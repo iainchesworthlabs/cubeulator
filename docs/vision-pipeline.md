@@ -178,7 +178,7 @@ evidence for the side-joining rule to absorb more reads: they become more sides,
 and `SideScan::sides()` keeps the six with the most reads rather than the six that
 assemble. Until that is fixed a 2x2 reads with the two looks it always had, and
 the size-generic changes below are what it gets. Across all 65 recorded sessions
-the branch now reads 2.9% more 2x2 frames, 7.7% more 4x4 and 5.6% more 5x5, with
+the branch now reads 0.4% more 2x2 frames, 2.9% more 4x4 and 3.8% more 5x5, with
 every session's verdict unchanged.
 
 ### A side seen at an angle: the face's own corners
@@ -198,7 +198,15 @@ solved rather than assumed. It is refined through the blobs that sat on the grid
 cell out), and it needs only half the cells to hold a sticker, because it places
 the rest. It runs last, so it can add a read and cannot change one the grid
 already made, and its gate is the fit rather than the pose: how many cells held a
-sticker, and how far the blobs sit from them (`kMaxQuadRms`, in cell pitches).
+sticker, and how far the blobs sit from them (`kMaxQuadRms`, in cell pitches),
+and then whether the blobs are the size of the cells they sit on
+(`blobs_fill_the_cells`): a homography has eight degrees of freedom, so four
+blobs always fit it exactly, and the top and bottom rows of a side with its
+middle row covered fit a 3x3 lattice to the pixel. What tells either from a face
+is that its blobs fill 1.4 cells, or a twentieth of one. Before that check the
+quad look read 7.7% more 4x4 and 5.6% more 5x5 recorded frames, and most of what
+it added was lattices laid through the room's clutter (about two thirds of the 4x4 reads): the blobs it matched filled
+2% to 7% of their cells, and a cluttered room at 1080p read as a side.
 
 What it needs, and what it does not do yet. The face's four **corner stickers**
 must be among the blobs: they are what the quad is found from, and a face missing

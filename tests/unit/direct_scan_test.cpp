@@ -296,6 +296,14 @@ TEST_CASE("frames without a whole square-on side give no read", "[direct-scan]")
     SECTION("an empty room") {
         CHECK_FALSE(read_side(room({640, 360})).has_value());
     }
+    SECTION("an empty room at the sizes a camera gives") {
+        // Four blobs fix a homography exactly, so a room with four sticker-sized
+        // rectangles that happen to be spread like a face's corners fits a
+        // lattice with no error. What stops it is that they are not the size of
+        // its cells.
+        CHECK_FALSE(read_side(room({1280, 720})).has_value());
+        CHECK_FALSE(read_side(room({1920, 1080})).has_value());
+    }
     SECTION("no frame at all") {
         CHECK_FALSE(read_side(cv::Mat()).has_value());
     }

@@ -1801,6 +1801,83 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
     return read;
 }
 
+// The share of its own cell a sticker's blob fills, at least and at most, for a
+// quadrilateral lattice to be believed. A sticker is a little under a cell
+// (about 0.7 of its area on a drawn side, less where the plastic is wide), so a
+// lattice through which they fill 1.4 cells is not the side's: it is a side's
+// rows pulled apart - the top and bottom rows of a hand-covered side fit nine
+// cells' worth of lattice exactly, and so does any four blobs, because a
+// homography has eight degrees of freedom and four pairs fix it - or the
+// furniture of a room.
+constexpr float kMinStickerOfCell = 0.25F;
+constexpr float kMaxStickerOfCell = 1.3F;
+constexpr float kMinMedianStickerOfCell = 0.45F;
+constexpr float kMaxMedianStickerOfCell = 1.0F;
+
+// Whether the blobs a quad lattice matched are the size of its cells.
+//
+// The quad fit is a statement about where the blobs are; this is about what
+// they are. The largest blob on each cell is measured against that cell's own
+// area (the cross product of its steps to its neighbours, so a side at an angle
+// is judged by the cells it shows), and the lattice is kept only when they all
+// fill a believable share of it and the middle one fills about what a sticker
+// does.
+[[nodiscard]] bool blobs_fill_the_cells(const std::vector<Blob>& blobs, const QuadLattice& lattice,
+                                        int size) {
+    const auto n = static_cast<std::size_t>(size);
+    const std::size_t cells = n * n;
+    if (lattice.centres.size() != cells) {
+        return false;
+    }
+    // The largest blob on each cell: the sticker, where a speck of glare or a
+    // fleck of the room also sits within reach of its centre.
+    const float reach = kQuadMatchFraction * lattice.pitch;
+    std::vector<float> biggest(cells, 0.0F);
+    for (const Blob& blob : blobs) {
+        std::size_t nearest = cells;
+        float nearest_distance = reach;
+        for (std::size_t i = 0; i < cells; ++i) {
+            const float distance = length(lattice.centres.at(i) - blob.centre);
+            if (distance < nearest_distance) {
+                nearest_distance = distance;
+                nearest = i;
+            }
+        }
+        if (nearest != cells) {
+            biggest.at(nearest) = std::max(biggest.at(nearest), blob.side);
+        }
+    }
+    std::vector<float> shares;
+    shares.reserve(cells);
+    for (std::size_t i = 0; i < cells; ++i) {
+        if (!(biggest.at(i) > 0.0F)) {
+            continue;
+        }
+        const std::size_t row = i / n;
+        const std::size_t column = i % n;
+        const cv::Point2f along_row = column + 1 < n
+                                          ? lattice.centres.at(i + 1) - lattice.centres.at(i)
+                                          : lattice.centres.at(i) - lattice.centres.at(i - 1);
+        const cv::Point2f along_column = row + 1 < n
+                                             ? lattice.centres.at(i + n) - lattice.centres.at(i)
+                                             : lattice.centres.at(i) - lattice.centres.at(i - n);
+        const auto cell = static_cast<float>(std::abs(along_row.cross(along_column)));
+        if (!(cell > 0.0F)) {
+            return false;
+        }
+        shares.push_back((biggest.at(i) * biggest.at(i)) / cell);
+    }
+    if (shares.empty()) {
+        return false;
+    }
+    const auto [least, most] = std::ranges::minmax(shares);
+    if (least < kMinStickerOfCell || most > kMaxStickerOfCell) {
+        return false;
+    }
+    const float middle = median_of(std::move(shares));
+    return middle >= kMinMedianStickerOfCell && middle <= kMaxMedianStickerOfCell;
+}
+
 // The side a quadrilateral lattice makes: the colour at each of its N^2 cells.
 //
 // Unlike read_blobs there is no square-on gate to pass and no separate fill
@@ -2026,7 +2103,7 @@ std::optional<SideRead> read_side_explained(const PreparedFrame& frame, int size
             centres.push_back(blob.centre);
         }
         if (const std::optional<QuadLattice> quad = fit_quad_lattice(centres, size, least);
-            quad.has_value()) {
+            quad.has_value() && blobs_fill_the_cells(widest, *quad, size)) {
             attempt.blobs.at(static_cast<std::size_t>(FrameLook::quad)) = quad->blobs;
             if (std::optional<SideRead> read = read_quad(frame, *quad, tuning); read.has_value()) {
                 attempt.look = FrameLook::quad;
