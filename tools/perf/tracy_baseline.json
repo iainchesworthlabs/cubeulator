@@ -5,88 +5,136 @@
   "tolerance": 3.0,
   "zones": {
     "perf.calibration": {
-      "count": 156,
+      "count": 174,
       "ratio": 1.0
     },
     "solver.algorithm_search": {
       "count": 152,
-      "ratio": 7.383e-05
+      "ratio": 6.575e-05
     },
     "solver.assemble_all": {
       "count": 20,
-      "ratio": 0.07252
+      "ratio": 0.003674
     },
     "solver.assemble_scan": {
-      "count": 21,
-      "ratio": 0.0775
+      "count": 23,
+      "ratio": 0.001846
     },
     "solver.cfop": {
       "count": 44,
-      "ratio": 0.1276
+      "ratio": 0.1367
     },
     "solver.corners": {
       "count": 38,
-      "ratio": 0.01033
+      "ratio": 0.01095
     },
     "solver.cross": {
       "count": 38,
-      "ratio": 0.01452
+      "ratio": 0.01563
     },
     "solver.merge_adjacent_moves": {
-      "count": 116,
-      "ratio": 0.0002826
+      "count": 176,
+      "ratio": 0.0002995
     },
     "solver.middle_edges": {
       "count": 38,
-      "ratio": 3.38
+      "ratio": 4.896
     },
     "solver.oll": {
       "count": 38,
-      "ratio": 0.003045
+      "ratio": 0.001931
     },
     "solver.piece_search": {
       "count": 360,
-      "ratio": 0.002844
+      "ratio": 0.002937
     },
     "solver.pll": {
       "count": 38,
-      "ratio": 0.00316
+      "ratio": 0.002119
     },
     "solver.solve": {
-      "count": 86,
-      "ratio": 0.1276
+      "count": 146,
+      "ratio": 0.1367
     },
     "solver.two_phase": {
-      "count": 34,
-      "ratio": 1.679
+      "count": 94,
+      "ratio": 1.861
     },
     "solver.two_phase.prepare": {
+      "count": 6,
+      "ratio": 7.306e-06
+    },
+    "vision.chroma_contours": {
       "count": 2,
-      "ratio": 2.037e-05
+      "ratio": 0.6897
+    },
+    "vision.contours_at_pitch": {
+      "count": 20,
+      "ratio": 0.1218
+    },
+    "vision.contours_without_glare": {
+      "count": 20,
+      "ratio": 0.4789
     },
     "vision.corner_view.read_corner": {
       "count": 51,
-      "ratio": 0.01218
+      "ratio": 0.01314
     },
     "vision.direct_scan.add": {
-      "count": 1988,
-      "ratio": 2.546e-07
+      "count": 1986,
+      "ratio": 2.435e-06
+    },
+    "vision.direct_scan.assemble": {
+      "count": 20,
+      "ratio": 0.006419
+    },
+    "vision.direct_scan.diagnose": {
+      "count": 430,
+      "ratio": 4.87e-06
     },
     "vision.direct_scan.read_side": {
-      "count": 85,
-      "ratio": 0.005344
+      "count": 87,
+      "ratio": 0.1113
+    },
+    "vision.direct_scan.read_side_chroma_look": {
+      "count": 2,
+      "ratio": 0.7317
+    },
+    "vision.direct_scan.read_side_glare_look": {
+      "count": 20,
+      "ratio": 0.5053
+    },
+    "vision.direct_scan.read_side_pitch_look": {
+      "count": 20,
+      "ratio": 0.1468
+    },
+    "vision.direct_scan.read_side_quad_look": {
+      "count": 20,
+      "ratio": 0.0002995
+    },
+    "vision.direct_scan.read_side_second_look": {
+      "count": 2,
+      "ratio": 0.2243
     },
     "vision.direct_scan.scanned": {
       "count": 17,
-      "ratio": 0.1225
+      "ratio": 0.02771
+    },
+    "vision.fit_quad_lattice": {
+      "count": 20,
+      "ratio": 9.01e-05
+    },
+    "vision.narrow_contours": {
+      "count": 2,
+      "ratio": 0.1767
     },
     "vision.prepare_frame": {
-      "count": 136,
-      "ratio": 0.1737
+      "count": 138,
+      "ratio": 0.153
     },
     "vision.resolve_colors": {
       "count": 228,
-      "ratio": 0.04745
+      "ratio": 0.01356
     }
   }
 }
