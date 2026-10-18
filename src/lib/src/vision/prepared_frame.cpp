@@ -94,15 +94,12 @@ struct Channels {
     channels.value.create(working.size(), CV_8UC1);
     channels.chroma.create(working.size(), CV_8UC1);
     for (int row = 0; row < working.rows; ++row) {
-        const auto* pixel = working.ptr<cv::Vec3b>(row);
-        auto* value = channels.value.ptr<uchar>(row);
-        auto* chroma = channels.chroma.ptr<uchar>(row);
         for (int column = 0; column < working.cols; ++column) {
-            const cv::Vec3b& bgr = pixel[column];
-            const uchar highest = std::max({bgr[0], bgr[1], bgr[2]});
-            const uchar lowest = std::min({bgr[0], bgr[1], bgr[2]});
-            value[column] = highest;
-            chroma[column] = static_cast<uchar>(highest - lowest);
+            const auto& bgr = working.at<cv::Vec3b>(row, column);
+            const uchar highest = std::max({bgr(0), bgr(1), bgr(2)});
+            const uchar lowest = std::min({bgr(0), bgr(1), bgr(2)});
+            channels.value.at<uchar>(row, column) = highest;
+            channels.chroma.at<uchar>(row, column) = static_cast<uchar>(highest - lowest);
         }
     }
     return channels;
@@ -133,7 +130,7 @@ constexpr int kGlareChroma = 12;
 // own brightness, so a dim sticker still reads as coloured, scaled to 0..255.
 // Taken in place in the chroma plane, which the look has no other use for; a
 // black pixel has no chroma and divides to zero, as it did against a floor of 1.
-[[nodiscard]] cv::Mat chroma_image(Channels&& channels) {
+[[nodiscard]] cv::Mat chroma_image(Channels channels) {
     cv::divide(channels.chroma, channels.value, channels.chroma, 255.0);
     return std::move(channels.chroma);
 }

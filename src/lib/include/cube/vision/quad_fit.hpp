@@ -33,7 +33,7 @@ struct QuadLattice {
     std::array<cv::Point2f, 4> corners{};
     // The unit square onto those corners: (u, v) in [0, 1]^2 to working pixels,
     // u running rightwards and v downwards as the corners are ordered.
-    cv::Matx33d homography{};
+    cv::Matx33d homography;
     // N^2 cell centres in working pixels, row-major: cell (row, column) is at
     // row * N + column, and rows run with v.
     std::vector<cv::Point2f> centres;

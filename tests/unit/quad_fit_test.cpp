@@ -21,7 +21,7 @@ namespace {
 // mapped through the same homography.
 struct DrawnFace {
     std::vector<cv::Point2f> centres;
-    cv::Matx33d homography{};
+    cv::Matx33d homography;
 };
 
 [[nodiscard]] DrawnFace drawn_face(int size, const std::vector<cv::Point2f>& quad) {
@@ -76,18 +76,18 @@ TEST_CASE("A face seen at an angle is read from its own four corners", "[vision]
     const DrawnFace face = drawn_face(5, trapezium());
     REQUIRE(face.centres.size() == 25);
 
-    const auto lattice = fit_quad_lattice(face.centres, 5, 12);
-    REQUIRE(lattice.has_value());
-    CHECK(lattice->centres.size() == 25);
-    CHECK(lattice->blobs == 25);
-    CHECK(lattice->rms < kMaxQuadRms);
+    const auto lattice_read = fit_quad_lattice(face.centres, 5, 12);
+    const auto& lattice = cube::test::must_have(lattice_read);
+    CHECK(lattice.centres.size() == 25);
+    CHECK(lattice.blobs == 25);
+    CHECK(lattice.rms < kMaxQuadRms);
 
     // Every cell the reader would sample is near the cell the face was drawn
     // with: the homography carries the perspective rather than fitting a
     // parallel projection through the middle of it.
     for (const cv::Point2f& drawn : face.centres) {
         double best = 1e9;
-        for (const cv::Point2f& placed : lattice->centres) {
+        for (const cv::Point2f& placed : lattice.centres) {
             best = std::min(best, cv::norm(drawn - placed));
         }
         CHECK(best < 2.0);
@@ -104,10 +104,10 @@ TEST_CASE("A parallel projection of the same face is read too", "[vision][quad]"
         {100.0F, 300.0F},
     };
     const DrawnFace face = drawn_face(4, square);
-    const auto lattice = fit_quad_lattice(face.centres, 4, 8);
-    REQUIRE(lattice.has_value());
-    CHECK(lattice->centres.size() == 16);
-    CHECK(lattice->rms < 0.05F);
+    const auto lattice_read = fit_quad_lattice(face.centres, 4, 8);
+    const auto& lattice = cube::test::must_have(lattice_read);
+    CHECK(lattice.centres.size() == 16);
+    CHECK(lattice.rms < 0.05F);
 }
 
 TEST_CASE("A face with a sticker covered is still placed, and that cell is marked",
@@ -124,11 +124,11 @@ TEST_CASE("A face with a sticker covered is still placed, and that cell is marke
     }
     REQUIRE(present.size() == 24);
 
-    const auto lattice = fit_quad_lattice(present, 5, 12);
-    REQUIRE(lattice.has_value());
-    CHECK(lattice->centres.size() == 25);
-    CHECK(lattice->blobs == 24);
-    CHECK(std::count(lattice->found.begin(), lattice->found.end(), true) == 24);
+    const auto lattice_read = fit_quad_lattice(present, 5, 12);
+    const auto& lattice = cube::test::must_have(lattice_read);
+    CHECK(lattice.centres.size() == 25);
+    CHECK(lattice.blobs == 24);
+    CHECK(std::count(lattice.found.begin(), lattice.found.end(), true) == 24);
 }
 
 TEST_CASE("Too few stickers to place a face is not a face", "[vision][quad]") {

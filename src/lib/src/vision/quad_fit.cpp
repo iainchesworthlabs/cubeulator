@@ -25,6 +25,7 @@ namespace {
 }
 
 // The unit co-ordinates of cell (row, column) of an N x N face.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the face's size, then a cell
 [[nodiscard]] cv::Point2d cell_uv(int size, std::size_t index) {
     const auto n = static_cast<std::size_t>(size);
     const auto row = index / n;
@@ -142,28 +143,28 @@ namespace {
 // from the blobs that matched cannot recover a corner sticker that is missing -
 // the matched set is itself inset - while a fit from cell to pixel extrapolates
 // through the missing cells, because the cells are still there in the grid.
-[[nodiscard]] std::optional<cv::Matx33d> homography_through(
-    const std::vector<std::pair<cv::Point2d, cv::Point2f>>& pairs) {
-    if (pairs.size() < 4) {
-        return std::nullopt;
-    }
-    // Normal equations for A h = b in eight unknowns.
-    std::array<std::array<double, 8>, 8> normal{};
-    std::array<double, 8> rhs{};
-    for (const auto& [uv, pixel] : pairs) {
-        const auto pixel_x = static_cast<double>(pixel.x);
-        const auto pixel_y = static_cast<double>(pixel.y);
-        const std::array<double, 8> row_x{uv.x,           uv.y, 1.0, 0.0, 0.0, 0.0, -pixel_x * uv.x,
-                                          -pixel_x * uv.y};
-        const std::array<double, 8> row_y{
-            0.0, 0.0, 0.0, uv.x, uv.y, 1.0, -pixel_y * uv.x, -pixel_y * uv.y};
-        for (std::size_t i = 0; i < 8; ++i) {
-            rhs.at(i) += (row_x.at(i) * pixel_x) + (row_y.at(i) * pixel_y);
-            for (std::size_t j = 0; j < 8; ++j) {
-                normal.at(i).at(j) += (row_x.at(i) * row_x.at(j)) + (row_y.at(i) * row_y.at(j));
-            }
+using Normal = std::array<std::array<double, 8>, 8>;
+using Unknowns = std::array<double, 8>;
+
+// A x = b for the eight unknowns, as the normal equations A^T A x = A^T b of
+// every correspondence: two rows each, one for the pixel's x and one for its y.
+void add_correspondence(const cv::Point2d& uv, const cv::Point2f& pixel, Normal& normal,
+                        Unknowns& rhs) {
+    const auto pixel_x = static_cast<double>(pixel.x);
+    const auto pixel_y = static_cast<double>(pixel.y);
+    const Unknowns row_x{uv.x, uv.y, 1.0, 0.0, 0.0, 0.0, -pixel_x * uv.x, -pixel_x * uv.y};
+    const Unknowns row_y{0.0, 0.0, 0.0, uv.x, uv.y, 1.0, -pixel_y * uv.x, -pixel_y * uv.y};
+    for (std::size_t i = 0; i < 8; ++i) {
+        rhs.at(i) += (row_x.at(i) * pixel_x) + (row_y.at(i) * pixel_y);
+        for (std::size_t j = 0; j < 8; ++j) {
+            normal.at(i).at(j) += (row_x.at(i) * row_x.at(j)) + (row_y.at(i) * row_y.at(j));
         }
     }
+}
+
+// Gauss-Jordan elimination with partial pivoting; nothing when the system is
+// singular.
+[[nodiscard]] std::optional<Unknowns> solve_normal(Normal normal, Unknowns rhs) {
     for (std::size_t column = 0; column < 8; ++column) {
         std::size_t pivot = column;
         for (std::size_t row = column + 1; row < 8; ++row) {
@@ -182,11 +183,8 @@ namespace {
         }
         rhs.at(column) /= divisor;
         for (std::size_t row = 0; row < 8; ++row) {
-            if (row == column) {
-                continue;
-            }
             const double factor = normal.at(row).at(column);
-            if (factor == 0.0) {
+            if (row == column || factor == 0.0) {
                 continue;
             }
             for (std::size_t i = column; i < 8; ++i) {
@@ -195,13 +193,30 @@ namespace {
             rhs.at(row) -= factor * rhs.at(column);
         }
     }
-    return cv::Matx33d(rhs.at(0), rhs.at(1), rhs.at(2), rhs.at(3), rhs.at(4), rhs.at(5), rhs.at(6),
-                       rhs.at(7), 1.0);
+    return rhs;
+}
+
+[[nodiscard]] std::optional<cv::Matx33d> homography_through(
+    const std::vector<std::pair<cv::Point2d, cv::Point2f>>& pairs) {
+    if (pairs.size() < 4) {
+        return std::nullopt;
+    }
+    Normal normal{};
+    Unknowns rhs{};
+    for (const auto& [uv, pixel] : pairs) {
+        add_correspondence(uv, pixel, normal, rhs);
+    }
+    const std::optional<Unknowns> h = solve_normal(normal, rhs);
+    if (!h.has_value()) {
+        return std::nullopt;
+    }
+    return cv::Matx33d(h->at(0), h->at(1), h->at(2), h->at(3), h->at(4), h->at(5), h->at(6),
+                       h->at(7), 1.0);
 }
 
 // What one mapping of the unit square made of the blobs.
 struct Placed {
-    cv::Matx33d homography{};
+    cv::Matx33d homography;
     std::vector<cv::Point2f> centres;
     std::vector<bool> found;
     std::vector<std::size_t> matched_cells;
@@ -274,8 +289,123 @@ struct Placed {
     return placed;
 }
 
+// Whether `placed` explains more of the blobs than `best` does: more of them on
+// cells, or as many and nearer.
+[[nodiscard]] bool explains_more(const Placed& placed, const std::optional<Placed>& best) {
+    return !best.has_value() || placed.matched.size() > best->matched.size() ||
+           (placed.matched.size() == best->matched.size() && placed.rms < best->rms);
+}
+
+// The homography that maps the unit square onto `quad`.
+[[nodiscard]] std::optional<cv::Matx33d> homography_onto(const std::array<cv::Point2f, 4>& quad) {
+    const std::vector<cv::Point2f> unit = unit_square();
+    const std::vector<cv::Point2f> target(quad.begin(), quad.end());
+    const cv::Mat transform = cv::getPerspectiveTransform(unit, target);
+    if (transform.empty()) {
+        return std::nullopt;
+    }
+    cv::Matx33d homography;
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            homography(row, column) = transform.at<double>(row, column);
+        }
+    }
+    return homography;
+}
+
+// A mapping and what it made of the blobs.
+struct Start {
+    Placed placed;
+    cv::Matx33d homography;
+};
+
+// Start from the quad the extreme stickers make, then refine through the
+// blobs that sat on the grid, which is what recovers a face whose corner
+// stickers are missing or bridged.
+//
+// Two starts are weighed: the extremes as they are, and the same quad grown
+// by half a cell all round. The second is what a face with its four corner
+// stickers missing needs - its extremes are then the ring of cells inside
+// them, half a pitch in - and the first is what a face with all of them
+// needs. The better of the two is refined.
+[[nodiscard]] std::optional<Start> better_start(const std::array<cv::Point2f, 4>& ordered, int size,
+                                                const std::vector<cv::Point2f>& blobs) {
+    cv::Point2f centroid(0.0F, 0.0F);
+    for (const cv::Point2f& corner : ordered) {
+        centroid += corner;
+    }
+    centroid *= 0.25F;
+    const auto grow = static_cast<float>(size) / static_cast<float>(size - 1);
+    std::array<cv::Point2f, 4> grown{};
+    for (std::size_t i = 0; i < grown.size(); ++i) {
+        grown.at(i) = centroid + ((ordered.at(i) - centroid) * grow);
+    }
+
+    std::optional<Start> best;
+    for (const std::array<cv::Point2f, 4>& candidate : {ordered, grown}) {
+        const std::optional<cv::Matx33d> homography = homography_onto(candidate);
+        if (!homography.has_value()) {
+            continue;
+        }
+        Placed placed = place_cells(*homography, size, blobs);
+        if (!best.has_value() || explains_more(placed, best->placed)) {
+            best = Start{.placed = std::move(placed), .homography = *homography};
+        }
+    }
+    return best;
+}
+
+// Refit the homography from the cells the blobs claimed and look again, up to
+// six times, keeping the mapping that explained most.
+[[nodiscard]] Placed refined(Start start, int size, const std::vector<cv::Point2f>& blobs) {
+    cv::Matx33d homography = start.homography;
+    Placed best = std::move(start.placed);
+    for (int attempt = 0; attempt < 6; ++attempt) {
+        Placed placed = place_cells(homography, size, blobs);
+        const bool enough = placed.matched.size() >= 4;
+        const bool settled_rms = placed.rms <= kMaxQuadRms;
+        std::vector<std::pair<cv::Point2d, cv::Point2f>> pairs;
+        for (std::size_t i = 0; enough && i < placed.matched.size(); ++i) {
+            pairs.emplace_back(cell_uv(size, placed.matched_cells.at(i)), placed.matched.at(i));
+        }
+        if (explains_more(placed, best)) {
+            best = std::move(placed);
+        }
+        if (!enough) {
+            break;
+        }
+        const std::optional<cv::Matx33d> next = homography_through(pairs);
+        if (!next.has_value()) {
+            break;
+        }
+        const double shift = std::abs(next->operator()(0, 2) - homography(0, 2)) +
+                             std::abs(next->operator()(1, 2) - homography(1, 2));
+        homography = *next;
+        if (shift < 0.01 && settled_rms) {
+            break;
+        }
+    }
+    return best;
+}
+
+// The fitted grid's own scale has to be a sticker's, or the quad is not a
+// face: four blobs in a line, or two that a stray has pulled together, give
+// a homography that maps the cells millions of pixels apart. That is not
+// only wrong, it is expensive - the colour patch is sized from the pitch,
+// and a pitch of a million asks the sampler for a patch the size of the
+// frame. The quad's own diagonal is the bound: no cell can be further from
+// its neighbour than half the face is across.
+[[nodiscard]] bool pitch_is_a_stickers(const Placed& placed, int size) {
+    const double diagonal = cv::norm(map_through(placed.homography, {0.0, 0.0}) -
+                                     map_through(placed.homography, {1.0, 1.0}));
+    const double largest_pitch = (2.0 * diagonal) / static_cast<double>(size);
+    return std::isfinite(placed.pitch) && placed.pitch >= 2.0F &&
+           static_cast<double>(placed.pitch) <= largest_pitch;
+}
+
 }  // namespace
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the face's size, then the cells wanted
 std::optional<QuadLattice> fit_quad_lattice(const std::vector<cv::Point2f>& blobs, int size,
                                             std::size_t least_matched) {
     CUBE_ZONE_SCOPED_N("vision.fit_quad_lattice");
@@ -289,101 +419,13 @@ std::optional<QuadLattice> fit_quad_lattice(const std::vector<cv::Point2f>& blob
     if (!corners.has_value()) {
         return std::nullopt;
     }
-
-    // Start from the quad the extreme stickers make, then refine through the
-    // blobs that sat on the grid, which is what recovers a face whose corner
-    // stickers are missing or bridged.
-    //
-    // Two starts are weighed: the extremes as they are, and the same quad grown
-    // by half a cell all round. The second is what a face with its four corner
-    // stickers missing needs - its extremes are then the ring of cells inside
-    // them, half a pitch in - and the first is what a face with all of them
-    // needs. The better of the two is refined.
-    const std::array<cv::Point2f, 4> ordered = order_corners(*corners);
-    cv::Point2f centroid(0.0F, 0.0F);
-    for (const cv::Point2f& corner : ordered) {
-        centroid += corner;
-    }
-    centroid *= 0.25F;
-    const auto grow = static_cast<float>(size) / static_cast<float>(size - 1);
-    std::array<cv::Point2f, 4> grown{};
-    for (std::size_t i = 0; i < grown.size(); ++i) {
-        grown.at(i) = centroid + ((ordered.at(i) - centroid) * grow);
-    }
-
-    const std::vector<cv::Point2f> unit = unit_square();
-    std::optional<Placed> best;
-    std::optional<cv::Matx33d> start;
-    for (const std::array<cv::Point2f, 4>& candidate : {ordered, grown}) {
-        const std::vector<cv::Point2f> quad(candidate.begin(), candidate.end());
-        const cv::Mat transform = cv::getPerspectiveTransform(unit, quad);
-        if (transform.empty()) {
-            continue;
-        }
-        cv::Matx33d homography;
-        for (int row = 0; row < 3; ++row) {
-            for (int column = 0; column < 3; ++column) {
-                homography(row, column) = transform.at<double>(row, column);
-            }
-        }
-        Placed placed = place_cells(homography, size, blobs);
-        const bool better =
-            !best.has_value() || placed.matched.size() > best->matched.size() ||
-            (placed.matched.size() == best->matched.size() && placed.rms < best->rms);
-        if (better) {
-            best = std::move(placed);
-            start = homography;
-        }
-    }
-    if (!best.has_value() || !start.has_value()) {
+    std::optional<Start> start = better_start(order_corners(*corners), size, blobs);
+    if (!start.has_value()) {
         return std::nullopt;
     }
-
-    cv::Matx33d homography = *start;
-    for (int attempt = 0; attempt < 6; ++attempt) {
-        Placed placed = place_cells(homography, size, blobs);
-        const bool better =
-            !best.has_value() || placed.matched.size() > best->matched.size() ||
-            (placed.matched.size() == best->matched.size() && placed.rms < best->rms);
-        if (better) {
-            best = placed;
-        }
-        if (placed.matched.size() < 4) {
-            break;
-        }
-        // Refit from the cells the blobs claimed, then look again.
-        std::vector<std::pair<cv::Point2d, cv::Point2f>> pairs;
-        pairs.reserve(placed.matched.size());
-        for (std::size_t i = 0; i < placed.matched.size(); ++i) {
-            pairs.emplace_back(cell_uv(size, placed.matched_cells.at(i)), placed.matched.at(i));
-        }
-        const std::optional<cv::Matx33d> refined = homography_through(pairs);
-        if (!refined.has_value()) {
-            break;
-        }
-        const double shift = std::abs(refined->operator()(0, 2) - homography(0, 2)) +
-                             std::abs(refined->operator()(1, 2) - homography(1, 2));
-        homography = *refined;
-        if (shift < 0.01 && placed.rms <= kMaxQuadRms) {
-            break;
-        }
-    }
-    if (!best.has_value() || best->matched.size() < wanted || best->rms > kMaxQuadRms) {
-        return std::nullopt;
-    }
-
-    // The fitted grid's own scale has to be a sticker's, or the quad is not a
-    // face: four blobs in a line, or two that a stray has pulled together, give
-    // a homography that maps the cells millions of pixels apart. That is not
-    // only wrong, it is expensive - the colour patch is sized from the pitch,
-    // and a pitch of a million asks the sampler for a patch the size of the
-    // frame. The quad's own diagonal is the bound: no cell can be further from
-    // its neighbour than half the face is across.
-    const double diagonal = cv::norm(map_through(best->homography, {0.0, 0.0}) -
-                                     map_through(best->homography, {1.0, 1.0}));
-    const double largest_pitch = (2.0 * diagonal) / static_cast<double>(size);
-    if (!std::isfinite(best->pitch) || best->pitch < 2.0F ||
-        static_cast<double>(best->pitch) > largest_pitch) {
+    Placed best = refined(std::move(*start), size, blobs);
+    if (best.matched.size() < wanted || best.rms > kMaxQuadRms ||
+        !pitch_is_a_stickers(best, size)) {
         return std::nullopt;
     }
 
@@ -392,17 +434,17 @@ std::optional<QuadLattice> fit_quad_lattice(const std::vector<cv::Point2f>& blob
     // (0, 0), (1, 0), (1, 1) and (0, 1): the quad the cells lie in, not the
     // blurred extreme blobs it started from.
     lattice.corners = {
-        map_through(best->homography, {0.0, 0.0}),
-        map_through(best->homography, {1.0, 0.0}),
-        map_through(best->homography, {1.0, 1.0}),
-        map_through(best->homography, {0.0, 1.0}),
+        map_through(best.homography, {0.0, 0.0}),
+        map_through(best.homography, {1.0, 0.0}),
+        map_through(best.homography, {1.0, 1.0}),
+        map_through(best.homography, {0.0, 1.0}),
     };
-    lattice.homography = best->homography;
-    lattice.centres = std::move(best->centres);
-    lattice.found = std::move(best->found);
-    lattice.blobs = best->matched.size();
-    lattice.rms = best->rms;
-    lattice.pitch = best->pitch;
+    lattice.homography = best.homography;
+    lattice.centres = std::move(best.centres);
+    lattice.found = std::move(best.found);
+    lattice.blobs = best.matched.size();
+    lattice.rms = best.rms;
+    lattice.pitch = best.pitch;
     return lattice;
 }
 
