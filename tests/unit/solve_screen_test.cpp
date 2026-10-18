@@ -70,7 +70,6 @@ namespace {
         }
     }
     FAIL("not a side: " << side.toStdString());
-    return Face::U;
 }
 
 // Solves `scrambled` in the app's own SolveController and waits for it.

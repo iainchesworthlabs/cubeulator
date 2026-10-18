@@ -35,6 +35,15 @@ if(CUBEULATOR_ENABLE_TRACY)
     find_package(Tracy CONFIG REQUIRED)
     target_link_libraries(cube_tracy INTERFACE Tracy::TracyClient)
 
+    # Tracy 0.14 flipped TRACY_ENABLE off by default in its own CMake, and the
+    # vcpkg port passes it to the client library's build only - the exported
+    # Tracy::TracyClient target carries TRACY_ON_DEMAND,
+    # TRACY_NO_CRASH_HANDLER and TRACY_IMPORTS, but not TRACY_ENABLE. Without
+    # it every zone macro in a consumer compiles to nothing. It is the
+    # client's compile-time master switch and must be defined where the
+    # headers are read, which is exactly this INTERFACE target's job.
+    target_compile_definitions(cube_tracy INTERFACE TRACY_ENABLE)
+
     # Not an error: someone chasing a bug in the profiling build itself wants
     # exactly this. But a number taken from an AddressSanitizer or coverage
     # build is not a number about the program, and nothing else will say so.
