@@ -1135,8 +1135,8 @@ Rectangle {
     AppButton {
         id: leave
         objectName: "solve.rescan"
-        // Only a 3x3 is read by the camera; a bigger cube is entered, not scanned.
-        visible: root.threeByThree
+        // Every size is scanned, so every size can be scanned again (at its own size:
+        // AppState.rescan).
         // Anchored to the edge the count is at, and not placed at an x, which does not mirror:
         // wide, clear of the count (the header's own, which this cannot be anchored to: it is
         // not a sibling); narrow, at the same edge, above the stepping buttons.

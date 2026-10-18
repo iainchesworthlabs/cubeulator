@@ -347,7 +347,19 @@ QtObject {
     // Part-way through a solve the cube and the solution no longer agree:
     // read the cube again as it now is and solve it from there. The same
     // solve as far as the clock is concerned, so the time keeps running.
+    //
+    // At the size of the cube being solved, chosen and not found: it is known, and
+    // finding it again from a cube that is half unsolved is a guess that need not
+    // be made (the scan screen's Auto is still there to ask for it). DirectScan.size
+    // may hold anything by now - the size of the scan before, or one found from a
+    // cube that has since been replaced - so it is set before the screen changes:
+    // the screen starting the camera reads it (solveCamera, which follows only a 3x3).
     function rescan() {
-        screen = "scan";
+        DirectScan.size = SolveController.size;
+        if (cameraGranted || !isMobile) {
+            screen = "scan";
+        } else {
+            screen = "permission";
+        }
     }
 }

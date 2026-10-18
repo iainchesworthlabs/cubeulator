@@ -526,7 +526,7 @@ TEST_CASE("a cube of another size is listed with its size, reviewed and carried 
         QQuickItem* five = app.find("solve.cube");
         REQUIRE(five != nullptr);
         CHECK(five->property("cubeSize").toInt() == 5);
-        CHECK(app.find("solve.rescan") == nullptr);
+        CHECK(app.find("solve.rescan") != nullptr);
 
         // The next turn is the entry's next turn.
         app.click("solve.next");

@@ -22,9 +22,14 @@ test.describe('?demo=&size=', () => {
       expect(solve.stageRanges.length).toBeGreaterThan(4);
     });
 
-    test('has no camera and no rescan: they are the 3x3\'s', async ({ app }) => {
+    test('has no camera (that is the 3x3\'s), but can be rescanned, at its own size', async ({ app }) => {
       expect(await app.page.evaluate(() => window.__fakeCamera.opened())).toBe(0);
-      expect(await app.find('solve.rescan')).toBeNull();
+      expect(await app.find('solve.rescan')).not.toBeNull();
+      await app.click('solve.rescan');
+      await app.waitForScreen('scan');
+      const scan = await app.singleton('DirectScan');
+      expect(scan.size).toBe(5);
+      expect(scan.autoSize).toBe(false);
     });
 
     test('says which layer to turn, and steps forward and back', async ({ app }) => {

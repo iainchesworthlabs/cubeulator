@@ -119,8 +119,8 @@ TEST_CASE("a scramble typed for a 5x5 is solved without the camera, and its redu
         CHECK(solve.totalMoves() > 0);
         CHECK(solve.atStart());
 
-        // No camera for a cube that is not a 3x3, and no rescan from it.
-        CHECK(app.find("solve.rescan") == nullptr);
+        // No camera for a cube that is not a 3x3, but the way back to a scan is there.
+        CHECK(app.find("solve.rescan") != nullptr);
 
         // A turn, a step back, then the reduction skipped.
         app.click("solve.next");
