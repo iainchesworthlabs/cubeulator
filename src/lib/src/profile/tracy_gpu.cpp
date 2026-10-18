@@ -4,11 +4,12 @@
 // variants' cube/profiling.hpp declare the same classes as no-ops, so the
 // app's render thread compiles unchanged whatever the build.
 //
-// The Direct3D 11 backend is its own translation unit -
-// src/profile/tracy_gpu_d3d11.cpp where Windows supplies D3D11, and
-// src/profile/tracy_gpu_d3d11_stub.cpp everywhere else. CMake compiles
-// exactly one of the two, the way the platform fragments pick per-OS files;
-// no preprocessor directive in source tests the OS.
+// The Direct3D 11 backend is its own translation unit, and platform code:
+// src/app/platform/windows/tracy_gpu_d3d11_windows.cpp where Windows supplies
+// D3D11, and src/app/platform/posix/tracy_gpu_d3d11_none.cpp everywhere else.
+// The platform's fragment names exactly one of the two in
+// CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES; no preprocessor directive in
+// source tests the OS.
 //
 // Everything the Tracy GPU bindings need is header-heavy, so it stays out of
 // the variant header. The app extracts the native handles from its window's
@@ -149,8 +150,7 @@ namespace cube::profiling {
 
 GpuContext* GpuContext::create_opengl(const gl_gpu_functions& functions) noexcept {
     if (functions.gen_queries == nullptr || functions.get_queryiv == nullptr ||
-        functions.get_query_objectiv == nullptr ||
-        functions.get_query_objectui64v == nullptr ||
+        functions.get_query_objectiv == nullptr || functions.get_query_objectui64v == nullptr ||
         functions.get_integer64v == nullptr || functions.query_counter == nullptr ||
         functions.get_error == nullptr || functions.get_integerv == nullptr ||
         functions.get_string == nullptr || functions.get_stringi == nullptr) {
@@ -163,8 +163,7 @@ GpuContext* GpuContext::create_opengl(const gl_gpu_functions& functions) noexcep
         reinterpret_cast<decltype(gl_get_query_objectiv)>(functions.get_query_objectiv);
     gl_get_query_objectui64v =
         reinterpret_cast<decltype(gl_get_query_objectui64v)>(functions.get_query_objectui64v);
-    gl_get_integer64v =
-        reinterpret_cast<decltype(gl_get_integer64v)>(functions.get_integer64v);
+    gl_get_integer64v = reinterpret_cast<decltype(gl_get_integer64v)>(functions.get_integer64v);
     gl_query_counter = reinterpret_cast<decltype(gl_query_counter)>(functions.query_counter);
     gl_get_error = reinterpret_cast<decltype(gl_get_error)>(functions.get_error);
     gl_get_integerv = reinterpret_cast<decltype(gl_get_integerv)>(functions.get_integerv);

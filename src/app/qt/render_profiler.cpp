@@ -20,11 +20,15 @@ namespace {
 // context is current.
 QOpenGLFunctions* gl1_fallback = nullptr;
 
-GLenum fallback_get_error() { return gl1_fallback->glGetError(); }
+GLenum fallback_get_error() {
+    return gl1_fallback->glGetError();
+}
 void fallback_get_integerv(GLenum name, GLint* values) {
     gl1_fallback->glGetIntegerv(name, values);
 }
-const GLubyte* fallback_get_string(GLenum name) { return gl1_fallback->glGetString(name); }
+const GLubyte* fallback_get_string(GLenum name) {
+    return gl1_fallback->glGetString(name);
+}
 
 void* resolve(QOpenGLContext* context, const char* name) {
     if (QFunctionPointer pointer = context->getProcAddress(name); pointer != nullptr) {
@@ -58,8 +62,8 @@ RenderProfiler* RenderProfiler::install(QQuickWindow& window) {
                      &RenderProfiler::beforeRendering, Qt::DirectConnection);
     QObject::connect(&window, &QQuickWindow::afterRendering, profiler,
                      &RenderProfiler::afterRendering, Qt::DirectConnection);
-    QObject::connect(&window, &QQuickWindow::frameSwapped, profiler,
-                     &RenderProfiler::frameSwapped, Qt::DirectConnection);
+    QObject::connect(&window, &QQuickWindow::frameSwapped, profiler, &RenderProfiler::frameSwapped,
+                     Qt::DirectConnection);
     return profiler;
 }
 

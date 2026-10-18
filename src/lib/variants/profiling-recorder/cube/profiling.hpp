@@ -165,7 +165,9 @@ public:
 // Execution sections have no recorder equivalent (the recorder's trace is a
 // flat zone/message/plot stream), so they are no-ops here as in the
 // disabled variant.
-inline std::uint32_t section_enter(const char*) { return 0; }
+inline std::uint32_t section_enter(const char*) {
+    return 0;
+}
 inline void section_leave(std::uint32_t) {}
 
 }  // namespace cube::profiling

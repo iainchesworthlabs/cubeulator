@@ -56,7 +56,9 @@ public:
     void end() noexcept {}
 };
 
-inline std::uint32_t section_enter(const char*) { return 0; }
+inline std::uint32_t section_enter(const char*) {
+    return 0;
+}
 inline void section_leave(std::uint32_t) {}
 
 // The value-with-no-open-zone path, kept callable in every variant so a test

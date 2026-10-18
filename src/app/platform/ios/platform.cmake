@@ -29,6 +29,9 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/posix/capture_thread_scope_posix.cpp
     platform/posix/crash_handler_posix.cpp)
 
+# The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
+set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_d3d11_none.cpp)
+
 set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS "")

@@ -1,8 +1,10 @@
 // Direct3D 11 GPU context for cube::profiling::GpuContext - the backend for
-// Windows, compiled by src/lib/CMakeLists.txt in place of
-// tracy_gpu_d3d11_stub.cpp wherever the platform is WIN32. The OpenGL
-// backend is src/profile/tracy_gpu.cpp; nothing here tests the OS because
-// CMake already chose this file.
+// Windows. Windows' platform.cmake names it in
+// CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES and src/lib/CMakeLists.txt compiles
+// it into cube::lib when Tracy is on, in place of posix/tracy_gpu_d3d11_none.cpp.
+// It lives here because <windows.h> and <d3d11.h> are platform code (see
+// docs/platform-isolation.md). The OpenGL backend is
+// src/lib/src/profile/tracy_gpu.cpp.
 //
 // The app extracts the device and its immediate context from its window's
 // QSGRendererInterface and passes them in as void*; this file stays free of

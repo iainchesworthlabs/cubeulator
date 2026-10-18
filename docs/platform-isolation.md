@@ -47,6 +47,7 @@ platform's fragment. Every other CMake file reads what the fragment declared:
 | What | Where it is declared | Who reads it |
 |---|---|---|
 | Source files compiled into `cube_platform` | `CUBEULATOR_PLATFORM_SOURCES` | `src/app/CMakeLists.txt` |
+| The Direct3D 11 Tracy GPU backend, compiled into `cube::lib` when Tracy is on (`windows/tracy_gpu_d3d11_windows.cpp`, or `posix/tracy_gpu_d3d11_none.cpp`) | `CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES` | `src/lib/CMakeLists.txt` |
 | System libraries (`strmiids`, `dbghelp`, ...) | `CUBEULATOR_PLATFORM_LINK_LIBRARIES` | `src/app/CMakeLists.txt` |
 | Qt libraries a platform file needs | `CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES` | `src/app/CMakeLists.txt` |
 | C-runtime defines (`_CRT_SECURE_NO_WARNINGS`) | `CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS` | `cube_platform`, every test target |
