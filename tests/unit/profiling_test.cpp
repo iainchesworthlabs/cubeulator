@@ -64,7 +64,24 @@ TEST_CASE("the process-level macros compile and run", "[profiling]") {
     CUBE_FRAME_MARK();
     CUBE_FRAME_MARK_NAMED("test.frames");
 
+    // Execution sections (Tracy 0.14), in the shape the app uses them: the
+    // id is kept across the region and handed back to leave.
+    const std::uint32_t section = CUBE_SECTION_ENTER("test.section");
+    CUBE_SECTION_LEAVE(section);
+
     // Nothing to assert about the instrumentation itself - it has no
     // observable effect on the program - beyond having got this far.
     SUCCEED();
+}
+
+TEST_CASE("the GPU profiling surface exists and rejects empty handles", "[profiling]") {
+    // The render thread's two tools compile in every variant, and the real
+    // one refuses to profile without the handles a window supplies.
+    ::cube::profiling::ZoneSpan span;
+    span.begin("test.span");
+    span.end();
+    span.end();  // idempotent, like the zones themselves
+
+    REQUIRE(::cube::profiling::GpuContext::create_opengl({}) == nullptr);
+    REQUIRE(::cube::profiling::GpuContext::create_d3d11(nullptr, nullptr) == nullptr);
 }

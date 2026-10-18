@@ -242,6 +242,7 @@ void OpenCvCaptureLoop::run() {
     CUBE_THREAD_NAME("camera-capture");
 
     cv::Mat frame;
+    auto last_frame = std::chrono::steady_clock::now();
     while (!stop_requested_.load(std::memory_order_acquire)) {
         bool grabbed = false;
         {
@@ -254,6 +255,16 @@ void OpenCvCaptureLoop::run() {
         if (!grabbed) {
             continue;
         }
+        // The delivered-frame cadence as a plot, so the GUI can correlate it
+        // with the vision pass and the UI frames. Counted per delivered
+        // frame, not per loop pass. (A local, not the duration expression
+        // itself: the template's comma would split a macro argument; and
+        // [[maybe_unused]] because the no-op variant never reads it.)
+        const auto now = std::chrono::steady_clock::now();
+        const double interval_ms [[maybe_unused]] =
+            std::chrono::duration<double, std::milli>(now - last_frame).count();
+        CUBE_PLOT("capture.interval_ms", interval_ms);
+        last_frame = now;
         // Between grabs, on the thread that owns the device - the only
         // place a property write is allowed (see interfaces/camera.hpp:
         // request_photometry_lock). Counted per delivered frame, so the

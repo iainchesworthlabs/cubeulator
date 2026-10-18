@@ -16,6 +16,7 @@
 #include <cube/nxn/cube.hpp>
 #include <cube/nxn/geometry.hpp>
 #include <cube/nxn/solution.hpp>
+#include <cube/profiling.hpp>
 #include <cube/solver/solver.hpp>
 
 // How a cube of a given size is solved, as data.
@@ -223,6 +224,7 @@ namespace detail {
 template <TargetPolicy P>
 StageFn plan(P policy) {
     return [policy = std::move(policy)](Context& context) -> Result<void> {
+        CUBE_ZONE_SCOPED_N("nxn.plan");
         const Result<Scheme> scheme = policy.scheme(context.cube);
         if (!scheme) {
             return std::unexpected(scheme.error());
@@ -235,6 +237,7 @@ StageFn plan(P policy) {
 template <TargetPolicy P>
 StageFn plan_edges(P policy) {
     return [policy = std::move(policy)](Context& context) -> Result<void> {
+        CUBE_ZONE_SCOPED_N("nxn.plan_edges");
         if (!context.targets) {
             return std::unexpected(CubeError::no_solution);
         }

@@ -197,19 +197,20 @@ tools/tests only.
 
 | port | version | SPDX | ships | why / obligation |
 |---|---|---|---|---|
-| opencv4 | 4.12.0#5 | Apache-2.0 (port says `null`; the copyright file is Apache-2.0 plus SoftFloat and a CHI-table notice) | all (the browser build is smaller, see 2.5) | Apache: licence copy; keep the bundled notices in its copyright file. Features: calib3d, core, fs, intrinsics, jpeg, png, quirc, thread, tiff, webp, + dshow/msmf (W), v4l (L). `highgui`, `gtk` and `win32ui` are not requested (see the Linux-specific finding below) |
-| libjpeg-turbo | 3.2.0 | BSD-3-Clause (port); the file also carries the IJG licence | all | notice in docs |
-| libpng | 1.6.58 | libpng-2.0 | all | notice; no misrepresentation |
+| opencv4 | 4.14.0 | Apache-2.0 (port says `null`; the copyright file is Apache-2.0 plus SoftFloat and a CHI-table notice) | all (the browser build is smaller, see 2.5) | Apache: licence copy; keep the bundled notices in its copyright file. Features: calib3d, core, fs, intrinsics, jpeg, png, quirc, thread, tiff, webp, + dshow/msmf (W), v4l (L). `highgui`, `gtk` and `win32ui` are not requested (see the Linux-specific finding below) |
+| libjpeg-turbo | 3.2.0#1 | BSD-3-Clause (port); the file also carries the IJG licence | all | notice in docs |
+| libpng | 1.6.59 | libpng-2.0 | all | notice; no misrepresentation |
+| libspng | 0.7.4#1 | BSD-2-Clause | all | notice (OpenCV 4.14's PNG codec) |
 | tiff | 4.7.2 | libtiff | all | notice |
-| libwebp | 1.6.0#2 | BSD-3-Clause | all | notice |
-| liblzma | 5.8.3 | 0BSD (liblzma) | all | none (0BSD); the copyright file notes LGPL getopt only for the CLI tools, which are not built |
-| zlib | 1.3.2#1 | Zlib | all | none for binaries beyond not misrepresenting |
+| libwebp | 1.6.0#3 | BSD-3-Clause | all | notice |
+| liblzma | 5.8.4 | 0BSD (liblzma) | all | none (0BSD); the copyright file notes LGPL getopt only for the CLI tools, which are not built |
+| zlib | 1.3.2#2 | Zlib | all | none for binaries beyond not misrepresenting |
 | quirc | 1.2 | ISC | all | notice |
 | fmt | 12.2.0 | MIT | all (`cube_lib`) | notice |
 | bgfx (+ libsquish, lodepng, mgnlibs, miniz, stb, tinyexr) | 1.129.8940-496#1 | BSD-2-Clause AND CC0-1.0 | **removed from `vcpkg.json`** - it was declared but nothing linked it [V: the file API's link line of `cube_app` had no bgfx; `src/render` was a stub] | none |
 | cpu-features | 0.11.0 | Apache-2.0 [V: port manifest] | A | OpenCV's dependency on Android only; Apache: licence copy |
-| catch2 **[T]** | 3.15.2 | BSL-1.0 | no | tests only |
-| tracy **[T]** | 0.13.1 | BSD-3-Clause | no | the opt-in `profiling` feature (`CUBEULATOR_ENABLE_TRACY`, off in every release preset); a profiling build is a development build and is not packaged. Its command-line tools are host tools; see [Profiling](profiling.md#licence) |
+| catch2 **[T]** | 3.16.0 | BSL-1.0 | no | tests only |
+| tracy **[T]** | 0.14.1 | BSD-3-Clause | no | the opt-in `profiling` feature (`CUBEULATOR_ENABLE_TRACY`, off in every release preset); a profiling build is a development build and is not packaged. Its command-line tools are host tools; see [Profiling](profiling.md#licence) |
 | vcpkg-cmake, vcpkg-cmake-config, vcpkg-get-python-packages | - | - | no | install nothing outside `share/`; the generator skips ports with no `include/`, `lib/` or `bin/` content |
 
 ONNX Runtime and the ports only it pulled in (onnx, abseil, flatbuffers,

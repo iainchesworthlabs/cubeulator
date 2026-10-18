@@ -124,6 +124,50 @@ inline void scoped_zone_value(std::uint64_t number) noexcept {
     }
 }
 
+// The GPU (render-thread) surface, as no-ops: a browser page has no GPU
+// context to bracket, and the recorder keeps CPU events only. The
+// profiling-tracy_enabled sibling implements these; the declarations exist
+// so render-side call sites compile unchanged. See the sibling for the
+// contract.
+enum class gpu_backend : unsigned { none = 0, opengl, d3d11 };
+
+struct gl_gpu_functions {
+    void* gen_queries = nullptr;
+    void* get_queryiv = nullptr;
+    void* get_query_objectiv = nullptr;
+    void* get_query_objectui64v = nullptr;
+    void* get_integer64v = nullptr;
+    void* query_counter = nullptr;
+    void* get_error = nullptr;
+    void* get_integerv = nullptr;
+    void* get_string = nullptr;
+    void* get_stringi = nullptr;
+};
+
+class GpuContext {
+public:
+    static GpuContext* create_opengl(const gl_gpu_functions&) noexcept { return nullptr; }
+    static GpuContext* create_d3d11(void*, void*) noexcept { return nullptr; }
+    virtual ~GpuContext() = default;
+
+    [[nodiscard]] virtual bool valid() const noexcept { return false; }
+    virtual void begin_zone(const char*) noexcept {}
+    virtual void end_zone() noexcept {}
+    virtual void collect() noexcept {}
+};
+
+class ZoneSpan {
+public:
+    void begin(const char*) noexcept {}
+    void end() noexcept {}
+};
+
+// Execution sections have no recorder equivalent (the recorder's trace is a
+// flat zone/message/plot stream), so they are no-ops here as in the
+// disabled variant.
+inline std::uint32_t section_enter(const char*) { return 0; }
+inline void section_leave(std::uint32_t) {}
+
 }  // namespace cube::profiling
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
@@ -166,5 +210,10 @@ inline void scoped_zone_value(std::uint64_t number) noexcept {
 
 // Free text in the trace's metadata (version, build).
 #define CUBE_APP_INFO(text) ::cube::profiling::app_info(text)
+
+// An execution section (Tracy 0.14); see the Tracy variant. No recorder
+// equivalent, so the pair runs as no-ops.
+#define CUBE_SECTION_ENTER(name) ::cube::profiling::section_enter(name)
+#define CUBE_SECTION_LEAVE(id) ::cube::profiling::section_leave(id)
 
 // NOLINTEND(cppcoreguidelines-macro-usage)

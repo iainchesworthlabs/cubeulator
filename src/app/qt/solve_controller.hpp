@@ -11,6 +11,7 @@
 #include <cube/nxn/stepped_plan.hpp>
 #include <cube/solver/solver.hpp>
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -296,4 +297,7 @@ private:
     int resume_turn_ = 0;
     bool solving_continuation_ = false;
     bool continuation_ = false;
+    // The Tracy execution section opened by beginSolve and closed when the
+    // solve lands (see CUBE_SECTION_ENTER in the .cpp).
+    std::uint32_t solve_section_ = 0;
 };

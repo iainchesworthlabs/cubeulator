@@ -49,6 +49,89 @@ estimate.
 Zone names are in [profiling.md](profiling.md#zones). Each row is `develop` as
 it was when the measurement was taken.
 
+### Pass of 2026-10-18 (feature/scan-edge-and-square base, Tracy 0.14.1)
+
+Taken on this branch (`feature/tracy-profiling`, built on
+`feature/scan-edge-and-square`) with the Tracy 0.14.1 upgrade, the first
+capture after the render-thread and NxN instrumentation landed. Same machine
+and method as below, so the numbers compare with the tables that follow.
+
+#### The 3x3 solver
+
+`cube_solve_bench`, Beginner, 28 solves, seeds 0-27, 25-move scrambles:
+
+| Zone | Per solve | Share | |
+|---|---|---|---|
+| `solver.middle_edges` | 70 ms | 75% | |
+| `solver.cross` | 13.7 ms | 15% | |
+| `solver.corners` | 8.4 ms | 9% | |
+| `solver.oll`, `.pll`, `.algorithm_search`, `.merge_adjacent_moves` | under 0.1 ms | 0% | |
+| **`solver.solve`** | **96 ms** mean, p95 131, max 202 | | 95.9 ms mean unattached (bench digest `1bc470006f988409`) |
+
+All of it is `solver.piece_search`: 22.8 million nodes over the corpus,
+948 000 per solve, at **99 ns a node** - the 2.4 us a node of the old table
+above is gone (the arena, the open addressing and the packed signatures).
+What remains is the node *count*: `middle_edges` alone visits about
+three quarters of them.
+
+Opportunities, in order of value:
+
+- **Do not expand a turn of the face the parent turned.** Two same-face
+  quarter turns in a row are always redundant or reachable through the merged
+  multi-turn, so skipping those children is provably safe and cuts the
+  expansions by about a quarter (12 children to 9) - roughly 20 ms of a
+  Beginner solve, for one line of pruning in `piece_search`.
+- `map_codes` walks the packed codes through `FaceletMap::at()`, a
+  bounds-checked `std::array` access, several times per node on a provably
+  masked index; an unchecked read (with a comment and the perf test to hold
+  it) is the other piece of the remaining per-node cost.
+- The stage postconditions are checked by scanning `goal.keys` before the
+  dedup insert; nothing found today, but a hash of the goal keys would be
+  the next cut if the searches ever grow.
+
+#### Cubes of any size
+
+`cube_nxn_bench solve 2 9 10`, unattached: mean ms per solve at each size -
+2x2 0.0, 3x3 19.9, 4x4 134, 5x5 173, 6x6 334, 7x7 412, 8x8 616, **9x9 742**.
+A 9x9 is over the quarter-second budget this page states above; 6x6 to 9x9
+all are. The new per-stage zones say where:
+
+| Zone | Total over the run | Share |
+|---|---|---|
+| `nxn.centres` | 4771 ms | 66% |
+| `nxn.core` (the 3x3 stage) | 2447 ms | 34% |
+| `nxn.edges` | 38 ms | 1% |
+| `nxn.plan`, `nxn.plan_edges`, `nxn.parity` | under 1 ms | 0% |
+
+The centre solver (`solve_centre_stickers`) is the hotspot for big cubes and
+grows with the cube; the wing-edge reduction is already negligible. The core
+stage is the two-phase solver's fixed 39 ms and only matters at the sizes
+where the centres are still cheap.
+
+#### The render thread (new instrumentation)
+
+A `CUBE_SOLVE_DEMO` session, 447 frames in 18 s on the solve screen:
+`render.frame` mean 4.1 ms, but the first painted frames are **154 ms** -
+startup painting, not QML loading (`app.load_qml`), is where the first
+picture's cost sits, and it is the number to watch on slower hardware.
+`render.frame_ms` and `capture.interval_ms` plots carry the cadences now, so
+a capture shows frame gaps without exporting events.
+
+GPU zones: on OpenGL (this box's software GL) 402 frames resolved, about
+1-2 us each for the demo scene - the bracket works end to end and the GPU
+timeline appears. On Direct3D 11 the context and its per-frame Collect run,
+but the timestamps stalled after the first frames on this machine with no
+Tracy diagnostic logged; that path is in place but is not yet trusted on
+this box. Vulkan, Metal and D3D12 have no GPU zone (see
+[profiling.md](profiling.md#the-render-pass-cpu-and-gpu)).
+
+#### The baseline
+
+`tools/perf/tracy_baseline.json` was re-baselined for this branch (33 zones;
+the scan-edge "looks" added ten new ones, and `solver.assemble_all`,
+`vision.direct_scan.scanned` and `vision.resolve_colors` measured 3-20x
+faster than the old baseline's, which is the scan-edge work showing).
+
 ### The solver
 
 The default method (`Beginner`), 28 solves, one capture.

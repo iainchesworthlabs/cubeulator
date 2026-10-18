@@ -745,6 +745,10 @@ TEST_CASE("a value with no zone open is dropped, not misplaced", "[profile]") {
     Recorder& recorder = Recorder::global();
     recorder.clear();
 
-    CUBE_ZONE_SCOPED_VALUE(99);
+    // The seam function, not the macro: the Tracy variant's macro form needs
+    // a CUBE_ZONE_SCOPED*() zone to exist at all (its target is that zone),
+    // and a test for "no zone open" cannot have one. Every variant provides
+    // cube::profiling::scoped_zone_value for exactly this.
+    ::cube::profiling::scoped_zone_value(99);
     CHECK(recorder.snapshot().empty());
 }

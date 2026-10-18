@@ -96,6 +96,28 @@ target_sources(cube_lib
         src/profile/recorder.cpp
         src/i18n/i18n.cpp)
 
+# The Tracy GPU contexts (cube::profiling::GpuContext): built only when
+# Tracy is on, because the per-backend headers they include (<d3d11.h> on
+# Windows, Tracy's OpenGL and D3D11 bindings) are nobody else's business.
+# The disabled and recorder variants of cube/profiling.hpp declare the same
+# classes as no-ops, so nothing else notices. CMake chooses the files - the
+# platform test lives here, never in a source file - and hands each file its
+# third-party-header tokens as compile definitions: the GL tokens
+# TracyOpenGL.hpp reads, and NOMINMAX for the D3D11 file's <windows.h>.
+if(CUBEULATOR_ENABLE_TRACY)
+    target_sources(cube_lib PRIVATE src/profile/tracy_gpu.cpp)
+    set_source_files_properties(src/profile/tracy_gpu.cpp PROPERTIES
+        COMPILE_DEFINITIONS
+            "GL_TIMESTAMP=0x8E28;GL_QUERY_COUNTER_BITS=0x8864;GL_QUERY_RESULT=0x8866;GL_QUERY_RESULT_AVAILABLE=0x8867;GL_NO_ERROR=0x0;GL_EXTENSIONS=0x1F03;GL_FALSE=0x0;GL_VERSION_3_0=1")
+    if(WIN32)
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_d3d11.cpp)
+        set_source_files_properties(src/profile/tracy_gpu_d3d11.cpp PROPERTIES
+            COMPILE_DEFINITIONS "NOMINMAX")
+    else()
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_d3d11_stub.cpp)
+    endif()
+endif()
+
 # Two files make the compiler build lookup tables from loops: the two-phase
 # solver's phase 1 move tables (two_phase_tables.cpp, about 85 thousand
 # entries) and the last-layer algorithms, parsed from their text
