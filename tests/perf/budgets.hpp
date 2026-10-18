@@ -166,17 +166,20 @@ inline constexpr std::array<SizeBudget, 8> kNxnSizes = {{
 // the two larger sizes a camera gives. The reader reduces a wide frame to its
 // working width before it does anything else, so its buffers do not depend on
 // the camera: that is the contract in direct_scan.hpp, and it is what these
-// hold. Measured: 101 to 115 buffers, 1.92 MB (2.8 working-width frames) at
-// every size; a frame with no cube in it 36 to 54 buffers, 1.85 MB - except
-// the 1080p room, 113 buffers and 2.32 MB. That one has seven sticker-sized
-// outlines in it and no side, which is what earns a second look (outlines
-// taken against a narrower block, read_side in direct_scan.cpp): the
-// threshold, the contours and the shape filter again, and a second lattice
-// search through what they found.
-inline constexpr std::uint64_t kReadBuffers = 145;
+// hold. Measured: 132 to 151 buffers, 1.99 MB at every size; a frame with no
+// cube in it 133 to 165 buffers, 4.4 MB - except the 1080p room, 307 buffers and
+// 6.0 MB. A room with sticker-sized outlines in it and no side earns every look
+// the reader has after the first (outlines against a narrower block, against the
+// size the first look measured, and from the frame's chroma, then the face's own
+// four corners, read_side in direct_scan.cpp): each is a threshold, a trace and
+// a lattice search. Before the pitch and chroma looks it was 36 to 54 buffers,
+// 1.85 MB, and the 1080p room 113 and 2.32 MB. The chroma is made in one pass
+// and divided in place (prepared_frame.cpp), which took the 640 room from
+// 5.8 MB to 4.4 MB; what is left is the traces.
+inline constexpr std::uint64_t kReadBuffers = 190;
 inline constexpr std::uint64_t kReadBytes = 2'400'000;
-inline constexpr std::uint64_t kEmptyReadBuffers = 140;
-inline constexpr std::uint64_t kEmptyReadBytes = 2'900'000;
+inline constexpr std::uint64_t kEmptyReadBuffers = 385;
+inline constexpr std::uint64_t kEmptyReadBytes = 7'600'000;
 // Bytes a read of the larger sizes may allocate, as a multiple of what the
 // working-width read did: they pay for the one reduction, and nothing else.
 // Measured 1.00.
@@ -196,12 +199,12 @@ inline constexpr std::uint64_t kEmptyCornerBytes = 2'320'000;
 // terms: a side just past the gate that it finds nothing in (nine blobs for it
 // to weigh, so the frame also goes to the second look, where it is made again),
 // and a side at the edge of the gate that it finds. It allocates a matrix or
-// two for each distinct lattice it weighs. Measured: 205 buffers, 2.32 MB for
-// the side past the gate (the two looks without it, 175), and 119, 1.97 MB for
-// the side it finds (113, 1.99 MB for a side held square; 177 without it,
-// where the second look reads nothing).
-inline constexpr std::uint64_t kThroughFitMissBuffers = 260;
-inline constexpr std::uint64_t kThroughFitMissBytes = 2'900'000;
+// two for each distinct lattice it weighs. Measured: 639 buffers, 6.06 MB for
+// the side past the gate (205 and 2.32 MB before the looks after the second,
+// which weigh its blobs again), and 121, 1.97 MB for the side it
+// finds (113, 1.99 MB for a side held square).
+inline constexpr std::uint64_t kThroughFitMissBuffers = 800;
+inline constexpr std::uint64_t kThroughFitMissBytes = 7'600'000;
 inline constexpr std::uint64_t kThroughFitReadBuffers = 150;
 inline constexpr std::uint64_t kThroughFitReadBytes = 2'460'000;
 // SideScan::add() works on nine Lab triples and a few vectors, not pictures:
