@@ -1139,11 +1139,12 @@ Rectangle {
         // AppState.rescan).
         // Anchored to the edge the count is at, and not placed at an x, which does not mirror:
         // wide, clear of the count (the header's own, which this cannot be anchored to: it is
-        // not a sibling); narrow, at the same edge, above the stepping buttons.
+        // not a sibling); narrow, at the same edge, above the stepping buttons and, on a cube
+        // that has one, the way to skip to the 3x3 stage.
         anchors.right: parent.right
         anchors.rightMargin: Theme.space3 + (root.wide ? progress.width + Theme.space3 : 0)
         y: root.wide ? (header.height - height) / 2
-                     : root.height - buttons.height - checkBox.height - height - Theme.space1
+                     : root.height - buttons.height - skipBox.height - checkBox.height - height - Theme.space1
         height: 30
         variant: "ghost"; text: "Out of step? Rescan"
         onClicked: AppState.rescan()
