@@ -18,11 +18,16 @@
 // outside it. State lives on `$CubeCamera` itself.
 mergeInto(LibraryManager.library, {
   $CubeCamera: {
-    // The vision reader works at 640 px wide (kWorkingWidth in
-    // vision/direct_scan.cpp) and scales anything larger down itself. Scaling
-    // here, where the browser has already decoded the frame to a canvas, means
-    // far fewer pixels cross into the heap and through getImageData().
-    MAX_FRAME_WIDTH: 640,
+    // The vision reader works at 640 px wide for a 3x3 (kWorkingWidth in
+    // vision/direct_scan.cpp) and at 960 for a 4x4 or 5x5, scaling anything
+    // larger down itself. Scaling here, where the browser has already decoded
+    // the frame to a canvas, means far fewer pixels cross into the heap and
+    // through getImageData() - but it must not go below what the reader asks
+    // for, or the size-aware working width is capped before the reader sees it.
+    // 960 is the widest any size the scan screen offers asks for; a 3x3 is
+    // reduced from 960 to 640 by the reader, which is the same thing a desktop
+    // camera already gives it.
+    MAX_FRAME_WIDTH: 960,
 
     // What the sensor is asked for. Larger than the reader needs on purpose:
     // the browser's downscale then averages real detail into each sticker
