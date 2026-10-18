@@ -2,10 +2,38 @@
 
 #include <opencv2/core.hpp>
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
 namespace cube::vision {
+
+// Which outlines of a prepared frame a look was taken from. The reader tries
+// them in this order and stops at the first that makes a side, so a frame the
+// first look reads is read exactly as it was before any of the others existed.
+enum class FrameLook : std::uint8_t {
+    // PreparedFrame::contours: the block prepare_frame chose for the size.
+    first,
+    // narrow_contours: a block half as wide, for a dark sticker beside a bright
+    // one. Its outlines are the noisier, so a side found only here must sit on
+    // plastic (read_side).
+    narrow,
+    // contours_at_pitch: a block taken from the sticker pitch this frame
+    // actually shows, for a cube that is not the share of the frame the block
+    // was scaled for.
+    pitch,
+    // contours_without_glare: clipped specular pixels kept out of the bright
+    // region, so a highlight cannot bridge two stickers into one outline.
+    glare,
+    // chroma_contours: a second binary taken from colour rather than brightness,
+    // for white on a pale wall and for dark red or blue on black plastic.
+    chroma,
+    // The face's own quadrilateral, with a homography through it (quad_fit.hpp):
+    // no threshold of its own, so its blob count is the one the look before it
+    // found.
+    quad,
+    count,
+};
 
 // A camera frame made ready to be read.
 //
@@ -62,5 +90,41 @@ struct PreparedFrame {
 // the same brightness.
 [[nodiscard]] std::vector<std::vector<cv::Point>> narrow_contours(const cv::Mat& brightness,
                                                                   int size = 3);
+
+// The outlines taken against a block of exactly this many pixels across.
+//
+// prepare_frame scales its block by the size of the cube and not by the cube's
+// share of the frame, so a side that is small in the frame (a cube held at
+// arm's length) is judged against a block several stickers wide, and one that
+// fills the frame against a block narrower than a sticker. Once the pitch a
+// frame actually shows is known - the median side of the sticker-sized outlines
+// the first look found - the block that suits it is about two pitches, and this
+// is the look that takes it.
+[[nodiscard]] std::vector<std::vector<cv::Point>> contours_at_pitch(const cv::Mat& brightness,
+                                                                    float pitch_px);
+
+// The outlines the same frame makes with its clipped specular pixels taken out
+// of the bright region.
+//
+// A highlight across the plastic between two stickers joins them into one
+// outline that is then too big to be a sticker and is dropped; the stickers are
+// lost, and a 4x4 or 5x5 loses enough of them to fall under the count a lattice
+// needs before it is looked for at all. Only pixels that are both at the top of
+// the range and nearly colourless are taken out - a white sticker is bright but
+// carries a little chroma even under a lamp - and the mask is dilated by a pixel
+// so the rim of a highlight goes with its middle.
+[[nodiscard]] std::vector<std::vector<cv::Point>> contours_without_glare(const cv::Mat& working,
+                                                                        int size = 3);
+
+// The outlines of regions that are strongly coloured, taken from the frame's
+// chroma rather than its brightness.
+//
+// Brightness separates a sticker from black plastic and from most of a room;
+// it cannot separate a white sticker from a pale wall, or a dark blue sticker
+// from a shadow. Chroma can: five of a cube's six colours are strongly
+// coloured, and white - the sixth - is the one this look cannot see, so it is
+// read here only if its outline is dark enough to be bounded by plastic.
+[[nodiscard]] std::vector<std::vector<cv::Point>> chroma_contours(const cv::Mat& working,
+                                                                 int size = 3);
 
 }  // namespace cube::vision

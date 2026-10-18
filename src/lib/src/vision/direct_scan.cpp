@@ -7,6 +7,7 @@
 #include <cube/solver/scan_assembly.hpp>
 #include <cube/vision/color_resolution.hpp>
 #include <cube/vision/corner_fit.hpp>
+#include <cube/vision/quad_fit.hpp>
 #include <cube/vision/sticker_colour.hpp>
 
 #include <opencv2/imgproc.hpp>
@@ -20,6 +21,7 @@
 namespace cube::vision {
 
 namespace {
+
 
 // Sticker blob limits, as fractions of the frame area. At the working width
 // they admit the stickers of a 3x3 from about 9 to 65 pixels across; a cube of
@@ -211,6 +213,14 @@ int most_stickers_a_hand_covers(int size) {
 // stickers may differ (two of a 4x4's sixteen, none of a 2x2's four). Two sides of a
 // cube alike in all but that many stickers would need most of two colours on two sides,
 // the other four having none.
+//
+// A 2x2 has four stickers a side, so "an eighth of them" is integer division's zero and
+// one sticker moved by a glint starts a side of its own. Measured on the recorded
+// sessions, allowing one of the four to differ halved the groups a 2x2 scan formed (24
+// to 12 on its worst session) and still cost more verdicts than it won - three sessions
+// that had assembled a cube stopped - so it is not taken here. The 2x2's real fault is
+// further up, in choosing which six of the captured sides to keep; see
+// docs/investigations/2026-10-18-nxn-real-scan-sessions.md.
 int most_stickers_unlike_in_one_side(int size) {
     return (size * size) / 8;
 }
@@ -226,28 +236,128 @@ template <typename T>
     return (lower + *mid) / T{2};
 }
 
+// What one look at a frame's outlines found besides its blobs, for the funnel
+// (`cube_scan read`) and for deciding whether a further look is worth its cost.
+struct BlobStats {
+    // Outlines bigger than the largest sticker: stickers bridged by a highlight
+    // across the plastic between them, or something in the room that is not a
+    // cube. What the glare look is tried for.
+    std::size_t oversized = 0;
+    // Outlines that were the right size but the wrong shape (a finger, a glint,
+    // a sticker seen edge-on).
+    std::size_t wrong_shape = 0;
+};
+
+// How the contours are judged, where a look may be more forgiving than the
+// first one.
+struct BlobRules {
+    // Split a contour too big to be a sticker into the stickers it holds. See
+    // the E1 note in sticker_blobs.
+    bool split_oversized = false;
+    // The smallest share of its rectangle a contour may fill and still count.
+    // The first look's is kMinBlobFill; a look that is allowed to keep a sticker
+    // with a finger or a shadow across its edge passes less.
+    float min_fill = kMinBlobFill;
+};
+
 // Bright, compact, squarish regions bounded by darker plastic: the outlines
 // prepare_frame found, kept when they are the size and shape of a sticker.
+//
+// E1, the split. A specular highlight across the black plastic between two
+// stickers makes one bright region out of them both. Its area is over the
+// largest sticker's, so it used to be dropped, and the stickers with it; a 4x4
+// or 5x5 lost enough that way to fall under the count a lattice needs before one
+// was looked for at all (measured on a 4x4 session that read nothing in 259
+// frames: contours 89 to 112 px across against stickers of 27 to 43). A look may
+// ask for it back: the region is cut on the sticker size the rest of the frame
+// shows, and each cell of the cut is a blob. Only up to four cells are taken
+// from any one contour, so a lit wall or a window - which is bright, bounded and
+// far bigger than four stickers - is still dropped.
+//
+// E4, the fill. A sticker with a finger or a highlight across one edge has a
+// contour that is the right size and aspect but fills its rectangle less well;
+// dropping it costs a cell the lattice then has to place blind.
 [[nodiscard]] std::vector<Blob> sticker_blobs(const std::vector<std::vector<cv::Point>>& contours,
-                                              const cv::Mat& working, const Tuning& tuning) {
+                                              const cv::Mat& working, const Tuning& tuning,
+                                              const BlobRules& rules = {},
+                                              BlobStats* stats = nullptr) {
     const double frame_area = static_cast<double>(working.rows) * static_cast<double>(working.cols);
     std::vector<Blob> blobs;
+    std::vector<cv::RotatedRect> oversized;
     for (const auto& contour : contours) {
         const double area = cv::contourArea(contour);
-        if (area <= frame_area * tuning.min_blob_area ||
-            area >= frame_area * tuning.max_blob_area) {
+        if (area <= frame_area * tuning.min_blob_area) {
             continue;
         }
         const cv::RotatedRect rect = cv::minAreaRect(contour);
+        if (area >= frame_area * tuning.max_blob_area) {
+            if (stats != nullptr) {
+                ++stats->oversized;
+            }
+            if (rules.split_oversized) {
+                oversized.push_back(rect);
+            }
+            continue;
+        }
         const float shorter = std::min(rect.size.width, rect.size.height);
         const float longer = std::max(rect.size.width, rect.size.height);
         if (shorter < 1.0F || longer / shorter > kMaxBlobAspect) {
+            if (stats != nullptr) {
+                ++stats->wrong_shape;
+            }
             continue;
         }
-        if (static_cast<float>(area) / (shorter * longer) < kMinBlobFill) {
+        if (static_cast<float>(area) / (shorter * longer) < rules.min_fill) {
+            if (stats != nullptr) {
+                ++stats->wrong_shape;
+            }
             continue;
         }
         blobs.push_back(Blob{.centre = rect.center, .side = std::sqrt(shorter * longer)});
+    }
+    if (!rules.split_oversized || oversized.empty() || blobs.empty()) {
+        return blobs;
+    }
+
+    // The sticker size this frame actually shows, which is what the cut is
+    // scaled by - not the size the cube's N predicts, which is the assumption
+    // that E3 is about.
+    std::vector<float> sides;
+    sides.reserve(blobs.size());
+    for (const Blob& blob : blobs) {
+        sides.push_back(blob.side);
+    }
+    const float pitch = median_of(std::move(sides));
+    if (pitch < 4.0F) {
+        return blobs;
+    }
+    for (const cv::RotatedRect& rect : oversized) {
+        const cv::Rect box = rect.boundingRect() & cv::Rect(0, 0, working.cols, working.rows);
+        if (box.width < 2 || box.height < 2) {
+            continue;
+        }
+        const auto cells_along = [&pitch](int length) {
+            return std::clamp(static_cast<int>(std::lround(static_cast<float>(length) / pitch)), 1,
+                              3);
+        };
+        const int across = cells_along(box.width);
+        const int down = cells_along(box.height);
+        if (across * down < 2 || across * down > 4) {
+            continue;
+        }
+        const float cell_width = static_cast<float>(box.width) / static_cast<float>(across);
+        const float cell_height = static_cast<float>(box.height) / static_cast<float>(down);
+        for (int row = 0; row < down; ++row) {
+            for (int column = 0; column < across; ++column) {
+                blobs.push_back(Blob{
+                    .centre = cv::Point2f(static_cast<float>(box.x) +
+                                              ((static_cast<float>(column) + 0.5F) * cell_width),
+                                          static_cast<float>(box.y) +
+                                              ((static_cast<float>(row) + 0.5F) * cell_height)),
+                    .side = pitch,
+                });
+            }
+        }
     }
     return blobs;
 }
@@ -373,11 +483,21 @@ struct SnappedPoints {
     std::vector<cv::Point> cells;
 };
 
+// S1: the grid's origin is the caller's, not `points.front()`.
+//
+// It used to be points.front() - whichever blob passed the neighbour filter
+// first, which is the frame's order and not the side's. A stray blob inside the
+// seed's reach therefore moved the grid's phase, and since a point counts as on
+// the grid only within kMaxCellResidual of a cell, a stray sitting mid-cell put
+// every real sticker a third of a cell out and the whole side was lost. The
+// lattice's position on the side is normalised away afterwards, so the origin
+// only ever mattered to that test; anchoring it on a blob that is known to be on
+// the side - the seed - makes the test mean what it says.
 [[nodiscard]] SnappedPoints snap_to_grid(const std::vector<cv::Point2f>& points,
-                                         const GridFrame& frame) {
+                                         const GridFrame& frame, const cv::Point2f& origin) {
     SnappedPoints snapped;
     for (const cv::Point2f& point : points) {
-        const cv::Point2f relative = point - points.front();
+        const cv::Point2f relative = point - origin;
         const float a = relative.dot(frame.axis_a) / frame.pitch;
         const float b = relative.dot(frame.axis_b) / frame.pitch;
         const float cell_a = std::round(a);
@@ -420,18 +540,75 @@ struct SnappedPoints {
     return taken;
 }
 
+// S2: the N x N windows of the snapped cells that hold at least `least` of them,
+// each with its own cells moved to start at (0, 0).
+//
+// normalise_cells asks for an exact N-by-N span, which one stray blob inside the
+// seed's reach refuses: it sits within a third of a cell of a place just outside
+// the side, the span becomes N+1, and the whole seed is dropped - a side lost to
+// a blob beside it. This is the square grid's own window search, the one
+// windows_through_fit already makes after a fit, and it is what the reader now
+// weighs as well as the exact-span candidate. The ambiguity normalise_cells was
+// guarding against is real - an N-by-N window of a bigger grid does not say
+// which row the side starts on - so both are offered and the caller weighs them
+// on blobs and then fit, as it already did for two lattices that fit alike.
+[[nodiscard]] std::vector<SnappedPoints> windows_over_cells(const SnappedPoints& snapped, int size,
+                                                            std::size_t least) {
+    std::vector<SnappedPoints> windows;
+    if (snapped.cells.empty()) {
+        return windows;
+    }
+    const auto [min_u, max_u] = std::ranges::minmax_element(
+        snapped.cells, [](const auto& l, const auto& r) { return l.x < r.x; });
+    const auto [min_v, max_v] = std::ranges::minmax_element(
+        snapped.cells, [](const auto& l, const auto& r) { return l.y < r.y; });
+    for (int u0 = min_u->x; u0 <= max_u->x - (size - 1); ++u0) {
+        for (int v0 = min_v->y; v0 <= max_v->y - (size - 1); ++v0) {
+            SnappedPoints window;
+            for (std::size_t i = 0; i < snapped.cells.size(); ++i) {
+                const cv::Point& cell = snapped.cells.at(i);
+                if (cell.x >= u0 && cell.x < u0 + size && cell.y >= v0 && cell.y < v0 + size) {
+                    window.on_grid.push_back(snapped.on_grid.at(i));
+                    window.cells.emplace_back(cell.x - u0, cell.y - v0);
+                }
+            }
+            if (window.on_grid.size() >= least) {
+                windows.push_back(std::move(window));
+            }
+        }
+    }
+    return windows;
+}
+
 [[nodiscard]] float length(const cv::Point2f& v) {
     return std::hypot(v.x, v.y);
+}
+
+// Which of the square-on gate's tests a lattice fails, or none.
+[[nodiscard]] LatticeRefusal square_on_refusal(const Lattice& lattice) {
+    const float columns = length(lattice.column_step);
+    const float rows = length(lattice.row_step);
+    if (columns <= 0.0F || rows <= 0.0F) {
+        return LatticeRefusal::no_lattice;
+    }
+    const float ratio = columns / rows;
+    if (!(ratio > kMinAxisRatio && ratio < kMaxAxisRatio)) {
+        return LatticeRefusal::axis_ratio;
+    }
+    const float cosine = std::abs(lattice.column_step.dot(lattice.row_step)) / (columns * rows);
+    if (cosine > kMaxAxisCosine) {
+        return LatticeRefusal::axis_cosine;
+    }
+    if (lattice.rms > kMaxLatticeRms) {
+        return LatticeRefusal::residual;
+    }
+    return LatticeRefusal::none;
 }
 
 // Whether a lattice is a side held square to the camera: its two steps
 // near-equal and near-perpendicular, and the blobs sitting on it.
 [[nodiscard]] bool is_square_on(const Lattice& lattice) {
-    const float columns = length(lattice.column_step);
-    const float rows = length(lattice.row_step);
-    const float cosine = std::abs(lattice.column_step.dot(lattice.row_step)) / (columns * rows);
-    return columns / rows > kMinAxisRatio && columns / rows < kMaxAxisRatio &&
-           cosine <= kMaxAxisCosine && lattice.rms <= kMaxLatticeRms;
+    return square_on_refusal(lattice) == LatticeRefusal::none;
 }
 
 // The origin and steps of the affine map from cell to pixels that is the least
@@ -617,9 +794,38 @@ constexpr std::size_t kMinPlacedFrom = 4;
 // The best N x N lattice through the blobs: most blobs on it, then tightest.
 // Each blob in turn seeds a group of similar-sized neighbours; the group's
 // nearest-neighbour spacing and direction give a grid to snap its members to.
+//
+// Two readings of that grid are weighed for each seed: the exact-span one the
+// reader has always used, and the best N-by-N window on the grid with the seed
+// as the origin (S1, S2 above). They are weighed in two separate passes, and the
+// exact-span answer is taken whenever there is one, so a side that read before
+// is read as exactly the lattice it was; the window only ever supplies a side
+// the exact span refused - one with a stray beside it, or a blob of the next
+// side in reach.
 [[nodiscard]] std::optional<Lattice> fit_lattice(const std::vector<Blob>& blobs,
                                                  const Tuning& tuning) {
-    std::optional<Lattice> best;
+    const auto best_of = [](std::optional<Lattice>& best, Lattice candidate) {
+        if (!best.has_value() ||
+            std::tuple(candidate.blobs, -candidate.rms) > std::tuple(best->blobs, -best->rms)) {
+            best = candidate;
+        }
+    };
+    const auto found_from = [&tuning](const SnappedPoints& window) {
+        const auto n = static_cast<std::size_t>(tuning.size);
+        std::vector<bool> taken(n * n, false);
+        for (const cv::Point& cell : window.cells) {
+            const auto at =
+                (static_cast<std::size_t>(cell.y) * n) + static_cast<std::size_t>(cell.x);
+            if (at >= taken.size()) {
+                return std::vector<bool>{};
+            }
+            taken.at(at) = true;
+        }
+        return taken;
+    };
+
+    std::optional<Lattice> exact;
+    std::optional<Lattice> windowed;
     for (const Blob& seed : blobs) {
         const std::vector<cv::Point2f> points = neighbours_of(blobs, seed, tuning);
         if (points.size() < tuning.min_lattice_blobs) {
@@ -629,23 +835,33 @@ constexpr std::size_t kMinPlacedFrom = 4;
         if (!frame) {
             continue;
         }
-        SnappedPoints snapped = snap_to_grid(points, *frame);
-        if (snapped.on_grid.size() < tuning.min_lattice_blobs) {
+        // The exact-span candidate, at the origin the reader has always used.
+        SnappedPoints snapped = snap_to_grid(points, *frame, points.front());
+        if (snapped.on_grid.size() >= tuning.min_lattice_blobs) {
+            if (const std::optional<std::vector<bool>> taken =
+                    normalise_cells(snapped.cells, tuning.size)) {
+                Lattice candidate = fit_affine(snapped.on_grid, snapped.cells, frame->pitch);
+                candidate.found = *taken;
+                best_of(exact, candidate);
+            }
+        }
+        // The windowed ones, at the seed.
+        const SnappedPoints seeded = snap_to_grid(points, *frame, seed.centre);
+        if (seeded.on_grid.size() < tuning.min_lattice_blobs) {
             continue;
         }
-        const std::optional<std::vector<bool>> taken = normalise_cells(snapped.cells, tuning.size);
-        if (!taken) {
-            continue;
-        }
-
-        Lattice candidate = fit_affine(snapped.on_grid, snapped.cells, frame->pitch);
-        candidate.found = *taken;
-        if (!best.has_value() ||
-            std::tuple(candidate.blobs, -candidate.rms) > std::tuple(best->blobs, -best->rms)) {
-            best = candidate;
+        for (const SnappedPoints& window :
+             windows_over_cells(seeded, tuning.size, tuning.min_lattice_blobs)) {
+            const std::vector<bool> taken = found_from(window);
+            if (taken.empty()) {
+                continue;
+            }
+            Lattice candidate = fit_affine(window.on_grid, window.cells, frame->pitch);
+            candidate.found = taken;
+            best_of(windowed, candidate);
         }
     }
-    return best;
+    return exact.has_value() ? exact : windowed;
 }
 // A lattice, and the blobs that make it.
 struct Candidate {
@@ -675,7 +891,7 @@ struct Candidate {
 [[nodiscard]] std::optional<Lattice> fit_lattice_through_fit(const std::vector<Blob>& blobs,
                                                              const Tuning& tuning) {
     std::vector<Candidate> candidates;
-    const auto consider = [&candidates, &tuning](SnappedPoints set, float pitch) {
+    const auto consider = [&tuning](std::vector<Candidate>& into, SnappedPoints set, float pitch) {
         if (set.on_grid.size() < tuning.min_lattice_blobs) {
             return;
         }
@@ -687,7 +903,7 @@ struct Candidate {
                        return std::ranges::find(known.members, point) != known.members.end();
                    });
         };
-        if (std::ranges::any_of(candidates, same)) {
+        if (std::ranges::any_of(into, same)) {
             return;
         }
         const std::vector<cv::Point2f> members = set.on_grid;
@@ -697,9 +913,27 @@ struct Candidate {
         }
         Lattice lattice = fit_affine(set.on_grid, set.cells, pitch);
         lattice.found = *taken;
-        candidates.push_back(Candidate{.lattice = lattice, .members = members});
+        into.push_back(Candidate{.lattice = lattice, .members = members});
+    };
+    const auto choose = [](std::vector<Candidate>& from) -> std::optional<Lattice> {
+        std::ranges::sort(from, [](const Candidate& l, const Candidate& r) {
+            return std::tuple(r.lattice.blobs, l.lattice.rms) <
+                   std::tuple(l.lattice.blobs, r.lattice.rms);
+        });
+        std::vector<cv::Point2f> weighed;
+        for (const Candidate& candidate : from) {
+            if (shares_a_blob(candidate.members, weighed)) {
+                continue;
+            }
+            weighed.insert(weighed.end(), candidate.members.begin(), candidate.members.end());
+            if (is_square_on(candidate.lattice)) {
+                return candidate.lattice;
+            }
+        }
+        return std::nullopt;
     };
 
+    std::vector<Candidate> from_seed;
     for (const Blob& seed : blobs) {
         const std::vector<cv::Point2f> points = neighbours_of(blobs, seed, tuning);
         if (points.size() < tuning.min_lattice_blobs) {
@@ -709,28 +943,26 @@ struct Candidate {
         if (!frame) {
             continue;
         }
-        const SnappedPoints snapped = snap_to_grid(points, *frame);
+        // S1: the origin the reader has always used, then the seed's.
+        const SnappedPoints snapped = snap_to_grid(points, *frame, points.front());
         for (SnappedPoints& window : windows_through_fit(points, snapped, tuning)) {
-            consider(std::move(window), frame->pitch);
+            consider(candidates, std::move(window), frame->pitch);
         }
-        consider(snapped, frame->pitch);
+        consider(candidates, snapped, frame->pitch);
+
+        const SnappedPoints seeded = snap_to_grid(points, *frame, seed.centre);
+        for (SnappedPoints& window : windows_through_fit(points, seeded, tuning)) {
+            consider(from_seed, std::move(window), frame->pitch);
+        }
+        consider(from_seed, seeded, frame->pitch);
     }
 
-    std::ranges::sort(candidates, [](const Candidate& l, const Candidate& r) {
-        return std::tuple(r.lattice.blobs, l.lattice.rms) <
-               std::tuple(l.lattice.blobs, r.lattice.rms);
-    });
-    std::vector<cv::Point2f> weighed;
-    for (const Candidate& candidate : candidates) {
-        if (shares_a_blob(candidate.members, weighed)) {
-            continue;
-        }
-        weighed.insert(weighed.end(), candidate.members.begin(), candidate.members.end());
-        if (is_square_on(candidate.lattice)) {
-            return candidate.lattice;
-        }
+    if (std::optional<Lattice> chosen = choose(candidates)) {
+        return chosen;
     }
-    return std::nullopt;
+    // Only now the seed-anchored grids: nothing the old origin made was a side,
+    // so a lattice found this way adds a read and never changes one.
+    return choose(from_seed);
 }
 
 // The N^2 centres row-major with cell 0 nearest the image's top-left: of
@@ -1422,13 +1654,24 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
     return false;
 }
 
-// Which of read_side's two looks a set of blobs came from.
-enum class Look : std::uint8_t {
-    // The outlines prepare_frame took.
-    first,
-    // narrow_contours: more of the frame is an outline, so more is held to.
-    second,
-};
+// How far a look got, for the funnel: a lattice refused by one of the gate's
+// tests went further than one that could not be made at all, which went further
+// than a frame with too few stickers to try.
+[[nodiscard]] int reach_of(LatticeRefusal refusal) {
+    switch (refusal) {
+        case LatticeRefusal::none:
+            return 4;
+        case LatticeRefusal::axis_ratio:
+        case LatticeRefusal::axis_cosine:
+        case LatticeRefusal::residual:
+            return 3;
+        case LatticeRefusal::no_lattice:
+            return 2;
+        case LatticeRefusal::too_few_blobs:
+            return 1;
+    }
+    return 0;
+}
 
 // Whether the plastic between the lattice's stickers is darker than the
 // stickers: see kMaxGapOverSticker.
@@ -1461,11 +1704,32 @@ enum class Look : std::uint8_t {
 }
 
 // The side the blobs make, if they make one: the lattice through them, judged
-// square-on, and the nine colours sampled at its cells.
+// square-on, and the nine colours sampled at its cells. `attempt`, when given,
+// is told how far this look got and what it made.
 [[nodiscard]] std::optional<SideRead> read_blobs(const PreparedFrame& frame,
-                                                 const std::vector<Blob>& blobs, Look look,
-                                                 const Tuning& tuning) {
+                                                 const std::vector<Blob>& blobs, FrameLook look,
+                                                 const Tuning& tuning,
+                                                 SideAttempt* attempt = nullptr) {
+    const auto record = [attempt](LatticeRefusal refusal, const Lattice* lattice) {
+        if (attempt == nullptr || reach_of(refusal) < reach_of(attempt->refusal)) {
+            return;
+        }
+        attempt->refusal = refusal;
+        if (lattice == nullptr) {
+            return;
+        }
+        const float columns = length(lattice->column_step);
+        const float rows = length(lattice->row_step);
+        attempt->lattice_blobs = lattice->blobs;
+        attempt->lattice_rms = lattice->rms;
+        attempt->lattice_ratio = rows > 0.0F ? columns / rows : 0.0F;
+        attempt->lattice_cosine = (columns > 0.0F && rows > 0.0F)
+                                      ? std::abs(lattice->column_step.dot(lattice->row_step)) /
+                                            (columns * rows)
+                                      : 0.0F;
+    };
     if (blobs.size() < tuning.min_lattice_blobs) {
+        record(LatticeRefusal::too_few_blobs, nullptr);
         return std::nullopt;
     }
     // The first try is a square grid, which is all a side held square needs.
@@ -1492,12 +1756,23 @@ enum class Look : std::uint8_t {
             lattice = fit_lattice_through_fit(blobs, tuning);
         }
     }
-    if (!lattice.has_value() || !is_square_on(*lattice)) {
+    if (!lattice.has_value()) {
+        record(LatticeRefusal::no_lattice, nullptr);
+        return std::nullopt;
+    }
+    if (const LatticeRefusal refusal = square_on_refusal(*lattice);
+        refusal != LatticeRefusal::none) {
+        record(refusal, &*lattice);
         return std::nullopt;
     }
     const float columns = length(lattice->column_step);
     const float rows = length(lattice->row_step);
-    if (look == Look::second && !gaps_are_plastic(frame.brightness, *lattice, tuning.size)) {
+    if (look == FrameLook::narrow &&
+        !gaps_are_plastic(frame.brightness, *lattice, tuning.size)) {
+        // The narrow block's outlines are the noisier: a lattice only it made
+        // must sit on plastic. There is no gate of its own in LatticeRefusal,
+        // so this reports as a lattice the look could not keep.
+        record(LatticeRefusal::no_lattice, &*lattice);
         return std::nullopt;
     }
 
@@ -1521,10 +1796,68 @@ enum class Look : std::uint8_t {
         read.lab.at(i) = *lab;
         read.centres.at(i) = upright.centres.at(i) * frame.scale;
     }
+    record(LatticeRefusal::none, nullptr);
+    if (attempt != nullptr) {
+        attempt->look = look;
+    }
+    return read;
+}
+
+// The side a quadrilateral lattice makes: the colour at each of its N^2 cells.
+//
+// Unlike read_blobs there is no square-on gate to pass and no separate fill
+// test: the quad has already accounted for the pose, and a cell it placed
+// without a blob is sampled where the homography puts it and marked not found,
+// exactly as a cell the affine fit placed is.
+[[nodiscard]] std::optional<SideRead> read_quad(const PreparedFrame& frame,
+                                                const QuadLattice& lattice,
+                                                const Tuning& tuning) {
+    if (lattice.centres.size() != tuning.cells() || !(lattice.pitch > 0.0F)) {
+        return std::nullopt;
+    }
+    // Bounded by the frame as well as by the pitch: a lattice that is not a face
+    // must not be able to ask for a patch bigger than the picture.
+    const int largest = std::max(2, std::min(frame.working.cols, frame.working.rows) / 4);
+    const int half_width =
+        std::clamp(static_cast<int>(kPatchHalfWidth * lattice.pitch), 2, largest);
+    SideRead read;
+    read.size = tuning.size;
+    read.pitch = lattice.pitch * frame.scale;
+    read.stickers_found = static_cast<int>(lattice.blobs);
+    read.found = lattice.found;
+    read.centres.resize(tuning.cells());
+    read.lab.resize(tuning.cells());
+    for (std::size_t i = 0; i < tuning.cells(); ++i) {
+        const std::optional<cv::Vec3f> lab =
+            sticker_lab(frame.working, lattice.centres.at(i), half_width);
+        if (!lab.has_value()) {
+            return std::nullopt;
+        }
+        read.lab.at(i) = *lab;
+        read.centres.at(i) = lattice.centres.at(i) * frame.scale;
+    }
     return read;
 }
 
 }  // namespace
+
+std::string_view to_string(LatticeRefusal refusal) {
+    switch (refusal) {
+        case LatticeRefusal::none:
+            return "none";
+        case LatticeRefusal::too_few_blobs:
+            return "blobs";
+        case LatticeRefusal::no_lattice:
+            return "no-lattice";
+        case LatticeRefusal::axis_ratio:
+            return "ratio";
+        case LatticeRefusal::axis_cosine:
+            return "cosine";
+        case LatticeRefusal::residual:
+            return "residual";
+    }
+    return "?";
+}
 
 std::optional<SideRead> read_side(const cv::Mat& bgr, int size) {
     const std::optional<PreparedFrame> frame = prepare_frame(bgr, size);
@@ -1532,31 +1865,183 @@ std::optional<SideRead> read_side(const cv::Mat& bgr, int size) {
 }
 
 std::optional<SideRead> read_side(const PreparedFrame& frame, int size) {
+    SideAttempt attempt;
+    return read_side_explained(frame, size, attempt);
+}
+
+std::optional<SideRead> read_side_explained(const PreparedFrame& frame, int size,
+                                            SideAttempt& attempt) {
     CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side");
+    attempt = SideAttempt{};
+    attempt.size = size;
+    attempt.refusal = LatticeRefusal::too_few_blobs;
+    attempt.look = FrameLook::count;
     if (size < 2 || size > 9) {
         return std::nullopt;
     }
     const Tuning tuning = tuning_for(size);
-    const std::vector<Blob> blobs = sticker_blobs(frame.contours, frame.working, tuning);
-    if (std::optional<SideRead> read = read_blobs(frame, blobs, Look::first, tuning);
+    attempt.blobs_needed = tuning.min_lattice_blobs;
+
+    // The look the reader has always taken first, judged exactly as it was - no
+    // split of a merged outline, the original fill gate - so a side that read
+    // before is read as it was. Its blob sizes are also the pitch every later
+    // look is scaled by.
+    BlobStats stats;
+    attempt.outlines.at(static_cast<std::size_t>(FrameLook::first)) = frame.contours.size();
+    const std::vector<Blob> blobs =
+        sticker_blobs(frame.contours, frame.working, tuning, BlobRules{}, &stats);
+    attempt.blobs.at(static_cast<std::size_t>(FrameLook::first)) = blobs.size();
+    attempt.oversized = stats.oversized;
+    attempt.wrong_shape = stats.wrong_shape;
+    {
+        std::vector<float> sides;
+        sides.reserve(blobs.size());
+        for (const Blob& blob : blobs) {
+            sides.push_back(blob.side);
+        }
+        attempt.pitch_px = sides.empty() ? 0.0F : median_of(std::move(sides));
+    }
+    if (std::optional<SideRead> read = read_blobs(frame, blobs, FrameLook::first, tuning, &attempt);
         read.has_value()) {
         return read;
     }
     // Most frames of a scan have nothing in them near a side: no sticker-sized
     // outlines enough to make one at all. The second look is for the frame that
     // came close, as many that did not make a side.
-    if (blobs.size() < tuning.min_lattice_blobs) {
+    if (blobs.size() >= tuning.min_lattice_blobs) {
+        // A dark sticker beside a bright one is clipped by the mean the outlines
+        // were taken against, and a row of them is lost; the outlines taken
+        // against a narrower block keep it (see narrow_contours). A frame the
+        // first look read is read as it was: only one it read nothing of is
+        // looked at again.
+        CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side_second_look");
+        const std::vector<Blob> narrow =
+            sticker_blobs(narrow_contours(frame.brightness, size), frame.working, tuning);
+        attempt.blobs.at(static_cast<std::size_t>(FrameLook::narrow)) = narrow.size();
+        if (std::optional<SideRead> read =
+                read_blobs(frame, narrow, FrameLook::narrow, tuning, &attempt);
+            read.has_value()) {
+            return read;
+        }
+    }
+
+    // Everything below is new, and each look is paid for only when the frame
+    // shows a reason to take it: they can add a read where there was none, and
+    // none of them can change one the two above already made.
+    //
+    // They are for a cube of three or more, and a 2x2 waits for its grouping to
+    // be fixed. Measured over the 43 recorded 2x2 sessions, switching them on
+    // read 15% more frames - but it moved ten verdicts: two from no cube to a
+    // cube, three from a cube to none, and five only in how many sides were
+    // captured. A 2x2 side is four stickers, and `most_stickers_unlike_in_one_side`
+    // joins a read to a side on too little evidence to absorb the extra ones, so
+    // more reads become more sides and `SideScan::sides()` keeps the six with the
+    // most reads rather than the six that assemble. Until that is fixed
+    // (docs/investigations/2026-10-18-nxn-real-scan-sessions.md, R1), a 2x2 reads
+    // with the two looks it always had.
+    constexpr int kExtraLooksFrom = 3;
+    if (size < kExtraLooksFrom) {
         return std::nullopt;
     }
-    // A dark sticker beside a bright one is clipped by the mean the outlines
-    // were taken against, and a row of them is lost; the outlines taken
-    // against a narrower block keep it (see narrow_contours). A frame the
-    // first look read is read as it was: only one it read nothing of is
-    // looked at again.
-    CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side_second_look");
-    return read_blobs(frame,
-                      sticker_blobs(narrow_contours(frame.brightness, size), frame.working, tuning),
-                      Look::second, tuning);
+    const BlobRules forgiving{.split_oversized = true, .min_fill = kMinBlobFill * 0.75F};
+    // The widest set of stickers any look has found: what the quad is fitted
+    // through, since the quad wants the face's extremes and cares little about
+    // how many blobs there are between them.
+    std::vector<Blob> widest = blobs;
+
+    // E3: the block scaled by the pitch this frame actually shows, for a cube
+    // that is not the share of the frame prepare_frame's scale assumed.
+    if (attempt.pitch_px > 0.0F) {
+        CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side_pitch_look");
+        const std::vector<std::vector<cv::Point>> pitch_contours =
+            contours_at_pitch(frame.brightness, attempt.pitch_px);
+        attempt.outlines.at(static_cast<std::size_t>(FrameLook::pitch)) = pitch_contours.size();
+        const std::vector<Blob> at_pitch =
+            sticker_blobs(pitch_contours, frame.working, tuning, forgiving);
+        attempt.blobs.at(static_cast<std::size_t>(FrameLook::pitch)) = at_pitch.size();
+        if (at_pitch.size() > widest.size()) {
+            widest = at_pitch;
+        }
+        if (std::optional<SideRead> read =
+                read_blobs(frame, at_pitch, FrameLook::pitch, tuning, &attempt);
+            read.has_value()) {
+            return read;
+        }
+    }
+
+    // E1: the stickers a highlight bridged into one outline, cut back out of it.
+    if (stats.oversized > 0) {
+        CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side_glare_look");
+        const std::vector<std::vector<cv::Point>> glare_contours =
+            contours_without_glare(frame.working, size);
+        attempt.outlines.at(static_cast<std::size_t>(FrameLook::glare)) = glare_contours.size();
+        const std::vector<Blob> without_glare =
+            sticker_blobs(glare_contours, frame.working, tuning, forgiving);
+        attempt.blobs.at(static_cast<std::size_t>(FrameLook::glare)) = without_glare.size();
+        if (without_glare.size() > widest.size()) {
+            widest = without_glare;
+        }
+        if (std::optional<SideRead> read =
+                read_blobs(frame, without_glare, FrameLook::glare, tuning, &attempt);
+            read.has_value()) {
+            return read;
+        }
+    }
+
+    // E5: the stickers brightness does not separate from what is behind them.
+    if (blobs.size() >= tuning.min_lattice_blobs) {
+        CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side_chroma_look");
+        const std::vector<Blob> chroma =
+            sticker_blobs(chroma_contours(frame.working, size), frame.working, tuning, forgiving);
+        attempt.blobs.at(static_cast<std::size_t>(FrameLook::chroma)) = chroma.size();
+        if (chroma.size() > widest.size()) {
+            widest = chroma;
+        }
+        if (std::optional<SideRead> read =
+                read_blobs(frame, chroma, FrameLook::chroma, tuning, &attempt);
+            read.has_value()) {
+            return read;
+        }
+    }
+
+    // S3 and S4: the face's own four corners, with a homography through them.
+    //
+    // This is the look that does not ask the side to be held square. The affine
+    // grid can only be accepted when its steps are near-equal and
+    // near-perpendicular, which is a statement about the pose; a homography
+    // solves the pose instead, so a side at an angle - and a 4x4 or 5x5 held
+    // close enough to a wide-angle camera for the pitch to change across it -
+    // is read like any other. Half the cells may be missing, because the quad
+    // places the rest.
+    if (widest.size() >= 4) {
+        CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side_quad_look");
+        const std::size_t cells = tuning.cells();
+        const std::size_t least = std::min(cells, std::max<std::size_t>(4, cells / 2));
+        // No point fitting a lattice that cannot pass its own gate: a scene with
+        // four blobs in it is not a 5x5, and the fit is the dearest thing the
+        // reader does on a frame it does not read.
+        if (widest.size() < least) {
+            return std::nullopt;
+        }
+        std::vector<cv::Point2f> centres;
+        centres.reserve(widest.size());
+        for (const Blob& blob : widest) {
+            centres.push_back(blob.centre);
+        }
+        if (const std::optional<QuadLattice> quad = fit_quad_lattice(centres, size, least);
+            quad.has_value()) {
+            attempt.blobs.at(static_cast<std::size_t>(FrameLook::quad)) = quad->blobs;
+            if (std::optional<SideRead> read = read_quad(frame, *quad, tuning);
+                read.has_value()) {
+                attempt.look = FrameLook::quad;
+                attempt.refusal = LatticeRefusal::none;
+                attempt.lattice_blobs = quad->blobs;
+                attempt.lattice_rms = quad->rms;
+                return read;
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 float colour_distance(const cv::Vec3f& a, const cv::Vec3f& b) {

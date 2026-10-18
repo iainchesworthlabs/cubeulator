@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 namespace cube::vision {
@@ -83,6 +84,66 @@ struct SideRead {
 // caller that hands the frame to more than one reader. The result is the one
 // read_side(bgr) gives for the frame it was prepared from.
 [[nodiscard]] std::optional<SideRead> read_side(const PreparedFrame& frame, int size = 3);
+
+// Which of the square-on gate's tests refused a lattice, or that nothing in the
+// frame made one. The reader's own verdict, kept so that `cube_scan read` can
+// say where a frame was lost instead of only that it was.
+enum class LatticeRefusal : std::uint8_t {
+    // The lattice was accepted.
+    none,
+    // Fewer sticker-sized blobs than a lattice needs, before any fit was tried.
+    too_few_blobs,
+    // The blobs made no lattice at all: no spacing, no two axes, nothing
+    // spanning N by N.
+    no_lattice,
+    // The two steps are too unequal in length: the side is seen at an angle.
+    axis_ratio,
+    // The two steps are not perpendicular enough.
+    axis_cosine,
+    // The blobs do not sit on the lattice closely enough.
+    residual,
+};
+
+[[nodiscard]] std::string_view to_string(LatticeRefusal refusal);
+
+// What one frame's read came to, stage by stage: what the side funnel prints.
+// Every value is one the reader already had.
+struct SideAttempt {
+    // The cube's size, and the stickers of one side.
+    int size = 3;
+    // Sticker-sized blobs each look found, indexed by FrameLook.
+    std::array<std::size_t, static_cast<std::size_t>(FrameLook::count)> blobs{};
+    // Outlines each look traced, before any of them was judged: how noisy the
+    // binary that look thresholded was. A look whose count is in the thousands
+    // is tracing a curtain, not a cube.
+    std::array<std::size_t, static_cast<std::size_t>(FrameLook::count)> outlines{};
+    // Fewest blobs a lattice needs (Tuning::min_lattice_blobs).
+    std::size_t blobs_needed = 0;
+    // Outlines the first look found that were bigger than the largest sticker:
+    // stickers bridged by a highlight across the plastic between them, or
+    // something in the room. The count the glare look is paid for on, and the
+    // cheapest measure of how much a frame is glared.
+    std::size_t oversized = 0;
+    // Outlines that were the right size and the wrong shape.
+    std::size_t wrong_shape = 0;
+    // Median sticker side the first look measured, in working pixels: what the
+    // pitch look is scaled from, and 0 when it found no sticker.
+    float pitch_px = 0.0F;
+    // Which look produced the read; FrameLook::count when none did.
+    FrameLook look = FrameLook::count;
+    // The last lattice any look made and what refused it: the furthest the
+    // frame got, and why it stopped there.
+    LatticeRefusal refusal = LatticeRefusal::no_lattice;
+    std::size_t lattice_blobs = 0;
+    float lattice_rms = 0.0F;
+    float lattice_ratio = 0.0F;
+    float lattice_cosine = 0.0F;
+};
+
+// read_side, with the frame's attempt left in `attempt`. The read itself is the
+// one read_side returns.
+[[nodiscard]] std::optional<SideRead> read_side_explained(const PreparedFrame& frame, int size,
+                                                          SideAttempt& attempt);
 
 // A read counts only if the side has been held still: its centre within this
 // fraction of a sticker spacing of where the frame before had it. A side still
