@@ -1640,6 +1640,138 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
     return 0;
 }
 
+// The side reader's funnel: where each frame was lost between the camera and a
+// lattice, which is what `funnel` reports for the corner reader and what no
+// command reported for the side that most scans are made of.
+int run_read(const fs::path& session, bool verbose) {
+    const int size = session_size(session);
+    const std::vector<fs::path> frames = frames_of(session);
+    if (frames.empty()) {
+        fmt::print("{}: no frames\n", session.filename().string());
+        return 1;
+    }
+
+    using cube::vision::FrameLook;
+    using cube::vision::LatticeRefusal;
+    constexpr auto kLooks = static_cast<std::size_t>(FrameLook::count);
+    constexpr auto kRefusals = 6;
+
+    std::array<std::size_t, kLooks> by_look{};
+    std::array<std::size_t, kRefusals> by_refusal{};
+    std::vector<std::size_t> first_blobs;
+    std::vector<float> rms;
+    std::vector<float> ratios;
+    std::vector<float> cosines;
+    std::size_t read = 0;
+    std::size_t analysed = 0;
+    std::size_t blobs_needed = 0;
+    std::size_t oversized_total = 0;
+    std::size_t wrong_shape_total = 0;
+    int working_width = 0;
+
+    for (const fs::path& path : frames) {
+        const cv::Mat bgr = cv::imread(path.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        if (!prepared.has_value()) {
+            continue;
+        }
+        ++analysed;
+        working_width = prepared->working.cols;
+        cube::vision::SideAttempt attempt;
+        const auto got = cube::vision::read_side_explained(*prepared, size, attempt);
+        blobs_needed = attempt.blobs_needed;
+        oversized_total += attempt.oversized;
+        wrong_shape_total += attempt.wrong_shape;
+        first_blobs.push_back(attempt.blobs.at(static_cast<std::size_t>(FrameLook::first)));
+        if (got.has_value()) {
+            ++read;
+            by_look.at(static_cast<std::size_t>(attempt.look)) += 1;
+        } else {
+            by_refusal.at(static_cast<std::size_t>(attempt.refusal)) += 1;
+        }
+        if (attempt.refusal != LatticeRefusal::too_few_blobs &&
+            attempt.refusal != LatticeRefusal::no_lattice) {
+            rms.push_back(attempt.lattice_rms);
+            ratios.push_back(attempt.lattice_ratio);
+            cosines.push_back(attempt.lattice_cosine);
+        }
+        if (verbose) {
+            std::string looks;
+            std::string outlines;
+            for (std::size_t look = 0; look < kLooks; ++look) {
+                looks += fmt::format(" {}", attempt.blobs.at(look));
+                outlines += fmt::format(" {}", attempt.outlines.at(look));
+            }
+            fmt::print(
+                "  frame {}: blobs{} / {} needed; outlines{}; {}; rms {:.3f} ratio {:.2f} "
+                "cosine {:.2f}\n",
+                path.stem().string(), looks, attempt.blobs_needed, outlines,
+                got.has_value()
+                    ? fmt::format("read ({})", static_cast<int>(attempt.look))
+                    : fmt::format("refused ({})", cube::vision::to_string(attempt.refusal)),
+                static_cast<double>(attempt.lattice_rms),
+                static_cast<double>(attempt.lattice_ratio),
+                static_cast<double>(attempt.lattice_cosine));
+        }
+    }
+
+    const auto median_of = [](std::vector<float> values) {
+        if (values.empty()) {
+            return 0.0F;
+        }
+        const auto middle = values.begin() + static_cast<std::ptrdiff_t>(values.size() / 2);
+        std::nth_element(values.begin(), middle, values.end());
+        return *middle;
+    };
+    const auto median_count = [](std::vector<std::size_t> values) {
+        if (values.empty()) {
+            return std::size_t{0};
+        }
+        const auto middle = values.begin() + static_cast<std::ptrdiff_t>(values.size() / 2);
+        std::nth_element(values.begin(), middle, values.end());
+        return *middle;
+    };
+
+    fmt::print("{}: a {}x{}x{}, {} frames, {} analysed at {} px wide\n",
+               session.filename().string(), size, size, size, frames.size(), analysed,
+               working_width);
+    fmt::print(
+        "  read a side        {}  ({:.1f}%)\n", read,
+        analysed == 0 ? 0.0 : (100.0 * static_cast<double>(read) / static_cast<double>(analysed)));
+    fmt::print("  first look found   median {} sticker-sized blobs, {} needed for a lattice\n",
+               median_count(first_blobs), blobs_needed);
+    fmt::print("  outlines it could not use  merged/oversized {}, wrong shape {}\n",
+               oversized_total, wrong_shape_total);
+    if (read > 0) {
+        std::string looks;
+        for (std::size_t look = 0; look < kLooks; ++look) {
+            if (by_look.at(look) > 0) {
+                looks += fmt::format(" {}={}", static_cast<int>(look), by_look.at(look));
+            }
+        }
+        fmt::print("  reads by look     {}\n", looks);
+    }
+    if (analysed > read) {
+        std::string refused;
+        for (std::size_t refusal = 0; refusal < kRefusals; ++refusal) {
+            if (by_refusal.at(refusal) > 0) {
+                refused += fmt::format(
+                    " {}={}", cube::vision::to_string(static_cast<LatticeRefusal>(refusal)),
+                    by_refusal.at(refusal));
+            }
+        }
+        fmt::print("  frames refused    {}\n", refused);
+        if (!rms.empty()) {
+            fmt::print(
+                "  of those, a lattice was made: rms median {:.3f}, ratio {:.2f}, cosine "
+                "{:.2f}\n",
+                static_cast<double>(median_of(rms)), static_cast<double>(median_of(ratios)),
+                static_cast<double>(median_of(cosines)));
+        }
+    }
+    return read > 0 ? 0 : 1;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1674,6 +1806,9 @@ int main(int argc, char** argv) {
     if ((args.size() == 2 || args.size() == 3) && args[0] == "funnel") {
         return run_funnel(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
     }
+    if ((args.size() == 2 || args.size() == 3) && args[0] == "read") {
+        return run_read(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
+    }
     if ((args.size() == 2 || args.size() == 3 || args.size() == 4) && args[0] == "cost") {
         std::size_t runs = 3;
         bool every_frame = false;
@@ -1692,6 +1827,7 @@ int main(int argc, char** argv) {
         "  cube_scan holds <session-dir>\n  cube_scan corners <session-dir> [max-distance]\n"
         "  cube_scan corner-colours <session-dir>\n  cube_scan ambiguity <session-dir>\n"
         "  cube_scan funnel <session-dir> [-v]\n"
+        "  cube_scan read <session-dir> [-v]\n"
         "  cube_scan cost <session-dir> [runs] [-v]\n");
     return 2;
 }

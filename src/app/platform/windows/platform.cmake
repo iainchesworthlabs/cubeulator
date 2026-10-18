@@ -41,6 +41,9 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/windows/paths_windows.cpp
     platform/windows/platform_info_windows.cpp)
 
+# The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
+set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/windows/tracy_gpu_d3d11_windows.cpp)
+
 # camera_windows.cpp enumerates via native DirectShow device enumeration
 # (ICreateDevEnum/IEnumMoniker) rather than OpenCvCaptureLoop's generic
 # probe - see its own comment for why, and for why DirectShow rather than

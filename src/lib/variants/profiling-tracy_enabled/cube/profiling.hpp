@@ -13,6 +13,7 @@
 // CUBE_MESSAGE must outlive the process - never pass a temporary.
 
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 
@@ -45,6 +46,13 @@ void plot(const char* name, T value) {
         TracyPlot(name, static_cast<std::int64_t>(value));
     }
 }
+
+// The value-with-no-open-zone path, kept callable in every variant so a test
+// can drive it directly: in this variant CUBE_ZONE_SCOPED_VALUE is
+// ZoneValue, which cannot even compile without a CUBE_ZONE_SCOPED*() zone in
+// scope - exactly what a test for "no zone open" must not have. Here nothing
+// is open and nothing records the value.
+inline void scoped_zone_value(std::uint64_t) noexcept {}
 
 // The manual (begin ... end) zone, made exception safe.
 //
@@ -82,6 +90,107 @@ private:
     TracyCZoneCtx context_;
     bool open_ = true;
 };
+
+// ---- GPU (render-thread) zones ------------------------------------------
+//
+// The Tracy GPU context and one open GPU zone, behind an opaque interface:
+// the real implementations need Tracy's per-backend bindings and, on
+// Windows, <d3d11.h>, which no other translation unit should pay for - they
+// live in cube::lib's src/profile/tracy_gpu.cpp, built only when Tracy is
+// on. The disabled and recorder variants declare the same classes as
+// no-ops, so the app's render thread compiles unchanged whatever the build.
+//
+// A context must be created and driven on the thread whose command stream
+// it brackets - the scene graph's render thread - and begin_zone()/end_zone()
+// insert timestamps around whatever is drawn between the two calls.
+enum class gpu_backend : std::uint8_t { none = 0, opengl, d3d11 };
+
+// The OpenGL entry points Tracy's GL context calls, as the app resolves
+// them from its QOpenGLContext. All ten must be non-null for create_opengl
+// to profile.
+struct gl_gpu_functions {
+    void* gen_queries = nullptr;
+    void* get_queryiv = nullptr;
+    void* get_query_objectiv = nullptr;
+    void* get_query_objectui64v = nullptr;
+    void* get_integer64v = nullptr;
+    void* query_counter = nullptr;
+    void* get_error = nullptr;
+    void* get_integerv = nullptr;
+    void* get_string = nullptr;
+    void* get_stringi = nullptr;
+};
+
+class GpuContext {
+public:
+    // OpenGL: constructs Tracy's per-thread GL context, which requires the
+    // window's GL context to be current. One per thread; a second call
+    // returns the same one.
+    static GpuContext* create_opengl(const gl_gpu_functions& functions) noexcept;
+    // Direct3D 11: `device` (ID3D11Device*) and `device_context`
+    // (ID3D11DeviceContext*; null asks the device for its immediate
+    // context). Returns null if no device is available.
+    static GpuContext* create_d3d11(void* device, void* device_context) noexcept;
+    GpuContext() = default;
+    GpuContext(const GpuContext&) = delete;
+    GpuContext& operator=(const GpuContext&) = delete;
+    GpuContext(GpuContext&&) = delete;
+    GpuContext& operator=(GpuContext&&) = delete;
+    virtual ~GpuContext() = default;
+
+    [[nodiscard]] virtual bool valid() const noexcept = 0;
+    // Inserts the zone's begin timestamp into the current GPU command
+    // stream. `name` is a string literal: Tracy keeps the pointer.
+    virtual void begin_zone(const char* name) noexcept = 0;
+    // Inserts the zone's end timestamp. No effect if no zone is open.
+    virtual void end_zone() noexcept = 0;
+    // Resolves completed GPU timestamps; once per frame, after end_zone().
+    virtual void collect() noexcept = 0;
+};
+
+// A CPU zone whose begin and end are not one C++ scope - the render-frame
+// zone opens in beforeRendering and closes in afterRendering. The same
+// exception safety as ManualZone: the destructor closes an open zone, and
+// end() is idempotent.
+class ZoneSpan {
+public:
+    ZoneSpan() = default;
+    ~ZoneSpan() { end(); }
+    ZoneSpan(const ZoneSpan&) = delete;
+    ZoneSpan& operator=(const ZoneSpan&) = delete;
+    ZoneSpan(ZoneSpan&&) = delete;
+    ZoneSpan& operator=(ZoneSpan&&) = delete;
+
+    void begin(const char* name) noexcept {
+        if (zone_) {
+            return;
+        }
+        location_ = ___tracy_source_location_data{name, __func__, __FILE__, 0, 0};
+        zone_.emplace(&location_);
+    }
+
+    void end() noexcept {
+        if (zone_) {
+            zone_->end();
+            zone_.reset();
+        }
+    }
+
+private:
+    ___tracy_source_location_data location_{};
+    std::optional<ManualZone> zone_;
+};
+
+// Execution sections (Tracy 0.14): named regions the GUI can filter the
+// timeline by - the app's startup, one solve. `name` is a literal and must
+// contain no printf conversion; the id returned is handed back to leave().
+inline std::uint32_t section_enter(const char* name) {
+    return tracy::Profiler::SectionEnter(0, name);
+}
+
+inline void section_leave(std::uint32_t id) {
+    tracy::Profiler::SectionLeave(id);
+}
 
 }  // namespace cube::profiling
 
@@ -137,5 +246,10 @@ private:
 
 // Free text shown in the trace's information window (version, build).
 #define CUBE_APP_INFO(text) ::cube::profiling::app_info(text)
+
+// An execution section (Tracy 0.14): begin/end a named region the GUI can
+// filter the timeline by. `name` is a literal with no printf conversion.
+#define CUBE_SECTION_ENTER(name) ::cube::profiling::section_enter(name)
+#define CUBE_SECTION_LEAVE(id) ::cube::profiling::section_leave(id)
 
 // NOLINTEND(cppcoreguidelines-macro-usage)

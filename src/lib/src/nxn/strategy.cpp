@@ -1,5 +1,7 @@
 #include <cube/nxn/strategy.hpp>
 
+#include <cube/profiling.hpp>
+
 #include <algorithm>
 #include <span>
 #include <utility>
@@ -32,6 +34,7 @@ Strategy default_strategy(int size) {
 
 Result<Solution> solve(const NCube& scrambled, const Strategy& strategy,
                        solver::SolveMethod method) {
+    CUBE_ZONE_SCOPED_N("nxn.solve");
     Context context{.cube = scrambled, .steps = {}, .method = method, .targets = std::nullopt};
     for (const Strategy::Entry& entry : strategy.stages()) {
         if (Result<void> result = entry.run(context); !result) {

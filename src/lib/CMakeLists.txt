@@ -85,6 +85,7 @@ target_sources(cube_lib
         src/vision/prepared_frame.cpp
         src/vision/sticker_colour.cpp
         src/vision/direct_scan.cpp
+        src/vision/quad_fit.cpp
         src/vision/corner_fit_n.cpp
         src/vision/corner_view.cpp
         src/vision/held_cube.cpp
@@ -94,6 +95,29 @@ target_sources(cube_lib
         src/diagnostics/jsonl_file.cpp
         src/profile/recorder.cpp
         src/i18n/i18n.cpp)
+
+# The Tracy GPU contexts (cube::profiling::GpuContext): built only when
+# Tracy is on, because the per-backend headers they include (<d3d11.h> on
+# Windows, Tracy's OpenGL and D3D11 bindings) are nobody else's business.
+# The disabled and recorder variants of cube/profiling.hpp declare the same
+# classes as no-ops, so nothing else notices. The Direct3D 11 backend is
+# platform code: the platform's fragment names it in
+# CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES (relative to src/app), and this
+# file asks no question about the OS. Each file gets its third-party-header
+# tokens as compile definitions: the GL tokens TracyOpenGL.hpp reads, and
+# NOMINMAX for the D3D11 file's <windows.h>.
+if(CUBEULATOR_ENABLE_TRACY)
+    target_sources(cube_lib PRIVATE src/profile/tracy_gpu.cpp)
+    set_source_files_properties(src/profile/tracy_gpu.cpp PROPERTIES
+        COMPILE_DEFINITIONS
+            "GL_TIMESTAMP=0x8E28;GL_QUERY_COUNTER_BITS=0x8864;GL_QUERY_RESULT=0x8866;GL_QUERY_RESULT_AVAILABLE=0x8867;GL_NO_ERROR=0x0;GL_EXTENSIONS=0x1F03;GL_FALSE=0x0;GL_VERSION_3_0=1")
+    foreach(_gpu_source IN LISTS CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES)
+        set(_gpu_file "${PROJECT_SOURCE_DIR}/src/app/${_gpu_source}")
+        target_sources(cube_lib PRIVATE "${_gpu_file}")
+        set_source_files_properties("${_gpu_file}" PROPERTIES
+            COMPILE_DEFINITIONS "NOMINMAX")
+    endforeach()
+endif()
 
 # Two files make the compiler build lookup tables from loops: the two-phase
 # solver's phase 1 move tables (two_phase_tables.cpp, about 85 thousand

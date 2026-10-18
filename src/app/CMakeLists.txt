@@ -202,7 +202,9 @@ if(CUBEULATOR_BUILD_APP)
     target_include_directories(cube_app_qml PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/qt")
 
     qt_add_executable(cube_app
-        qt/main.cpp)
+        qt/main.cpp
+        qt/render_profiler.hpp
+        qt/render_profiler.cpp)
 
     # Target properties the platform's packaging needs (Android's custom
     # manifest, for one): <property> <value> pairs from its fragment.

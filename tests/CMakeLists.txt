@@ -62,6 +62,7 @@ add_executable(cube_unit_tests
     unit/read_set_test.cpp
     unit/corner_view_test.cpp
     unit/corner_view_nxn_test.cpp
+    unit/quad_fit_test.cpp
     unit/drawn_cube_test.cpp
     unit/held_cube_test.cpp
     unit/lib_stub_functions_test.cpp

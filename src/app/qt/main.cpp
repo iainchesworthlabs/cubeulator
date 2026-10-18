@@ -3,6 +3,7 @@
 #include "desktop/desktop_integration.hpp"
 #include "interfaces/crash_handler.hpp"
 #include "kit/bundled_fonts.hpp"
+#include "render_profiler.hpp"
 
 #include <cube/nxn/cube.hpp>
 #include <cube/profiling.hpp>
@@ -72,6 +73,11 @@ int main(int argc, char* argv[]) {
     CUBE_THREAD_NAME("main");
     CUBE_APP_INFO(cube::version_details());
 
+    // The "startup" section brackets everything up to the first window: the
+    // GUI can filter a capture to it, and it is where app.i18n_install and
+    // app.load_qml spend their time.
+    const std::uint32_t startup_section = CUBE_SECTION_ENTER("startup");
+
     // E4a - the process's identity (AppUserModelID, desktop file name, window
     // icon) and the remembered window geometry: what only the real application
     // does with its window. Declared before the runtime so that it outlives
@@ -90,15 +96,16 @@ int main(int argc, char* argv[]) {
     SolveController& solveController = runtime.solve();
     QQmlApplicationEngine& engine = runtime.engine();
 
-    // Tracy's "UI" frame set: one mark per Qt Quick presentation, so the frame
-    // view shows what the user sees (the unnamed set is the vision pass and
-    // "Capture" the camera - three unrelated cadences, three sets). Direct, not
-    // queued: frameSwapped can fire on the scene graph's render thread, and the
-    // mark should timestamp the swap itself.
+    CUBE_SECTION_LEAVE(startup_section);
+
+    // Tracy's "UI" frame set, the CPU and GPU zones around each Qt Quick
+    // presentation and the frame-time plot all hang off RenderProfiler,
+    // whose handlers run on the scene graph's render thread (direct
+    // connections, not queued: the marks must timestamp the swap itself).
+    // The unnamed frame set is the vision pass and "Capture" the camera -
+    // three unrelated cadences, three sets.
     if (QQuickWindow* window = runtime.window()) {
-        QObject::connect(
-            window, &QQuickWindow::frameSwapped, window, [] { CUBE_FRAME_MARK_NAMED("UI"); },
-            Qt::DirectConnection);
+        cube::app::RenderProfiler::install(*window);
     }
 
     // CUBE_SOLVE_DEMO=<number>: open on the solve screen with a cube

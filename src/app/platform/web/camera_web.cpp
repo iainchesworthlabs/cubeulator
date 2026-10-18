@@ -67,10 +67,17 @@ namespace {
 constexpr std::chrono::seconds kEnumerateTimeout{15};
 constexpr std::chrono::seconds kStartTimeout{180};
 
-// One frame, RGBA, at the most the page ever delivers: 640 wide (the vision
-// reader's working width) by up to 1280 tall (a portrait phone). camera_web.js
-// scales anything taller to fit.
-constexpr std::size_t kFrameCapacity = 640U * 1280U * 4U;
+// One frame, RGBA, at the most the page ever delivers: 960 wide (the widest
+// working width the reader asks for, for a 4x4 or 5x5) by up to 1280 tall (a
+// portrait phone). camera_web.js scales anything larger to fit.
+//
+// It was 640, the 3x3's working width, which capped the page below what the
+// reader asks for at any size above 3: the size-aware working width could never
+// take effect in a browser. The cost of the change is the extra pixels a 3x3's
+// frame carries before the reader reduces it, and it is the browser's frame
+// budget (docs/investigations/2026-10-15-web-scan-frame-cost.md) that says
+// whether that is affordable - measured, not assumed.
+constexpr std::size_t kFrameCapacity = 960U * 1280U * 4U;
 
 // What camera_web.js answers a start with; mirrored there.
 enum class Answer : int { ok = 0, denied = 1, not_found = 2, unavailable = 3, failed = 4 };

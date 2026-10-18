@@ -6,6 +6,7 @@
 
 #include <cube/nxn/commutator.hpp>
 #include <cube/nxn/strategy.hpp>
+#include <cube/profiling.hpp>
 
 #include "centres.hpp"
 #include "two_by_two.hpp"
@@ -241,6 +242,7 @@ Result<void> plan_displays(Context& context, Result<EdgeDisplays> displays) {
 
 StageFn make_wings_even(ParityHandler handler) {
     return [handler = std::move(handler)](Context& context) -> Result<void> {
+        CUBE_ZONE_SCOPED_N("nxn.parity");
         const Result<const Targets*> targets = targets_of(context);
         if (!targets) {
             return std::unexpected(targets.error());
@@ -273,6 +275,7 @@ StageFn make_wings_even(ParityHandler handler) {
 
 StageFn solve_centres() {
     return [](Context& context) -> Result<void> {
+        CUBE_ZONE_SCOPED_N("nxn.centres");
         const Result<const Targets*> targets = targets_of(context);
         if (!targets) {
             return std::unexpected(targets.error());
@@ -295,6 +298,7 @@ StageFn solve_centres() {
 
 StageFn solve_edges() {
     return [](Context& context) -> Result<void> {
+        CUBE_ZONE_SCOPED_N("nxn.edges");
         const Result<const Targets*> targets = targets_of(context);
         if (!targets) {
             return std::unexpected(targets.error());
@@ -332,6 +336,7 @@ StageFn solve_edges() {
 
 StageFn solve_core(CoreView view) {
     return [view](Context& context) -> Result<void> {
+        CUBE_ZONE_SCOPED_N("nxn.core");
         const Result<solver::Cube> core_cube =
             view == CoreView::AsHeld ? context.cube.to_cube3_as_held() : context.cube.to_cube3();
         if (!core_cube) {
@@ -356,6 +361,7 @@ StageFn solve_core(CoreView view) {
 
 StageFn solve_corners() {
     return [](Context& context) -> Result<void> {
+        CUBE_ZONE_SCOPED_N("nxn.corners");
         Result<std::vector<LayerMove>> moves = detail::solve_two_by_two(context.cube);
         if (!moves) {
             return std::unexpected(moves.error());

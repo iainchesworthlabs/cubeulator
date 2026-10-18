@@ -86,6 +86,15 @@
 #                                      Unused on phones.
 #
 # Build inputs (paths are relative to src/app):
+#   CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES
+#                                      The Direct3D 11 backend of
+#                                      cube::profiling::GpuContext, compiled
+#                                      into cube::lib (not cube_platform: the
+#                                      unit tests reach it) when Tracy is on:
+#                                      platform/windows/tracy_gpu_d3d11_windows.cpp
+#                                      where Windows supplies D3D11,
+#                                      platform/posix/tracy_gpu_d3d11_none.cpp
+#                                      everywhere else.
 #   CUBEULATOR_PLATFORM_SOURCES        Compiled into cube_platform: one
 #                                      implementation of every interfaces/
 #                                      header (and of the detail/ seams).
