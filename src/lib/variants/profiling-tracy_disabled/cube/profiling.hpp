@@ -59,6 +59,12 @@ public:
 inline std::uint32_t section_enter(const char*) { return 0; }
 inline void section_leave(std::uint32_t) {}
 
+// The value-with-no-open-zone path, kept callable in every variant so a test
+// can drive it directly; here, as in the Tracy variant, nothing is open and
+// nothing records the value (the recorder variant drops it through its
+// zone stack).
+inline void scoped_zone_value(std::uint64_t) noexcept {}
+
 }  // namespace cube::profiling
 
 // Macros, not functions, on purpose: a function would evaluate its arguments

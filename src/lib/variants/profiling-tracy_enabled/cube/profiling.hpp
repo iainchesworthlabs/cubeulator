@@ -47,6 +47,13 @@ void plot(const char* name, T value) {
     }
 }
 
+// The value-with-no-open-zone path, kept callable in every variant so a test
+// can drive it directly: in this variant CUBE_ZONE_SCOPED_VALUE is
+// ZoneValue, which cannot even compile without a CUBE_ZONE_SCOPED*() zone in
+// scope - exactly what a test for "no zone open" must not have. Here nothing
+// is open and nothing records the value.
+inline void scoped_zone_value(std::uint64_t) noexcept {}
+
 // The manual (begin ... end) zone, made exception safe.
 //
 // Tracy's own C-API pair (TracyCZoneN / TracyCZoneEnd) leaves the zone open

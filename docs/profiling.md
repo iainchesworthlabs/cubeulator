@@ -209,7 +209,7 @@ signal handlers (the same surface exists, as no-ops, in the other variants):
 | Tool | Use |
 | --- | --- |
 | `cube::profiling::ZoneSpan` | a CPU zone whose begin and end are not one C++ scope - `begin("render.frame")` in `beforeRendering`, `end()` in `afterRendering`. Exception safe and idempotent like a manual zone |
-| `cube::profiling::GpuContext` | the Tracy GPU context behind the render pass (OpenGL via `create_opengl(gl_gpu_functions)`, Direct3D 11 via `create_d3d11(device, device_context)`); `begin_zone`/`end_zone`/`collect` around each frame, all on the thread that created it. The implementations live in `src/lib/src/profile/tracy_gpu.cpp`, built only in a Tracy build |
+| `cube::profiling::GpuContext` | the Tracy GPU context behind the render pass (OpenGL via `create_opengl(gl_gpu_functions)`, Direct3D 11 via `create_d3d11(device, device_context)`); `begin_zone`/`end_zone`/`collect` around each frame, all on the thread that created it. The implementations live in `src/lib/src/profile/tracy_gpu.cpp` (OpenGL) and `tracy_gpu_d3d11.cpp` (Windows) or `tracy_gpu_d3d11_stub.cpp` (elsewhere - CMake compiles exactly one, the way the platform fragments pick per-OS files), built only in a Tracy build |
 
 Rules that keep it honest:
 
