@@ -36,16 +36,13 @@ namespace {
 }
 
 [[nodiscard]] cv::Point2f map_through(const cv::Matx33d& homography, cv::Point2d uv) {
-    const double w =
-        (homography(2, 0) * uv.x) + (homography(2, 1) * uv.y) + homography(2, 2);
+    const double w = (homography(2, 0) * uv.x) + (homography(2, 1) * uv.y) + homography(2, 2);
     const double divisor = std::abs(w) < 1e-12 ? 1e-12 : w;
     return {
-        static_cast<float>(((homography(0, 0) * uv.x) + (homography(0, 1) * uv.y) +
-                            homography(0, 2)) /
-                           divisor),
-        static_cast<float>(((homography(1, 0) * uv.x) + (homography(1, 1) * uv.y) +
-                            homography(1, 2)) /
-                           divisor),
+        static_cast<float>(
+            ((homography(0, 0) * uv.x) + (homography(0, 1) * uv.y) + homography(0, 2)) / divisor),
+        static_cast<float>(
+            ((homography(1, 0) * uv.x) + (homography(1, 1) * uv.y) + homography(1, 2)) / divisor),
     };
 }
 
@@ -154,10 +151,10 @@ namespace {
     std::array<std::array<double, 8>, 8> normal{};
     std::array<double, 8> rhs{};
     for (const auto& [uv, pixel] : pairs) {
-        const std::array<double, 8> row_x{uv.x, uv.y, 1.0, 0.0, 0.0, 0.0, -pixel.x * uv.x,
+        const std::array<double, 8> row_x{uv.x,           uv.y, 1.0, 0.0, 0.0, 0.0, -pixel.x * uv.x,
                                           -pixel.x * uv.y};
-        const std::array<double, 8> row_y{0.0, 0.0, 0.0, uv.x, uv.y, 1.0, -pixel.y * uv.x,
-                                          -pixel.y * uv.y};
+        const std::array<double, 8> row_y{
+            0.0, 0.0, 0.0, uv.x, uv.y, 1.0, -pixel.y * uv.x, -pixel.y * uv.y};
         for (std::size_t i = 0; i < 8; ++i) {
             rhs.at(i) += (row_x.at(i) * static_cast<double>(pixel.x)) +
                          (row_y.at(i) * static_cast<double>(pixel.y));
@@ -197,8 +194,8 @@ namespace {
             rhs.at(row) -= factor * rhs.at(column);
         }
     }
-    return cv::Matx33d(rhs.at(0), rhs.at(1), rhs.at(2), rhs.at(3), rhs.at(4), rhs.at(5),
-                       rhs.at(6), rhs.at(7), 1.0);
+    return cv::Matx33d(rhs.at(0), rhs.at(1), rhs.at(2), rhs.at(3), rhs.at(4), rhs.at(5), rhs.at(6),
+                       rhs.at(7), 1.0);
 }
 
 // What one mapping of the unit square made of the blobs.
@@ -243,8 +240,7 @@ struct Placed {
             ++steps;
         }
     }
-    placed.pitch =
-        steps == 0 ? 0.0F : static_cast<float>(step_sum / static_cast<double>(steps));
+    placed.pitch = steps == 0 ? 0.0F : static_cast<float>(step_sum / static_cast<double>(steps));
     if (!(placed.pitch > 0.0F)) {
         return placed;
     }
@@ -285,8 +281,7 @@ std::optional<QuadLattice> fit_quad_lattice(const std::vector<cv::Point2f>& blob
     if (size < 2 || size > 9 || blobs.size() < 4) {
         return std::nullopt;
     }
-    const std::size_t cells =
-        static_cast<std::size_t>(size) * static_cast<std::size_t>(size);
+    const std::size_t cells = static_cast<std::size_t>(size) * static_cast<std::size_t>(size);
     const std::size_t wanted = std::min(cells, std::max<std::size_t>(4, least_matched));
 
     const std::optional<std::vector<cv::Point2f>> corners = extreme_corners(blobs);
@@ -331,10 +326,9 @@ std::optional<QuadLattice> fit_quad_lattice(const std::vector<cv::Point2f>& blob
             }
         }
         Placed placed = place_cells(homography, size, blobs);
-        const bool better = !best.has_value() ||
-                            placed.matched.size() > best->matched.size() ||
-                            (placed.matched.size() == best->matched.size() &&
-                             placed.rms < best->rms);
+        const bool better =
+            !best.has_value() || placed.matched.size() > best->matched.size() ||
+            (placed.matched.size() == best->matched.size() && placed.rms < best->rms);
         if (better) {
             best = std::move(placed);
             start = homography;
@@ -347,10 +341,9 @@ std::optional<QuadLattice> fit_quad_lattice(const std::vector<cv::Point2f>& blob
     cv::Matx33d homography = *start;
     for (int attempt = 0; attempt < 6; ++attempt) {
         Placed placed = place_cells(homography, size, blobs);
-        const bool better = !best.has_value() ||
-                            placed.matched.size() > best->matched.size() ||
-                            (placed.matched.size() == best->matched.size() &&
-                             placed.rms < best->rms);
+        const bool better =
+            !best.has_value() || placed.matched.size() > best->matched.size() ||
+            (placed.matched.size() == best->matched.size() && placed.rms < best->rms);
         if (better) {
             best = placed;
         }
@@ -385,9 +378,8 @@ std::optional<QuadLattice> fit_quad_lattice(const std::vector<cv::Point2f>& blob
     // and a pitch of a million asks the sampler for a patch the size of the
     // frame. The quad's own diagonal is the bound: no cell can be further from
     // its neighbour than half the face is across.
-    const double diagonal =
-        cv::norm(map_through(best->homography, {0.0, 0.0}) -
-                 map_through(best->homography, {1.0, 1.0}));
+    const double diagonal = cv::norm(map_through(best->homography, {0.0, 0.0}) -
+                                     map_through(best->homography, {1.0, 1.0}));
     const double largest_pitch = (2.0 * diagonal) / static_cast<double>(size);
     if (!std::isfinite(best->pitch) || best->pitch < 2.0F ||
         static_cast<double>(best->pitch) > largest_pitch) {

@@ -39,8 +39,8 @@ struct DrawnFace {
         }
     }
     const auto map = [&face](double u, double v) {
-        const double w = (face.homography(2, 0) * u) + (face.homography(2, 1) * v) +
-                         face.homography(2, 2);
+        const double w =
+            (face.homography(2, 0) * u) + (face.homography(2, 1) * v) + face.homography(2, 2);
         return cv::Point2f(
             static_cast<float>(((face.homography(0, 0) * u) + (face.homography(0, 1) * v) +
                                 face.homography(0, 2)) /
@@ -52,9 +52,8 @@ struct DrawnFace {
     const auto n = static_cast<std::size_t>(size);
     for (std::size_t row = 0; row < n; ++row) {
         for (std::size_t column = 0; column < n; ++column) {
-            face.centres.push_back(
-                map((static_cast<double>(column) + 0.5) / static_cast<double>(n),
-                    (static_cast<double>(row) + 0.5) / static_cast<double>(n)));
+            face.centres.push_back(map((static_cast<double>(column) + 0.5) / static_cast<double>(n),
+                                       (static_cast<double>(row) + 0.5) / static_cast<double>(n)));
         }
     }
     return face;
@@ -111,7 +110,8 @@ TEST_CASE("A parallel projection of the same face is read too", "[vision][quad]"
     CHECK(lattice->rms < 0.05F);
 }
 
-TEST_CASE("A face with a sticker covered is still placed, and that cell is marked", "[vision][quad]") {
+TEST_CASE("A face with a sticker covered is still placed, and that cell is marked",
+          "[vision][quad]") {
     // The centre of a 5x5 covered by a finger: 24 of 25 stickers left, and the
     // four corner stickers still there, which is what the quad's corner search
     // needs. The covered cell is placed by the homography and marked not found.

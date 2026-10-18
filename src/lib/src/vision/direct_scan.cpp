@@ -22,7 +22,6 @@ namespace cube::vision {
 
 namespace {
 
-
 // Sticker blob limits, as fractions of the frame area. At the working width
 // they admit the stickers of a 3x3 from about 9 to 65 pixels across; a cube of
 // N holds the same extent in the frame, so its stickers are 3 / N of that
@@ -1723,10 +1722,10 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
         attempt->lattice_blobs = lattice->blobs;
         attempt->lattice_rms = lattice->rms;
         attempt->lattice_ratio = rows > 0.0F ? columns / rows : 0.0F;
-        attempt->lattice_cosine = (columns > 0.0F && rows > 0.0F)
-                                      ? std::abs(lattice->column_step.dot(lattice->row_step)) /
-                                            (columns * rows)
-                                      : 0.0F;
+        attempt->lattice_cosine =
+            (columns > 0.0F && rows > 0.0F)
+                ? std::abs(lattice->column_step.dot(lattice->row_step)) / (columns * rows)
+                : 0.0F;
     };
     if (blobs.size() < tuning.min_lattice_blobs) {
         record(LatticeRefusal::too_few_blobs, nullptr);
@@ -1767,8 +1766,7 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
     }
     const float columns = length(lattice->column_step);
     const float rows = length(lattice->row_step);
-    if (look == FrameLook::narrow &&
-        !gaps_are_plastic(frame.brightness, *lattice, tuning.size)) {
+    if (look == FrameLook::narrow && !gaps_are_plastic(frame.brightness, *lattice, tuning.size)) {
         // The narrow block's outlines are the noisier: a lattice only it made
         // must sit on plastic. There is no gate of its own in LatticeRefusal,
         // so this reports as a lattice the look could not keep.
@@ -1810,8 +1808,7 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
 // without a blob is sampled where the homography puts it and marked not found,
 // exactly as a cell the affine fit placed is.
 [[nodiscard]] std::optional<SideRead> read_quad(const PreparedFrame& frame,
-                                                const QuadLattice& lattice,
-                                                const Tuning& tuning) {
+                                                const QuadLattice& lattice, const Tuning& tuning) {
     if (lattice.centres.size() != tuning.cells() || !(lattice.pitch > 0.0F)) {
         return std::nullopt;
     }
@@ -2031,8 +2028,7 @@ std::optional<SideRead> read_side_explained(const PreparedFrame& frame, int size
         if (const std::optional<QuadLattice> quad = fit_quad_lattice(centres, size, least);
             quad.has_value()) {
             attempt.blobs.at(static_cast<std::size_t>(FrameLook::quad)) = quad->blobs;
-            if (std::optional<SideRead> read = read_quad(frame, *quad, tuning);
-                read.has_value()) {
+            if (std::optional<SideRead> read = read_quad(frame, *quad, tuning); read.has_value()) {
                 attempt.look = FrameLook::quad;
                 attempt.refusal = LatticeRefusal::none;
                 attempt.lattice_blobs = quad->blobs;

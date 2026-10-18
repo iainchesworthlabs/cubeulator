@@ -1702,16 +1702,16 @@ int run_read(const fs::path& session, bool verbose) {
                 looks += fmt::format(" {}", attempt.blobs.at(look));
                 outlines += fmt::format(" {}", attempt.outlines.at(look));
             }
-            fmt::print("  frame {}: blobs{} / {} needed; outlines{}; {}; rms {:.3f} ratio {:.2f} "
-                       "cosine {:.2f}\n",
-                       path.stem().string(), looks, attempt.blobs_needed, outlines,
-                       got.has_value()
-                           ? fmt::format("read ({})", static_cast<int>(attempt.look))
-                           : fmt::format("refused ({})",
-                                         cube::vision::to_string(attempt.refusal)),
-                       static_cast<double>(attempt.lattice_rms),
-                       static_cast<double>(attempt.lattice_ratio),
-                       static_cast<double>(attempt.lattice_cosine));
+            fmt::print(
+                "  frame {}: blobs{} / {} needed; outlines{}; {}; rms {:.3f} ratio {:.2f} "
+                "cosine {:.2f}\n",
+                path.stem().string(), looks, attempt.blobs_needed, outlines,
+                got.has_value()
+                    ? fmt::format("read ({})", static_cast<int>(attempt.look))
+                    : fmt::format("refused ({})", cube::vision::to_string(attempt.refusal)),
+                static_cast<double>(attempt.lattice_rms),
+                static_cast<double>(attempt.lattice_ratio),
+                static_cast<double>(attempt.lattice_cosine));
         }
     }
 
@@ -1735,9 +1735,9 @@ int run_read(const fs::path& session, bool verbose) {
     fmt::print("{}: a {}x{}x{}, {} frames, {} analysed at {} px wide\n",
                session.filename().string(), size, size, size, frames.size(), analysed,
                working_width);
-    fmt::print("  read a side        {}  ({:.1f}%)\n", read,
-               analysed == 0 ? 0.0 : (100.0 * static_cast<double>(read) /
-                                       static_cast<double>(analysed)));
+    fmt::print(
+        "  read a side        {}  ({:.1f}%)\n", read,
+        analysed == 0 ? 0.0 : (100.0 * static_cast<double>(read) / static_cast<double>(analysed)));
     fmt::print("  first look found   median {} sticker-sized blobs, {} needed for a lattice\n",
                median_count(first_blobs), blobs_needed);
     fmt::print("  outlines it could not use  merged/oversized {}, wrong shape {}\n",
@@ -1755,18 +1755,18 @@ int run_read(const fs::path& session, bool verbose) {
         std::string refused;
         for (std::size_t refusal = 0; refusal < kRefusals; ++refusal) {
             if (by_refusal.at(refusal) > 0) {
-                refused += fmt::format(" {}={}", cube::vision::to_string(
-                                                     static_cast<LatticeRefusal>(refusal)),
-                                       by_refusal.at(refusal));
+                refused += fmt::format(
+                    " {}={}", cube::vision::to_string(static_cast<LatticeRefusal>(refusal)),
+                    by_refusal.at(refusal));
             }
         }
         fmt::print("  frames refused    {}\n", refused);
         if (!rms.empty()) {
-            fmt::print("  of those, a lattice was made: rms median {:.3f}, ratio {:.2f}, cosine "
-                       "{:.2f}\n",
-                       static_cast<double>(median_of(rms)),
-                       static_cast<double>(median_of(ratios)),
-                       static_cast<double>(median_of(cosines)));
+            fmt::print(
+                "  of those, a lattice was made: rms median {:.3f}, ratio {:.2f}, cosine "
+                "{:.2f}\n",
+                static_cast<double>(median_of(rms)), static_cast<double>(median_of(ratios)),
+                static_cast<double>(median_of(cosines)));
         }
     }
     return read > 0 ? 0 : 1;

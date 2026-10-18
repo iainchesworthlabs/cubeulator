@@ -114,7 +114,7 @@ struct PreparedFrame {
 // carries a little chroma even under a lamp - and the mask is dilated by a pixel
 // so the rim of a highlight goes with its middle.
 [[nodiscard]] std::vector<std::vector<cv::Point>> contours_without_glare(const cv::Mat& working,
-                                                                        int size = 3);
+                                                                         int size = 3);
 
 // The outlines of regions that are strongly coloured, taken from the frame's
 // chroma rather than its brightness.
@@ -125,6 +125,6 @@ struct PreparedFrame {
 // coloured, and white - the sixth - is the one this look cannot see, so it is
 // read here only if its outline is dark enough to be bounded by plastic.
 [[nodiscard]] std::vector<std::vector<cv::Point>> chroma_contours(const cv::Mat& working,
-                                                                 int size = 3);
+                                                                  int size = 3);
 
 }  // namespace cube::vision

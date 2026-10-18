@@ -47,9 +47,9 @@ constexpr double kThresholdOffset = 8.0;
 // The block, in pixels, that `fraction` of the frame comes to: odd, and never
 // smaller than three.
 [[nodiscard]] int block_pixels(int rows, int cols, double fraction) {
-    return std::max(3, static_cast<int>(static_cast<unsigned>(
-                                        static_cast<double>(std::min(rows, cols)) * fraction) |
-                                    1U));
+    return std::max(
+        3, static_cast<int>(
+               static_cast<unsigned>(static_cast<double>(std::min(rows, cols)) * fraction) | 1U));
 }
 
 // Threshold and trace. `mask`, when it is not empty, is a CV_8U image the same
@@ -174,8 +174,8 @@ std::vector<std::vector<cv::Point>> contours_at_pitch(const cv::Mat& brightness,
     // A block about two pitches across: wide enough to carry a sticker and the
     // plastic around it, narrow enough not to reach the next one. Odd, as
     // adaptiveThreshold wants, and at least three.
-    const int block = std::max(
-        3, static_cast<int>(static_cast<unsigned>(std::lround(pitch_px * 2.0F)) | 1U));
+    const int block =
+        std::max(3, static_cast<int>(static_cast<unsigned>(std::lround(pitch_px * 2.0F)) | 1U));
     return traced(brightness, block, cv::Mat{});
 }
 
@@ -201,10 +201,9 @@ std::vector<std::vector<cv::Point>> chroma_contours(const cv::Mat& working, int 
     const Channels channels = channels_of(working);
     cv::Mat chroma = chroma_image(channels);
     cv::GaussianBlur(chroma, chroma, cv::Size(5, 5), 0.0);
-    return traced(
-        chroma,
-        block_pixels(chroma.rows, chroma.cols, kBlockFraction * block_scale(size)),
-        cv::Mat{});
+    return traced(chroma,
+                  block_pixels(chroma.rows, chroma.cols, kBlockFraction * block_scale(size)),
+                  cv::Mat{});
 }
 
 }  // namespace cube::vision
