@@ -204,6 +204,38 @@ Item {
         }
     }
 
+    // The size of the cube being scanned: found from the cube in view (Auto, the
+    // default) or chosen here, which stands until Auto is chosen again. A change
+    // starts the scan over.
+    Row {
+        objectName: "scan.sizes"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: chips.top
+        anchors.bottomMargin: Theme.space3
+        spacing: Theme.space2
+        visible: !root.complete && !root.cameraFailed
+
+        // The size is found from the cube until a size is chosen; this goes back to
+        // finding it.
+        AppButton {
+            objectName: "scan.size.auto"
+            height: 36
+            variant: DirectScan.autoSize ? "primary" : "secondary"
+            text: qsTrId("scan.size.auto")
+            onClicked: DirectScan.useAutoSize()
+        }
+        Repeater {
+            model: [2, 3, 4, 5]
+            AppButton {
+                objectName: "scan.size." + modelData
+                height: 36
+                variant: modelData === DirectScan.size ? "primary" : "secondary"
+                text: qsTrId("entry.size.option").arg(modelData)
+                onClicked: DirectScan.size = modelData
+            }
+        }
+    }
+
     // The sides read so far, in the order they were first shown, each as the
     // camera last saw it. Colours are the measured ones, not tidy swatches.
     Row {
