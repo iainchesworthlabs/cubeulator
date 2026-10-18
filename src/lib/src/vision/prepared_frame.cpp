@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <utility>
 
 namespace cube::vision {
 
@@ -87,12 +88,23 @@ struct Channels {
 };
 
 [[nodiscard]] Channels channels_of(const cv::Mat& working) {
-    std::array<cv::Mat, 3> split;
-    cv::split(working, split.data());
+    // One pass, two images: splitting into three planes and taking the extremes
+    // of them allocated eight pixel buffers per look for what two hold.
     Channels channels;
-    channels.value = cv::max(cv::max(split.at(0), split.at(1)), split.at(2));
-    const cv::Mat lowest = cv::min(cv::min(split.at(0), split.at(1)), split.at(2));
-    cv::subtract(channels.value, lowest, channels.chroma);
+    channels.value.create(working.size(), CV_8UC1);
+    channels.chroma.create(working.size(), CV_8UC1);
+    for (int row = 0; row < working.rows; ++row) {
+        const auto* pixel = working.ptr<cv::Vec3b>(row);
+        auto* value = channels.value.ptr<uchar>(row);
+        auto* chroma = channels.chroma.ptr<uchar>(row);
+        for (int column = 0; column < working.cols; ++column) {
+            const cv::Vec3b& bgr = pixel[column];
+            const uchar highest = std::max({bgr[0], bgr[1], bgr[2]});
+            const uchar lowest = std::min({bgr[0], bgr[1], bgr[2]});
+            value[column] = highest;
+            chroma[column] = static_cast<uchar>(highest - lowest);
+        }
+    }
     return channels;
 }
 
@@ -119,12 +131,11 @@ constexpr int kGlareChroma = 12;
 
 // The chroma the chroma look thresholds: colourfulness relative to the pixel's
 // own brightness, so a dim sticker still reads as coloured, scaled to 0..255.
-[[nodiscard]] cv::Mat chroma_image(const Channels& channels) {
-    cv::Mat floor_value;
-    cv::max(channels.value, cv::Scalar(1.0), floor_value);
-    cv::Mat scaled;
-    cv::divide(channels.chroma, floor_value, scaled, 255.0);
-    return scaled;
+// Taken in place in the chroma plane, which the look has no other use for; a
+// black pixel has no chroma and divides to zero, as it did against a floor of 1.
+[[nodiscard]] cv::Mat chroma_image(Channels&& channels) {
+    cv::divide(channels.chroma, channels.value, channels.chroma, 255.0);
+    return std::move(channels.chroma);
 }
 
 }  // namespace
@@ -198,8 +209,7 @@ std::vector<std::vector<cv::Point>> chroma_contours(const cv::Mat& working, int 
     if (working.empty() || working.type() != CV_8UC3) {
         return {};
     }
-    const Channels channels = channels_of(working);
-    cv::Mat chroma = chroma_image(channels);
+    cv::Mat chroma = chroma_image(channels_of(working));
     cv::GaussianBlur(chroma, chroma, cv::Size(5, 5), 0.0);
     return traced(chroma,
                   block_pixels(chroma.rows, chroma.cols, kBlockFraction * block_scale(size)),
