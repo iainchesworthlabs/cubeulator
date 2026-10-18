@@ -126,8 +126,7 @@ TEST_CASE("the entry screen offers 2 to 5, and the camera at each", "[qml][entry
         CHECK(screen.get("size").toInt() == size);
         // Every size offered can be scanned; under test a string is its id.
         CHECK(screen.visible("entry.scan"));
-        CHECK(screen.require("entry.size.note").property("text").toString() ==
-              "entry.size.camera");
+        CHECK(screen.require("entry.size.note").property("text").toString() == "entry.size.camera");
     }
     CHECK(screen.find("entry.size.6") == nullptr);
     CHECK(screen.find("entry.size.1") == nullptr);
