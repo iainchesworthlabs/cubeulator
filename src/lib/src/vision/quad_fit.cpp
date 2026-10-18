@@ -126,7 +126,7 @@ namespace {
     };
     for (std::size_t i = 0; i < corners.size(); ++i) {
         for (std::size_t j = i + 1; j < corners.size(); ++j) {
-            if (cv::norm(corners.at(i) - corners.at(j)) < 2.0F) {
+            if (cv::norm(corners.at(i) - corners.at(j)) < 2.0) {
                 return std::nullopt;
             }
         }
@@ -151,13 +151,14 @@ namespace {
     std::array<std::array<double, 8>, 8> normal{};
     std::array<double, 8> rhs{};
     for (const auto& [uv, pixel] : pairs) {
-        const std::array<double, 8> row_x{uv.x,           uv.y, 1.0, 0.0, 0.0, 0.0, -pixel.x * uv.x,
-                                          -pixel.x * uv.y};
+        const auto pixel_x = static_cast<double>(pixel.x);
+        const auto pixel_y = static_cast<double>(pixel.y);
+        const std::array<double, 8> row_x{uv.x,           uv.y, 1.0, 0.0, 0.0, 0.0, -pixel_x * uv.x,
+                                          -pixel_x * uv.y};
         const std::array<double, 8> row_y{
-            0.0, 0.0, 0.0, uv.x, uv.y, 1.0, -pixel.y * uv.x, -pixel.y * uv.y};
+            0.0, 0.0, 0.0, uv.x, uv.y, 1.0, -pixel_y * uv.x, -pixel_y * uv.y};
         for (std::size_t i = 0; i < 8; ++i) {
-            rhs.at(i) += (row_x.at(i) * static_cast<double>(pixel.x)) +
-                         (row_y.at(i) * static_cast<double>(pixel.y));
+            rhs.at(i) += (row_x.at(i) * pixel_x) + (row_y.at(i) * pixel_y);
             for (std::size_t j = 0; j < 8; ++j) {
                 normal.at(i).at(j) += (row_x.at(i) * row_x.at(j)) + (row_y.at(i) * row_y.at(j));
             }
