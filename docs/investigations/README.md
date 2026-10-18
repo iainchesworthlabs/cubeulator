@@ -125,3 +125,11 @@ name.
 - [2026-10-17: can a cube of N x N be settled by two sides at once?](2026-10-17-nxn-corner-reader.md) -
   on drawn tumbles yes to 5x5 (31 of 32 cubes four turns from solved, none wrong) and half of
   6x6; on real cubes not measured, the recorded sessions hold hardly a corner view.
+
+- [2026-10-18: what do the real 2x2, 4x4 and 5x5 scan sessions say about the
+  reader?](2026-10-18-nxn-real-scan-sessions.md) - a 2x2 cannot join a side to
+  itself when one of its four stickers is off, so it averages 12.9 groups for a
+  six-sided cube and captures the same side twice; above a 3x3 most losses happen
+  before the lattice, where reflections bridge stickers into one blob. The
+  recordings are all downscaled to 640, so tune above a 3x3 only at the reader's
+  width, and label them first: none has a truth to score against.
