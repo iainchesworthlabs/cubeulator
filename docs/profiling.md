@@ -61,7 +61,7 @@ load and a branch per zone.
 
 Use the server tools at the **same version as the client** (the wire protocol
 changes between releases). The pin is whatever `tracy` resolves to in
-`deps/vcpkg` - currently 0.13.1.
+`deps/vcpkg` - currently 0.14.1.
 
 Headless, from the tools vcpkg built into the build tree:
 
@@ -83,7 +83,9 @@ $TOOLS/tracy-csvexport -u -p scan.tracy > plots.csv   # the plot samples
 overwrite an existing output, `-s <seconds>` stop after that long.
 `tracy-csvexport`: by default one row per zone with its count and
 total/mean/min/max/standard deviation; `-f <text>` filters zone names (so
-`-f solver.` is the solver), `-e` reports self time rather than inclusive.
+`-f solver.` is the solver), `-e` reports self time rather than inclusive,
+and `-g` reports the GPU zone events (one row per event with the GPU
+execution time; GPU zones are not in the default list).
 That is the neutral interchange: plain CSV, readable by anything.
 `tracy-import-chrome` converts a Chrome-trace JSON the other way, and
 `tracy-update` upgrades an old capture to the current format.
@@ -107,12 +109,45 @@ interleave into a single meaningless graph:
 | --- | --- | --- |
 | *(unnamed)* | camera frame processed by the direct scan (the vision pass) | `DirectScan::processFrame` |
 | `Capture` | camera frame delivered by the device | `OpenCvCaptureLoop::run` |
-| `UI` | Qt Quick presentation (`frameSwapped`) | `main.cpp` |
+| `UI` | Qt Quick presentation (`frameSwapped`) | `RenderProfiler` (`src/app/qt/render_profiler.cpp`) |
 
 ### Threads
 
-`main` (GUI), `camera-capture`, `recorder-writer`. Pool threads that run a
-solve keep their default name - they are shared, and a name is written once.
+`main` (GUI), `camera-capture`, `recorder-writer`, and the scene graph's
+render thread, which shows the `render.frame` zone and its GPU sibling. Pool
+threads that run a solve keep their default name - they are shared, and a
+name is written once.
+
+### The render pass (CPU and GPU)
+
+`RenderProfiler` (installed by `main.cpp`) brackets every Qt Quick
+presentation twice, all on the render thread:
+
+- `render.frame` - a CPU zone from `beforeRendering` to `afterRendering`: what
+  the render thread spends on a frame, before the swap;
+- `render.gpu` - a GPU zone spanning the same range, so the graphics
+  timeline shows the frame's draw calls against everything else the GPU
+  does. It exists on **OpenGL** and **Direct3D 11** (Tracy's two bindings a
+  frame can be bracketed with from outside the scene graph); on Direct3D 12,
+  Vulkan, Metal and software rendering the app logs `render.gpu_unavailable`
+  once and keeps the CPU zone. D3D12/Vulkan would need begin/end timestamps
+  inside the scene graph's own command buffers, which Qt does not hand to
+  the application - Tracy's D3D12/Vulkan zones cannot span two separate
+  submissions.
+
+`render.frame_ms` plots the time between presentations, and
+`capture.interval_ms` the camera's delivered-frame cadence - the two
+cadences a frame's work is budgeted against.
+
+### Sections
+
+Execution sections (Tracy 0.14) mark the app's high-level phases, so the GUI
+can filter a capture to one of them:
+
+| Section | Bounds |
+| --- | --- |
+| `startup` | `main()` to the loaded main window |
+| `solve` | `SolveController::beginSolve` to the solve's result landing |
 
 ### Zones
 
@@ -123,7 +158,9 @@ solve keep their default name - they are shared, and a name is written once.
 | **held cube** | `held_cube.on_frame_watched`, `held_cube.judge`, `vision.held_cube.fit` |
 | **colour and recording** | `vision.resolve_colors`, `vision.analysis_downscale`, `vision.recorder.push` (the GUI-thread clone) and `vision.recorder.write_job` (the writer thread's disk write) |
 | **solver** | `solver.solve`; per stage `solver.cross`, `.corners`, `.middle_edges`, `.oll`, `.pll`, then `solver.merge_adjacent_moves`; the other two methods are `solver.cfop` and `solver.two_phase` (the latter's lookup tables are built once: in `solver.two_phase.prepare` when asked for ahead of time, otherwise inside the first `solver.two_phase`); underneath, `solver.piece_search` (the first-two-layer searches, run on piece positions) and `solver.algorithm_search` (a template, so each stage's instantiation is its own row in the statistics) carry the **visited-node count** as a zone value (the first-two-layer searches' real cost, which is why the [slow tests](testing.md#slow-tests) are slow); `solver.bfs_search` is the same search over whole cubes, which only a cube that cannot be turned from solved ever reaches; `solver.assemble_scan` and `solver.assemble_all` (the one cube the six sides make, and every cube they make) |
+| **nxn** | `nxn.solve` (the whole reduction solve), then per stage `nxn.plan`, `.parity`, `.centres`, `.plan_edges`, `.edges`, `.core` (and `.corners` for a 2x2); `nxn.assemble_scan` puts six scanned sides together as a cube of any size |
 | **app** | startup: `app.i18n_install`, `app.load_qml` (the largest single startup cost); `app.solve_stepped` (the worker), `app.solve.apply_result`; `app.frame_image.request` (the preview's `cv::Mat` to `QImage` copy) |
+| **render** | `render.frame` (the render thread's per-frame CPU zone; see above) |
 
 ### Messages
 
@@ -131,9 +168,11 @@ solve keep their default name - they are shared, and a name is written once.
 | --- | --- |
 | `direct_scan.completed` | the scan produced a cube |
 | `solve.started`, `solve.finished` | the solve worker's bounds |
+| `render.gpu_unavailable` | the window's graphics backend has no GPU zone (once per run) |
 
-There are no plots today; `CUBE_PLOT` is available for the next one (a
-per-frame statistic worth correlating with the zones).
+The plots are `render.frame_ms` and `capture.interval_ms` (see
+[The render pass](#the-render-pass-cpu-and-gpu)); `CUBE_PLOT` remains
+available for the next per-frame statistic worth correlating with the zones.
 
 The trace's **information** window carries the build (`cube::version_details()`:
 version, commit, branch, dirty flag), so a capture says what it measured.
@@ -162,6 +201,15 @@ is available, on purpose: the macros are what compiles to nothing.
 | `CUBE_MESSAGE("name")` | a discrete event |
 | `CUBE_THREAD_NAME("name")` | name the calling thread, **once** per thread - every call adds a table entry, so never in a per-frame or per-task path |
 | `CUBE_APP_INFO(text)` | free text for the trace's information window |
+| `CUBE_SECTION_ENTER("name")` / `CUBE_SECTION_LEAVE(id)` | an execution section (Tracy 0.14): a named region the GUI can filter by. `name` is a literal with no printf conversion; keep the id and hand it to `LEAVE` |
+
+The render thread's two tools are classes, not macros, so they can span two
+signal handlers (the same surface exists, as no-ops, in the other variants):
+
+| Tool | Use |
+| --- | --- |
+| `cube::profiling::ZoneSpan` | a CPU zone whose begin and end are not one C++ scope - `begin("render.frame")` in `beforeRendering`, `end()` in `afterRendering`. Exception safe and idempotent like a manual zone |
+| `cube::profiling::GpuContext` | the Tracy GPU context behind the render pass (OpenGL via `create_opengl(gl_gpu_functions)`, Direct3D 11 via `create_d3d11(device, device_context)`); `begin_zone`/`end_zone`/`collect` around each frame, all on the thread that created it. The implementations live in `src/lib/src/profile/tracy_gpu.cpp`, built only in a Tracy build |
 
 Rules that keep it honest:
 

@@ -12,10 +12,52 @@
 // never let it be the only use of a variable (that is an unused-variable
 // warning, an error under -Werror, in exactly the build nobody profiles).
 
+#include <cstdint>
+
 namespace cube::profiling {
 
 inline constexpr bool enabled = false;
 inline constexpr bool to_recorder = false;
+
+// The GPU (render-thread) surface, as no-ops: the profiling-tracy_enabled
+// sibling implements these (cube::lib's src/profile/tracy_gpu.cpp); here
+// they exist so the app's render thread compiles unchanged and nothing is
+// created. See the sibling for the contract.
+enum class gpu_backend : unsigned { none = 0, opengl, d3d11 };
+
+struct gl_gpu_functions {
+    void* gen_queries = nullptr;
+    void* get_queryiv = nullptr;
+    void* get_query_objectiv = nullptr;
+    void* get_query_objectui64v = nullptr;
+    void* get_integer64v = nullptr;
+    void* query_counter = nullptr;
+    void* get_error = nullptr;
+    void* get_integerv = nullptr;
+    void* get_string = nullptr;
+    void* get_stringi = nullptr;
+};
+
+class GpuContext {
+public:
+    static GpuContext* create_opengl(const gl_gpu_functions&) noexcept { return nullptr; }
+    static GpuContext* create_d3d11(void*, void*) noexcept { return nullptr; }
+    virtual ~GpuContext() = default;
+
+    [[nodiscard]] virtual bool valid() const noexcept { return false; }
+    virtual void begin_zone(const char*) noexcept {}
+    virtual void end_zone() noexcept {}
+    virtual void collect() noexcept {}
+};
+
+class ZoneSpan {
+public:
+    void begin(const char*) noexcept {}
+    void end() noexcept {}
+};
+
+inline std::uint32_t section_enter(const char*) { return 0; }
+inline void section_leave(std::uint32_t) {}
 
 }  // namespace cube::profiling
 
@@ -35,4 +77,6 @@ inline constexpr bool to_recorder = false;
 #define CUBE_MESSAGE(text)
 #define CUBE_THREAD_NAME(name)
 #define CUBE_APP_INFO(text)
+#define CUBE_SECTION_ENTER(name) ::cube::profiling::section_enter(name)
+#define CUBE_SECTION_LEAVE(id) ::cube::profiling::section_leave(id)
 // NOLINTEND(cppcoreguidelines-macro-usage)

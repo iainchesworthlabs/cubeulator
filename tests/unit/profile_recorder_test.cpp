@@ -745,6 +745,11 @@ TEST_CASE("a value with no zone open is dropped, not misplaced", "[profile]") {
     Recorder& recorder = Recorder::global();
     recorder.clear();
 
+    // #if, not the SKIP above: in the Tracy variant the macro needs an
+    // enclosing CUBE_ZONE_SCOPED*() to compile at all (its target is the
+    // zone the macro named), so the statement must not even be parsed there.
+#if !CUBE_EXPECT_TRACY
     CUBE_ZONE_SCOPED_VALUE(99);
     CHECK(recorder.snapshot().empty());
+#endif
 }

@@ -278,6 +278,9 @@ void SolveController::beginSolve(const NCube& scrambled, bool continuation) {
     resume_turn_ = 0;
     isSolving_ = true;
     CUBE_MESSAGE("solve.started");
+    // The "solve" section: the GUI can filter a capture to what one solve
+    // took, worker thread and all.
+    solve_section_ = CUBE_SECTION_ENTER("solve");
     emit stateChanged();
     solveWatcher_.setFuture(
         QtConcurrent::run(&solve_stepped, scrambled, to_solver_method(method_)));
@@ -290,6 +293,7 @@ void SolveController::applySolveResult() {
         return;
     }
     CUBE_MESSAGE("solve.finished");
+    CUBE_SECTION_LEAVE(solve_section_);
     stepped_ = solveWatcher_.result();
     land();
 }

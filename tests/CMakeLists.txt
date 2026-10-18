@@ -102,12 +102,16 @@ target_link_libraries(cube_unit_tests
         cube::coverage
         Catch2::Catch2WithMain)
 
-# profiling_test.cpp asks which cube/profiling.hpp variant CMake selected
-# (src/lib/CMakeLists.txt) and checks it against the option that drove the
-# choice, so a wrong directory on the include path cannot go unnoticed.
-set_source_files_properties(unit/profiling_test.cpp PROPERTIES
-    COMPILE_DEFINITIONS
-        "CUBE_EXPECT_TRACY=$<BOOL:${CUBEULATOR_ENABLE_TRACY}>;CUBE_EXPECT_RECORDER=$<BOOL:${CUBEULATOR_ENABLE_PROFILE_RECORDER}>")
+# profiling_test.cpp and profile_recorder_test.cpp ask which
+# cube/profiling.hpp variant CMake selected (src/lib/CMakeLists.txt) and
+# check it against the option that drove the choice, so a wrong directory on
+# the include path cannot go unnoticed.
+set_source_files_properties(
+    unit/profiling_test.cpp
+    unit/profile_recorder_test.cpp
+    PROPERTIES
+        COMPILE_DEFINITIONS
+            "CUBE_EXPECT_TRACY=$<BOOL:${CUBEULATOR_ENABLE_TRACY}>;CUBE_EXPECT_RECORDER=$<BOOL:${CUBEULATOR_ENABLE_PROFILE_RECORDER}>")
 
 # White-box include path for last_layer_test.cpp only: it includes
 # cube::lib's private last_layer.hpp directly, because the F2L-preservation

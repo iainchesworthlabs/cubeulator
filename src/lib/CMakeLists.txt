@@ -96,6 +96,16 @@ target_sources(cube_lib
         src/profile/recorder.cpp
         src/i18n/i18n.cpp)
 
+# The Tracy GPU contexts (cube::profiling::GpuContext): one translation
+# unit, built only when Tracy is on, because the per-backend headers it
+# includes (<d3d11.h> on Windows, Tracy's OpenGL and D3D11 bindings) are
+# nobody else's business. The disabled and recorder variants of
+# cube/profiling.hpp declare the same classes as no-ops, so nothing else
+# notices.
+if(CUBEULATOR_ENABLE_TRACY)
+    target_sources(cube_lib PRIVATE src/profile/tracy_gpu.cpp)
+endif()
+
 # Two files make the compiler build lookup tables from loops: the two-phase
 # solver's phase 1 move tables (two_phase_tables.cpp, about 85 thousand
 # entries) and the last-layer algorithms, parsed from their text
