@@ -548,7 +548,7 @@ In your hands.</source>
     <message id="entry.size.camera">
         <source>The camera reads this cube. Scan it, or type its scramble here.</source>
         <extracomment>Under the size buttons: the camera reads every size offered.</extracomment>
-        <translation>[Thé càmérà réàds thîs cûbé. Scàn ît, õr typé îts scràmblé héré. ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~]</translation>
+        <translation>[Thé càmérà réàds thîs cûbé. Scàn ît, õr typé îts scràmblé héré. ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~~]</translation>
     </message>
     <message id="entry.scramble.label">
         <source>Its scramble</source>
