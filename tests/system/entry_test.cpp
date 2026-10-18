@@ -75,6 +75,18 @@ TEST_CASE("Home opens the screen for another size, which offers its sizes and go
         app.click("entry.scan");
         REQUIRE(app.wait_for([&]() { return app.screen() == "scan"; }));
 
+        // The scan screen's own sizes: a chosen size is the scan's, Auto gives the choice back.
+        auto& scan = app.runtime().directScan();
+        REQUIRE(app.wait_for([&]() { return app.find("scan.size.auto") != nullptr; }));
+        for (const int size : {2, 4, 5, 3}) {
+            INFO("size " << size);
+            app.click(QString::fromStdString("scan.size." + std::to_string(size)));
+            CHECK(scan.size() == size);
+            CHECK_FALSE(scan.autoSize());
+        }
+        app.click("scan.size.auto");
+        CHECK(scan.autoSize());
+
         const auto warnings = cube::systest::take_qml_warnings();
         for (const auto& warning : warnings) {
             UNSCOPED_INFO(warning.where.toStdString() << ": " << warning.message.toStdString());
