@@ -129,7 +129,7 @@ inline void scoped_zone_value(std::uint64_t number) noexcept {
 // profiling-tracy_enabled sibling implements these; the declarations exist
 // so render-side call sites compile unchanged. See the sibling for the
 // contract.
-enum class gpu_backend : unsigned { none = 0, opengl, d3d11 };
+enum class gpu_backend : std::uint8_t { none = 0, opengl, d3d11 };
 
 struct gl_gpu_functions {
     void* gen_queries = nullptr;
@@ -146,29 +146,38 @@ struct gl_gpu_functions {
 
 class GpuContext {
 public:
-    static GpuContext* create_opengl(const gl_gpu_functions&) noexcept { return nullptr; }
-    static GpuContext* create_d3d11(void*, void*) noexcept { return nullptr; }
+    static GpuContext* create_opengl(const gl_gpu_functions& /*functions*/) noexcept {
+        return nullptr;
+    }
+    static GpuContext* create_d3d11(void* /*device*/, void* /*device_context*/) noexcept {
+        return nullptr;
+    }
+    GpuContext() = default;
+    GpuContext(const GpuContext&) = delete;
+    GpuContext& operator=(const GpuContext&) = delete;
+    GpuContext(GpuContext&&) = delete;
+    GpuContext& operator=(GpuContext&&) = delete;
     virtual ~GpuContext() = default;
 
     [[nodiscard]] virtual bool valid() const noexcept { return false; }
-    virtual void begin_zone(const char*) noexcept {}
+    virtual void begin_zone(const char* /*name*/) noexcept {}
     virtual void end_zone() noexcept {}
     virtual void collect() noexcept {}
 };
 
 class ZoneSpan {
 public:
-    void begin(const char*) noexcept {}
+    void begin(const char* /*name*/) noexcept {}
     void end() noexcept {}
 };
 
 // Execution sections have no recorder equivalent (the recorder's trace is a
 // flat zone/message/plot stream), so they are no-ops here as in the
 // disabled variant.
-inline std::uint32_t section_enter(const char*) {
+inline std::uint32_t section_enter(const char* /*name*/) {
     return 0;
 }
-inline void section_leave(std::uint32_t) {}
+inline void section_leave(std::uint32_t /*id*/) {}
 
 }  // namespace cube::profiling
 

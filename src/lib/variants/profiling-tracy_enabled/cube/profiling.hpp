@@ -103,7 +103,7 @@ private:
 // A context must be created and driven on the thread whose command stream
 // it brackets - the scene graph's render thread - and begin_zone()/end_zone()
 // insert timestamps around whatever is drawn between the two calls.
-enum class gpu_backend : unsigned { none = 0, opengl, d3d11 };
+enum class gpu_backend : std::uint8_t { none = 0, opengl, d3d11 };
 
 // The OpenGL entry points Tracy's GL context calls, as the app resolves
 // them from its QOpenGLContext. All ten must be non-null for create_opengl
@@ -131,6 +131,11 @@ public:
     // (ID3D11DeviceContext*; null asks the device for its immediate
     // context). Returns null if no device is available.
     static GpuContext* create_d3d11(void* device, void* device_context) noexcept;
+    GpuContext() = default;
+    GpuContext(const GpuContext&) = delete;
+    GpuContext& operator=(const GpuContext&) = delete;
+    GpuContext(GpuContext&&) = delete;
+    GpuContext& operator=(GpuContext&&) = delete;
     virtual ~GpuContext() = default;
 
     [[nodiscard]] virtual bool valid() const noexcept = 0;

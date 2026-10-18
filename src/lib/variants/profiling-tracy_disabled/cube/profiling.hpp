@@ -23,7 +23,7 @@ inline constexpr bool to_recorder = false;
 // sibling implements these (cube::lib's src/profile/tracy_gpu.cpp); here
 // they exist so the app's render thread compiles unchanged and nothing is
 // created. See the sibling for the contract.
-enum class gpu_backend : unsigned { none = 0, opengl, d3d11 };
+enum class gpu_backend : std::uint8_t { none = 0, opengl, d3d11 };
 
 struct gl_gpu_functions {
     void* gen_queries = nullptr;
@@ -40,32 +40,41 @@ struct gl_gpu_functions {
 
 class GpuContext {
 public:
-    static GpuContext* create_opengl(const gl_gpu_functions&) noexcept { return nullptr; }
-    static GpuContext* create_d3d11(void*, void*) noexcept { return nullptr; }
+    static GpuContext* create_opengl(const gl_gpu_functions& /*functions*/) noexcept {
+        return nullptr;
+    }
+    static GpuContext* create_d3d11(void* /*device*/, void* /*device_context*/) noexcept {
+        return nullptr;
+    }
+    GpuContext() = default;
+    GpuContext(const GpuContext&) = delete;
+    GpuContext& operator=(const GpuContext&) = delete;
+    GpuContext(GpuContext&&) = delete;
+    GpuContext& operator=(GpuContext&&) = delete;
     virtual ~GpuContext() = default;
 
     [[nodiscard]] virtual bool valid() const noexcept { return false; }
-    virtual void begin_zone(const char*) noexcept {}
+    virtual void begin_zone(const char* /*name*/) noexcept {}
     virtual void end_zone() noexcept {}
     virtual void collect() noexcept {}
 };
 
 class ZoneSpan {
 public:
-    void begin(const char*) noexcept {}
+    void begin(const char* /*name*/) noexcept {}
     void end() noexcept {}
 };
 
-inline std::uint32_t section_enter(const char*) {
+inline std::uint32_t section_enter(const char* /*name*/) {
     return 0;
 }
-inline void section_leave(std::uint32_t) {}
+inline void section_leave(std::uint32_t /*id*/) {}
 
 // The value-with-no-open-zone path, kept callable in every variant so a test
 // can drive it directly; here, as in the Tracy variant, nothing is open and
 // nothing records the value (the recorder variant drops it through its
 // zone stack).
-inline void scoped_zone_value(std::uint64_t) noexcept {}
+inline void scoped_zone_value(std::uint64_t /*value*/) noexcept {}
 
 }  // namespace cube::profiling
 
