@@ -68,9 +68,10 @@ The solve screen is the one you know, with what a bigger cube needs:
   time, putting the cube down, and picking it up again later is what
   [History](history.md) is for: your place is kept.
 
-There is no camera on this screen and no rescan: the cube is the one you told
-it about. If your cube and the screen part company, go back and enter it
-again.
+The camera does not follow your turns on this screen: the cube is the one you
+told it about. If your cube and the screen part company, press **Out of step?
+Rescan**. It scans the cube again at this size, as it now is, and solves it
+from there; the clock keeps running.
 
 ## Reviewing it
 
