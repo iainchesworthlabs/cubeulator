@@ -367,6 +367,10 @@ jobs:
       - name: Build
         run: cmake --build --preset linux-gcc-debug
 
+      # The generated sources (moc, qrc, the QML cache loaders) live under
+      # build/.../src/app/ and match the path too: the first run linted 88 files,
+      # most of them those, for 29 466 "findings" (13 404 of them pointer
+      # arithmetic in generated tables). Only checked-in sources count.
       # No --warnings-as-errors: this job measures. The files are the app's own
       # (src/app), as in the clang-tidy job's src and tests, and the findings
       # are counted by check so a ratchet can be set from the first numbers.
@@ -374,6 +378,7 @@ jobs:
         run: |
           jq -r '.[].file' build/linux-gcc-debug/compile_commands.json \
             | grep -E '/src/app/' \
+            | grep -v '/build/' \
             | sort -u > app-files.txt
           wc -l < app-files.txt
           xargs -a app-files.txt -P 2 -n 4 clang-tidy-23 -p build/linux-gcc-debug > clang-tidy-app.log 2>&1 || true
