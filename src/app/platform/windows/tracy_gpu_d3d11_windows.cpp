@@ -1,7 +1,7 @@
 // Direct3D 11 GPU context for cube::profiling::GpuContext - the backend for
 // Windows. Windows' platform.cmake names it in
 // CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES and src/lib/CMakeLists.txt compiles
-// it into cube::lib when Tracy is on, in place of posix/tracy_gpu_d3d11_none.cpp.
+// it into cube::lib when Tracy is on, in place of posix/tracy_gpu_direct3d_none.cpp.
 // It lives here because <windows.h> and <d3d11.h> are platform code (see
 // docs/platform-isolation.md). The OpenGL backend is
 // src/lib/src/profile/tracy_gpu.cpp.
@@ -50,19 +50,20 @@ public:
         }
     }
 
-    bool valid() const noexcept override { return ctx_ != nullptr; }
+    [[nodiscard]] bool valid() const noexcept override { return ctx_ != nullptr; }
 
-    void begin_zone(const char* name) noexcept override {
+    void begin_zone(const char* name, void* /*command_stream*/) noexcept override {
         if (ctx_ == nullptr) {
             return;
         }
-        location_ = tracy::SourceLocationData{name, __func__, __FILE__, 0, 0};
+        location_ = tracy::SourceLocationData{
+            .name = name, .function = __func__, .file = __FILE__, .line = 0, .color = 0};
         zone_.emplace(ctx_, &location_, true);
     }
 
     void end_zone() noexcept override { zone_.reset(); }
 
-    void collect() noexcept override {
+    void collect(void* /*command_stream*/) noexcept override {
         if (ctx_ != nullptr) {
             TracyD3D11Collect(ctx_);
         }
@@ -81,12 +82,14 @@ namespace cube::profiling {
 GpuContext* GpuContext::create_d3d11(void* device, void* device_context) noexcept {
     auto* d3d_device = static_cast<ID3D11Device*>(device);
     auto* d3d_context = static_cast<ID3D11DeviceContext*>(device_context);
-    if (d3d_device == nullptr) {
+    if (d3d_device == nullptr || !active()) {
         return nullptr;
     }
+    // Never destroyed on purpose (see the top of the file); a failed one is.
+    // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,bugprone-unhandled-exception-at-new)
     auto* context = new D3D11GpuContext(d3d_device, d3d_context);
     if (!context->valid()) {
-        delete context;
+        delete context;  // NOLINT(cppcoreguidelines-owning-memory)
         return nullptr;
     }
     return context;

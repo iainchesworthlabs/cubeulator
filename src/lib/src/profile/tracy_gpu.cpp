@@ -6,7 +6,7 @@
 //
 // The Direct3D 11 backend is its own translation unit, and platform code:
 // src/app/platform/windows/tracy_gpu_d3d11_windows.cpp where Windows supplies
-// D3D11, and src/app/platform/posix/tracy_gpu_d3d11_none.cpp everywhere else.
+// D3D11, and src/app/platform/posix/tracy_gpu_direct3d_none.cpp everywhere else.
 // The platform's fragment names exactly one of the two in
 // CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES; no preprocessor directive in
 // source tests the OS.
@@ -60,16 +60,34 @@ using gl_int64 = std::int64_t;
 using gl_uint64 = std::uint64_t;
 using gl_ubyte = std::uint8_t;
 
-void (*gl_gen_queries)(gl_sizei, gl_uint*) = nullptr;
-void (*gl_get_queryiv)(gl_enum, gl_enum, gl_int*) = nullptr;
-void (*gl_get_query_objectiv)(gl_uint, gl_enum, gl_int*) = nullptr;
-void (*gl_get_query_objectui64v)(gl_uint, gl_enum, gl_uint64*) = nullptr;
-void (*gl_get_integer64v)(gl_enum, gl_int64*) = nullptr;
-void (*gl_query_counter)(gl_uint, gl_enum) = nullptr;
-gl_enum (*gl_get_error)() = nullptr;
-void (*gl_get_integerv)(gl_enum, gl_int*) = nullptr;
-const gl_ubyte* (*gl_get_string)(gl_enum) = nullptr;
-const gl_ubyte* (*gl_get_stringi)(gl_enum, gl_uint) = nullptr;
+// The entry points, in one table behind a function: the TracyOpenGL.hpp header
+// below calls them by the GL names, which the #defines after this namespace map
+// onto the table's members.
+struct GlEntryPoints {
+    void (*gen_queries)(gl_sizei, gl_uint*) = nullptr;
+    void (*get_queryiv)(gl_enum, gl_enum, gl_int*) = nullptr;
+    void (*get_query_objectiv)(gl_uint, gl_enum, gl_int*) = nullptr;
+    void (*get_query_objectui64v)(gl_uint, gl_enum, gl_uint64*) = nullptr;
+    void (*get_integer64v)(gl_enum, gl_int64*) = nullptr;
+    void (*query_counter)(gl_uint, gl_enum) = nullptr;
+    gl_enum (*get_error)() = nullptr;
+    void (*get_integerv)(gl_enum, gl_int*) = nullptr;
+    const gl_ubyte* (*get_string)(gl_enum) = nullptr;
+    const gl_ubyte* (*get_stringi)(gl_enum, gl_uint) = nullptr;
+};
+
+GlEntryPoints& gl_entry_points() noexcept {
+    static GlEntryPoints entry_points;
+    return entry_points;
+}
+
+// A GL entry point arrives as the data pointer the application got from its
+// GL context; turning it back into its function type is the whole job here.
+template <typename Function>
+Function as_function(void* pointer) noexcept {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    return reinterpret_cast<Function>(pointer);
+}
 
 // The header spells its scalar locals as GLint/GLenum/...; without a GL
 // header those are these.
@@ -83,16 +101,16 @@ using GLubyte = gl_ubyte;
 
 }  // namespace
 
-#define glGenQueries gl_gen_queries
-#define glGetQueryiv gl_get_queryiv
-#define glGetQueryObjectiv gl_get_query_objectiv
-#define glGetQueryObjectui64v gl_get_query_objectui64v
-#define glGetInteger64v gl_get_integer64v
-#define glQueryCounter gl_query_counter
-#define glGetError gl_get_error
-#define glGetIntegerv gl_get_integerv
-#define glGetString gl_get_string
-#define glGetStringi gl_get_stringi
+#define glGenQueries gl_entry_points().gen_queries
+#define glGetQueryiv gl_entry_points().get_queryiv
+#define glGetQueryObjectiv gl_entry_points().get_query_objectiv
+#define glGetQueryObjectui64v gl_entry_points().get_query_objectui64v
+#define glGetInteger64v gl_entry_points().get_integer64v
+#define glQueryCounter gl_entry_points().query_counter
+#define glGetError gl_entry_points().get_error
+#define glGetIntegerv gl_entry_points().get_integerv
+#define glGetString gl_entry_points().get_string
+#define glGetStringi gl_entry_points().get_stringi
 
 #include <tracy/TracyOpenGL.hpp>
 
@@ -117,29 +135,29 @@ public:
         // Constructs the per-thread GL context. The entry-point pointers
         // above and a current GL context must already be in place.
         TracyGpuContext;
-        valid_ = true;
     }
 
-    bool valid() const noexcept override { return valid_; }
+    [[nodiscard]] bool valid() const noexcept override { return valid_; }
 
-    void begin_zone(const char* name) noexcept override {
+    void begin_zone(const char* name, void* /*command_stream*/) noexcept override {
         if (!valid_) {
             return;
         }
-        location_ = tracy::SourceLocationData{name, __func__, __FILE__, 0, 0};
+        location_ = tracy::SourceLocationData{
+            .name = name, .function = __func__, .file = __FILE__, .line = 0, .color = 0};
         zone_.emplace(&location_, true);
     }
 
     void end_zone() noexcept override { zone_.reset(); }
 
-    void collect() noexcept override {
+    void collect(void* /*command_stream*/) noexcept override {
         if (valid_) {
             TracyGpuCollect;
         }
     }
 
 private:
-    bool valid_ = false;
+    bool valid_ = true;
     tracy::SourceLocationData location_{};
     std::optional<tracy::GpuCtxScope> zone_;
 };
@@ -149,6 +167,9 @@ private:
 namespace cube::profiling {
 
 GpuContext* GpuContext::create_opengl(const gl_gpu_functions& functions) noexcept {
+    if (!active()) {
+        return nullptr;
+    }
     if (functions.gen_queries == nullptr || functions.get_queryiv == nullptr ||
         functions.get_query_objectiv == nullptr || functions.get_query_objectui64v == nullptr ||
         functions.get_integer64v == nullptr || functions.query_counter == nullptr ||
@@ -157,18 +178,19 @@ GpuContext* GpuContext::create_opengl(const gl_gpu_functions& functions) noexcep
         return nullptr;
     }
 
-    gl_gen_queries = reinterpret_cast<decltype(gl_gen_queries)>(functions.gen_queries);
-    gl_get_queryiv = reinterpret_cast<decltype(gl_get_queryiv)>(functions.get_queryiv);
-    gl_get_query_objectiv =
-        reinterpret_cast<decltype(gl_get_query_objectiv)>(functions.get_query_objectiv);
-    gl_get_query_objectui64v =
-        reinterpret_cast<decltype(gl_get_query_objectui64v)>(functions.get_query_objectui64v);
-    gl_get_integer64v = reinterpret_cast<decltype(gl_get_integer64v)>(functions.get_integer64v);
-    gl_query_counter = reinterpret_cast<decltype(gl_query_counter)>(functions.query_counter);
-    gl_get_error = reinterpret_cast<decltype(gl_get_error)>(functions.get_error);
-    gl_get_integerv = reinterpret_cast<decltype(gl_get_integerv)>(functions.get_integerv);
-    gl_get_string = reinterpret_cast<decltype(gl_get_string)>(functions.get_string);
-    gl_get_stringi = reinterpret_cast<decltype(gl_get_stringi)>(functions.get_stringi);
+    GlEntryPoints& table = gl_entry_points();
+    table.gen_queries = as_function<decltype(table.gen_queries)>(functions.gen_queries);
+    table.get_queryiv = as_function<decltype(table.get_queryiv)>(functions.get_queryiv);
+    table.get_query_objectiv =
+        as_function<decltype(table.get_query_objectiv)>(functions.get_query_objectiv);
+    table.get_query_objectui64v =
+        as_function<decltype(table.get_query_objectui64v)>(functions.get_query_objectui64v);
+    table.get_integer64v = as_function<decltype(table.get_integer64v)>(functions.get_integer64v);
+    table.query_counter = as_function<decltype(table.query_counter)>(functions.query_counter);
+    table.get_error = as_function<decltype(table.get_error)>(functions.get_error);
+    table.get_integerv = as_function<decltype(table.get_integerv)>(functions.get_integerv);
+    table.get_string = as_function<decltype(table.get_string)>(functions.get_string);
+    table.get_stringi = as_function<decltype(table.get_stringi)>(functions.get_stringi);
 
     // One GL context per thread; a second call (another window) reuses it.
     // The pointers above describe the same thread's current context either

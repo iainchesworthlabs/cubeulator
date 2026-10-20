@@ -43,6 +43,8 @@
       "inherits": ["fastdebug"],
       "cacheVariables": {
         "CUBEULATOR_ENABLE_TRACY": "ON",
+        "CUBEULATOR_TRACY_TOOLS": "ON",
+        "CUBEULATOR_TRACY_AUTOSTART": "ON",
         "CUBEULATOR_ENABLE_SANITIZERS": "OFF"
       }
     },

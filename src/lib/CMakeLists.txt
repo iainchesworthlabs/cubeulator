@@ -93,8 +93,16 @@ target_sources(cube_lib
         src/diagnostics/describe.cpp
         src/diagnostics/record.cpp
         src/diagnostics/jsonl_file.cpp
+        src/profile/qsg_timing.cpp
         src/profile/recorder.cpp
+        src/profile/session.cpp
         src/i18n/i18n.cpp)
+
+# What a process with no profiling switch does (cube/profile/session.hpp) is a
+# build-configuration fact, so it reaches session.cpp as a compile definition
+# computed by CMake (cmake/Tracy.cmake) and not as an #ifdef on NDEBUG.
+set_source_files_properties(src/profile/session.cpp PROPERTIES
+    COMPILE_DEFINITIONS "CUBE_PROFILE_DEFAULT_ON=${CUBEULATOR_PROFILE_DEFAULT_ON}")
 
 # The Tracy GPU contexts (cube::profiling::GpuContext): built only when
 # Tracy is on, because the per-backend headers they include (<d3d11.h> on
@@ -117,6 +125,18 @@ if(CUBEULATOR_ENABLE_TRACY)
         set_source_files_properties("${_gpu_file}" PROPERTIES
             COMPILE_DEFINITIONS "NOMINMAX")
     endforeach()
+
+    # Vulkan is an API, not an operating system: the same file serves every
+    # platform that has it, and the platform's fragment says whether that is
+    # this one. Tracy resolves Vulkan's functions through two entry points the
+    # application hands over, so only the headers are needed, not the loader.
+    if(CUBEULATOR_PLATFORM_PROFILING_VULKAN)
+        find_package(VulkanHeaders CONFIG REQUIRED)
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_vulkan.cpp)
+        target_link_libraries(cube_lib PRIVATE Vulkan::Headers)
+    else()
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_vulkan_none.cpp)
+    endif()
 endif()
 
 # Two files make the compiler build lookup tables from loops: the two-phase

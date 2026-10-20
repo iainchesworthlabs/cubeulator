@@ -42,10 +42,36 @@ if(NOT DEFINED CUBEULATOR_BUILD_TESTS OR CUBEULATOR_BUILD_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
 
-# Tracy is opt-in: the one switch (declared in cmake/Tracy.cmake) both makes
-# the profiler client resolvable and turns the instrumentation macros real.
+# Tracy is built into the desktop applications (Windows, Linux, macOS) and
+# dormant in them: the one switch CUBEULATOR_ENABLE_TRACY (declared in
+# cmake/Tracy.cmake) both makes the profiler client resolvable and turns the
+# instrumentation macros real, and cube::profile::Session decides at run time
+# whether the client is started (docs/profiling.md). It defaults off where
+# Tracy's client cannot run or has not been exercised: the browser (which has
+# the in-process recorder instead), Android and iOS, Windows on ARM - and for a
+# coverage build, whose timings are not about the program.
+# The default has to be settled here, before project(), because it selects a
+# vcpkg manifest feature; -DCUBEULATOR_ENABLE_TRACY=OFF opts a build out.
+if(NOT DEFINED CUBEULATOR_ENABLE_TRACY)
+    if(CUBEULATOR_ENABLE_PROFILE_RECORDER OR CUBEULATOR_ENABLE_COVERAGE
+       OR VCPKG_TARGET_TRIPLET MATCHES "emscripten|android|ios|uwp|^arm.*-windows")
+        set(_cubeulator_tracy_default OFF)
+    else()
+        set(_cubeulator_tracy_default ON)
+    endif()
+    set(CUBEULATOR_ENABLE_TRACY ${_cubeulator_tracy_default} CACHE BOOL
+        "Build the Tracy profiler client into the application (started at run time, see docs/profiling.md)")
+endif()
+option(CUBEULATOR_TRACY_TOOLS
+    "Also build Tracy's command-line tools (tracy-capture, tracy-csvexport) for the host" OFF)
 if(CUBEULATOR_ENABLE_TRACY)
     list(APPEND VCPKG_MANIFEST_FEATURES "profiling")
+    if(CUBEULATOR_TRACY_TOOLS)
+        list(APPEND VCPKG_MANIFEST_FEATURES "profiling-tools")
+    endif()
+    # The tracy port is an overlay (vcpkg-overlay-ports/tracy): the registry's has no
+    # feature for manual lifetime or loopback-only listening.
+    list(APPEND VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg-overlay-ports")
 endif()
 
 project(Cubeulator

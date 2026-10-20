@@ -92,9 +92,18 @@
 #                                      into cube::lib (not cube_platform: the
 #                                      unit tests reach it) when Tracy is on:
 #                                      platform/windows/tracy_gpu_d3d11_windows.cpp
-#                                      where Windows supplies D3D11,
-#                                      platform/posix/tracy_gpu_d3d11_none.cpp
+#                                      where Windows supplies Direct3D,
+#                                      platform/posix/tracy_gpu_direct3d_none.cpp
 #                                      everywhere else.
+#   CUBEULATOR_PLATFORM_PROFILING_VULKAN
+#                                      ON when the platform's Qt can render
+#                                      with Vulkan and the Tracy Vulkan backend
+#                                      is to be built (src/lib/src/profile/
+#                                      tracy_gpu_vulkan.cpp, with the Vulkan
+#                                      headers; the app's
+#                                      qt/render_profiler_vulkan.cpp finds the
+#                                      handles). OFF compiles the *_none.cpp
+#                                      stubs of the same two.
 #   CUBEULATOR_PLATFORM_SOURCES        Compiled into cube_platform: one
 #                                      implementation of every interfaces/
 #                                      header (and of the detail/ seams).

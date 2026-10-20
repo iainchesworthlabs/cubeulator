@@ -15,7 +15,7 @@ Naming convention: `<os>-<compiler>-<config>`. A preset configures into
 | `linux-gcc-{debug,release}` | CI builds+tests `release` only |
 | `linux-gcc-coverage` | Debug + gcov instrumentation, 80% line/branch gate |
 | `{windows-msvc,linux-gcc,macos-clang}-fastdebug` | RelWithDebInfo, so optimised with no sanitizers: the quick build for local iteration (see [Testing](testing.md#debug-is-slow-use-fastdebug-for-local-iteration)); not built by CI |
-| `{windows-msvc,linux-gcc,macos-clang}-profiling` | RelWithDebInfo + [Tracy](profiling.md) (`CUBEULATOR_ENABLE_TRACY=ON`, sanitizers off); not built by CI |
+| `{windows-msvc,linux-gcc,macos-clang}-profiling` | RelWithDebInfo + [Tracy](profiling.md) (the client's command-line tools built, profiling on at launch, sanitizers off); not built by CI |
 | `macos-clang-{debug,release}` | CI builds+tests `release` only |
 | `android-clang-{debug,release}` | CI builds `release` only; builds the Qt/QML app via Qt for Android |
 | `ios-clang-{debug,release}` | Xcode generator, so macOS only; CI builds `release` only; build-only, unsigned, `CUBEULATOR_BUILD_APP=OFF` (no Qt) — Qt for iOS packaging not yet wired up, no Mac available to validate it here |
@@ -158,11 +158,21 @@ worker that adds the two headers and reloads the page once.
   or ASan (real MSVC Debug); disabled automatically under clang-cl.
 - `CUBEULATOR_ENABLE_COVERAGE` (default `OFF`) — gcov instrumentation; only
   the `linux-gcc-coverage` preset turns this on.
-- `CUBEULATOR_ENABLE_TRACY` (default `OFF`) — Tracy profiler instrumentation
-  (`cmake/Tracy.cmake`). Adds the `profiling` vcpkg manifest feature, which
-  supplies the Tracy client and its command-line tools; off is a no-op that
-  needs none of it. The `*-profiling` presets turn it on. See
-  [Profiling](profiling.md).
+- `CUBEULATOR_ENABLE_TRACY` (default `ON` on Windows, Linux and macOS; `OFF`
+  for the browser, Android, iOS, Windows on ARM and coverage builds) — the Tracy profiler
+  client and its instrumentation (`cmake/Tracy.cmake`). Adds the `profiling`
+  vcpkg manifest feature (the `tracy` overlay port in
+  `vcpkg-overlay-ports/`, and the Vulkan headers where Qt can render with
+  Vulkan). ON links a client that is **dormant** until the application is
+  started with `--profile` or `CUBEULATOR_PROFILE=1` (or is a Debug build);
+  `-DCUBEULATOR_ENABLE_TRACY=OFF` compiles it all out and needs none of it.
+  See [Profiling](profiling.md).
+- `CUBEULATOR_TRACY_AUTOSTART` (default `AUTO`) — whether a process given no
+  switch starts the profiler: `AUTO` is Debug builds only, `ON` / `OFF` force
+  it. The `*-profiling` presets set `ON`.
+- `CUBEULATOR_TRACY_TOOLS` (default `OFF`) — also build Tracy's command-line
+  tools (`tracy-capture`, `tracy-csvexport`) for the host (the
+  `profiling-tools` vcpkg feature). The `*-profiling` presets set `ON`.
 - `CUBEULATOR_ENABLE_PROFILE_RECORDER` (default `OFF`) — the same zone macros
   recorded in-process (`cmake/ProfileRecorder.cmake`) and exported as a Chrome
   trace, a CSV and a summary, for where Tracy's client cannot run: a browser.

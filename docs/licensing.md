@@ -210,7 +210,8 @@ tools/tests only.
 | bgfx (+ libsquish, lodepng, mgnlibs, miniz, stb, tinyexr) | 1.129.8940-496#1 | BSD-2-Clause AND CC0-1.0 | **removed from `vcpkg.json`** - it was declared but nothing linked it [V: the file API's link line of `cube_app` had no bgfx; `src/render` was a stub] | none |
 | cpu-features | 0.11.0 | Apache-2.0 [V: port manifest] | A | OpenCV's dependency on Android only; Apache: licence copy |
 | catch2 **[T]** | 3.16.0 | BSL-1.0 | no | tests only |
-| tracy **[T]** | 0.14.1 | BSD-3-Clause | no | the opt-in `profiling` feature (`CUBEULATOR_ENABLE_TRACY`, off in every release preset); a profiling build is a development build and is not packaged. Its command-line tools are host tools; see [Profiling](profiling.md#licence) |
+| tracy **[T]** | 0.14.1 (overlay port-version 2) | BSD-3-Clause | **yes, on the desktop** | the `profiling` feature (`CUBEULATOR_ENABLE_TRACY`, on by default on Windows, Linux and macOS): the client library is linked into the desktop applications (`TracyClient.dll` on Windows), dormant until the application is started with `--profile` / `CUBEULATOR_PROFILE=1`. The notices pick it up from the link line with its licence text. Its command-line tools (the separate `profiling-tools` feature, which brings `capstone`, `ppqsort`, `zstd`) are host tools a shipped build does not select; see [Profiling](profiling.md#licence) |
+| vulkan-headers | 1.4.363.0 | Apache-2.0 OR MIT | no | header-only, a `profiling` feature dependency on Windows and Linux (Tracy's Vulkan context is compiled against it); nothing is linked, so nothing is distributed |
 | vcpkg-cmake, vcpkg-cmake-config, vcpkg-get-python-packages | - | - | no | install nothing outside `share/`; the generator skips ports with no `include/`, `lib/` or `bin/` content |
 
 ONNX Runtime and the ports only it pulled in (onnx, abseil, flatbuffers,
