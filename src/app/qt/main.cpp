@@ -24,6 +24,8 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace {
 
@@ -96,15 +98,19 @@ int main(int argc, char* argv[]) {
     // launch that cannot use it falls back instead of failing to start
     // (cube/graphics/backend_choice.hpp, docs/graphics-api.md).
     const auto platform_info = cube::platform::platform_info::current();
-    cube::graphics::platform offered{.automatic = platform_info.automatic_graphics_backends};
+    std::vector<std::string> available;
     for (const auto& backend : platform_info.graphics_backends) {
-        offered.available.push_back(backend.key);
+        available.push_back(backend.key);
     }
     // Not a chip in the Settings picker, but a backend the command line and
     // the chains can name wherever the platform says what it draws with.
     if (!platform_info.software_graphics_api.empty()) {
-        offered.available.emplace_back(cube::graphics::software);
+        available.emplace_back(cube::graphics::software);
     }
+    cube::graphics::platform offered{
+        .available = std::move(available),
+        .automatic = platform_info.automatic_graphics_backends,
+    };
     QCoreApplication::setOrganizationName("Cubeulator");
     QCoreApplication::setApplicationName("Cubeulator");
     cube::app::graphics::Launch graphics(std::make_unique<QSettings>(), profile_arguments,
