@@ -5,10 +5,14 @@
 #include "solve_controller.hpp"
 
 #include <cube/diagnostics/describe.hpp>
+#include <cube/nxn/notation.hpp>
+#include <cube/nxn/outside_view.hpp>
+#include <cube/nxn/stepped_plan.hpp>
 #include <cube/profiling.hpp>
 
 #include <QMatrix3x3>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 
@@ -80,9 +84,12 @@ HeldCube::HeldCube(DirectScan& scan, SolveController& solve, QObject* parent)
         }
     });
     connect(&solve_, &SolveController::stateChanged, this, &HeldCube::onSolveChanged);
+    connect(&solve_, &SolveController::stateChanged, this, &HeldCube::updateMoveHidden);
     connect(&solve_, &SolveController::solutionChanged, this, [this]() {
         forget();
         matched_this_move_ = false;
+        judged_index_ = -1;
+        updateMoveHidden();
         if (solve_.solutionContinuesCube()) {
             // The same cube, still in the same hands: the method changed and
             // the way to solve it with it. How it is held has not, so the
@@ -106,6 +113,7 @@ void HeldCube::setHold(const Hold& hold) {
     }
     hold_ = hold;
     emit holdChanged();
+    updateMoveHidden();
 }
 
 QString HeldCube::up() const {
@@ -283,12 +291,20 @@ void HeldCube::forget() {
 }
 
 void HeldCube::onSolveChanged() {
-    if (solve_.currentCube() == judged_cube_) {
-        return;
+    if (solve_.size() == 3) {
+        if (solve_.currentCube() == judged_cube_) {
+            return;
+        }
+        judged_cube_ = solve_.currentCube();
+    } else {
+        // Another size has no 3x3 to compare: the cube expected is the one at this move.
+        if (solve_.moveIndex() == judged_index_) {
+            return;
+        }
+        judged_index_ = solve_.moveIndex();
     }
     // A different cube is expected now: whatever was being counted towards
     // was about the one before.
-    judged_cube_ = solve_.currentCube();
     move_announced_ = false;
     matched_this_move_ = false;
     last_ = Verdict{};
@@ -404,13 +420,255 @@ HeldCube::Verdict HeldCube::judge(const cube::vision::SideRead& read,
     return say(Kind::Unknown);
 }
 
+// ---- a cube of any size ------------------------------------------------------------------
+//
+// The same questions as judge(), asked of the plan's cube (cube::nxn) and a side of N x N
+// cells; docs/nxn-camera-follow.md says why each rule is what it is.
+
+namespace {
+
+// The cells of the side in view that the move changes, from `hold`.
+[[nodiscard]] std::vector<std::size_t> changed_cells(const cube::nxn::NCube& before,
+                                                     const cube::nxn::NCube& after,
+                                                     const Hold& hold) {
+    const std::vector<cube::solver::Color> a = cube::nxn::camera_view(before, hold);
+    const std::vector<cube::solver::Color> b = cube::nxn::camera_view(after, hold);
+    std::vector<std::size_t> cells;
+    for (std::size_t cell = 0; cell < a.size(); ++cell) {
+        if (a.at(cell) != b.at(cell)) {
+            cells.push_back(cell);
+        }
+    }
+    return cells;
+}
+
+// Fewer cells than this changing and a move is not followed: one cell is as likely a glint
+// as a turn.
+constexpr std::size_t kLeastCellsChanged = 2;
+
+}  // namespace
+
+bool HeldCube::move_decided(const cube::vision::SideRead& read, const cube::nxn::NCube& before,
+                            const cube::nxn::NCube& after, const Hold& hold,
+                            const cube::vision::SessionColours& colours) const {
+    const std::vector<std::size_t> cells = changed_cells(before, after, hold);
+    if (cells.size() < kLeastCellsChanged) {
+        return false;
+    }
+    const std::vector<cube::solver::Color> was = cube::nxn::camera_view(before, hold);
+    const std::vector<cube::solver::Color> will_be = cube::nxn::camera_view(after, hold);
+    std::size_t found = 0;
+    std::size_t agree = 0;
+    for (const std::size_t cell : cells) {
+        if (!read.found.at(cell)) {
+            continue;
+        }
+        ++found;
+        const float to_was = cube::vision::colour_distance(
+            read.lab.at(cell), colours.at(static_cast<std::size_t>(was.at(cell))));
+        const float to_will_be = cube::vision::colour_distance(
+            read.lab.at(cell), colours.at(static_cast<std::size_t>(will_be.at(cell))));
+        agree += to_will_be < to_was ? 1U : 0U;
+    }
+    // Enough of the cells that decide it were seen (two, and half of them)...
+    if (found < kLeastCellsChanged || 2 * found < cells.size()) {
+        return false;
+    }
+    // ...and four fifths of those say it was made.
+    return 5 * agree >= 4 * found;
+}
+
+HeldCube::Verdict HeldCube::judge_n(const cube::vision::SideRead& read,
+                                    const cube::vision::SessionColours& colours) const {
+    CUBE_ZONE_SCOPED_N("held_cube.judge_n");
+    using Kind = Verdict::Kind;
+    const cube::nxn::SteppedPlan& plan = solve_.plan();
+    const cube::nxn::NCube& now = plan.current_cube();
+    const int size = now.size();
+    const float clear = cube::vision::hold_clear_distance(size);
+    const HoldReading here = cube::vision::read_hold(read, now, colours);
+
+    // Has the move been made? As for a 3x3: the side in view is the cube after the move, and
+    // the cube as it stood explains it clearly worse - and, for a side of this many cells,
+    // the cells the move changes agree (move_decided). A move that changes too few cells to
+    // decide on is not decided, however well the mean fits.
+    std::optional<cube::nxn::NCube> next;
+    std::optional<HoldReading> there;
+    if (!plan.at_end()) {
+        next = plan.cube_at(plan.current_index() + 1);
+        there = cube::vision::read_hold(read, *next, colours);
+        if (!there->holds.empty() && here.distance >= there->distance + clear) {
+            if (const auto hold = choose(there->holds); hold.has_value()) {
+                if (move_decided(read, now, *next, *hold, colours)) {
+                    return say(Kind::Moved, *hold);
+                }
+            } else {
+                return say(Kind::Unsure);
+            }
+        }
+    }
+
+    if (here.shows(hold_)) {
+        return say(Kind::Held, hold_);
+    }
+    if (there.has_value() && there->shows(hold_)) {
+        // The side that was turned, facing the camera: a turned side and a rolled cube look
+        // the same (see judge()).
+        if (matched_this_move_) {
+            return say(Kind::Moved, hold_);
+        }
+        return say(Kind::Unsure);
+    }
+
+    if (!here.holds.empty()) {
+        if (const auto hold = choose(here.holds); hold.has_value()) {
+            return say(Kind::Held, *hold);
+        }
+        return say(Kind::Unsure);
+    }
+
+    // Neither the cube as it stood nor the cube after the move. A mistake is said only of a
+    // side seen whole, with plainly wrong cells in a share that grows with the side (two for
+    // a 3x3, a twelfth of the cells above that).
+    const auto cells = static_cast<int>(read.found.size());
+    if (read.stickers_found < cells) {
+        return say(Kind::Nothing);
+    }
+    const int needed = std::max(2, cells / 12);
+    const int off_as_it_stood =
+        cube::vision::stickers_off(read, cube::nxn::camera_view(now, hold_), colours);
+    const int off_after_move =
+        next.has_value()
+            ? cube::vision::stickers_off(read, cube::nxn::camera_view(*next, hold_), colours)
+            : off_as_it_stood;
+    if (off_as_it_stood < needed || off_after_move < needed) {
+        return say(Kind::Nothing);
+    }
+    if (half_way_there_n(read, colours)) {
+        return say(Kind::Nothing);
+    }
+    if (const auto side = side_turned_instead_n(read, colours, here.distance); side.has_value()) {
+        return say(Kind::Wrong, hold_, *side);
+    }
+    return say(Kind::Unknown);
+}
+
+std::optional<Face> HeldCube::side_turned_instead_n(const cube::vision::SideRead& read,
+                                                    const cube::vision::SessionColours& colours,
+                                                    float unmoved_distance) const {
+    if (!seen_) {
+        return std::nullopt;
+    }
+    const cube::nxn::SteppedPlan& plan = solve_.plan();
+    const cube::nxn::NCube& now = plan.current_cube();
+    const float clear = cube::vision::hold_clear_distance(now.size());
+    // The layers the asked move turns, as turns of a slice: turning one of them the way it asks
+    // is not "instead". A layer is spelt from either end of its axis, so a layer is tried once,
+    // from the end it is nearer (the positive side's when it is in the middle).
+    const int size = now.size();
+    std::vector<cube::nxn::SliceTurn> asked;
+    if (!plan.at_end()) {
+        for (const cube::nxn::LayerMove& layer : cube::nxn::layers_of(plan.current_move())) {
+            asked.push_back(cube::nxn::to_slice_turn(layer, size));
+        }
+    }
+    std::optional<Face> turned;
+    for (const Face face : cube::solver::kAllFaces) {
+        for (int depth = 0; depth < size; ++depth) {
+            const int other_end = size - 1 - depth;
+            if (depth > other_end || (depth == other_end && !cube::nxn::is_positive(face))) {
+                continue;
+            }
+            for (int turns = 1; turns <= 3; ++turns) {
+                const cube::nxn::LayerMove move{.face = face, .depth = depth, .turns = turns};
+                if (std::ranges::find(asked, cube::nxn::to_slice_turn(move, size)) != asked.end()) {
+                    continue;
+                }
+                cube::nxn::NCube after = now;
+                after.apply(move);
+                const HoldReading reading = cube::vision::read_hold(read, after, colours);
+                if (!reading.shows(hold_) || unmoved_distance < reading.distance + clear) {
+                    continue;
+                }
+                if (turned.has_value() && *turned != face) {
+                    return std::nullopt;  // turns of two different sides would both explain it
+                }
+                turned = face;
+            }
+        }
+    }
+    return turned;
+}
+
+bool HeldCube::half_way_there_n(const cube::vision::SideRead& read,
+                                const cube::vision::SessionColours& colours) const {
+    const cube::nxn::SteppedPlan& plan = solve_.plan();
+    if (plan.at_end() || plan.current_move().turns != 2) {
+        return false;
+    }
+    for (const int turns : {1, 3}) {
+        cube::nxn::NCube part_way = plan.current_cube();
+        for (const cube::nxn::LayerMove& layer : cube::nxn::layers_of(plan.current_move())) {
+            part_way.apply(
+                cube::nxn::LayerMove{.face = layer.face, .depth = layer.depth, .turns = turns});
+        }
+        if (cube::vision::read_hold(read, part_way, colours).shows(hold_)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void HeldCube::note_n(const cube::vision::SideRead& read, const Verdict& verdict) const {
+    if (diagnostics_ == nullptr || !diagnostics_->enabled()) {
+        return;
+    }
+    using cube::diagnostics::Json;
+    constexpr std::array<const char*, 6> kKinds = {"nothing", "held",  "moved",
+                                                   "unsure",  "wrong", "unknown"};
+    Json data = Json::object();
+    data.set("verdict", kKinds.at(static_cast<std::size_t>(verdict.kind)));
+    data.set("size", solve_.size());
+    data.set("move_index", solve_.moveIndex());
+    data.set("shown_hold", hold_json(hold_));
+    data.set("verdict_hold", hold_json(verdict.hold));
+    data.set("seen", seen_);
+    data.set("turned_instead", verdict.kind == Verdict::Kind::Wrong
+                                   ? Json(cube::diagnostics::letter_of(verdict.side))
+                                   : Json());
+    data.set("stickers_found", read.stickers_found);
+    diagnostics_->write("held", std::move(data));
+}
+
+void HeldCube::updateMoveHidden() {
+    bool hidden = false;
+    if (!solve_.isSolving() && !solve_.atEnd()) {
+        if (solve_.size() == 3) {
+            // The side facing the holder is the one side the camera never sees change.
+            const auto move = solve_.currentMove();
+            hidden = move.has_value() && cube::solver::place_of(hold_, move->face) == Place::Front;
+        } else {
+            const cube::nxn::SteppedPlan& plan = solve_.plan();
+            hidden =
+                changed_cells(plan.current_cube(), plan.cube_at(plan.current_index() + 1), hold_)
+                    .size() < kLeastCellsChanged;
+        }
+    }
+    if (hidden != move_hidden_) {
+        move_hidden_ = hidden;
+        emit moveHiddenChanged();
+    }
+}
+
 void HeldCube::onFrameWatched() {
     CUBE_ZONE_SCOPED_N("held_cube.on_frame_watched");
     const std::optional<cube::vision::SideRead>& read = scan_.read();
     const std::optional<cube::vision::SessionColours> colours = scan_.colours();
-    // Only a 3x3 is followed: the hold and the move are matched against its nine stickers a
-    // side. A bigger cube's side is read for the preview and means nothing here.
-    if (!read.has_value() || !colours.has_value() || solve_.isSolving() || scan_.size() != 3) {
+    // What is read is a side of the size of the cube being solved: a read of any other size
+    // (a scan left at another size) is a different cube's and means nothing here.
+    const int size = solve_.size();
+    if (!read.has_value() || !colours.has_value() || solve_.isSolving() || scan_.size() != size ||
+        read->size != size) {
         forget();
         setSight(Sight::None);
         return;
@@ -419,7 +677,7 @@ void HeldCube::onFrameWatched() {
     // Held still since the frame before, as a read has to be for a scan.
     const bool steady =
         previous_centre_.has_value() && cube::vision::held_still(*read, *previous_centre_);
-    previous_centre_ = read->centres[4];
+    previous_centre_ = cube::vision::steady_point(*read);
     if (!steady) {
         last_ = Verdict{};
         streak_ = 0;
@@ -427,9 +685,13 @@ void HeldCube::onFrameWatched() {
     }
 
     onSolveChanged();
-    const Verdict verdict = judge(*read, *colours);
+    const Verdict verdict = size == 3 ? judge(*read, *colours) : judge_n(*read, *colours);
     if (!(verdict == last_)) {
-        note(*read, *colours, verdict);
+        if (size == 3) {
+            note(*read, *colours, verdict);
+        } else {
+            note_n(*read, verdict);
+        }
     }
     streak_ = verdict == last_ ? streak_ + 1 : 1;
     last_ = verdict;

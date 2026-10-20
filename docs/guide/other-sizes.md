@@ -90,9 +90,13 @@ cube beside it at the turn you select.
 
 ## What is not here yet
 
-- **The camera follows only a 3x3.** On the solve screen a bigger cube is
-  shown on camera, with a dot on each sticker it finds, but a turn you make is
-  not recognised: press **Next turn** after each one.
+- **The camera follows a bigger cube less surely.** Hold a side square to it
+  and the cube on screen turns to match, and a turn you make in view is
+  recognised and stepped on, as for a 3x3. But a layer the side you are showing
+  does not touch (one behind the front layer, say) cannot be seen, and nor can
+  a turn that changes almost nothing on that side: the screen says so, and you
+  press **Next turn** after it. The 4x4 is read as well as a 3x3; a 5x5 and a
+  2x2 are read less often, and then it is **Next turn** too.
 - **Sizes 2 to 5.** Bigger cubes are solved by the library but are not offered
   on screen yet.
 - **The words.** The new screens are in English; other languages are drafts

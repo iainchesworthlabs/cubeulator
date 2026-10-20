@@ -545,7 +545,7 @@ Review the solution.
 | `solve.skipToCore` | Skip to the 3x3 stage | Button on the solve screen of a cube bigger than 3x3. Jumps over the stages that pair up its pieces. |
 | `solve.skipToCore.note` | Use this once you have paired up the centres and edges yourself. The cube on screen jumps to the 3x3 it should now be. | Explains the button above it, for someone who can already solve a 3x3. |
 | `solve.method.finishWith` | Finish with | Small label above the three method buttons when the cube is bigger than 3x3: the methods apply to the 3x3 the cube has become, so they are said to be how it is finished. |
-| `solve.camera.shownOnly` | Your cube is on camera, but a bigger cube is not followed yet. Press Next turn after each move. | Shown under the move on the solve screen of a cube bigger than 3x3, beside the camera preview: the camera shows the cube being solved, but only a 3x3's turns are recognised, so the person steps on with the button. 'Next turn' is the main button's text (solve.next). |
+| `solve.camera.layerHidden` | Matched. The camera cannot see this layer from here: press Next turn after this move. | Shown beside the camera preview on the solve screen of a cube bigger than 3x3 when the layer to turn is one the side facing the camera does not show (a layer behind the front one, say): the camera cannot tell that it was turned, so the person steps on with the button. 'Next turn' is the main button's text (solve.next). |
 | `solve.finish` | Finish | Replaces 'Next turn' on the last turn. |
 | `solve.hint.touch` | Make the turn, then tap the cube. | Shown once, on the first turn of a first solve, on touch devices. |
 | `solve.hint.keys` | Make the turn, then press Space. | The same, on a computer. 'Space' is the space bar. |
