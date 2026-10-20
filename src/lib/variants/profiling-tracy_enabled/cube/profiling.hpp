@@ -24,7 +24,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <optional>
 #include <string_view>
 #include <type_traits>
 
@@ -162,7 +161,7 @@ public:
     }
 
 private:
-    TracyCZoneCtx context_;
+    TracyCZoneCtx context_{};
     bool open_ = true;
 };
 
@@ -261,7 +260,7 @@ public:
     ZoneSpan& operator=(ZoneSpan&&) = delete;
 
     void begin(const char* name) noexcept {
-        if (zone_) {
+        if (open_) {
             return;
         }
         location_ = ___tracy_source_location_data{
@@ -271,19 +270,21 @@ public:
             .line = 0,
             .color = 0,
         };
-        zone_.emplace(&location_);
+        context_ = ___tracy_emit_zone_begin(&location_, active() ? 1 : 0);
+        open_ = true;
     }
 
     void end() noexcept {
-        if (zone_) {
-            zone_->end();
-            zone_.reset();
+        if (open_) {
+            open_ = false;
+            ___tracy_emit_zone_end(context_);
         }
     }
 
 private:
     ___tracy_source_location_data location_{};
-    std::optional<ManualZone> zone_;
+    TracyCZoneCtx context_{};
+    bool open_ = false;
 };
 
 // Execution sections (Tracy 0.14): named regions the GUI can filter the
