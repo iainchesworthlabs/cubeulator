@@ -415,6 +415,17 @@ What is in it.
   to 13 ms warm, plus the signal's other listeners. A hitch of one or two frames
   on a desktop; three to five on a phone if it scales like the rest. The three
   child zones are in the tree to see it with.
+- **The scan screen at rest** (the fake camera's drawn 640 x 360 frames, 66
+  frames of the system tests under Tracy, Direct3D 11): `direct_scan.process_frame`
+  is **8.5 ms** a frame on average, 7.0 at best and 13.0 at worst, a quarter of
+  the 33 ms budget (a phone at 3 to 5 times a desktop core would be over it on
+  average). Where it goes: `read_side_glare_look` 3.5 ms (almost all of it
+  `contours_without_glare`, 3.3), `read_side` 2.9 over two calls, `prepare_frame`
+  1.1 over two, the pitch look 1.0, the second look 0.9. The glare look runs on
+  every frame of a scene with no glare in it; skipping it when the first read
+  has found nothing to be fooled by would take the largest piece out, and it is
+  the vision lane's to decide, with its corpus. The preview's `QImage` copy
+  (`app.frame_image.request`) is 0.065 ms: the video upload is not a cost.
 - **Idle.** Home spins its cube when the setting is on, as designed, and draws
   every frame for it (46 a second, 0.5 to 1 ms of render-thread time each); the
   solve screens nudge the layer to move, which is the same; History, Entry,
