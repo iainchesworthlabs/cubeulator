@@ -1021,7 +1021,7 @@ jobs:
           libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxcb-xinput0
 
       - name: Install gcovr
-        run: pip install --quiet gcovr==8.6
+        run: pip install --quiet --require-hashes -r ci/requirements-coverage.txt
 
       # The Qt the app ships on: the build legs' version and action pin, so the
       # system tests run the Qt that users run, and share the legs' Qt cache.
@@ -1151,7 +1151,7 @@ jobs:
         run: sudo apt-get install -y libx11-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
 
       - name: Install gcovr
-        run: pip install --quiet gcovr==8.6
+        run: pip install --quiet --require-hashes -r ci/requirements-coverage.txt
 
       # No GUI app needed to measure coverage of cube::lib/cube::platform, so
       # this leg skips the Qt install entirely.
