@@ -65,6 +65,7 @@ constexpr double kThresholdOffset = 8.0;
 // image the same size as `binary` whose non-zero pixels are taken out of the
 // bright region before it is traced: that is how the glare look keeps a
 // highlight from bridging two stickers. `binary` is left as it was.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the image, then what is taken out of it.
 [[nodiscard]] std::vector<std::vector<cv::Point>> trace(const cv::Mat& binary,
                                                         const cv::Mat& mask) {
     cv::Mat kept = binary;
@@ -146,22 +147,25 @@ constexpr int kGlareChroma = 12;
 [[nodiscard]] cv::Mat glare_mask(const cv::Mat& brightness, const cv::Mat& working) {
     cv::Mat mask = cv::Mat::zeros(working.size(), CV_8UC1);
     bool any = false;
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic): a per-pixel loop over
+    // image rows; the work is only done where the brightness is at the top.
     for (int row = 0; row < working.rows; ++row) {
-        const uchar* bright = brightness.ptr<uchar>(row);
-        const uchar* bgr = working.ptr<uchar>(row);
-        uchar* out = mask.ptr<uchar>(row);
+        const auto* bright = brightness.ptr<uchar>(row);
+        const auto* bgr = working.ptr<uchar>(row);
+        auto* out = mask.ptr<uchar>(row);
         for (int column = 0; column < working.cols; ++column, bgr += 3) {
             if (bright[column] < kGlareValue) {
                 continue;
             }
-            const int highest = std::max(std::max(bgr[0], bgr[1]), bgr[2]);
-            const int lowest = std::min(std::min(bgr[0], bgr[1]), bgr[2]);
+            const int highest = std::max({bgr[0], bgr[1], bgr[2]});
+            const int lowest = std::min({bgr[0], bgr[1], bgr[2]});
             if (highest - lowest < kGlareChroma) {
                 out[column] = 255;
                 any = true;
             }
         }
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     if (!any) {
         return {};
     }

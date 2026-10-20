@@ -7,6 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "drawn_cube.hpp"
+#include "must_have.hpp"
 
 #include <cube/solver/cube.hpp>
 #include <cube/vision/prepared_frame.hpp>
@@ -165,22 +166,22 @@ TEST_CASE("the glare look of a prepared frame is the look of its working frame",
             }
             for (const int cube_size : {3, 5}) {
                 CAPTURE(cube_size);
-                const std::optional<cube::vision::PreparedFrame> prepared =
+                const std::optional<cube::vision::PreparedFrame> made =
                     cube::vision::prepare_frame(frame, cube_size);
-                REQUIRE(prepared.has_value());
+                const cube::vision::PreparedFrame& prepared = cube::test::must_have(made);
                 const Contours expected =
-                    cube::vision::contours_without_glare(prepared->working, cube_size);
+                    cube::vision::contours_without_glare(prepared.working, cube_size);
                 CHECK_FALSE(expected.empty());
-                CHECK(cube::vision::contours_without_glare(*prepared, cube_size) == expected);
+                CHECK(cube::vision::contours_without_glare(prepared, cube_size) == expected);
                 if (!with_glare) {
                     // The shortcut is the frame's own outlines, not a second trace.
-                    CHECK(expected == prepared->contours);
+                    CHECK(expected == prepared.contours);
                 }
                 // A frame prepared for one size and looked at as another is
                 // traced against the other's block.
                 const int other = cube_size == 3 ? 5 : 3;
-                CHECK(cube::vision::contours_without_glare(*prepared, other) ==
-                      cube::vision::contours_without_glare(prepared->working, other));
+                CHECK(cube::vision::contours_without_glare(prepared, other) ==
+                      cube::vision::contours_without_glare(prepared.working, other));
             }
         }
     }
