@@ -217,7 +217,6 @@ jobs:
       contents: read
     env:
       VCPKG_MAX_CONCURRENCY: "2"
-      QT_QPA_PLATFORM: xcb
       LIBGL_ALWAYS_SOFTWARE: "1"
       # The Mesa and fontconfig libraries leak at exit by design; leaks in the
       # code under test are the library job's to find.
@@ -282,8 +281,13 @@ jobs:
       # The system tests draw the real app under Xvfb; under ASan they are
       # slower, and a failure here is as likely to be the software GL stack as
       # the app, so the step reports without stopping the job's other results.
+      # QT_QPA_PLATFORM=xcb is set here and not on the job: the tests above
+      # choose their own platform (offscreen) and fail to start on xcb with no
+      # display.
       - name: System tests
         if: ${{ !cancelled() }}
+        env:
+          QT_QPA_PLATFORM: xcb
         run: >
           xvfb-run -a -s "-screen 0 1280x1024x24"
           ctest --preset linux-gcc-debug-system --timeout 1800 --output-on-failure
