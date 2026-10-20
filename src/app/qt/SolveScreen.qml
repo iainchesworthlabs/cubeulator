@@ -476,6 +476,7 @@ Rectangle {
                 autoRotate: false
                 HoverHandler { cursorShape: dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor }
                 evenLight: true
+                shaderStyle: SettingsState.shaderStyleIndex
                 showStats: SettingsState.statsForNerds
 
                 objectName: "solve.cube"

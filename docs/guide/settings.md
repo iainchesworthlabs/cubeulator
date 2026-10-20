@@ -22,7 +22,7 @@ Settings is open.
 | **Appearance** | *Same as this device*, *Light* or *Dark*. It applies at once. | Yes |
 | **Language** | *Same as this device*, or one of nine languages. It applies at once. See below. | Yes |
 | **History** | *Keep a history of solves*, on by default, and **Clear history**. Both are described in [Past solves](history.md). | Yes |
-| **Cube style** | How the 3D cube is shaded: *Physically-Based Realism* (the default), *Instructional Glow* or *Borderlands Cel-Shading*. | No |
+| **Cube style** | How the 3D cube is shaded: *Physically-Based Realism* (the default), *Instructional Glow* or *Borderlands Cel-Shading*. It applies to the cube on the start, solve and review screens, at every size of cube. | No |
 | **Cube motion** | Whether the cube on the start and settings screens turns by itself when left alone, and how fast. | No |
 | **Rendering** | Which graphics system draws the window (Automatic, Direct3D 11 or 12, Vulkan, OpenGL; what is offered depends on the system). Automatic is right unless the cube does not draw. A change takes effect the next time Cubeulator starts. | Yes |
 | **About Cubeulator** | The name and version. (On a Mac it is in the app menu.) | |
