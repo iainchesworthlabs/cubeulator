@@ -45,7 +45,7 @@ the run rather than running nothing. `platform-isolation` is the no-`#ifdef` che
 build legs.
 `system` is the Linux job that runs the system tests under Xvfb (see
 [testing.md](testing.md#system-tests)); on Windows and macOS the same suite
-runs as a non-blocking step of their build legs.
+runs as a step of their build legs, which fails the leg.
 `web-test` is the browser's tests ([testing.md](testing.md#browser-tests)): it
 builds the `web-emscripten-diagnostics` app and the `web-emscripten-tests`
 binaries from one vcpkg tree, runs the unit, integration and performance cases
@@ -328,8 +328,8 @@ separate prebuilt install (`jurplel/install-qt-action` in CI,
 `MAX_PATH` reasons.
 
 Mobile (arm64-ios/arm64-android) vcpkg builds of opencv4 are
-new and not yet proven out in CI (the `android-build`/`ios-build` jobs stay
-`continue-on-error: true` until they are) — see
+new; they have been green on 39 of the last 40 runs, so the `android-build`/
+`ios-build` jobs have no `continue-on-error` since 2026-10-21 — see
 [Dependency strategy](dependency-strategy.md) for the evidence and the
 fallback plan if it doesn't work out.
 

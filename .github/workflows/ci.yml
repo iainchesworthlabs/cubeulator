@@ -456,12 +456,15 @@ jobs:
         run: ctest --preset ${{ matrix.preset }} -LE system
 
       # The same system suite on the Windows and macOS runners, which have a
-      # desktop session. Not a gate yet: whether Qt Quick 3D renders on these
-      # runners' graphics is what this step finds out, and it is reported
-      # rather than forced green (docs/testing.md, "System tests").
-      - name: System tests (experimental off Linux)
+      # desktop session. A gate since 2026-10-21: it was `continue-on-error`
+      # while whether Qt Quick 3D renders on these runners' graphics was being
+      # found out, and a red step there was invisible (system.reach failed on
+      # both for days, and system.walk.4of5 on macOS on most runs). Both were
+      # real and are fixed (#210; the cube views' guide timer). The longest
+      # test is macOS system.walk.5of5 at about 640 s against its 1200 s
+      # timeout (docs/testing.md, "System tests").
+      - name: System tests (off Linux)
         if: ${{ !cancelled() && runner.os != 'Linux' && steps.build.outcome == 'success' }}
-        continue-on-error: true
         run: ctest --preset ${{ matrix.preset }}-system --output-on-failure
 
       - name: Upload system-test pictures
@@ -539,7 +542,6 @@ jobs:
     # step below for why this needed a closer look before deciding whether
     # to stay here.
     runs-on: ubuntu-26.04
-    continue-on-error: true
     # Caps vcpkg's internal build parallelism - see the equivalent comment on
     # build-and-test above. opencv4/onnxruntime now build here too (see
     # docs/dependency-strategy.md), including onnxruntime, which already
@@ -705,9 +707,9 @@ jobs:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Web (WebAssembly)' || 'Web (WebAssembly)' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',web,') }}
     runs-on: ubuntu-26.04
-    # Not required until it has run green on develop, like the other porting
-    # legs (docs/ci.md).
-    continue-on-error: true
+    # Gating (no continue-on-error) since 2026-10-21: green on 39 of 40 runs
+    # read, the one red being a run that broke every leg in its first minutes
+    # (docs/ci.md).
     # Caps vcpkg's internal build parallelism - see the equivalent comment on
     # build-and-test above. Only fmt and opencv4 (core, imgproc, imgcodecs and
     # the image codecs) are built for this triplet.
@@ -757,11 +759,12 @@ jobs:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Web tests (Node + Chromium)' || 'Web tests (Node + Chromium)' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',web-test,') }}
     runs-on: ubuntu-26.04
-    # Not required until it has run green on develop, like the other porting
-    # legs (docs/ci.md). The browser suite draws in software, one page at a
-    # time; an hour and a half is a hang, not a slow run.
+    # Gating (no continue-on-error) since 2026-10-21: its red runs in the last
+    # forty were all real (a web-only compile error in one pull request, the
+    # boot spec in another, the demo journey on #200). The browser suite draws
+    # in software, one page at a time; an hour and a half is a hang, not a
+    # slow run.
     timeout-minutes: 90
-    continue-on-error: true
     env:
       VCPKG_MAX_CONCURRENCY: "4"
 
@@ -909,7 +912,6 @@ jobs:
     # still-open vcpkg/pkgconf issue (microsoft/vcpkg#50681), not something
     # to work around here. Revisit once that's resolved upstream.
     runs-on: macos-15
-    continue-on-error: true
     # Caps vcpkg's internal build parallelism - see the equivalent comment on
     # build-and-test above. opencv4/onnxruntime now build here too (see
     # docs/dependency-strategy.md), including onnxruntime, which already

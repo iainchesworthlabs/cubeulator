@@ -105,9 +105,11 @@ that its workflow has to carry `merge_group`. The rule is:
 | `Analyze (C++)` | `codeql.yml` | when green | yes |
 | `Commit is green` | `release-check.yml` | no (it runs only on a pull request into `main`) | yes |
 
-Promoting a check only ever tightens the ruleset. Android, iOS and Web are
-informational (`continue-on-error`): Android and iOS are never required, and
-Web only once it has run green on `develop`.
+Promoting a check only ever tightens the ruleset. Android, iOS, Web and Web tests no
+longer carry `continue-on-error` (2026-10-21): a red one fails the CI run and
+shows on the pull request, though none of them is a *required* check yet.
+Requiring them is the ruleset edit in
+[Promoting the build checks](#promoting-the-build-checks-on-develop).
 The system tests, `platform-isolation`, `Changelog fragment`, `Docs build
 (strict)` and `Release readiness` are not in the table either: none is required.
 

@@ -275,8 +275,13 @@ The `system` label keeps it out of the plain `ctest` runs - the committed
 presets exclude it, and CI's build legs say `-LE system` as well: it needs
 somewhere to draw. CI runs it in its own Linux job (`System tests (Linux, Xvfb
 + software GL)`, the command above, on the Qt the app ships on), and the
-Windows and macOS build legs run `<preset>-system` as a step that reports but
-does not block.
+Windows and macOS build legs run `<preset>-system` as a step of their own,
+which fails the leg (since 2026-10-21; it reported without blocking while it
+was found out whether Qt Quick 3D renders on those runners, and two real
+faults hid behind that). Times on those runners, from the last forty runs:
+Windows' longest shard is about 160 s and macOS's is `system.walk.5of5` at
+about 640 s, against a 1200 s timeout per test (1.9x of headroom on macOS, 7x
+on Windows); the whole macOS step is about 28 minutes.
 
 ### How it works
 
