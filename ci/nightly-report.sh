@@ -14,8 +14,10 @@
 #   informational  shown, never opens an issue by itself. These are the jobs
 #                  that are new and have never run (an app build under ASan,
 #                  clang-tidy over the app) or that cannot be trusted to be
-#                  stable on a shared runner (wall-time budgets), and CI's own
-#                  porting legs that its workflow marks continue-on-error.
+#                  stable on a shared runner (wall-time budgets: CI's perf and
+#                  web-perf legs). Android, iOS, Web and the system tests on
+#                  Windows and macOS gate in CI itself since 2026-10-21 and so
+#                  gate here.
 #
 # A job CI marks continue-on-error ends "success" on its run when it fails, and
 # so does a step inside a job (the Windows and macOS system tests are one:
@@ -32,7 +34,7 @@ SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
 
 # CI's jobs whose red is informational (matched against the job name, with the
 # "dispatch - " a dispatched run gives it taken off).
-INFORMATIONAL_CI='^(Android|iOS|Web performance|Performance \()'
+INFORMATIONAL_CI='^(Web performance|Performance \()'
 
 gating_failed=()
 info_failed=()
