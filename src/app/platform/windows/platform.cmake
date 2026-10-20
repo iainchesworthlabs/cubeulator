@@ -47,6 +47,7 @@ set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/windows/tracy_gpu_d3d11_w
 # Qt renders with Vulkan here, so Tracy gets a Vulkan GPU context too
 # (needs the vulkan-headers vcpkg port, a "profiling" feature dependency).
 set(CUBEULATOR_PLATFORM_PROFILING_VULKAN ON)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
 
 # camera_windows.cpp enumerates via native DirectShow device enumeration
 # (ICreateDevEnum/IEnumMoniker) rather than OpenCvCaptureLoop's generic

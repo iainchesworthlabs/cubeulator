@@ -104,6 +104,14 @@
 #                                      qt/render_profiler_vulkan.cpp finds the
 #                                      handles). OFF compiles the *_none.cpp
 #                                      stubs of the same two.
+#   CUBEULATOR_PLATFORM_PROFILING_OPENGL
+#                                      ON where Tracy's OpenGL backend
+#                                      (src/lib/src/profile/tracy_gpu.cpp) is
+#                                      to be built; OFF compiles
+#                                      tracy_gpu_opengl_none.cpp. Not on Apple,
+#                                      where Tracy's OpenGL header refuses to
+#                                      compile (its timestamps are unreliable
+#                                      there).
 #   CUBEULATOR_PLATFORM_SOURCES        Compiled into cube_platform: one
 #                                      implementation of every interfaces/
 #                                      header (and of the detail/ seams).

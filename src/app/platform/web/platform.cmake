@@ -82,6 +82,7 @@ set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_
 # No Vulkan backend for Tracy here (macOS and iOS render with Metal; Android and
 # the browser have not been exercised).
 set(CUBEULATOR_PLATFORM_PROFILING_VULKAN OFF)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
 
 # camera_web.js is the page's half of the camera: an Emscripten JS library, so
 # camera_web.cpp calls its functions like any other and Emscripten proxies them

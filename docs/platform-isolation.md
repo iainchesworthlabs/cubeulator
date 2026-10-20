@@ -48,6 +48,7 @@ platform's fragment. Every other CMake file reads what the fragment declared:
 |---|---|---|
 | Source files compiled into `cube_platform` | `CUBEULATOR_PLATFORM_SOURCES` | `src/app/CMakeLists.txt` |
 | The Direct3D 11 Tracy GPU backend, compiled into `cube::lib` when Tracy is on (`windows/tracy_gpu_d3d11_windows.cpp`, or `posix/tracy_gpu_direct3d_none.cpp`) | `CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES` | `src/lib/CMakeLists.txt` |
+| Whether the platform has OpenGL for Tracy's OpenGL GPU backend (`src/lib/src/profile/tracy_gpu.cpp`, or the `tracy_gpu_opengl_none.cpp` stub; not on Apple, where Tracy's header refuses to compile) | `CUBEULATOR_PLATFORM_PROFILING_OPENGL` | `src/lib/CMakeLists.txt` |
 | Whether the platform has Vulkan for Tracy's Vulkan GPU backend (`src/lib/src/profile/tracy_gpu_vulkan.cpp`, with the Vulkan headers, and the app's `qt/render_profiler_vulkan.cpp`), or gets the `*_none.cpp` stubs | `CUBEULATOR_PLATFORM_PROFILING_VULKAN` | `src/lib/CMakeLists.txt`, `src/app/CMakeLists.txt` |
 | System libraries (`strmiids`, `dbghelp`, ...) | `CUBEULATOR_PLATFORM_LINK_LIBRARIES` | `src/app/CMakeLists.txt` |
 | Qt libraries a platform file needs | `CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES` | `src/app/CMakeLists.txt` |

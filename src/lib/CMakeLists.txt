@@ -115,10 +115,14 @@ set_source_files_properties(src/profile/session.cpp PROPERTIES
 # tokens as compile definitions: the GL tokens TracyOpenGL.hpp reads, and
 # NOMINMAX for the D3D11 file's <windows.h>.
 if(CUBEULATOR_ENABLE_TRACY)
-    target_sources(cube_lib PRIVATE src/profile/tracy_gpu.cpp)
-    set_source_files_properties(src/profile/tracy_gpu.cpp PROPERTIES
-        COMPILE_DEFINITIONS
-            "GL_TIMESTAMP=0x8E28;GL_QUERY_COUNTER_BITS=0x8864;GL_QUERY_RESULT=0x8866;GL_QUERY_RESULT_AVAILABLE=0x8867;GL_NO_ERROR=0x0;GL_EXTENSIONS=0x1F03;GL_FALSE=0x0;GL_VERSION_3_0=1")
+    if(CUBEULATOR_PLATFORM_PROFILING_OPENGL)
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu.cpp)
+        set_source_files_properties(src/profile/tracy_gpu.cpp PROPERTIES
+            COMPILE_DEFINITIONS
+                "GL_TIMESTAMP=0x8E28;GL_QUERY_COUNTER_BITS=0x8864;GL_QUERY_RESULT=0x8866;GL_QUERY_RESULT_AVAILABLE=0x8867;GL_NO_ERROR=0x0;GL_EXTENSIONS=0x1F03;GL_FALSE=0x0;GL_VERSION_3_0=1")
+    else()
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_opengl_none.cpp)
+    endif()
     foreach(_gpu_source IN LISTS CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES)
         set(_gpu_file "${PROJECT_SOURCE_DIR}/src/app/${_gpu_source}")
         target_sources(cube_lib PRIVATE "${_gpu_file}")

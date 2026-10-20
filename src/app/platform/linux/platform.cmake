@@ -45,6 +45,7 @@ set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_
 # Qt renders with Vulkan here, so Tracy gets a Vulkan GPU context too
 # (needs the vulkan-headers vcpkg port, a "profiling" feature dependency).
 set(CUBEULATOR_PLATFORM_PROFILING_VULKAN ON)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
 
 set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")
