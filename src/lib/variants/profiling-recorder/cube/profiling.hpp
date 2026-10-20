@@ -44,7 +44,7 @@ inline void start() noexcept {}
 inline void stop() noexcept {}
 
 inline void app_info(std::string_view text) {
-    ::cube::profile::Recorder::global().set_app_info(text);
+    ::cube::profile::Recorder::global().add_app_info(text);
 }
 
 // Every value becomes a double: the recorder keeps one number type, and the
