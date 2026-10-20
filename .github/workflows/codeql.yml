@@ -6,6 +6,10 @@ on:
     tags: ["v*.*.*"]
   pull_request:
     branches: [main, develop]
+  # The merge queue in front of develop (docs/branch-protection.md): Analyze
+  # (C++) is one of the checks develop requires.
+  merge_group:
+    types: [checks_requested]
   schedule:
     - cron: "17 3 * * 1"
 
@@ -40,6 +44,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # A change to documentation alone is not analysed. The job still runs and
+      # reports `Analyze (C++)`: a job skipped by `if` reports under the raw text
+      # of its name, which for a required check is no report at all.
+      - name: Does anything but documentation change?
+        id: changed
+        uses: $/.github/actions/changed-code
+
+
       # Keyed per vcpkg triplet (x64-linux), shared with ci.yml's Linux legs,
       # clang-tidy, and coverage jobs - all resolve the identical x64-linux
       # package set regardless of preset, so a single shared cache avoids
@@ -49,12 +61,14 @@ jobs:
       # key (whichever finishes first wins; the others just skip their own
       # save harmlessly).
       - name: Restore vcpkg binaries
+        if: ${{ steps.changed.outputs.code == 'true' }}
         id: vcpkg-cache
         uses: $/.github/actions/vcpkg-cache/restore
         with:
           triplet: x64-linux
 
       - name: Install CMake 4 + Ninja
+        if: ${{ steps.changed.outputs.code == 'true' }}
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
         with:
           cmakeVersion: "4.4.2"
@@ -63,11 +77,13 @@ jobs:
       # GCC 16 is installed, not shipped: see the comment on ci.yml's
       # build-and-test job.
       - name: Install GCC 16
+        if: ${{ steps.changed.outputs.code == 'true' }}
         uses: $/.github/actions/install-gcc
 
       # vcpkg build gaps on ubuntu-26.04 - see the fuller comment on
       # build-and-test in ci.yml (X11/GL headers).
       - name: Install vcpkg build dependencies
+        if: ${{ steps.changed.outputs.code == 'true' }}
         run: sudo apt-get install -y libx11-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
 
       # Sanitizers disabled: CodeQL's build tracer sets its own LD_PRELOAD for
@@ -75,6 +91,7 @@ jobs:
       # the preload chain. CodeQL is pure static analysis and gets nothing
       # from ASan/UBSan being enabled here.
       - name: Configure (library + platform only, no Qt app)
+        if: ${{ steps.changed.outputs.code == 'true' }}
         run: >
           cmake --preset linux-gcc-debug
           -DCMAKE_CXX_COMPILER=g++-16
@@ -91,6 +108,7 @@ jobs:
       # cold cache rebuilt them all), the code-scanning tab filled with some
       # 380 "high" alerts in deps/vcpkg/buildtrees/ that no one here can fix.
       - name: Initialize CodeQL
+        if: ${{ steps.changed.outputs.code == 'true' }}
         uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           languages: cpp
@@ -103,6 +121,7 @@ jobs:
       # the cache does not do - with the tracer started after the one and only
       # configure, "CodeQL could not process any code written in C/C++".
       - name: Configure again under the tracer
+        if: ${{ steps.changed.outputs.code == 'true' }}
         run: >
           cmake --fresh --preset linux-gcc-debug
           -DCMAKE_CXX_COMPILER=g++-16
@@ -110,9 +129,11 @@ jobs:
           -DCUBEULATOR_ENABLE_SANITIZERS=OFF
 
       - name: Build
+        if: ${{ steps.changed.outputs.code == 'true' }}
         run: cmake --build --preset linux-gcc-debug
 
       - name: Perform CodeQL Analysis
+        if: ${{ steps.changed.outputs.code == 'true' }}
         uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           category: "/language:cpp"
@@ -122,7 +143,7 @@ jobs:
       # (an hour or more on Windows and macOS). Only saves when packages were
       # added since the restore - see .github/actions/vcpkg-cache.
       - name: Save vcpkg binaries
-        if: ${{ always() }}
+        if: ${{ steps.changed.outputs.code == 'true' && (always()) }}
         uses: $/.github/actions/vcpkg-cache/save
         with:
           triplet: x64-linux

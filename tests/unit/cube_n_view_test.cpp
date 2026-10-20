@@ -16,26 +16,35 @@
 #include <cube/nxn/geometry.hpp>
 #include <cube/solver/cube.hpp>
 
+#include <QByteArray>
 #include <QColor>
 #include <QCoreApplication>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QEventLoop>
+#include <QFile>
 #include <QImage>
 #include <QMetaObject>
 #include <QQmlComponent>
+#include <QQmlContext>
 #include <QQmlEngine>
+#include <QQmlFile>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QString>
 #include <QStringList>
+#include <QSurfaceFormat>
 #include <QUrl>
 #include <QVariant>
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -406,6 +415,124 @@ TEST_CASE("the cube is three scene objects whatever its size", "[qml][cube-n-vie
     CHECK(quads == (12 * 5 * 5) + (2 * 5 * 5));
 }
 
+TEST_CASE("every shader style is drawn from the same three meshes", "[qml][cube-n-view][perf]") {
+    // A style changes what the meshes are drawn with, not what they are: the
+    // vertices already carry each sticker's colour, so Glow and Cel-Shading read
+    // it from there. Switching style rebuilds nothing, and costs no model but
+    // Borderlands' ink outline, which is made only while that style is in use
+    // (the 3x3's is one per cubie, 26 of them, for the same reason).
+    View view;
+    const NCube cube = scrambled(4, 3);
+    view.show(cube);
+
+    const auto builds = [&]() {
+        int total = 0;
+        for (const QObject* object : view.item()->findChildren<QObject*>()) {
+            if (qstrcmp(object->metaObject()->className(), "CubeNGeometry") == 0) {
+                total += object->property("builds").toInt();
+            }
+        }
+        return total;
+    };
+    const auto check = [&](int shown, int declared) {
+        // A model that is let go of is deleted when the event loop next runs.
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        const cube::test::Lights found = cube::test::models(view.item());
+        CHECK(found.on == shown);
+        CHECK(found.declared == declared);
+    };
+
+    const int built = builds();
+    REQUIRE(built > 0);
+    {
+        INFO("the first look: the cube, and the two parts it comes apart in");
+        check(1, 3);
+    }
+    for (const int style : {1, 2, 0, 2}) {
+        view.set("shaderStyle", style);
+        INFO("style " << style);
+        CHECK(builds() == built);
+        CHECK(view.shows(cube));
+        // Borderlands has the ink round the cube as well.
+        check(style == 2 ? 2 : 1, style == 2 ? 4 : 3);
+    }
+
+    // In hand: the rest and the layers, and the ink round each.
+    view.guide(Face::F, 1, 1, 1);
+    REQUIRE(wait_for([&]() { return view.get("held").isValid() && !view.get("held").isNull(); }));
+    {
+        INFO("Borderlands, with layers in hand");
+        check(4, 5);
+    }
+    view.set("shaderStyle", 1);
+    {
+        INFO("Glow, with layers in hand");
+        check(2, 3);
+    }
+    CHECK(view.shows(cube));
+}
+
+TEST_CASE("no more directional lights are on than Qt Quick 3D draws, in any style",
+          "[qml][cube-n-view]") {
+    // Qt Quick 3D draws four and leaves the rest out without saying which (see
+    // cube_view_test.cpp); the 3x3 holds every look to that, and so does this.
+    constexpr int kMostDrawn = 4;
+
+    View view;
+    for (const bool even : {false, true}) {
+        for (const int style : {0, 1, 2}) {
+            INFO("evenLight " << even << ", shaderStyle " << style);
+            view.set("evenLight", even);
+            view.set("shaderStyle", style);
+
+            const cube::test::Lights lights = cube::test::directional_lights(view.item());
+            REQUIRE(lights.declared > 0);
+            CHECK(lights.on >= 2);
+            CHECK(lights.on <= kMostDrawn);
+        }
+    }
+}
+
+TEST_CASE("the style materials name shaders that are in the app and the uniforms they use",
+          "[qml][cube-n-view]") {
+    // A material and its shader meet only on the GPU: a shader that is not in the
+    // app, or that uses a uniform the material does not have, fails on the first
+    // frame in that style and nowhere else. So they are read side by side here.
+    View view;
+    view.set("shaderStyle", 1);
+
+    int materials = 0;
+    for (const QObject* object : view.item()->findChildren<QObject*>()) {
+        if (!QString::fromLatin1(object->metaObject()->className())
+                 .startsWith(QLatin1String("QQuick3DCustomMaterial"))) {
+            continue;
+        }
+        ++materials;
+        // The URL as the QML wrote it, relative to the file that wrote it.
+        const QQmlContext* context = qmlContext(object);
+        REQUIRE(context != nullptr);
+        const QUrl url = context->resolvedUrl(object->property("fragmentShader").toUrl());
+        INFO(url.toString().toStdString());
+        QFile file(QQmlFile::urlToLocalFileOrQrc(url));
+        REQUIRE(file.open(QIODevice::ReadOnly));
+        const QString source = QString::fromUtf8(file.readAll());
+
+        // Every uniform the shader reads - the u-prefixed names - is a property of the material.
+        static const QRegularExpression uniform(QStringLiteral(R"(\bu[A-Z]\w*)"));
+        auto found = uniform.globalMatch(source);
+        int used = 0;
+        while (found.hasNext()) {
+            const QString name = found.next().captured();
+            INFO(name.toStdString());
+            CHECK(object->metaObject()->indexOfProperty(name.toLatin1().constData()) >= 0);
+            ++used;
+        }
+        CHECK(used > 0);
+    }
+    // Glow's two, Cel-Shading's two.
+    CHECK(materials == 4);
+}
+
 // Pictures of the cube at each size, for looking at rather than for checking.
 //
 // Hidden ("[.gallery]") and inert unless CUBE_GALLERY_DIR names a directory: it
@@ -413,11 +540,17 @@ TEST_CASE("the cube is three scene objects whatever its size", "[qml][cube-n-vie
 // window renders. It needs a GPU, so it is never part of the ordinary test run.
 // One picture per run (grabbing a window with a 3D scene in it twice is not
 // safe on every backend); CUBE_GALLERY_SHOT names it, as "<size>-rest" or
-// "<size>-lifted", for example "5-lifted".
+// "<size>-lifted" with the shader style (0 realism, 1 glow, 2 cel) after it if
+// not the default, for example "5-lifted" or "4-rest-2". The size "3d" is the
+// 3x3 view (Cube3DView) in its place, for putting the two side by side.
 //
 //   set CUBE_GALLERY_DIR=C:\some\dir
 //   set CUBE_GALLERY_SHOT=5-lifted
 //   cube_qml_tests "[.gallery]"
+//
+// CUBE_GALLERY_SETTLE_MS=<ms> keeps it rendering that long before the picture, for
+// reading the frame times Qt logs under QSG_RENDER_TIMING=1 (use a "lifted" shot,
+// which animates the whole time).
 TEST_CASE("n view gallery", "[.gallery]") {
     const QString out = qEnvironmentVariable("CUBE_GALLERY_DIR");
     if (out.isEmpty()) {
@@ -426,20 +559,35 @@ TEST_CASE("n view gallery", "[.gallery]") {
     REQUIRE(QDir().mkpath(out));
     const QString wanted = qEnvironmentVariable("CUBE_GALLERY_SHOT", "5-rest");
     const QStringList parts = wanted.split(QLatin1Char('-'));
-    REQUIRE(parts.size() == 2);
-    const int size = parts.at(0).toInt();
+    REQUIRE(parts.size() >= 2);
+    const bool three_by_three_view = parts.at(0) == QLatin1String("3d");
+    const int size = three_by_three_view ? 3 : parts.at(0).toInt();
     REQUIRE(size >= cube::nxn::kMinSize);
     REQUIRE(size <= cube::nxn::kMaxSize);
+    const int style = parts.size() > 2 ? parts.at(2).toInt() : 0;
 
     QQuickWindow window;
     window.setFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus);
     window.setPosition(-4000, -4000);
+    const int settle = qEnvironmentVariableIntValue("CUBE_GALLERY_SETTLE_MS");
+    if (settle > 0) {
+        // Timing: draw as fast as the machine can, not as fast as the display.
+        QSurfaceFormat format = window.format();
+        format.setSwapInterval(0);
+        window.setFormat(format);
+        // A window parked off-screen is not drawn to between pictures; one behind
+        // the others on the desktop is.
+        window.setFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus |
+                        Qt::WindowStaysOnBottomHint);
+        window.setPosition(100, 100);
+    }
 
     QQmlComponent component(&cube::test::qml_engine());
-    component.setData(R"QML(
+    const QByteArray source = QByteArray(R"QML(
 import QtQuick
 import Cubeulator
-CubeNView {
+)QML") + (three_by_three_view ? "Cube3DView" : "CubeNView") +
+                              R"QML( {
     autoRotate: false
     interactive: false
     evenLight: true
@@ -447,8 +595,10 @@ CubeNView {
     viewPitch: 24
     viewYaw: -32
 }
-)QML",
-                      QUrl(QStringLiteral("qrc:/cube_n_view_gallery.qml")));
+)QML";
+    component.setData(source, QUrl(QStringLiteral("qrc:/cube_n_view_gallery.qml")));
+    QElapsedTimer create_clock;
+    create_clock.start();
     std::unique_ptr<QQuickItem> view(
         qobject_cast<QQuickItem*>(component.beginCreate(cube::test::qml_engine().rootContext())));
     if (view == nullptr) {
@@ -456,18 +606,24 @@ CubeNView {
     }
     view->setParentItem(window.contentItem());
     component.completeCreate();
+    const double create_ms = static_cast<double>(create_clock.nsecsElapsed()) / 1e6;
     view->setWidth(640);
     view->setHeight(640);
     window.resize(640, 640);
 
+    if (style != 0) {
+        REQUIRE(view->setProperty("shaderStyle", style));
+    }
     const NCube cube = scrambled(size, 5);
     REQUIRE(view->setProperty("faceletColors", QVariant::fromValue(cube::test::painting(
                                                    cube::test::qml_engine(), cube, &paint))));
     if (parts.at(1) == QLatin1String("lifted")) {
         // The layer the move turns, a quarter way round on its nudge.
         REQUIRE(view->setProperty("guideFace", QStringLiteral("R")));
-        REQUIRE(view->setProperty("guideFirst", size / 2));
-        REQUIRE(view->setProperty("guideLast", size / 2));
+        if (!three_by_three_view) {
+            REQUIRE(view->setProperty("guideFirst", size / 2));
+            REQUIRE(view->setProperty("guideLast", size / 2));
+        }
         REQUIRE(view->setProperty("guideTurns", 1));
         REQUIRE(view->setProperty("nudgeAngle", 40.0));
     }
@@ -481,6 +637,55 @@ CubeNView {
         while (timer.elapsed() < 1500) {
             QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
         }
+    }
+    // Keeps the scene rendering a while longer and says what a frame cost:
+    // "lifted" never stops animating. Sync is the scene graph taking the GUI
+    // thread's changes, render the CPU's time recording the frame; the rate is
+    // with no display to wait for, so it is the slower of the CPU and the GPU.
+    if (settle > 0) {
+        std::atomic<qint64> sync_ns{0};
+        std::atomic<qint64> render_ns{0};
+        std::atomic<int> frames{0};
+        QElapsedTimer sync_clock;
+        QElapsedTimer render_clock;
+        QObject::connect(
+            &window, &QQuickWindow::beforeSynchronizing, &window, [&]() { sync_clock.start(); },
+            Qt::DirectConnection);
+        QObject::connect(
+            &window, &QQuickWindow::afterSynchronizing, &window,
+            [&]() { sync_ns += sync_clock.nsecsElapsed(); }, Qt::DirectConnection);
+        QObject::connect(
+            &window, &QQuickWindow::beforeRendering, &window, [&]() { render_clock.start(); },
+            Qt::DirectConnection);
+        QObject::connect(
+            &window, &QQuickWindow::afterRendering, &window,
+            [&]() { render_ns += render_clock.nsecsElapsed(); }, Qt::DirectConnection);
+        QObject::connect(
+            &window, &QQuickWindow::frameSwapped, &window, [&]() { ++frames; },
+            Qt::DirectConnection);
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.elapsed() < settle) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+        }
+        // What making one more costs, the QML being loaded by now: the median of five.
+        std::array<double, 5> again{};
+        for (double& took : again) {
+            QElapsedTimer make;
+            make.start();
+            std::unique_ptr<QObject> more(component.create());
+            took = static_cast<double>(make.nsecsElapsed()) / 1e6;
+        }
+        std::ranges::sort(again);
+        std::fprintf(stderr, "made again in %.1f ms (median of five)\n", again[2]);
+        const double seconds = static_cast<double>(timer.elapsed()) / 1000.0;
+        const int drawn = std::max(1, frames.load());
+        std::fprintf(
+            stderr,
+            "frame cost %s: made in %.1f ms; %d frames, %.1f fps, sync %.3f ms, render %.3f ms\n",
+            wanted.toStdString().c_str(), create_ms, drawn, drawn / seconds,
+            static_cast<double>(sync_ns.load()) / drawn / 1e6,
+            static_cast<double>(render_ns.load()) / drawn / 1e6);
     }
     const QImage image = window.grabWindow();
     REQUIRE_FALSE(image.isNull());

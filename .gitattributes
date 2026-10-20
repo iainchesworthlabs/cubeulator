@@ -17,3 +17,4 @@ CMakeLists.txt text
 *.ico binary
 *.qm  binary
 *.ktx binary
+vcpkg-overlay-ports/**/*.patch text eol=lf

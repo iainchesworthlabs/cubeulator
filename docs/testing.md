@@ -275,8 +275,13 @@ The `system` label keeps it out of the plain `ctest` runs - the committed
 presets exclude it, and CI's build legs say `-LE system` as well: it needs
 somewhere to draw. CI runs it in its own Linux job (`System tests (Linux, Xvfb
 + software GL)`, the command above, on the Qt the app ships on), and the
-Windows and macOS build legs run `<preset>-system` as a step that reports but
-does not block.
+Windows and macOS build legs run `<preset>-system` as a step of their own,
+which fails the leg (since 2026-10-21; it reported without blocking while it
+was found out whether Qt Quick 3D renders on those runners, and two real
+faults hid behind that). Times on those runners, from the last forty runs:
+Windows' longest shard is about 160 s and macOS's is `system.walk.5of5` at
+about 640 s, against a 1200 s timeout per test (1.9x of headroom on macOS, 7x
+on Windows); the whole macOS step is about 28 minutes.
 
 ### How it works
 
@@ -664,6 +669,7 @@ ctest --preset <preset> -L perf                  # the same, through ctest
 ctest --preset windows-msvc-perf                 # budgets *and* wall time (also linux-gcc-, macos-clang-)
 cube_perf_tests "[.perf-report]"                 # every metric beside its budget, and the corpus per seed
 cube_perf_tests "[.perf-report-timing]"          # just the wall-time metrics
+cube_perf_tests "[.perf-report-zone-cost]"       # what one profiling macro costs here (CUBEULATOR_PROFILE=1 for a started profiler; docs/profiling.md, "Idle cost")
 ```
 
 ### What is measured
@@ -882,8 +888,13 @@ way on a busy shared machine:
   that still has a nameless zone is run again, four attempts in all
   (`--attempts`).
 
-CI does not run it and nothing depends on it: no CI leg builds Tracy, and the
-Tracy-on build's `system.walk` has been seen failing intermittently. The
+CI does not run it and nothing depends on it: the desktop legs now build the
+Tracy client (dormant, so the whole test suite runs with it inert), but none
+takes a capture, and a profiling-on build's `system.walk` has been seen failing
+intermittently. The client is dormant in `cube_perf_tests` too, until the
+environment says otherwise: the tool sets `CUBEULATOR_PROFILE=1`, which the
+binary's Catch listener (`tests/perf/profiler_listener.cpp`) reads the way the
+application's `main()` does. The
 captures are of the headless perf binary for that reason, not of the app. Its
 self-test (`perf_tracy_check_selftest`, on a canned export) is the only part
 that runs in `ctest`.

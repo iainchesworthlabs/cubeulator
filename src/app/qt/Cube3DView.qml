@@ -367,7 +367,21 @@ Item {
     // The guide restarts once things have settled: a step of the solve
     // changes the painting, the side and the turn count together, and the
     // layer should be picked up once, from the cube as repainted.
-    function scheduleGuide() { Qt.callLater(root.applyGuide); }
+    // A Timer of the view's own, not Qt.callLater: a callLater scheduled as the
+    // screen is torn down (a step of the solve, then the screen leaves) runs
+    // after the view's context has gone, and the call into stopNudge() raises
+    // "Property 'stopNudge' ... is not a function (exception occurred during
+    // delayed function evaluation)". That warning failed the macOS system
+    // walk (history_test.cpp, "an unfinished solve is carried on") on every
+    // run for days. A Timer is destroyed with the view and never fires after.
+    // Restarting it is the same coalescing callLater gave.
+    Timer {
+        id: guideSoon
+        interval: 0
+        onTriggered: root.applyGuide()
+    }
+
+    function scheduleGuide() { guideSoon.restart(); }
 
     function applyGuide() {
         if (playing)

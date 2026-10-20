@@ -53,8 +53,11 @@ using cube::solver::kAllFaces;
 using cube::solver::Move;
 using cube::solver::Place;
 using cube::test::all_moves;
+using cube::test::directional_lights;
 using cube::test::dot;
 using cube::test::letter;
+using cube::test::Lights;
+using cube::test::models;
 using cube::test::Placement;
 using cube::test::Vec;
 using cube::test::wait_for;
@@ -167,43 +170,6 @@ private:
 [[nodiscard]] std::vector<Cube> scrambles() {
     return {cube::solver::random_scramble(11), cube::solver::random_scramble(12),
             cube::solver::random_scramble(13)};
-}
-
-struct Lights {
-    int declared = 0;
-    int on = 0;
-};
-
-// The directional lights a view has, and how many of them are switched on.
-[[nodiscard]] Lights directional_lights(const QObject* view) {
-    Lights lights;
-    for (const QObject* object : view->findChildren<QObject*>()) {
-        for (const QMetaObject* type = object->metaObject(); type != nullptr;
-             type = type->superClass()) {
-            if (qstrcmp(type->className(), "QQuick3DDirectionalLight") == 0) {
-                ++lights.declared;
-                lights.on += object->property("visible").toBool() ? 1 : 0;
-                break;
-            }
-        }
-    }
-    return lights;
-}
-
-// The models a view has, and how many of them are switched on.
-[[nodiscard]] Lights models(const QObject* view) {
-    Lights found;
-    for (const QObject* object : view->findChildren<QObject*>()) {
-        for (const QMetaObject* type = object->metaObject(); type != nullptr;
-             type = type->superClass()) {
-            if (qstrcmp(type->className(), "QQuick3DModel") == 0) {
-                ++found.declared;
-                found.on += object->property("visible").toBool() ? 1 : 0;
-                break;
-            }
-        }
-    }
-    return found;
 }
 
 }  // namespace

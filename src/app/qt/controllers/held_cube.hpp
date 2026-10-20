@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cube/diagnostics/json.hpp>
+#include <cube/nxn/cube.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/hold.hpp>
 #include <cube/vision/held_cube.hpp>
@@ -78,6 +79,11 @@ class HeldCube : public QObject {
     // side letter. It can be the side the move was on - turned the other way,
     // or too far. Empty otherwise.
     Q_PROPERTY(QString wrongSide READ wrongSide NOTIFY sightChanged)
+    // True while the move asked for cannot be seen being made from the hold the cube is in:
+    // the layer it turns is not one the side in view shows (a 3x3: the side facing the
+    // holder; a bigger cube: that, and every layer behind the front one). Said so on the
+    // screen, which tells the person to press Next turn after it.
+    Q_PROPERTY(bool moveHidden READ moveHidden NOTIFY moveHiddenChanged)
 
 public:
     // A side has to be seen the same way in this many frames running before
@@ -109,6 +115,7 @@ public:
     [[nodiscard]] bool seen() const noexcept { return seen_; }
     [[nodiscard]] QString sight() const;
     [[nodiscard]] QString wrongSide() const;
+    [[nodiscard]] bool moveHidden() const noexcept { return move_hidden_; }
 
     // The developer diagnostics channel (docs/diagnostics.md), or none. While
     // it is on, each change in what a frame says is written as a `held`
@@ -121,6 +128,7 @@ public:
 signals:
     void holdChanged();
     void sightChanged();
+    void moveHiddenChanged();
     // The move the solution expects next has been made on the real cube.
     // Emitted once per move; whoever listens steps the solution on.
     void moveSeen();
@@ -165,6 +173,24 @@ private:
               const Verdict& verdict) const;
     void setSight(Sight sight, cube::solver::Face wrong_side = cube::solver::Face::U);
     void forget();
+    // A cube bigger than a 3x3, or any size: the same questions as judge() of the plan's cube
+    // (cube::nxn), with the evidence a bigger side needs (docs/nxn-camera-follow.md).
+    [[nodiscard]] Verdict judge_n(const cube::vision::SideRead& read,
+                                  const cube::vision::SessionColours& colours) const;
+    // Whether the cells the asked move changes, seen from `hold`, are enough to decide it was
+    // made: at least two, at least half of them found, and four fifths of those found nearer
+    // the colour the move gives them.
+    [[nodiscard]] bool move_decided(const cube::vision::SideRead& read,
+                                    const cube::nxn::NCube& before, const cube::nxn::NCube& after,
+                                    const cube::solver::Hold& hold,
+                                    const cube::vision::SessionColours& colours) const;
+    [[nodiscard]] std::optional<cube::solver::Face> side_turned_instead_n(
+        const cube::vision::SideRead& read, const cube::vision::SessionColours& colours,
+        float unmoved_distance) const;
+    [[nodiscard]] bool half_way_there_n(const cube::vision::SideRead& read,
+                                        const cube::vision::SessionColours& colours) const;
+    void note_n(const cube::vision::SideRead& read, const Verdict& verdict) const;
+    void updateMoveHidden();
 
     DirectScan& scan_;
     SolveController& solve_;
@@ -181,6 +207,9 @@ private:
     // The cube the last verdict was about, and whether its move has already
     // been announced.
     cube::solver::Cube judged_cube_ = cube::solver::Cube::solved();
+    // The same for a cube of another size, which has no 3x3 to compare: the move it is at.
+    int judged_index_ = -1;
+    bool move_hidden_ = false;
     bool move_announced_ = false;
     // That cube has been seen, held the way the screen shows it, while its
     // move was the one being asked for.

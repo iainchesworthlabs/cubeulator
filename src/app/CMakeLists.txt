@@ -180,6 +180,8 @@ if(CUBEULATOR_BUILD_APP)
         RESOURCES
             qt/shaders/toon.frag
             qt/shaders/cel.frag
+            qt/shaders/toon_mesh.frag
+            qt/shaders/cel_mesh.frag
             qt/shaders/celshade_post.frag
             qt/lightprobe/sky.ktx)
 
@@ -204,7 +206,22 @@ if(CUBEULATOR_BUILD_APP)
     qt_add_executable(cube_app
         qt/main.cpp
         qt/render_profiler.hpp
-        qt/render_profiler.cpp)
+        qt/render_profiler.cpp
+        qt/qsg_log_bridge.hpp
+        qt/qsg_log_bridge.cpp)
+
+    # How the render profiler finds the Vulkan objects Tracy's GPU context
+    # needs (QVulkanInstance and the loader's entry points): its own file,
+    # because it needs the Vulkan headers Qt's QVulkanInstance is built on, and
+    # only the platforms whose fragment sets CUBEULATOR_PLATFORM_PROFILING_VULKAN
+    # have them. The other platforms get the stub that finds nothing.
+    if(CUBEULATOR_ENABLE_TRACY AND CUBEULATOR_PLATFORM_PROFILING_VULKAN)
+        find_package(VulkanHeaders CONFIG REQUIRED)
+        target_sources(cube_app PRIVATE qt/render_profiler_vulkan.cpp)
+        target_link_libraries(cube_app PRIVATE Vulkan::Headers)
+    else()
+        target_sources(cube_app PRIVATE qt/render_profiler_vulkan_none.cpp)
+    endif()
 
     # Target properties the platform's packaging needs (Android's custom
     # manifest, for one): <property> <value> pairs from its fragment.

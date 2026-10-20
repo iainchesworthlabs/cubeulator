@@ -1,0 +1,440 @@
+name: Nightly
+
+# What is too heavy, too slow or too unstable to run on every pull request,
+# run against the tip of develop once a day (docs/ci.md, "Nightly").
+#
+#   full-ci         ci.yml, dispatched on develop with every leg it has,
+#                   including the two wall-time legs (perf, web-perf) that a
+#                   pull request never runs, and read job by job afterwards:
+#                   the Windows and macOS system tests, and the porting legs,
+#                   are continue-on-error there and so invisible on a PR.
+#   sanitizers      the library and the platform layer under AddressSanitizer +
+#                   UndefinedBehaviorSanitizer (the debug preset's own) and
+#                   under ThreadSanitizer. No CI leg runs a sanitizer build:
+#                   clang-tidy builds one and never runs it.
+#   sanitizers-app  the same ASan/UBSan build with the Qt app: the controllers,
+#                   the QML tests and the system tests. Informational until it
+#                   has run for a while.
+#   clang-tidy-app  clang-tidy over src/app, which the clang-tidy leg of ci.yml
+#                   does not see (it configures with the app off). Counts, does
+#                   not gate.
+#   report          a table in the run summary, and one issue (label "nightly")
+#                   opened or commented on when something that gates is red and
+#                   closed when a night is green. It cannot fail a merge: no
+#                   ruleset names anything in this workflow.
+#
+# Scheduled workflows run from, and check out, the DEFAULT branch (main), and
+# this one has to test develop, so every checkout names its ref. The schedule
+# itself starts only once this file is on main (docs/ci.md).
+#
+# Pool use: the dispatched CI is up to ~12 jobs, so the jobs of this workflow
+# wait for it (needs: full-ci) and run two at a time: about 14 of the
+# organisation's 20 hosted jobs at the peak, for the first hour and a half, and
+# 3 after. It starts in the evening UTC, when the weekly scans (03:xx Monday)
+# are hours away.
+
+on:
+  schedule:
+    - cron: "41 20 * * *"
+  # A change to this workflow or its scripts proves itself: the three jobs that
+  # are not CI run on the pull request (a workflow that is not on main cannot
+  # be started by hand, so this is the only way to see it work before it
+  # merges). full-ci and report do not: the first would run all of CI a second
+  # time and the second needs a token that can write issues.
+  pull_request:
+    branches: [develop]
+    paths:
+      - ".github/workflows/nightly.yml"
+      - "ci/nightly-*.sh"
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: >-
+          Comma-separated jobs to run: full-ci, sanitizers, sanitizers-app,
+          clang-tidy-app - or "all".
+        type: string
+        default: all
+      ref:
+        description: The branch to test
+        type: string
+        default: develop
+
+permissions: {}
+
+concurrency:
+  group: nightly-${{ github.event_name == 'pull_request' && github.ref || 'scheduled' }}
+  # A night that is still going when the next is due finishes and one waits
+  # behind it; a pull request's run is superseded by its next push.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  full-ci:
+    name: Full CI, dispatched on develop
+    if: ${{ github.event_name == 'schedule' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',full-ci,') }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 360
+    permissions:
+      actions: write # dispatch ci.yml
+      contents: read
+    outputs:
+      run_id: ${{ steps.dispatch.outputs.run_id }}
+    steps:
+      # Only the script is needed, not the tree: sparse, and no history.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
+          sparse-checkout: ci
+          persist-credentials: false
+
+      # Every leg ci.yml has. "all" would leave out perf and web-perf, which
+      # are the point of running it at night.
+      - name: Dispatch ci.yml and wait for it
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ inputs.ref || 'develop' }}
+          LEGS: clang-format,platform-isolation,clang-tidy,linux,macos,windows,coverage,system,android,ios,web,web-test,perf,web-perf
+        run: bash ci/nightly-dispatch-ci.sh
+
+  sanitizers:
+    name: ${{ matrix.name }}
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',sanitizers,')) }}
+    needs: full-ci
+    runs-on: ubuntu-26.04
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          # The debug preset turns ASan + UBSan on itself (cmake/Sanitizers.cmake,
+          # -fno-sanitize-recover=all). -O1 because the solver's corpora are
+          # many minutes at -O0, and the sanitizers do not need -O0.
+          - name: Sanitizers - ASan + UBSan (library)
+            preset: linux-gcc-debug
+            cxx_flags: ""
+            cxx_flags_debug: "-O1 -g"
+            ctest_args: ""
+          # Release flags with -fsanitize=thread. -Wno-error=tsan: GCC warns that
+          # TSan does not model std::atomic_thread_fence (cube/profile/recorder.cpp
+          # uses one) and the warning set makes it an error; the warning stays
+          # visible, and a report that involves a fence is read with that in mind.
+          # The library's threads are the
+          # recorder, the diagnostics file, the recording writer and the
+          # two-phase tables' build; the solver corpora are single-threaded, so
+          # they are left to the ASan job.
+          - name: Sanitizers - TSan (library)
+            preset: linux-gcc-fastdebug
+            cxx_flags: "-fsanitize=thread -fno-omit-frame-pointer -Wno-error=tsan"
+            cxx_flags_debug: ""
+            ctest_args: "-LE slow"
+    env:
+      VCPKG_MAX_CONCURRENCY: "2"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore vcpkg binaries
+        id: vcpkg-cache
+        uses: $/.github/actions/vcpkg-cache/restore
+        with:
+          triplet: x64-linux
+
+      - name: Install CMake 4 + Ninja
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: "4.4.2"
+          ninjaVersion: "1.13.2"
+
+      - name: Install GCC 16
+        uses: $/.github/actions/install-gcc
+
+      - name: Install vcpkg build dependencies
+        run: sudo apt-get install -y libx11-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+
+      # Newer kernels randomise mmap more widely than the sanitizer runtimes
+      # can map around ("unexpected memory mapping"); the usual remedy.
+      - name: Let the sanitizer runtimes map their shadow memory
+        run: sudo sysctl -w vm.mmap_rnd_bits=28 || true
+
+      - name: Configure
+        env:
+          PRESET: ${{ matrix.preset }}
+          CXX_FLAGS: ${{ matrix.cxx_flags }}
+          CXX_FLAGS_DEBUG: ${{ matrix.cxx_flags_debug }}
+        run: |
+          # Tracy off: it is on by default in the debug presets (PR #211), and a
+          # sanitizer run measures nothing a profiler could use, while its
+          # instrumentation and a sanitizer runtime would sit in one binary.
+          args=(-DCMAKE_CXX_COMPILER=g++-16 -DCUBEULATOR_BUILD_APP=OFF -DCUBEULATOR_ENABLE_TRACY=OFF)
+          if [ -n "$CXX_FLAGS" ]; then
+            args+=("-DCMAKE_CXX_FLAGS=$CXX_FLAGS" "-DCMAKE_EXE_LINKER_FLAGS=$CXX_FLAGS" "-DCMAKE_SHARED_LINKER_FLAGS=$CXX_FLAGS")
+          fi
+          if [ -n "$CXX_FLAGS_DEBUG" ]; then
+            args+=("-DCMAKE_CXX_FLAGS_DEBUG=$CXX_FLAGS_DEBUG")
+          fi
+          cmake --preset "$PRESET" "${args[@]}"
+
+      - name: Build
+        env:
+          PRESET: ${{ matrix.preset }}
+        run: cmake --build --preset "$PRESET"
+
+      - name: Test
+        env:
+          PRESET: ${{ matrix.preset }}
+          CTEST_ARGS: ${{ matrix.ctest_args }}
+          ASAN_OPTIONS: detect_stack_use_after_return=1:strict_string_checks=1:print_stacktrace=1
+          UBSAN_OPTIONS: print_stacktrace=1
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppressions=${{ github.workspace }}/ci/tsan.supp
+          # OpenCV's own thread pool is not instrumented (ci/tsan.supp); one
+          # thread keeps its races out of the report in the first place.
+          OPENCV_FOR_THREADS_NUM: "1"
+        # shellcheck disable=SC2086 # CTEST_ARGS is a word list on purpose
+        run: ctest --preset "$PRESET" --timeout 1800 -j 4 $CTEST_ARGS
+
+      - name: Save vcpkg binaries
+        if: ${{ always() }}
+        uses: $/.github/actions/vcpkg-cache/save
+        with:
+          triplet: x64-linux
+          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+
+  sanitizers-app:
+    name: Sanitizers - ASan + UBSan (app)
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',sanitizers-app,')) }}
+    needs: [full-ci, sanitizers]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 300
+    permissions:
+      contents: read
+    env:
+      VCPKG_MAX_CONCURRENCY: "2"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      # The Mesa and fontconfig libraries leak at exit by design; leaks in the
+      # code under test are the library job's to find.
+      ASAN_OPTIONS: detect_leaks=0:detect_stack_use_after_return=1:print_stacktrace=1
+      UBSAN_OPTIONS: print_stacktrace=1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore vcpkg binaries
+        id: vcpkg-cache
+        uses: $/.github/actions/vcpkg-cache/restore
+        with:
+          triplet: x64-linux
+
+      - name: Install CMake 4 + Ninja
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: "4.4.2"
+          ninjaVersion: "1.13.2"
+
+      - name: Install GCC 16
+        uses: $/.github/actions/install-gcc
+
+      # As the system-tests job of ci.yml.
+      - name: Install build and display dependencies
+        run: >
+          sudo apt-get install -y
+          libx11-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+          xvfb xauth mesa-utils libgl1-mesa-dri libglx-mesa0 libegl1 libfontconfig1 libxkbcommon-x11-0
+          libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0
+          libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxcb-xinput0
+
+      - name: Install Qt (prebuilt)
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: "6.12.0"
+          modules: "qtquick3d qtshadertools"
+          cache: true
+
+      - name: Let the sanitizer runtimes map their shadow memory
+        run: sudo sysctl -w vm.mmap_rnd_bits=28 || true
+
+      - name: Configure
+        run: >
+          cmake --preset linux-gcc-debug
+          -DCMAKE_CXX_COMPILER=g++-16
+          -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+          -DCMAKE_CXX_FLAGS_DEBUG="-O1 -g"
+          -DCUBEULATOR_ENABLE_TRACY=OFF
+
+      - name: Build
+        run: cmake --build --preset linux-gcc-debug
+
+      - name: Tests (everything but the system tests)
+        run: ctest --preset linux-gcc-debug --timeout 1800 -j 2 -LE system
+
+      # The system tests draw the real app under Xvfb; under ASan they are
+      # slower, and a failure here is as likely to be the software GL stack as
+      # the app, so the step reports without stopping the job's other results.
+      # QT_QPA_PLATFORM=xcb is set here and not on the job: the tests above
+      # choose their own platform (offscreen) and fail to start on xcb with no
+      # display.
+      - name: System tests
+        if: ${{ !cancelled() }}
+        env:
+          QT_QPA_PLATFORM: xcb
+        run: >
+          xvfb-run -a -s "-screen 0 1280x1024x24"
+          ctest --preset linux-gcc-debug-system --timeout 1800 --output-on-failure
+
+      - name: Upload system-test pictures
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nightly-system-test-output
+          path: build/linux-gcc-debug/system-test-output
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Save vcpkg binaries
+        if: ${{ always() }}
+        uses: $/.github/actions/vcpkg-cache/save
+        with:
+          triplet: x64-linux
+          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+
+  clang-tidy-app:
+    name: clang-tidy over the app
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',clang-tidy-app,')) }}
+    needs: [full-ci, sanitizers]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      VCPKG_MAX_CONCURRENCY: "2"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore vcpkg binaries
+        id: vcpkg-cache
+        uses: $/.github/actions/vcpkg-cache/restore
+        with:
+          triplet: x64-linux
+
+      - name: Install CMake 4 + Ninja
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: "4.4.2"
+          ninjaVersion: "1.13.2"
+
+      # As the clang-tidy job of ci.yml: Clang parses with the newest libstdc++
+      # it can find, and <mdspan> is in 16.
+      - name: Install GCC 16 (for its libstdc++)
+        uses: $/.github/actions/install-gcc
+
+      - name: Install vcpkg build dependencies
+        run: sudo apt-get install -y libx11-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+
+      - name: Install Clang 23
+        run: bash ci/install-llvm.sh 23 clang-23 clang-tidy-23 libclang-rt-23-dev
+
+      - name: Install Qt (prebuilt)
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: "6.12.0"
+          modules: "qtquick3d qtshadertools"
+          cache: true
+
+      - name: Configure (with the Qt app)
+        run: >
+          cmake --preset linux-gcc-debug
+          -DCMAKE_CXX_COMPILER=clang++-23
+          -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+
+      # The build generates the moc and qrc sources and the module maps the
+      # compile commands refer to.
+      - name: Build
+        run: cmake --build --preset linux-gcc-debug
+
+      # The generated sources (moc, qrc, the QML cache loaders) live under
+      # build/.../src/app/ and match the path too: the first run linted 88 files,
+      # most of them those, for 29 466 "findings" (13 404 of them pointer
+      # arithmetic in generated tables). Only checked-in sources count.
+      # No --warnings-as-errors: this job measures. The files are the app's own
+      # (src/app), as in the clang-tidy job's src and tests, and the findings
+      # are counted by check so a ratchet can be set from the first numbers.
+      - name: Run clang-tidy over src/app
+        run: |
+          jq -r '.[].file' build/linux-gcc-debug/compile_commands.json \
+            | grep -E '/src/app/' \
+            | grep -v '/build/' \
+            | sort -u > app-files.txt
+          wc -l < app-files.txt
+          xargs -a app-files.txt -P 2 -n 4 clang-tidy-23 -p build/linux-gcc-debug > clang-tidy-app.log 2>&1 || true
+          grep -E ' (warning|error): ' clang-tidy-app.log | sort -u > findings.txt || true
+          {
+            echo "### clang-tidy over src/app"
+            echo
+            echo "$(wc -l < app-files.txt) files, $(wc -l < findings.txt) distinct findings."
+            echo
+            echo "| Check | Findings |"
+            echo "|---|---|"
+            sed -E 's/.*\[([^]]+)\]$/\1/' findings.txt | sort | uniq -c | sort -rn | head -25 \
+              | awk '{ printf "| %s | %s |\n", $2, $1 }'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the full log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nightly-clang-tidy-app
+          path: |
+            clang-tidy-app.log
+            findings.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Save vcpkg binaries
+        if: ${{ always() }}
+        uses: $/.github/actions/vcpkg-cache/save
+        with:
+          triplet: x64-linux
+          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+
+  report:
+    name: Report
+    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    needs: [full-ci, sanitizers, sanitizers-app, clang-tidy-app]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      actions: read # the dispatched run's jobs
+      checks: read # their annotations
+      contents: read
+      issues: write # the tracking issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
+          sparse-checkout: ci
+          persist-credentials: false
+
+      - name: Summarise and update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          CI_RUN_ID: ${{ needs.full-ci.outputs.run_id }}
+        run: bash ci/nightly-report.sh

@@ -599,6 +599,14 @@ TEST_CASE("an empty recorder exports valid, empty documents", "[profile]") {
     CHECK(split(recorder.zones_csv(), '\n').size() == 1);  // the header
 }
 
+TEST_CASE("application info added later joins what is there, one line each", "[profile]") {
+    Recorder recorder(64);
+    recorder.add_app_info("Cubeulator 1.2.3");
+    recorder.add_app_info("graphics backend: OpenGL");
+    CHECK(parse(recorder.summary_json()).at("app").string() ==
+          "Cubeulator 1.2.3\ngraphics backend: OpenGL");
+}
+
 TEST_CASE("the summary holds zone statistics in milliseconds and the counts of marks",
           "[profile]") {
     Recorder recorder(64);

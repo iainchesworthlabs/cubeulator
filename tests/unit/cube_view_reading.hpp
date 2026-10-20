@@ -312,4 +312,43 @@ using Sides = std::array<std::vector<QColor>, 6>;
     return vec(result.toMap().value(letter(side)));
 }
 
+// What a Quick 3D view declares, and how much of it is switched on: the tests that
+// hold a view to a budget of lights or models count them.
+struct Lights {
+    int declared = 0;
+    int on = 0;
+};
+
+// The directional lights a view has, and how many of them are switched on.
+[[nodiscard]] inline Lights directional_lights(const QObject* view) {
+    Lights lights;
+    for (const QObject* object : view->findChildren<QObject*>()) {
+        for (const QMetaObject* type = object->metaObject(); type != nullptr;
+             type = type->superClass()) {
+            if (qstrcmp(type->className(), "QQuick3DDirectionalLight") == 0) {
+                ++lights.declared;
+                lights.on += object->property("visible").toBool() ? 1 : 0;
+                break;
+            }
+        }
+    }
+    return lights;
+}
+
+// The models a view has, and how many of them are switched on.
+[[nodiscard]] inline Lights models(const QObject* view) {
+    Lights found;
+    for (const QObject* object : view->findChildren<QObject*>()) {
+        for (const QMetaObject* type = object->metaObject(); type != nullptr;
+             type = type->superClass()) {
+            if (qstrcmp(type->className(), "QQuick3DModel") == 0) {
+                ++found.declared;
+                found.on += object->property("visible").toBool() ? 1 : 0;
+                break;
+            }
+        }
+    }
+    return found;
+}
+
 }  // namespace cube::test

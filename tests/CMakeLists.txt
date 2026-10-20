@@ -64,6 +64,7 @@ add_executable(cube_unit_tests
     unit/corner_view_nxn_test.cpp
     unit/quad_fit_test.cpp
     unit/drawn_cube_test.cpp
+    unit/held_cube_nxn_test.cpp
     unit/held_cube_test.cpp
     unit/lib_stub_functions_test.cpp
     unit/solver/cube_test.cpp
@@ -107,7 +108,7 @@ target_link_libraries(cube_unit_tests
 # choice, so a wrong directory on the include path cannot go unnoticed.
 set_source_files_properties(unit/profiling_test.cpp PROPERTIES
     COMPILE_DEFINITIONS
-        "CUBE_EXPECT_TRACY=$<BOOL:${CUBEULATOR_ENABLE_TRACY}>;CUBE_EXPECT_RECORDER=$<BOOL:${CUBEULATOR_ENABLE_PROFILE_RECORDER}>")
+        "CUBE_EXPECT_TRACY=$<BOOL:${CUBEULATOR_ENABLE_TRACY}>;CUBE_EXPECT_RECORDER=$<BOOL:${CUBEULATOR_ENABLE_PROFILE_RECORDER}>;CUBE_EXPECT_PROFILE_DEFAULT=${CUBEULATOR_PROFILE_DEFAULT_ON}")
 
 # White-box include path for last_layer_test.cpp only: it includes
 # cube::lib's private last_layer.hpp directly, because the F2L-preservation
