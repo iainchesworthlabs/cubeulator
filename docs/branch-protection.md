@@ -202,21 +202,52 @@ runs on pushes to `main` and weekly, not on pull requests.
 dependency diff`, and the queue only re-runs those, so a change that breaks the
 build or the tests reaches `develop` (#200 did, on 2026-10-18: the i18n
 catalogue test and `system.reach` were red on its push run and fixed by #202
-two merges later). With `merge_group` on `ci.yml` and `codeql.yml`, promoting
-the seven checks of the table above is one ruleset edit, by an admin:
+two merges later). The seven checks of the table above are what to require.
+An admin does it (the repository's rulesets are not edited from a workflow or
+by an agent), **in this order**:
 
-```sh
-gh api repos/iainchesworthlabs/cubeulator/rulesets/24974265 > develop-protection.json
-# add, to the required_status_checks rule's "required_status_checks" list:
-#   {"context": "clang-format"}, {"context": "clang-tidy"}, {"context": "Linux (GCC 16)"},
-#   {"context": "macOS (AppleClang)"}, {"context": "Windows (MSVC)"},
-#   {"context": "Coverage (Linux, GCC)"}, {"context": "Analyze (C++)"}
-gh api -X PUT repos/iainchesworthlabs/cubeulator/rulesets/24974265 --input develop-protection.json
-```
+1. **Land the workflows that make the checks exist on every kind of pull
+   request and every queue entry.** `merge_group` on `ci.yml` and `codeql.yml`
+   (this change); the documentation-only path, under which the seven jobs still
+   run and report on a documentation-only change instead of being skipped
+   (`.github/actions/changed-code`; [Documentation-only changes](ci.md#documentation-only-changes)),
+   because a required check that is skipped by `if:` is never reported and the
+   pull request waits for it for ever; and the gating of the porting legs and
+   the Windows/macOS system tests, so a check that goes required is one that is
+   green.
+2. **See them green on a code pull request and on a documentation-only one**,
+   with all seven names reporting `success` on both (the proof pull requests of
+   the change that added the path are linked from it).
+3. **Edit the ruleset.** One `PUT`, with the seven contexts added to the
+   existing two; the queue's own rule is unchanged (`merge-queue-develop`
+   re-runs whatever `develop-protection` requires):
 
-Two costs to weigh first. Every queue entry then runs those seven jobs on the
-queue's merge ref (about an hour on a free pool, more on the shared one), and
-a cache entry is readable from its own ref, the base branch and the default
-branch only (see [Where an entry can be read from](ci.md#where-an-entry-can-be-read-from)):
-whether a `gh-readonly-queue/develop/...` ref reads `develop`'s vcpkg entries
-has not been observed, so the first entry may build the dependencies cold.
+   ```sh
+   RS=24974265   # develop-protection
+   gh api repos/iainchesworthlabs/cubeulator/rulesets/$RS > develop-protection.json
+   jq '{name, target, enforcement, conditions, bypass_actors,
+        rules: (.rules | map(if .type == "required_status_checks"
+          then .parameters.required_status_checks +=
+               ([ "clang-format", "clang-tidy", "Linux (GCC 16)", "macOS (AppleClang)",
+                  "Windows (MSVC)", "Coverage (Linux, GCC)", "Analyze (C++)" ]
+                | map({context: .}))
+          else . end))}' develop-protection.json > develop-protection.new.json
+   gh api -X PUT repos/iainchesworthlabs/cubeulator/rulesets/$RS --input develop-protection.new.json
+   ```
+
+   Check the diff of the two JSON files before the `PUT`. To undo: `PUT` the
+   saved `develop-protection.json` back (strip the same read-only keys with `jq
+   '{name, target, enforcement, conditions, bypass_actors, rules}'`).
+4. **Watch the first queue entry.** It runs the seven jobs on the queue's merge
+   ref (about an hour on a free pool, more on the shared one), and a cache entry
+   is readable from its own ref, the base branch and the default branch only
+   ([Where an entry can be read from](ci.md#where-an-entry-can-be-read-from)):
+   whether a `gh-readonly-queue/develop/...` ref reads `develop`'s vcpkg entries
+   has not been observed, so that first entry may build the dependencies cold.
+   If it does, `check_response_timeout_minutes` (180) is the bound on it.
+
+Android, iOS, Web and Web tests are not in the list on purpose: they gate a CI
+run (no `continue-on-error`) but a required check also has to report in the
+queue, and on a documentation-only change, which today they do not (they skip
+whole). Requiring them is a second step: give them the step-level skip the
+seven have, run them in the queue, and add their four names to the list above.
