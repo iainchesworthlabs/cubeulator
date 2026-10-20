@@ -57,6 +57,7 @@ endmacro()
 #     CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA and
 #     CUBEULATOR_PLATFORM_PROFILING_VULKAN and
 #     CUBEULATOR_PLATFORM_PROFILING_OPENGL are ON or OFF;
+#   - CUBEULATOR_PLATFORM_SIMD is auto or vector128;
 #   - every file the fragment compiles, or names for the library to compile,
 #     exists under <app_dir> (src/app).
 # `fragment` only names it in the message.
@@ -86,6 +87,13 @@ function(cube_platform_check_contract fragment app_dir)
                 "${fragment}: ${_flag} must be ON or OFF, not '${${_flag}}'.")
         endif()
     endforeach()
+
+    if(NOT CUBEULATOR_PLATFORM_SIMD STREQUAL "auto" AND
+       NOT CUBEULATOR_PLATFORM_SIMD STREQUAL "vector128")
+        message(FATAL_ERROR
+            "${fragment}: CUBEULATOR_PLATFORM_SIMD must be auto or vector128, "
+            "not '${CUBEULATOR_PLATFORM_SIMD}'.")
+    endif()
 
     foreach(_file IN LISTS CUBEULATOR_PLATFORM_SOURCES CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES)
         if(NOT EXISTS "${app_dir}/${_file}")

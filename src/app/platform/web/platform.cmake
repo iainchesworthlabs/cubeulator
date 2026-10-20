@@ -84,6 +84,11 @@ set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_
 set(CUBEULATOR_PLATFORM_PROFILING_VULKAN OFF)
 set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
 
+# A browser's architecture is not one CMake can see, and the page requires
+# WebAssembly SIMD (docs/web.md): the 128-bit kernels are built with it
+# (-msimd128 in cube_platform_prepare_dependencies below).
+set(CUBEULATOR_PLATFORM_SIMD vector128)
+
 # camera_web.js is the page's half of the camera: an Emscripten JS library, so
 # camera_web.cpp calls its functions like any other and Emscripten proxies them
 # to the main thread. As a link flag of the static library it reaches the app's
@@ -140,8 +145,12 @@ set(CUBEULATOR_PLATFORM_APP_PROPERTIES
 # -fexceptions likewise (the triplet says why): the compiler's default is to
 # compile `throw` to an abort and `catch` to nothing, and the same flag has to
 # be on the link line, which selects the C++ runtime that has them.
+#
+# -msimd128 so that the 128-bit kernels (cmake/Simd.cmake) compile to WebAssembly
+# SIMD rather than to OpenCV's scalar stand-in for it. The page needs the feature
+# already (docs/web.md), and Qt's kit and the vcpkg ports are built with it.
 function(cube_platform_prepare_dependencies)
-    add_compile_options(-pthread -fexceptions)
+    add_compile_options(-pthread -fexceptions -msimd128)
 endfunction()
 
 # What puts the app in a page: the page itself, the worker that makes the page

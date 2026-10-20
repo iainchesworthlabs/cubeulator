@@ -166,8 +166,9 @@ inline constexpr std::array<SizeBudget, 8> kNxnSizes = {{
 // the two larger sizes a camera gives. The reader reduces a wide frame to its
 // working width before it does anything else, so its buffers do not depend on
 // the camera: that is the contract in direct_scan.hpp, and it is what these
-// hold. Measured: 133 to 152 buffers, 2.22 MB at every size (1.99 before
-// prepare_frame kept its threshold, a 640 x 360 plane, for the glare look); a frame with no
+// hold. Measured: 133 to 152 buffers, 1.30 MB at every size (1.99 before
+// prepare_frame kept its threshold for the glare look, 2.22 with it, and 1.30
+// once the brightest channel stopped being split into three planes); a frame with no
 // cube in it 133 to 165 buffers, 4.4 MB - except the 1080p room, 307 buffers and
 // 6.0 MB. A room with sticker-sized outlines in it and no side earns every look
 // the reader has after the first (outlines against a narrower block, against the

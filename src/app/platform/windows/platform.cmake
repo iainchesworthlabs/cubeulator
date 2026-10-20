@@ -49,6 +49,9 @@ set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/windows/tracy_gpu_d3d11_w
 set(CUBEULATOR_PLATFORM_PROFILING_VULKAN ON)
 set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
 
+# The vector kernels follow the architecture (cmake/Simd.cmake).
+set(CUBEULATOR_PLATFORM_SIMD auto)
+
 # camera_windows.cpp enumerates via native DirectShow device enumeration
 # (ICreateDevEnum/IEnumMoniker) rather than OpenCvCaptureLoop's generic
 # probe - see its own comment for why, and for why DirectShow rather than
