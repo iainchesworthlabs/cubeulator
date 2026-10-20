@@ -89,17 +89,21 @@ struct Channels {
 
 [[nodiscard]] Channels channels_of(const cv::Mat& working) {
     // One pass, two images: splitting into three planes and taking the extremes
-    // of them allocated eight pixel buffers per look for what two hold.
+    // of them allocated eight pixel buffers per look for what two hold. Walked
+    // by row pointers: Mat::at<> in the loop below this replaced was 2.4 ms of a
+    // 640 x 360 frame, and this is 0.35 (docs/performance.md).
     Channels channels;
     channels.value.create(working.size(), CV_8UC1);
     channels.chroma.create(working.size(), CV_8UC1);
     for (int row = 0; row < working.rows; ++row) {
-        for (int column = 0; column < working.cols; ++column) {
-            const auto& bgr = working.at<cv::Vec3b>(row, column);
-            const uchar highest = std::max({bgr(0), bgr(1), bgr(2)});
-            const uchar lowest = std::min({bgr(0), bgr(1), bgr(2)});
-            channels.value.at<uchar>(row, column) = highest;
-            channels.chroma.at<uchar>(row, column) = static_cast<uchar>(highest - lowest);
+        const uchar* bgr = working.ptr<uchar>(row);
+        uchar* value = channels.value.ptr<uchar>(row);
+        uchar* chroma = channels.chroma.ptr<uchar>(row);
+        for (int column = 0; column < working.cols; ++column, bgr += 3) {
+            const uchar highest = std::max(std::max(bgr[0], bgr[1]), bgr[2]);
+            const uchar lowest = std::min(std::min(bgr[0], bgr[1]), bgr[2]);
+            value[column] = highest;
+            chroma[column] = static_cast<uchar>(highest - lowest);
         }
     }
     return channels;

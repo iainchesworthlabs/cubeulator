@@ -47,6 +47,7 @@
 #include <cube/vision/corner_fit.hpp>
 #include <cube/vision/direct_scan.hpp>
 #include <cube/vision/held_cube.hpp>
+#include <cube/vision/prepared_frame.hpp>
 #include <cube/vision/sticker_colour.hpp>
 
 #include <opencv2/imgcodecs.hpp>
@@ -55,6 +56,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -1855,6 +1857,134 @@ int run_read(const fs::path& session, bool verbose) {
     return read > 0 ? 0 : 1;
 }
 
+// A hash of everything a read hands on: where the stickers are, what colour they
+// came to, and what the attempt saw on the way. Two builds that print the same
+// digest for a session read the same sides in the same colours, which is the
+// check a change to how a look is computed has to pass; `-v` prints one line a
+// frame, to find the frame when they do not.
+[[nodiscard]] std::uint64_t fold(std::uint64_t hash, std::uint64_t value) {
+    constexpr std::uint64_t kPrime = 1099511628211ULL;
+    for (int byte = 0; byte < 8; ++byte) {
+        hash ^= (value >> (8 * byte)) & 0xFFU;
+        hash *= kPrime;
+    }
+    return hash;
+}
+
+[[nodiscard]] std::uint64_t fold(std::uint64_t hash, float value) {
+    return fold(hash, static_cast<std::uint64_t>(std::bit_cast<std::uint32_t>(value)));
+}
+
+int run_digest(const fs::path& session, bool every_frame) {
+    const int size = session_size(session);
+    std::uint64_t all = 14695981039346656037ULL;
+    std::size_t reads = 0;
+    std::size_t frames = 0;
+    for (const fs::path& path : frames_of(session)) {
+        const cv::Mat bgr = cv::imread(path.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        if (!prepared.has_value()) {
+            continue;
+        }
+        ++frames;
+        cube::vision::SideAttempt attempt;
+        const auto got = cube::vision::read_side_explained(*prepared, size, attempt);
+        std::uint64_t hash = 14695981039346656037ULL;
+        for (const std::size_t count : attempt.blobs) {
+            hash = fold(hash, static_cast<std::uint64_t>(count));
+        }
+        for (const std::size_t count : attempt.outlines) {
+            hash = fold(hash, static_cast<std::uint64_t>(count));
+        }
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.oversized));
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.wrong_shape));
+        hash = fold(hash, attempt.pitch_px);
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.look));
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.refusal));
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.lattice_blobs));
+        hash = fold(hash, attempt.lattice_rms);
+        hash = fold(hash, attempt.lattice_ratio);
+        hash = fold(hash, attempt.lattice_cosine);
+        hash = fold(hash, static_cast<std::uint64_t>(got.has_value()));
+        if (got.has_value()) {
+            ++reads;
+            hash = fold(hash, got->pitch);
+            hash = fold(hash, static_cast<std::uint64_t>(got->stickers_found));
+            for (const cv::Point2f& centre : got->centres) {
+                hash = fold(fold(hash, centre.x), centre.y);
+            }
+            for (const cv::Vec3f& lab : got->lab) {
+                hash = fold(fold(fold(hash, lab(0)), lab(1)), lab(2));
+            }
+            for (const bool found : got->found) {
+                hash = fold(hash, static_cast<std::uint64_t>(found));
+            }
+        }
+        all = fold(all, hash);
+        if (every_frame) {
+            fmt::print("{} {:016x} {}\n", path.stem().string(), hash,
+                       got.has_value() ? static_cast<int>(attempt.look) : -1);
+        }
+    }
+    fmt::print("{} {} frames {} reads digest {:016x}\n", session.filename().string(), frames, reads,
+               all);
+    return 0;
+}
+
+// What the glare look costs, on the frames it is taken for: the whole of a read
+// of the frame, and the look's outlines alone, in ms a frame (the fastest of
+// `runs`, so that another process on the machine is not in the number).
+int run_glare_cost(const fs::path& session, int runs) {
+    const int size = session_size(session);
+    using Clock = std::chrono::steady_clock;
+    const auto ms = [](Clock::duration d) {
+        return std::chrono::duration<double, std::milli>(d).count();
+    };
+    std::size_t frames = 0;
+    std::size_t looked = 0;
+    double read_ms = 0.0;
+    double look_ms = 0.0;
+    for (const fs::path& path : frames_of(session)) {
+        const cv::Mat bgr = cv::imread(path.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        if (!prepared.has_value()) {
+            continue;
+        }
+        ++frames;
+        cube::vision::SideAttempt attempt;
+        double read_best = 1e9;
+        for (int run = 0; run < runs; ++run) {
+            const auto start = Clock::now();
+            (void)cube::vision::read_side_explained(*prepared, size, attempt);
+            read_best = std::min(read_best, ms(Clock::now() - start));
+        }
+        read_ms += read_best;
+        if (attempt.outlines.at(static_cast<std::size_t>(cube::vision::FrameLook::glare)) == 0 &&
+            attempt.blobs.at(static_cast<std::size_t>(cube::vision::FrameLook::glare)) == 0) {
+            continue;
+        }
+        ++looked;
+        double best = 1e9;
+        for (int run = 0; run < runs; ++run) {
+            const auto start = Clock::now();
+            const auto contours = cube::vision::contours_without_glare(prepared->working, size);
+            best = std::min(best, ms(Clock::now() - start));
+            if (contours.empty() && run < 0) {
+                return 1;
+            }
+        }
+        look_ms += best;
+    }
+    fmt::print(
+        "{}: {} frames, the glare look taken on {}; read_side {:.3f} ms a frame, the look's "
+        "outlines {:.3f} ms a frame it was taken on ({:.3f} ms a frame of the session)\n",
+        session.filename().string(), frames, looked,
+        frames == 0 ? 0.0 : read_ms / static_cast<double>(frames),
+        looked == 0 ? 0.0 : look_ms / static_cast<double>(looked),
+        frames == 0 ? 0.0 : look_ms / static_cast<double>(frames));
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1888,6 +2018,13 @@ int main(int argc, char** argv) {
     }
     if ((args.size() == 2 || args.size() == 3) && args[0] == "funnel") {
         return run_funnel(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
+    }
+    if ((args.size() == 2 || args.size() == 3) && args[0] == "digest") {
+        return run_digest(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
+    }
+    if ((args.size() == 2 || args.size() == 3) && args[0] == "glare-cost") {
+        return run_glare_cost(fs::path(args[1]),
+                              args.size() == 3 ? std::max(1, std::stoi(std::string(args[2]))) : 3);
     }
     if ((args.size() == 2 || args.size() == 3) && args[0] == "read") {
         return run_read(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
