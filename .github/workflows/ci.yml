@@ -109,7 +109,8 @@ jobs:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - clang-tidy' || 'clang-tidy' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',clang-tidy,') }}
     needs: plan
-    runs-on: ubuntu-26.04
+    # A documentation-only change runs no step: the fleet, not the hosted queue.
+    runs-on: ${{ needs.plan.outputs.code == 'true' && fromJSON('["ubuntu-26.04"]') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && fromJSON('["ubuntu-26.04"]') || fromJSON(vars.CONTROL_RUNNER_JSON || '["ubuntu-26.04"]') }}
     # Caps vcpkg's internal build parallelism - see the equivalent comment
     # on build-and-test below (onnxruntime OOM'd this runner at full nproc
     # parallelism).
@@ -306,9 +307,11 @@ jobs:
     # The matrix is empty when a dispatch names no desktop leg, which would
     # otherwise be an error rather than a skip.
     if: ${{ needs.plan.outputs.matrix != '[]' }}
-    # A documentation-only change runs no step, so it is given the cheapest runner
-    # rather than a macOS or Windows one for the seconds it takes to say so.
-    runs-on: ${{ needs.plan.outputs.code == 'true' && matrix.os || 'ubuntu-26.04' }}
+    # A documentation-only change runs no step, so it is given a runner of the
+    # organisation's fleet (docs/ci.md, "Self-hosted runners") rather than a macOS
+    # or Windows one, or a place in the hosted queue behind real builds, for the
+    # seconds it takes to say so.
+    runs-on: ${{ needs.plan.outputs.code == 'true' && fromJSON(format('["{0}"]', matrix.os)) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && fromJSON('["ubuntu-26.04"]') || fromJSON(vars.CONTROL_RUNNER_JSON || '["ubuntu-26.04"]') }}
     # Caps vcpkg's internal build parallelism (used for every port it
     # compiles, including a single heavy port's own --parallel build step).
     # Confirmed in CI: building onnxruntime with the runner's default
@@ -1177,7 +1180,8 @@ jobs:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Coverage (Linux, GCC)' || 'Coverage (Linux, GCC)' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',coverage,') }}
     needs: plan
-    runs-on: ubuntu-26.04
+    # A documentation-only change runs no step: the fleet, not the hosted queue.
+    runs-on: ${{ needs.plan.outputs.code == 'true' && fromJSON('["ubuntu-26.04"]') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && fromJSON('["ubuntu-26.04"]') || fromJSON(vars.CONTROL_RUNNER_JSON || '["ubuntu-26.04"]') }}
     # Caps vcpkg's internal build parallelism - see the equivalent comment
     # on build-and-test above (onnxruntime OOM'd this runner at full nproc
     # parallelism).
