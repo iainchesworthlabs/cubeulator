@@ -413,3 +413,5 @@ the latest?":
 - **Libraries built by vcpkg** (OpenCV, ...) — these move
   only with the `builtin-baseline`, and only as far as the vcpkg registry has
   them.
+
+<!-- documentation-only change, to prove that CI skips the build (PR proof; not merged) -->
