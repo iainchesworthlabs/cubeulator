@@ -2,7 +2,9 @@
 #include "controllers/scan_reading.hpp"
 #include "desktop/desktop_integration.hpp"
 #include "interfaces/crash_handler.hpp"
+#include "interfaces/platform_info.hpp"
 #include "kit/bundled_fonts.hpp"
+#include "kit/font_warmup.hpp"
 #include "qsg_log_bridge.hpp"
 #include "render_profiler.hpp"
 
@@ -130,6 +132,15 @@ int main(int argc, char* argv[]) {
     // The fonts compiled into the app (:/fonts) are registered before any QML
     // asks for a family. A build that has none is unaffected.
     cube::app::kit::installBundledFonts();
+
+    // Qt's font database is asked for the interface's families on a thread of
+    // its own, while the engine and the screens are built; the first text on
+    // the GUI thread would otherwise wait for that lookup (kit/font_warmup.hpp).
+    // After the bundled fonts, so that it looks for what is there to be found.
+    // Destroyed before the application and the profiling session it reports to.
+    const cube::app::kit::FontWarmup font_warmup(
+        cube::app::kit::themeFamilies(),
+        cube::platform::platform_info::current().warm_fonts_off_thread);
 
     // Tracy names the GUI thread and carries the build's identity into every
     // trace, so a capture says which commit it measured (cube/profiling.hpp).

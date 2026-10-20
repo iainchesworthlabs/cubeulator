@@ -547,6 +547,7 @@ By what a person waits for, and how far it is from its budget, as found:
 | A frame is prepared once for both readers | 4.2 ms turned, 8.2 ms at 1080p | 2.2 ms, 3.6 ms; the same reads | [#78](https://github.com/iainchesworthlabs/cubeulator/pull/78) |
 | The cube's light probe is prefiltered once, not on every `View3D`'s first frame | llvmpipe 10 to 16 s a screen with the cube; a browser without a GPU stands still for 35 s at the start and 35 s at the close | 3 to 6 s (the cube itself); the 30th frame in 2 to 4 s; the close 1 s | this change, [above](#the-light-probe) |
 | A sticker of the 3x3 cube is the one model it draws; Home makes the one cube it shows, after its menu | Home 22 ms to make and 224 ms to the tenth frame; Settings 52 and 275; the cube 268 models | 2 and 169; 25 and 184; the cube 80 models (106 in the Cel look) | this change, [above](#screens) |
+| The font lookup for the families the screens name and the machine has not runs on a thread of its own, while the screens are built | `app.load_qml` 567 ms (median, seven alternated pairs, High priority) | 524 ms; the first frame about 40 ms earlier; no face changes in nine languages | this change, [below](#what-was-not-fixed) |
 
 The solver's cost per visit fell from 1.7 to 3.4 us to 0.15 to 0.29 us; what it
 did not change is the number of visits, and that is the one lever left (below).
@@ -556,11 +557,41 @@ old search gave.
 
 ## What was not fixed
 
-- **The fonts.** The cost is the fonts being named and not shipped, which
-  `feature/ax-kit` already fixes by bundling six font files and loading them.
-  Measured here with that branch's files: **-550 ms of startup**, and the
-  kit's loader (`bundled_fonts.cpp`) costs about 20 ms of it back. The thing to
-  check when the kit lands is the startup timeline above, not just the glyphs.
+- **The fonts, mostly.** Nothing is bundled on the desktop: `Theme.qml` names
+  Archivo and IBM Plex Mono, no machine this was measured on has them, and Qt
+  sets the text in its default face (Tahoma on Windows, not the Segoe UI the
+  app's own chrome uses). Asking Qt for a family it does not have is what costs:
+  it looks in every font the system has before it gives up. Measured in a
+  twenty-line Qt program, on a machine with 300 families, cold: the first text
+  in a family that is installed 15 ms, in one that is not **350 ms** (320 to 365
+  over three runs), and the same lookup with the four Latin files registered
+  with `addApplicationFont` **3 ms + 15 ms**. A substitution
+  (`QFont::insertSubstitution`) does not help (the family is looked for first);
+  neither does listing the families on a thread first (`QFontDatabase::families()`
+  reads the names, not the lookup); what does is the lookup itself being done
+  on another thread, because its result is the font database's, not the
+  thread's: the GUI thread then finds it in memory (under 1 ms).
+  - **Done: the lookup runs on a thread of its own** (`kit/font_warmup.hpp`),
+    started right after the bundled fonts are registered. It changes no face
+    (the same lookup, so the same result; the launch screen in nine languages
+    compared with and without it differs in its text column by at most one
+    level of 255, on a few hundred pixels, which is anti-aliasing as two runs
+    of one build differ). It is worth about **50 ms of `app.load_qml`** (567 to
+    524 ms median over seven alternated pairs at High priority; 43 to 65 ms in
+    each), not 350, because the GUI thread asks for the family about 85 ms into
+    `app.load_qml` and waits for the rest of the lookup: it has no more
+    font-free work to do first. Not done in the browser
+    (`PlatformInfo::warm_fonts_off_thread`): it has no system fonts to search
+    and its threads are Web Workers.
+  - **Not done, and not mine to do: bundling Archivo and IBM Plex Mono.** The
+    four Latin files `feature/ax-kit` carries, registered at start, take
+    `app.load_qml` to 250 to 280 ms (from 410 to 590) and leave nothing for the
+    lookup to wait for. It also **changes how the Latin text looks** on every
+    machine without those families (Tahoma becomes Archivo, which is the
+    design's face), so it is the kit's decision; with it the warm-up above is
+    nearly moot. Hebrew, Arabic and Yiddish are named Archivo by `Theme.qml` too,
+    so they go through the same lookup; their start-up measured the same as
+    English's (about 550 ms of `app.load_qml` before this change).
 - **Two cubes per screen, four models per sticker** were this entry until the
   [Screens](#screens) change: Home made the one cube it shows and each
   sticker one model. The other screens that build both a narrow and a wide

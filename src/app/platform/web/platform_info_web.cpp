@@ -24,6 +24,10 @@ PlatformInfo current() {
         // Sans JP and SC.
         .japanese_faces = {"Noto Sans JP"},
         .chinese_faces = {"Noto Sans SC"},
+        // Nothing to search: the browser has no system fonts, only the faces
+        // the app registers. And a thread here is a Web Worker, which only
+        // the page's event loop can start.
+        .warm_fonts_off_thread = false,
     };
 }
 

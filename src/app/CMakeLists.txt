@@ -339,7 +339,9 @@ endif()
 if(CUBEULATOR_BUILD_APP)
     target_sources(cube_app_qml PRIVATE
         qt/kit/bundled_fonts.hpp
-        qt/kit/bundled_fonts.cpp)
+        qt/kit/bundled_fonts.cpp
+        qt/kit/font_warmup.hpp
+        qt/kit/font_warmup.cpp)
 endif()
 
 # ---------------------------------------------------------------------------

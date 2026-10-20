@@ -54,6 +54,14 @@ struct PlatformInfo {
     // fonts). Empty means "the default face".
     std::vector<std::string> japanese_faces;
     std::vector<std::string> chinese_faces;
+
+    // Qt's font database may be asked for the interface's families on a thread
+    // of its own while the screens are built (kit/font_warmup.hpp). Where a
+    // family the machine does not have is looked for in every font it has, that
+    // search is a third of a second the first text would otherwise wait for.
+    // False where there is nothing to search and a thread is not free to make:
+    // a browser's threads are Web Workers, started by the page's event loop.
+    bool warm_fonts_off_thread = true;
 };
 
 // There is exactly one definition of `current()` per platform, living in
