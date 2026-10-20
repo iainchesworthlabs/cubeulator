@@ -33,22 +33,26 @@
 #include <opencv2/core/hal/intrin.hpp>
 #include <opencv2/core/utility.hpp>
 
+#include <cstddef>
 #include <string_view>
 
 namespace cube::vision::detail {
+
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic): kernels over image rows.
 
 inline constexpr std::string_view kSimdName = "vector128";
 
 inline void max_of_channels(const cv::Mat& bgr, cv::Mat& value) {
     value.create(bgr.size(), CV_8UC1);
     const bool vectors = cv::useOptimized();
-    constexpr int kLanes = 16;
+    const std::ptrdiff_t columns = bgr.cols;
+    constexpr std::ptrdiff_t kLanes = 16;
     for (int row = 0; row < bgr.rows; ++row) {
-        const unsigned char* in = bgr.ptr<unsigned char>(row);
-        unsigned char* out = value.ptr<unsigned char>(row);
-        int done = 0;
+        const auto* in = bgr.ptr<unsigned char>(row);
+        auto* out = value.ptr<unsigned char>(row);
+        std::ptrdiff_t done = 0;
         if (vectors) {
-            for (; done + kLanes <= bgr.cols; done += kLanes) {
+            for (; done + kLanes <= columns; done += kLanes) {
                 cv::v_uint8x16 blue;
                 cv::v_uint8x16 green;
                 cv::v_uint8x16 red;
@@ -56,7 +60,7 @@ inline void max_of_channels(const cv::Mat& bgr, cv::Mat& value) {
                 cv::v_store(out + done, cv::v_max(cv::v_max(blue, green), red));
             }
         }
-        max_of_channels_scalar(in + (3 * done), out + done, bgr.cols - done);
+        max_of_channels_scalar(in + (3 * done), out + done, static_cast<int>(columns - done));
     }
 }
 
@@ -64,14 +68,15 @@ inline void extremes_of_channels(const cv::Mat& bgr, cv::Mat& value, cv::Mat& ch
     value.create(bgr.size(), CV_8UC1);
     chroma.create(bgr.size(), CV_8UC1);
     const bool vectors = cv::useOptimized();
-    constexpr int kLanes = 16;
+    const std::ptrdiff_t columns = bgr.cols;
+    constexpr std::ptrdiff_t kLanes = 16;
     for (int row = 0; row < bgr.rows; ++row) {
-        const unsigned char* in = bgr.ptr<unsigned char>(row);
-        unsigned char* out_value = value.ptr<unsigned char>(row);
-        unsigned char* out_chroma = chroma.ptr<unsigned char>(row);
-        int done = 0;
+        const auto* in = bgr.ptr<unsigned char>(row);
+        auto* out_value = value.ptr<unsigned char>(row);
+        auto* out_chroma = chroma.ptr<unsigned char>(row);
+        std::ptrdiff_t done = 0;
         if (vectors) {
-            for (; done + kLanes <= bgr.cols; done += kLanes) {
+            for (; done + kLanes <= columns; done += kLanes) {
                 cv::v_uint8x16 blue;
                 cv::v_uint8x16 green;
                 cv::v_uint8x16 red;
@@ -83,8 +88,10 @@ inline void extremes_of_channels(const cv::Mat& bgr, cv::Mat& value, cv::Mat& ch
             }
         }
         extremes_of_channels_scalar(in + (3 * done), out_value + done, out_chroma + done,
-                                    bgr.cols - done);
+                                    static_cast<int>(columns - done));
     }
 }
+
+// NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
 }  // namespace cube::vision::detail

@@ -24,6 +24,8 @@ struct OptimizedUntilScopeEnds {
     explicit OptimizedUntilScopeEnds(bool on) { cv::setUseOptimized(on); }
     OptimizedUntilScopeEnds(const OptimizedUntilScopeEnds&) = delete;
     OptimizedUntilScopeEnds& operator=(const OptimizedUntilScopeEnds&) = delete;
+    OptimizedUntilScopeEnds(OptimizedUntilScopeEnds&&) = delete;
+    OptimizedUntilScopeEnds& operator=(OptimizedUntilScopeEnds&&) = delete;
     ~OptimizedUntilScopeEnds() { cv::setUseOptimized(before); }
 };
 

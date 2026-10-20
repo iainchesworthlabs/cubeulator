@@ -15,6 +15,8 @@
 
 namespace cube::vision::detail {
 
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic): kernels over image rows.
+
 inline constexpr std::string_view kSimdName = "generic";
 
 // `value` (created) is the brightest channel of every pixel of the 8-bit BGR
@@ -37,5 +39,7 @@ inline void extremes_of_channels(const cv::Mat& bgr, cv::Mat& value, cv::Mat& ch
                                     chroma.ptr<unsigned char>(row), bgr.cols);
     }
 }
+
+// NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
 }  // namespace cube::vision::detail
