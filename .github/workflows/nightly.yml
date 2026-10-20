@@ -118,13 +118,17 @@ jobs:
             cxx_flags: ""
             cxx_flags_debug: "-O1 -g"
             ctest_args: ""
-          # Release flags with -fsanitize=thread. The library's threads are the
+          # Release flags with -fsanitize=thread. -Wno-error=tsan: GCC warns that
+          # TSan does not model std::atomic_thread_fence (cube/profile/recorder.cpp
+          # uses one) and the warning set makes it an error; the warning stays
+          # visible, and a report that involves a fence is read with that in mind.
+          # The library's threads are the
           # recorder, the diagnostics file, the recording writer and the
           # two-phase tables' build; the solver corpora are single-threaded, so
           # they are left to the ASan job.
           - name: Sanitizers - TSan (library)
             preset: linux-gcc-fastdebug
-            cxx_flags: "-fsanitize=thread -fno-omit-frame-pointer"
+            cxx_flags: "-fsanitize=thread -fno-omit-frame-pointer -Wno-error=tsan"
             cxx_flags_debug: ""
             ctest_args: "-LE slow"
     env:
