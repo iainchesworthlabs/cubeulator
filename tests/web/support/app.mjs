@@ -69,8 +69,10 @@ export class CubeulatorApp {
    * Opens a fresh page on the app and waits until it has drawn its first screen.
    * @param {import('@playwright/test').Browser} browser
    * @param {{viewport?: {width:number,height:number}, camera?: 'fake'|'browser', query?: string,
+   *          cameras?: {list: object[], options?: object},
    *          touch?: boolean, permissions?: string[],
    *          screen?: string, storage?: Record<string,string>}} [options]
+   *          `cameras` is what the fake browser lists (fake_camera.js setDevices);
    *          `screen` is the one to wait for (launch); `storage` is what the
    *          browser's localStorage holds when the app starts, as an earlier
    *          visit would have left it
@@ -103,6 +105,17 @@ export class CubeulatorApp {
     }
     const page = await context.newPage();
     const app = new CubeulatorApp(page, context);
+
+    // The cameras the browser lists, from the first moment the app can ask:
+    // the app lists them as it starts, so a test that set them afterwards would
+    // be setting what it has already read.
+    if (options.cameras) {
+      await page.addInitScript(({ list, how }) => {
+        if (window.__fakeCamera) {
+          window.__fakeCamera.setDevices(list, how);
+        }
+      }, { list: options.cameras.list, how: options.cameras.options });
+    }
 
     page.on('console', (message) => {
       const line = `[${message.type()}] ${message.text()}`;

@@ -64,6 +64,14 @@
   let view = { kind: 'room' };
   let denied = null;
   let devices = [{ deviceId: 'fake-camera-0', kind: 'videoinput', label: 'Fake camera', groupId: 'fake' }];
+  // How a browser lists cameras to a page that has not been given access yet:
+  // no ids and no names, and in some browsers (Safari, Firefox) one entry
+  // however many cameras there are. Off, the list is always the whole one.
+  let withheld = null;
+  let granted = false;
+  // The camera the page has open, and every constraint set it asked with.
+  let chosen = null;
+  const requests = [];
   let opened = 0;
   // Every getUserMedia() call, refused or not: what the page asked for.
   let attempts = 0;
@@ -233,21 +241,58 @@
     }
   }
 
+  // Which camera a constraint set gets, the way a browser picks: a named one
+  // exactly, else the one facing the way that is asked for if there is one,
+  // else the first it lists - which is where the phones that list their front
+  // camera first (Safari) give the front camera to a page that says nothing.
+  function pick(constraints) {
+    const video = (constraints && constraints.video) || {};
+    const wanted = video.deviceId && (video.deviceId.exact || video.deviceId.ideal || video.deviceId);
+    if (typeof wanted === 'string') {
+      const named = devices.find((d) => d.deviceId === wanted);
+      if (!named) {
+        throw error('OverconstrainedError', 'no such camera');
+      }
+      return named;
+    }
+    const facing = video.facingMode && (video.facingMode.exact || video.facingMode.ideal || video.facingMode);
+    return devices.find((d) => d.facing && d.facing === facing) || devices[0];
+  }
+
   const mediaDevices = navigator.mediaDevices || {};
   const fake = {
-    enumerateDevices: async () => devices,
-    getUserMedia: async () => {
+    enumerateDevices: async () => {
+      if (withheld && !granted) {
+        const count = withheld.collapse ? 1 : devices.length;
+        return Array.from({ length: count }, () =>
+          ({ deviceId: '', kind: 'videoinput', label: '', groupId: '' }));
+      }
+      return devices;
+    },
+    getUserMedia: async (constraints) => {
       attempts++;
+      requests.push(copy(constraints || {}));
       if (denied) {
         throw error(denied.name, denied.message);
       }
       if (devices.length === 0) {
         throw error('NotFoundError', 'Requested device not found');
       }
+      chosen = pick(constraints);
+      granted = true;
       opened++;
       draw();
       stream = canvas.captureStream(30);
-      equip(stream.getVideoTracks()[0]);
+      const track = stream.getVideoTracks()[0];
+      equip(track);
+      // What a real track says of itself, on top of whatever controls it has.
+      const settings = track.getSettings.bind(track);
+      const device = chosen;
+      track.getSettings = () => ({
+        ...settings(),
+        deviceId: device.deviceId,
+        ...(device.facing ? { facingMode: device.facing } : {}),
+      });
       return stream;
     },
   };
@@ -282,10 +327,23 @@
     // The next getUserMedia() fails the way a browser's does: 'NotAllowedError'
     // (denied), 'NotFoundError', 'NotReadableError' (busy).
     deny(name, message) { denied = name ? { name, message: message || name } : null; },
-    // The cameras enumerateDevices() lists: [{deviceId, label}].
-    setDevices(list) {
-      devices = list.map((d) => ({ deviceId: d.deviceId, kind: 'videoinput', label: d.label, groupId: 'fake' }));
+    // The cameras enumerateDevices() lists: [{deviceId, label, facing}], in the
+    // order given. `facing` ('environment' or 'user') is what the camera's track
+    // reports once it is open; leave it out for one that does not say.
+    // `options.withheld` has the browser hide ids and names until a camera has
+    // been opened once, as it does until a site is given access; with
+    // `collapse` it also lists one camera however many there are.
+    setDevices(list, options) {
+      devices = list.map((d) => ({
+        deviceId: d.deviceId, kind: 'videoinput', label: d.label, groupId: 'fake', facing: d.facing,
+      }));
+      withheld = options && options.withheld ? { collapse: !!options.collapse } : null;
+      granted = false;
     },
+    // Every constraint set getUserMedia() has been asked, in order, and the id
+    // of the camera the last of them got.
+    requests: () => copy(requests),
+    chosen: () => (chosen ? chosen.deviceId : null),
     opened: () => opened,
     attempts: () => attempts,
     live: () => !!stream && stream.getTracks().some((t) => t.readyState === 'live'),
