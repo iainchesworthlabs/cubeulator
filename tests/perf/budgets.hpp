@@ -166,7 +166,8 @@ inline constexpr std::array<SizeBudget, 8> kNxnSizes = {{
 // the two larger sizes a camera gives. The reader reduces a wide frame to its
 // working width before it does anything else, so its buffers do not depend on
 // the camera: that is the contract in direct_scan.hpp, and it is what these
-// hold. Measured: 132 to 151 buffers, 1.99 MB at every size; a frame with no
+// hold. Measured: 133 to 152 buffers, 2.22 MB at every size (1.99 before
+// prepare_frame kept its threshold, a 640 x 360 plane, for the glare look); a frame with no
 // cube in it 133 to 165 buffers, 4.4 MB - except the 1080p room, 307 buffers and
 // 6.0 MB. A room with sticker-sized outlines in it and no side earns every look
 // the reader has after the first (outlines against a narrower block, against the
@@ -282,11 +283,14 @@ inline constexpr TimeBudget kAdvancedSolveTime = {30.0};
 inline constexpr TimeBudget kReadTime360 = {2.0};
 inline constexpr TimeBudget kReadTime1080 = {4.0};
 inline constexpr TimeBudget kEmptyReadTime360 = {2.0};
-// The glare look's outlines of a 640 x 360 working frame: 0.26 to 0.28 since
-// its channels were walked by row pointers, 0.51 to 0.52 when they were read a
-// pixel at a time through Mat::at (2.2 ms against this machine's 4.4 ms of
-// calibration), which this budget is under.
-inline constexpr TimeBudget kGlareLookTime360 = {0.45};
+// The glare look's outlines of a 640 x 360 working frame with a highlight in it:
+// 0.09 now that it starts from the first look's threshold and the brightness
+// already blurred, 0.26 to 0.28 when only its channels were walked by row
+// pointers, 0.51 to 0.52 when they were read a pixel at a time through Mat::at
+// (2.2 ms against this machine's 4.4 ms of calibration). The budget is under
+// both of the older figures. And the same look of a frame with nothing clipped
+// in it, which hands back the first look's outlines: 0.03.
+inline constexpr TimeBudget kGlareLookTime360 = {0.25};
 inline constexpr TimeBudget kClearGlareLookTime360 = {0.1};
 // 0.08 to 0.10 each: a hundred reads fed to SideScan::add, and one scanned().
 inline constexpr TimeBudget kScanAddTime = {1.0};

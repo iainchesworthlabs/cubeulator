@@ -59,11 +59,14 @@ struct PreparedFrame {
     // Outlines of the bright regions of `working` against their surroundings:
     // the stickers, and anything else bright and bounded by something darker.
     std::vector<std::vector<cv::Point>> contours;
-    // The block, in pixels, `contours` was thresholded against: what lets a look
-    // that would have used the same one hand `contours` back instead of tracing
-    // them again (contours_without_glare). 0 for a frame not made by
-    // prepare_frame, which no look takes the outlines of.
+    // The block, in pixels, `contours` was thresholded against, and the
+    // threshold itself before it was opened and traced: what lets a look that
+    // would use the same block start from it instead of thresholding again, or
+    // hand `contours` back when it has nothing to change in it
+    // (contours_without_glare). 0 and empty for a frame not made by
+    // prepare_frame, whose outlines no look takes.
     int block = 0;
+    cv::Mat binary;
 };
 
 // Nothing for a frame that is empty or is not 8-bit BGR.

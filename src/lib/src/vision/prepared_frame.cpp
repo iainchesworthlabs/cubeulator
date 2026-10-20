@@ -61,23 +61,30 @@ constexpr double kThresholdOffset = 8.0;
     return binary;
 }
 
-// Threshold and trace. `mask`, when it is not empty, is a CV_8U image the same
-// size as `brightness` whose non-zero pixels are taken out of the bright region
-// before it is traced: that is how the glare look keeps a highlight from
-// bridging two stickers.
-[[nodiscard]] std::vector<std::vector<cv::Point>> traced(const cv::Mat& brightness, int block,
-                                                         const cv::Mat& mask) {
-    cv::Mat binary = thresholded(brightness, block);
+// Open and trace a thresholded image. `mask`, when it is not empty, is a CV_8U
+// image the same size as `binary` whose non-zero pixels are taken out of the
+// bright region before it is traced: that is how the glare look keeps a
+// highlight from bridging two stickers. `binary` is left as it was.
+[[nodiscard]] std::vector<std::vector<cv::Point>> trace(const cv::Mat& binary,
+                                                        const cv::Mat& mask) {
+    cv::Mat kept = binary;
     if (!mask.empty()) {
-        cv::Mat kept;
-        cv::bitwise_not(mask, kept);
-        cv::bitwise_and(binary, kept, binary);
+        cv::Mat not_masked;
+        cv::bitwise_not(mask, not_masked);
+        cv::bitwise_and(binary, not_masked, kept);
     }
-    cv::morphologyEx(binary, binary, cv::MORPH_OPEN, cv::Mat::ones(3, 3, CV_8U));
+    cv::Mat opened;
+    cv::morphologyEx(kept, opened, cv::MORPH_OPEN, cv::Mat::ones(3, 3, CV_8U));
 
     std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(binary, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+    cv::findContours(opened, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
     return contours;
+}
+
+// Threshold and trace.
+[[nodiscard]] std::vector<std::vector<cv::Point>> traced(const cv::Mat& brightness, int block,
+                                                         const cv::Mat& mask) {
+    return trace(thresholded(brightness, block), mask);
 }
 
 [[nodiscard]] std::vector<std::vector<cv::Point>> outlines(const cv::Mat& brightness,
@@ -195,7 +202,8 @@ std::optional<PreparedFrame> prepare_frame(const cv::Mat& bgr, int size) {
 
     prepared.block = block_pixels(prepared.brightness.rows, prepared.brightness.cols,
                                   kBlockFraction * block_scale(size));
-    prepared.contours = traced(prepared.brightness, prepared.block, cv::Mat{});
+    prepared.binary = thresholded(prepared.brightness, prepared.block);
+    prepared.contours = trace(prepared.binary, cv::Mat{});
     return prepared;
 }
 
@@ -242,16 +250,16 @@ std::vector<std::vector<cv::Point>> contours_without_glare(const PreparedFrame& 
     }
     const int block = block_pixels(frame.brightness.rows, frame.brightness.cols,
                                    kBlockFraction * block_scale(size));
+    const bool first_look_block = block == frame.block && !frame.binary.empty();
     const cv::Mat mask = glare_mask(frame.brightness, frame.working);
-    if (mask.empty()) {
-        // Nothing to take out: the binary is the first look's, if that was taken
-        // against the same block, and its outlines are already traced.
-        if (block == frame.block) {
-            return frame.contours;
-        }
-        return traced(frame.brightness, block, cv::Mat{});
+    if (mask.empty() && first_look_block) {
+        // Nothing to take out: the look's outlines are the first look's, traced
+        // already.
+        return frame.contours;
     }
-    return traced(frame.brightness, block, mask);
+    // Against the block the first look used, its threshold is the first look's
+    // too, and is not taken again.
+    return trace(first_look_block ? frame.binary : thresholded(frame.brightness, block), mask);
 }
 
 std::vector<std::vector<cv::Point>> chroma_contours(const cv::Mat& working, int size) {
