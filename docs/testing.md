@@ -669,6 +669,7 @@ ctest --preset <preset> -L perf                  # the same, through ctest
 ctest --preset windows-msvc-perf                 # budgets *and* wall time (also linux-gcc-, macos-clang-)
 cube_perf_tests "[.perf-report]"                 # every metric beside its budget, and the corpus per seed
 cube_perf_tests "[.perf-report-timing]"          # just the wall-time metrics
+cube_perf_tests "[.perf-report-zone-cost]"       # what one profiling macro costs here (CUBEULATOR_PROFILE=1 for a started profiler; docs/profiling.md, "Idle cost")
 ```
 
 ### What is measured
@@ -887,8 +888,13 @@ way on a busy shared machine:
   that still has a nameless zone is run again, four attempts in all
   (`--attempts`).
 
-CI does not run it and nothing depends on it: no CI leg builds Tracy, and the
-Tracy-on build's `system.walk` has been seen failing intermittently. The
+CI does not run it and nothing depends on it: the desktop legs now build the
+Tracy client (dormant, so the whole test suite runs with it inert), but none
+takes a capture, and a profiling-on build's `system.walk` has been seen failing
+intermittently. The client is dormant in `cube_perf_tests` too, until the
+environment says otherwise: the tool sets `CUBEULATOR_PROFILE=1`, which the
+binary's Catch listener (`tests/perf/profiler_listener.cpp`) reads the way the
+application's `main()` does. The
 captures are of the headless perf binary for that reason, not of the app. Its
 self-test (`perf_tracy_check_selftest`, on a canned export) is the only part
 that runs in `ctest`.

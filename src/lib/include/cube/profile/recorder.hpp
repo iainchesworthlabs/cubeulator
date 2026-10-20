@@ -101,6 +101,9 @@ public:
     void set_thread_name(std::string_view name);
     // Free text for the trace's metadata (version, commit). Copies `text`.
     void set_app_info(std::string_view text);
+    // The same, added after what is there on a line of its own: Tracy's
+    // information window collects every call, and so does this.
+    void add_app_info(std::string_view text);
 
     // The events still in the ring, oldest first.
     [[nodiscard]] std::vector<Event> snapshot() const;

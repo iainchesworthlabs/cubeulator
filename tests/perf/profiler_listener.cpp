@@ -2,7 +2,14 @@
 // ends, for tools/perf/tracy_check.py. Nothing happens unless the environment
 // asks, so a plain run - ctest, a developer's terminal, CI - is unchanged.
 //
-//   CUBE_PERF_PROFILER_SETTLE_MS  sleep this long before the first case, so
+//   CUBEULATOR_PROFILE=1          start the Tracy client for this run. The
+//                                 client is built for manual lifetime, so it
+//                                 is dormant (no listener, zones inert) until
+//                                 something starts it; this listener does,
+//                                 the way the application's main() does. The
+//                                 same variable, with the same meaning, as
+//                                 the application's (docs/profiling.md).
+////   CUBE_PERF_PROFILER_SETTLE_MS  sleep this long before the first case, so
 //                                 that a Tracy capture has attached: the
 //                                 client is on-demand and records nothing
 //                                 until one has, and a count that depends on
@@ -15,6 +22,8 @@
 //                                 queued unanswered, and the capture shows
 //                                 those zones as "???".
 
+#include <cube/profile/session.hpp>
+
 #include <catch2/catch_test_case_info.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
@@ -22,6 +31,7 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <memory>
 #include <thread>
 
 namespace {
@@ -42,12 +52,20 @@ public:
     using Catch::EventListenerBase::EventListenerBase;
 
     void testRunStarting(const Catch::TestRunInfo& /*info*/) override {
+        // NOLINTNEXTLINE(concurrency-mt-unsafe) - read before any test thread exists.
+        const char* profile = std::getenv(cube::profile::environment_variable);
+        session_ = std::make_unique<cube::profile::Session>(
+            cube::profile::decide_startup(false, profile, {}));
         sleep_for_environment("CUBE_PERF_PROFILER_SETTLE_MS");
     }
 
     void testRunEnded(const Catch::TestRunStats& /*stats*/) override {
         sleep_for_environment("CUBE_PERF_PROFILER_DRAIN_MS");
+        session_.reset();
     }
+
+private:
+    std::unique_ptr<cube::profile::Session> session_;
 };
 
 }  // namespace

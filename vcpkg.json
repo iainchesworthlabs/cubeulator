@@ -54,16 +54,27 @@
       ]
     },
     "profiling": {
-      "description": "Tracy profiler instrumentation (CUBEULATOR_ENABLE_TRACY) - opt-in, selected by -DCUBEULATOR_ENABLE_TRACY=ON, so a normal build never pulls it in",
+      "description": "The Tracy profiler client (CUBEULATOR_ENABLE_TRACY, on by default on the desktop): built for manual lifetime and loopback-only listening by the overlay port in vcpkg-overlay-ports/tracy, dormant until cube::profile::Session starts it",
       "dependencies": [
         {
           "name": "tracy",
           "version>=": "0.14.1",
           "default-features": false,
           "features": [
-            "on-demand"
+            "manual-lifetime",
+            "on-demand",
+            "only-localhost"
           ]
         },
+        {
+          "name": "vulkan-headers",
+          "platform": "windows | linux"
+        }
+      ]
+    },
+    "profiling-tools": {
+      "description": "Tracy's command-line tools (tracy-capture, tracy-csvexport) built for the host - selected by -DCUBEULATOR_TRACY_TOOLS=ON, which the *-profiling presets set",
+      "dependencies": [
         {
           "name": "tracy",
           "version>=": "0.14.1",
