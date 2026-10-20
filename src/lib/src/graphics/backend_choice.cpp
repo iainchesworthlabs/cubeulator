@@ -194,12 +194,18 @@ struct named {
 asked_for read_sources(const request& asked, const platform& offered,
                        std::vector<std::string>& notes) {
     const std::array<named, 4> sources{{
-        {.from = source::command_line,
-         .key = asked.command_line ? normalised(*asked.command_line) : std::string()},
-        {.from = source::environment,
-         .key = asked.environment ? normalised(*asked.environment) : std::string()},
-        {.from = source::qt_environment,
-         .key = asked.qt_environment ? normalised(*asked.qt_environment) : std::string()},
+        {
+            .from = source::command_line,
+            .key = asked.command_line ? normalised(*asked.command_line) : std::string(),
+        },
+        {
+            .from = source::environment,
+            .key = asked.environment ? normalised(*asked.environment) : std::string(),
+        },
+        {
+            .from = source::qt_environment,
+            .key = asked.qt_environment ? normalised(*asked.qt_environment) : std::string(),
+        },
         {.from = source::setting, .key = normalised(asked.setting)},
     }};
 
@@ -216,9 +222,11 @@ asked_for read_sources(const request& asked, const platform& offered,
             break;
         }
         if (contains(offered.available, s.key)) {
-            out = {.key = s.key,
-                   .from = s.from,
-                   .by_name = s.from == source::command_line || s.from == source::environment};
+            out = {
+                .key = s.key,
+                .from = s.from,
+                .by_name = s.from == source::command_line || s.from == source::environment,
+            };
             break;
         }
         notes.push_back("ignored '" + s.key + "' from " + std::string(describe(s.from)) +
