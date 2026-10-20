@@ -44,6 +44,7 @@ TEST_CASE("platform_info::current's automatic chain only names what the app can 
     // is the floor of a chain, and --graphics-api=software), so it is allowed
     // where the platform says what it draws with.
     std::vector<std::string> applicable;
+    applicable.reserve(info.graphics_backends.size() + 1);
     for (const auto& backend : info.graphics_backends) {
         applicable.push_back(backend.key);
     }

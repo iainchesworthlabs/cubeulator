@@ -1,7 +1,8 @@
 #include <cube/graphics/backend_choice.hpp>
 
 #include <algorithm>
-#include <cstddef>
+#include <array>
+#include <iterator>
 #include <utility>
 
 namespace cube::graphics {
@@ -53,11 +54,14 @@ void split_into(std::string_view list, std::vector<std::string>& out) {
 
 // `--name=value`: the value, or nullopt when `argument` is not that option.
 std::optional<std::string_view> value_of(std::string_view argument, std::string_view name) {
-    if (argument.size() > name.size() && argument.substr(0, name.size()) == name &&
-        argument[name.size()] == '=') {
-        return argument.substr(name.size() + 1);
+    if (!argument.starts_with(name)) {
+        return std::nullopt;
     }
-    return std::nullopt;
+    const std::string_view rest = argument.substr(name.size());
+    if (!rest.starts_with('=')) {
+        return std::nullopt;
+    }
+    return rest.substr(1);
 }
 
 std::string_view describe(source from) noexcept {
@@ -72,10 +76,12 @@ record without_failure(record r, std::string_view backend) {
 record with_failure(record r, std::string_view backend, std::string_view build, std::int64_t now,
                     std::string_view setting) {
     r = without_failure(std::move(r), backend);
-    r.failed.push_back({.backend = std::string(backend),
-                        .build = std::string(build),
-                        .when = now,
-                        .setting = normalised(setting)});
+    r.failed.push_back({
+        .backend = std::string(backend),
+        .build = std::string(build),
+        .when = now,
+        .setting = normalised(setting),
+    });
     return r;
 }
 
@@ -99,12 +105,13 @@ std::string_view source_name(source s) noexcept {
 
 arguments parse_arguments(std::span<const std::string_view> argv_tail) {
     arguments parsed;
-    for (std::size_t i = 0; i < argv_tail.size(); ++i) {
-        const std::string_view argument = argv_tail[i];
+    for (auto it = argv_tail.begin(); it != argv_tail.end(); ++it) {
+        const std::string_view argument = *it;
         if (const auto value = value_of(argument, option_graphics_api)) {
             parsed.graphics_api = normalised(*value);
-        } else if (argument == option_graphics_api && i + 1 < argv_tail.size()) {
-            parsed.graphics_api = normalised(argv_tail[++i]);
+        } else if (argument == option_graphics_api && std::next(it) != argv_tail.end()) {
+            ++it;
+            parsed.graphics_api = normalised(*it);
         } else if (const auto skipped = value_of(argument, option_skip)) {
             split_into(*skipped, parsed.skip);
         }
@@ -166,57 +173,73 @@ record account_for_previous_launch(const record& r, std::string_view build, std:
     return out;
 }
 
+namespace {
+
+// What was asked for, once the sources have been read.
+struct asked_for {
+    std::string key;  // empty: nothing, so the platform's chain
+    source from = source::platform_chain;
+    bool by_name = false;  // on the command line or in CUBEULATOR_GRAPHICS_API
+};
+
+// One place a backend can be asked for, its value as a person types it.
+struct named {
+    source from;
+    std::string key;  // empty when that place says nothing
+};
+
+// The strongest source that names a backend this platform can apply. "auto"
+// settles it at once; an unknown key is set aside with a note and the next
+// source is read.
+asked_for read_sources(const request& asked, const platform& offered,
+                       std::vector<std::string>& notes) {
+    const std::array<named, 4> sources{{
+        {.from = source::command_line,
+         .key = asked.command_line ? normalised(*asked.command_line) : std::string()},
+        {.from = source::environment,
+         .key = asked.environment ? normalised(*asked.environment) : std::string()},
+        {.from = source::qt_environment,
+         .key = asked.qt_environment ? normalised(*asked.qt_environment) : std::string()},
+        {.from = source::setting, .key = normalised(asked.setting)},
+    }};
+
+    asked_for out;
+    for (const named& s : sources) {
+        if (s.key.empty()) {
+            continue;
+        }
+        if (s.key == automatic) {
+            // The picker's own "auto" is the default, not a request.
+            if (s.from != source::setting) {
+                out.from = s.from;
+            }
+            break;
+        }
+        if (contains(offered.available, s.key)) {
+            out = {.key = s.key,
+                   .from = s.from,
+                   .by_name = s.from == source::command_line || s.from == source::environment};
+            break;
+        }
+        notes.push_back("ignored '" + s.key + "' from " + std::string(describe(s.from)) +
+                        ": this platform does not offer it");
+    }
+    return out;
+}
+
+}  // namespace
+
 choice decide(const request& asked, const platform& offered, const record& r,
               std::string_view build, std::int64_t now) {
     choice out;
     out.guarded = !offered.automatic.empty();
 
-    // Who is asking for what: the strongest source that names a backend this
-    // platform can apply. "auto" settles it at once; an unknown key is set
-    // aside with a note and the next source is read.
-    struct candidate {
-        source from;
-        const std::string* value;
-    };
-    const std::string setting = normalised(asked.setting);
-    const std::string command_line = asked.command_line ? normalised(*asked.command_line) : "";
-    const std::string environment = asked.environment ? normalised(*asked.environment) : "";
-    const std::string qt_environment =
-        asked.qt_environment ? normalised(*asked.qt_environment) : "";
-    const std::string none;
-    const candidate candidates[] = {
-        {source::command_line, asked.command_line ? &command_line : &none},
-        {source::environment, asked.environment ? &environment : &none},
-        {source::qt_environment, asked.qt_environment ? &qt_environment : &none},
-        {source::setting, &setting},
-    };
-
-    std::string explicit_key;
-    bool by_name = false;  // asked for on the command line or in CUBEULATOR_GRAPHICS_API
-    for (const candidate& c : candidates) {
-        if (c.value->empty()) {
-            continue;
-        }
-        if (*c.value == automatic) {
-            // The picker's own "auto" is the default, not a request.
-            if (c.from != source::setting) {
-                out.from = c.from;
-            }
-            break;
-        }
-        if (contains(offered.available, *c.value)) {
-            explicit_key = *c.value;
-            out.from = c.from;
-            by_name = c.from == source::command_line || c.from == source::environment;
-            break;
-        }
-        out.notes.push_back("ignored '" + *c.value + "' from " + std::string(describe(c.from)) +
-                            ": this platform does not offer it");
-    }
+    const asked_for wanted_by = read_sources(asked, offered, out.notes);
+    out.from = wanted_by.from;
 
     std::vector<std::string> wanted;
-    if (!explicit_key.empty()) {
-        wanted.push_back(explicit_key);
+    if (!wanted_by.key.empty()) {
+        wanted.push_back(wanted_by.key);
     }
     for (const std::string& key : offered.automatic) {
         if (!contains(wanted, key)) {
@@ -231,7 +254,7 @@ choice decide(const request& asked, const platform& offered, const record& r,
             out.notes.push_back("skipped '" + key + "': it could not be used a moment ago");
             continue;
         }
-        const bool exempt = (by_name && key == explicit_key) || key == floor;
+        const bool exempt = (wanted_by.by_name && key == wanted_by.key) || key == floor;
         if (contains(failed, key) && !exempt) {
             out.notes.push_back("skipped '" + key +
                                 "': it did not get as far as a frame on an earlier launch of "

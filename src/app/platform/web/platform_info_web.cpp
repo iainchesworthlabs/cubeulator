@@ -22,6 +22,8 @@ PlatformInfo current() {
         // A browser has no system fonts: these are the faces the app bundles
         // and registers (platform/web/fonts, main.cpp), the cut-down Noto
         // Sans JP and SC.
+        .automatic_graphics_backends = {},
+        .software_graphics_api = {},
         .japanese_faces = {"Noto Sans JP"},
         .chinese_faces = {"Noto Sans SC"},
     };

@@ -51,14 +51,14 @@ struct PlatformInfo {
     // far as a frame). The last is the floor that nothing recorded can take
     // away. Empty means the platform leaves it to Qt, and the application does
     // not guard the choice. docs/graphics-api.md.
-    std::vector<std::string> automatic_graphics_backends{};
+    std::vector<std::string> automatic_graphics_backends;
 
     // The graphics API the "software" backend key draws with when Qt is asked
     // to prefer a software rasteriser ("d3d11": Direct3D 11 on WARP). Empty
     // when the platform has no such backend. "software" is a backend the command
     // line and the chains can name where this is set; it is not a chip in the
     // Settings picker, so it is not among `graphics_backends`.
-    std::string software_graphics_api{};
+    std::string software_graphics_api;
 
     // The families, in preference order, that this platform's own interface
     // text is set in when the app's language is Japanese or Simplified

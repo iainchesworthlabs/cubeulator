@@ -55,21 +55,25 @@ bool vulkan_has_a_device(VulkanGetInstanceProcAddr get) noexcept {
         return false;
     }
 
-    const ApplicationInfo application{.type = kApplicationInfo,
-                                      .next = nullptr,
-                                      .application_name = "Cubeulator graphics probe",
-                                      .application_version = 0,
-                                      .engine_name = nullptr,
-                                      .engine_version = 0,
-                                      .api_version = kApiVersion10};
-    const InstanceCreateInfo info{.type = kInstanceCreateInfo,
-                                  .next = nullptr,
-                                  .flags = 0,
-                                  .application_info = &application,
-                                  .enabled_layer_count = 0,
-                                  .enabled_layer_names = nullptr,
-                                  .enabled_extension_count = 0,
-                                  .enabled_extension_names = nullptr};
+    const ApplicationInfo application{
+        .type = kApplicationInfo,
+        .next = nullptr,
+        .application_name = "Cubeulator graphics probe",
+        .application_version = 0,
+        .engine_name = nullptr,
+        .engine_version = 0,
+        .api_version = kApiVersion10,
+    };
+    const InstanceCreateInfo info{
+        .type = kInstanceCreateInfo,
+        .next = nullptr,
+        .flags = 0,
+        .application_info = &application,
+        .enabled_layer_count = 0,
+        .enabled_layer_names = nullptr,
+        .enabled_extension_count = 0,
+        .enabled_extension_names = nullptr,
+    };
     void* instance = nullptr;
     if (create(&info, nullptr, &instance) != 0 || instance == nullptr) {
         return false;
