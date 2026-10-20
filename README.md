@@ -15,7 +15,7 @@ you the solution turn by turn on a 3D cube.
 
 > **Status: pre-release.** For Windows, macOS and Linux, and in a browser. The scan has been
 > checked on recorded sessions and a webcam, not yet across cameras, rooms and
-> cubes, and a sticker read wrongly cannot yet be corrected by hand.
+> cubes; a sticker read wrongly is put right by hand on the colours screen.
 > [CHANGELOG.md](CHANGELOG.md) says
 > what each release does and what is not yet proven.
 
@@ -62,6 +62,10 @@ and a build-provenance attestation for every file; how to check them is in the
 4. Follow the 3D cube one turn at a time. The camera stays on, so it sees the
    side you turned and steps on by itself; **Next turn** (or the right arrow)
    steps when it cannot.
+
+A sticker the camera got wrong is put right on **Check the colours**, without
+scanning again. For a 2×2 up to a 5×5, choose **Another size of cube** on the
+start screen and type the scramble or the colours in; the camera reads a 3×3.
 
 The [user guide](https://iainchesworthlabs.github.io/cubeulator/guide/) goes
 through each screen, and says what to do when a side will not read.

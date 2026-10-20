@@ -113,10 +113,20 @@ def artifacts_section(
         if files:
             rows.append(f"| {label} | " + " · ".join(f"`{f}`" for f in files) + " |")
 
+    sboms = _files_for(names, ".spdx.json") if sbom else []
+    if sboms:
+        rows.append("| SBOM (SPDX 2.3) | " + " · ".join(f"`{f}`" for f in sboms) + " |")
+
     checks: list[str] = []
     if attested:
         checks.append(f"`gh attestation verify <file> --repo {repo}`")
     checks.append("`SHA512SUMS`" + ("(`.asc`) + per-file `.asc`" if signed else ""))
+    if attested or signed:
+        # The SBOM's own check is in the page, not in a table cell.
+        checks.append(
+            f"[how to check each, the SBOM included](https://github.com/{repo}/blob/{tag}"
+            "/docs/SECURITY.md#verifying-build-authenticity)"
+        )
     rows.append("| Verification | " + "; ".join(checks) + " |")
 
     readme = f"https://github.com/{repo}/blob/{tag}/README.md#install"

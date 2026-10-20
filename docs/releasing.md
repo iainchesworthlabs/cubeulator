@@ -87,7 +87,9 @@ project(Cubeulator VERSION 0.1.0 ...)
 set(CUBEULATOR_VERSION_PRERELEASE "beta.1")     # "" for a final release
 ```
 
-`tools/release/prepare_release.py` sets both. Everything else follows:
+`tools/release/prepare_release.py` sets both, and the manifest's own `"version"`
+in `vcpkg.json` to match (`check_release.py` fails a tree where they differ).
+Everything else follows:
 
 | | |
 |---|---|
@@ -96,6 +98,7 @@ set(CUBEULATOR_VERSION_PRERELEASE "beta.1")     # "" for a final release
 | Windows installer, version resource | `0.1.0-beta.1` (the resource's numeric fields are `0,1,0,0`) |
 | `.deb`, AppStream | `0.1.0~beta.1` (`~` sorts before `0.1.0`, so `apt upgrade` takes a beta to the final) |
 | `.rpm` | version `0.1.0`, release `0.beta.1` (`1` for a final) |
+| `vcpkg.json` | `"version": "0.1.0"` (vcpkg takes no label) |
 | macOS `Info.plist` | `0.1.0` (macOS wants three numbers) |
 
 The Release workflow refuses a tag that does not name the pair exactly.
@@ -207,11 +210,23 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    python tools/release/prepare_release.py 0.1.0-beta.1
    ```
 
-   That moves `[Unreleased]` under `## [0.1.0-beta.1] - <today>` and sets the
-   version pair. It says what the section still needs (the summary, the bold
-   lead-ins, the caveat); write those. `--check` changes nothing and only says
-   what is wrong. Open a PR into `develop`; it goes through the merge queue like
-   any other.
+   That moves `[Unreleased]` under `## [0.1.0-beta.1] - <today>`, merges the
+   `changelog.d/` fragments in, and sets the version pair and the manifest's.
+   It says what the section still needs (the summary, the bold lead-ins, the
+   caveat); write those. `--check` changes nothing and only says what is wrong.
+   Open a PR into `develop`; it goes through the merge queue like any other.
+
+   Pull requests that were open when you prepared the release can merge after
+   it, each with a fragment, and the release then fails `check_release.py` (its
+   notes would miss them). Fold them into the section that is already cut:
+
+   ```sh
+   python tools/release/prepare_release.py 0.1.0-beta.1 --fold
+   ```
+
+   It adds every fragment still in `changelog.d/` to that version's section
+   (which must be the newest) and deletes them; it does not touch the version.
+   Do it in a PR before the release PR is opened, not after.
 4. **Open the release PR**: `develop` → `main`, merge commit. The `Release
    readiness` check puts the rendered notes in its summary: read them there.
    `Commit is green` asks step 1's question of the PR's head commit and puts the

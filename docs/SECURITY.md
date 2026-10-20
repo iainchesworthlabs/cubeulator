@@ -42,7 +42,7 @@ ship before you publish details: the advisory is where that is agreed.
 ## Supported versions
 
 Cubeulator is pre-1.0 and every release so far is a pre-release
-(`0.1.0-beta.N`). Only the newest release is supported: a fix lands on
+(`0.x.0-beta.N`). Only the newest release is supported: a fix lands on
 `develop` and ships in the next tagged release, and an older beta is not
 patched.
 
