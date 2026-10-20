@@ -4,12 +4,12 @@
 
 | Workflow | Purpose | Blocking? | In the merge queue? |
 | --- | --- | --- | --- |
-| `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Not yet |
+| `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Yes, the required legs only |
 | `release.yml` | Builds the desktop packages (an installer for Windows, a disk image for macOS, a `.deb` and an `.rpm` for Linux) and the web build's zip on a version tag, signs and attests them, and attaches them to a **draft** GitHub Release with notes rendered from `CHANGELOG.md` ([Cutting a release](releasing.md)). Run by hand it is a dry run unless `dry_run` is unticked. A PR that changes it, `packaging/check-package.sh` or `tools/release/` runs only the release tools' self-test | N/A (tags and manual runs) | No |
 | `changelog-check.yml` | On a PR into `develop`: does a change a person using the app can see carry a `changelog.d/` fragment (or the `no-changelog` label), and is every fragment it adds well formed | No (advisory) | No |
 | `spike-sweep.yml` | Mondays: a `spike/*` branch whose tip is 30 days old is tagged `archive/spike-<name>` and deleted ([Investigations](investigations/README.md)). Run by hand it is a dry run unless `dry_run` is unticked | N/A (schedule and manual runs) | No |
 | `release-check.yml` | On a PR into `main`, two jobs: `Release readiness` (is this a release the Release workflow will accept, and what would its notes say, in the job summary) and `Commit is green` (is the PR's head green on every workflow the README has a badge for: CI, CodeQL, OSV-Scanner, Zizmor; waits up to three hours for ones still running, fails at once on a red one) | No (advisory) | No |
-| `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Not yet |
+| `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Yes |
 | `branch-name-check.yml` | Enforces gitflow branch naming | Yes | Yes (skipped, a pass) |
 | `dependency-review.yml` | Fails on a moderate+ vulnerability newly introduced in a PR | Yes | Yes |
 | `osv-scanner.yml` | Scans `vcpkg.json` against the OSV database | No (visible only) | No |
@@ -26,8 +26,8 @@ the `merge_group` rule a workflow has to follow to be part of it.
 
 ### Running some legs by hand
 
-A push or pull request always runs every leg of `ci.yml` (a queue entry would
-too, once the workflow carries `merge_group`; it does not yet). A manual
+A push or pull request always runs every leg of `ci.yml` (a queue entry runs
+only the legs `develop` requires). A manual
 dispatch can name just the ones it needs, which matters because the whole
 matrix is hours of hosted runners and the pool is shared:
 
