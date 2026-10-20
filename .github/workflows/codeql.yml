@@ -9,6 +9,9 @@ on:
   schedule:
     - cron: "17 3 * * 1"
 
+# Nothing at the top level: the one job asks for what it needs.
+permissions: {}
+
 concurrency:
   group: codeql-${{ github.workflow }}-${{ github.ref }}
   # Same rule as ci.yml: a push to develop or main finishes, because it is the
@@ -36,12 +39,6 @@ jobs:
           submodules: recursive
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
-        with:
-          languages: cpp
-          build-mode: manual
 
       # Keyed per vcpkg triplet (x64-linux), shared with ci.yml's Linux legs,
       # clang-tidy, and coverage jobs - all resolve the identical x64-linux
@@ -80,6 +77,34 @@ jobs:
       - name: Configure (library + platform only, no Qt app)
         run: >
           cmake --preset linux-gcc-debug
+          -DCMAKE_CXX_COMPILER=g++-16
+          -DCUBEULATOR_BUILD_APP=OFF
+          -DCUBEULATOR_ENABLE_SANITIZERS=OFF
+
+      # Initialised AFTER the configure step above, which is where vcpkg builds
+      # the dependencies (manifest mode installs them during configure).
+      # CodeQL traces every compiler call from this step on, so anything vcpkg
+      # compiled after it was analysed as if it were ours: when the binary
+      # cache holds a different generation from the one the push needs (the
+      # push to develop on 2026-10-18 restored 52 archives of 64 and rebuilt
+      # libjpeg-turbo, OpenCV and the rest, and a scheduled run on main with a
+      # cold cache rebuilt them all), the code-scanning tab filled with some
+      # 380 "high" alerts in deps/vcpkg/buildtrees/ that no one here can fix.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: cpp
+          build-mode: manual
+
+      # Configured a second time, from scratch, under the tracer. The first
+      # configure left the dependencies installed, so vcpkg has nothing to
+      # build here; what the tracer needs is to see the compiler being run
+      # (CMake's compiler checks), which a configure that is only re-read from
+      # the cache does not do - with the tracer started after the one and only
+      # configure, "CodeQL could not process any code written in C/C++".
+      - name: Configure again under the tracer
+        run: >
+          cmake --fresh --preset linux-gcc-debug
           -DCMAKE_CXX_COMPILER=g++-16
           -DCUBEULATOR_BUILD_APP=OFF
           -DCUBEULATOR_ENABLE_SANITIZERS=OFF
