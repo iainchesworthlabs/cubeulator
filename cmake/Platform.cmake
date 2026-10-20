@@ -74,6 +74,15 @@
 #                                      which a test program cannot call from
 #                                      its thread and has no capture backend to
 #                                      ask about; the browser's is tests/web's.
+#   CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS
+#                                      ON where the app carries the design's
+#                                      Latin faces (src/app/qt/fonts/:
+#                                      Archivo and IBM Plex Mono) and
+#                                      registers them at start-up, because
+#                                      a machine cannot be assumed to have
+#                                      them. OFF in the browser, which
+#                                      draws with the face Qt's kit bundles
+#                                      and would carry them in the module.
 #   CUBEULATOR_PLATFORM_QT_SEARCH_ROOTS, CUBEULATOR_PLATFORM_QT_ARCH_DIRS
 #                                      Where cmake/FindQt6.cmake looks for an
 #                                      aqtinstall-style Qt when none is on

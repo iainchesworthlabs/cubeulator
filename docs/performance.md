@@ -547,6 +547,7 @@ By what a person waits for, and how far it is from its budget, as found:
 | A frame is prepared once for both readers | 4.2 ms turned, 8.2 ms at 1080p | 2.2 ms, 3.6 ms; the same reads | [#78](https://github.com/iainchesworthlabs/cubeulator/pull/78) |
 | The cube's light probe is prefiltered once, not on every `View3D`'s first frame | llvmpipe 10 to 16 s a screen with the cube; a browser without a GPU stands still for 35 s at the start and 35 s at the close | 3 to 6 s (the cube itself); the 30th frame in 2 to 4 s; the close 1 s | this change, [above](#the-light-probe) |
 | A sticker of the 3x3 cube is the one model it draws; Home makes the one cube it shows, after its menu | Home 22 ms to make and 224 ms to the tenth frame; Settings 52 and 275; the cube 268 models | 2 and 169; 25 and 184; the cube 80 models (106 in the Cel look) | this change, [above](#screens) |
+| Archivo and IBM Plex Mono are bundled and registered at start-up, not named and looked for | `app.load_qml` 513 ms, first frame 934 ms (English, same binary with the bundle skipped) | **303 ms, 749 ms**; the other languages unchanged | this change, [below](#the-fonts) |
 
 The solver's cost per visit fell from 1.7 to 3.4 us to 0.15 to 0.29 us; what it
 did not change is the number of visits, and that is the one lever left (below).
@@ -554,13 +555,70 @@ Over 2000 further scrambles the new search had no failure, a mean of 104 ms, a
 95th percentile of 186 ms and a worst of 341 ms; 120 more gave the digest the
 old search gave.
 
+### The fonts
+
+`Theme.qml` names Archivo and IBM Plex Mono. Nothing bundled them on the desktop
+and no machine measured here had them, so Qt set every string in its default
+face (Tahoma on Windows, not the Segoe UI of the app's own chrome) and paid for
+the family it did not have at the first text: it looks through every font the
+system has before it gives up. Measured in a twenty-line Qt program on a
+machine with 300 families, cold: the first text in an installed family 15 ms, in
+one that is not **350 ms** (320 to 365 over three runs), and the same text with
+the four Latin files registered by `addApplicationFont` **3 ms + 15 ms**. What
+does not help: `QFont::insertSubstitution` (the family is looked for first), and
+listing the families on a thread (that reads names, not the lookup). Doing the
+lookup on another thread does help, because its result is the font database's,
+not the thread's (a 50 ms saving of `app.load_qml`, since the GUI thread asks for
+the family 85 ms in), and it is what [#230](https://github.com/iainchesworthlabs/cubeulator/pull/230)
+did; with the fonts bundled it is worth nothing (`app.load_qml` 263 and 254 ms,
+seven alternated pairs, its own thread 18 ms), so it was dropped.
+
+The four Latin files `feature/ax-kit` carries (Archivo Regular, Bold and ExtraBold;
+IBM Plex Mono Medium, 740 KB) are compiled in under `:/fonts` and registered at
+start-up on every platform but the browser (`CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS`).
+Same binary, the bundle skipped by an environment variable in one build against
+the bundle, alternated five times at High priority, Windows, RelWithDebInfo,
+`--profile-wait`:
+
+| `app.load_qml` / the first frame's end (ms from `app.i18n_install`), medians | skipped | bundled |
+|---|---|---|
+| English | 513 / 934 | **303 / 749** |
+| Japanese (ten alternated pairs) | 519 / not taken | 515 / not taken |
+| Hebrew | 521 / 951 | 512 / 946 |
+| Arabic | 513 / 943 | 509 / 940 |
+
+So it is 210 ms of start-up in the Latin-script languages, and nothing in the rest:
+Japanese and Chinese are set in a system face chosen by language (no missing
+family to look for), and Hebrew, Arabic and Yiddish are set in Archivo, which has
+no glyphs for them (see [What was not fixed](#what-was-not-fixed)). (The
+machine was shared: Japanese read 388 to 534 ms from one set of runs to the next
+on one binary, so only alternated pairs are compared.)
+
+The Latin text now looks like the design (Archivo, IBM Plex Mono for numerals)
+where it was Tahoma; the launch screen in all nine languages before and after is
+on the pull request. Japanese and Chinese did not change (the same system
+faces), and in the right-to-left languages only the Latin words changed (the
+brand name): the Hebrew, Arabic and Yiddish text is drawn in the same fallback
+face as before.
+
+The test programs register the bundle as the app does, so the layout and overlap
+checks run in Archivo on every machine (`docs/i18n.md`); they were green in it:
+`cube_qml_tests` (91 cases), `cube_i18n_screen_tests` (14), and the system tests'
+`[language]` cases (8).
+
 ## What was not fixed
 
-- **The fonts.** The cost is the fonts being named and not shipped, which
-  `feature/ax-kit` already fixes by bundling six font files and loading them.
-  Measured here with that branch's files: **-550 ms of startup**, and the
-  kit's loader (`bundled_fonts.cpp`) costs about 20 ms of it back. The thing to
-  check when the kit lands is the startup timeline above, not just the glyphs.
+- **The fonts, for the right-to-left languages.** Archivo and IBM Plex Mono are
+  bundled now ([above](#what-was-fixed)), but Archivo has no Hebrew or Arabic
+  glyphs, and `Theme.qml` names Archivo for those languages too: Qt then looks
+  through the system's fonts for one that has the script, and that search costs
+  the same ~300 ms the missing family did (Hebrew text in Archivo, in a
+  twenty-line Qt program: 295 ms the first time, three runs each, with and without the bundle).
+  `app.load_qml` in Hebrew and Arabic is 510 to 520 ms with or without the
+  bundle. What removes it is naming a face that has the script, which the kit
+  plans (`NotoSansHebrew.ttf`, `NotoSansArabic.ttf` on `feature/ax-kit`,
+  chosen by language in its `Theme.qml`); it changes the look, as the Latin
+  faces did.
 - **Two cubes per screen, four models per sticker** were this entry until the
   [Screens](#screens) change: Home made the one cube it shows and each
   sticker one model. The other screens that build both a narrow and a wide

@@ -4,6 +4,9 @@
 set(CUBEULATOR_PLATFORM_DISPLAY_NAME "Android")
 set(CUBEULATOR_PLATFORM_DESKTOP OFF)
 # A native camera device, opened from the calling thread? (cmake/Platform.cmake)
+# Archivo and IBM Plex Mono are compiled in and registered at start-up
+# (src/app/CMakeLists.txt).
+set(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS ON)
 set(CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA OFF)
 
 # The test suites are not built for Android (CUBEULATOR_BUILD_TESTS is OFF in

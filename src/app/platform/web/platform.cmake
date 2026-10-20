@@ -16,6 +16,9 @@
 set(CUBEULATOR_PLATFORM_DISPLAY_NAME "Web")
 set(CUBEULATOR_PLATFORM_DESKTOP OFF)
 # A native camera device, opened from the calling thread? (cmake/Platform.cmake)
+# Not in the browser: it draws with the face Qt's kit bundles, and carries only
+# its two CJK subsets (below).
+set(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS OFF)
 set(CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA OFF)
 
 # The test suites that need no window - the unit, integration and performance
