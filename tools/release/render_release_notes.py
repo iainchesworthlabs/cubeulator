@@ -98,7 +98,7 @@ def artifacts_section(
     if attested:
         proofs.append("build-provenance attestations")
     if sbom:
-        proofs.append("an SPDX SBOM")
+        proofs.append("SPDX and CycloneDX SBOMs")
     if signed:
         proofs.append("GPG signatures")
     if proofs:
@@ -113,9 +113,9 @@ def artifacts_section(
         if files:
             rows.append(f"| {label} | " + " · ".join(f"`{f}`" for f in files) + " |")
 
-    sboms = _files_for(names, ".spdx.json") if sbom else []
+    sboms = (_files_for(names, ".spdx.json") + _files_for(names, ".cdx.json")) if sbom else []
     if sboms:
-        rows.append("| SBOM (SPDX 2.3) | " + " · ".join(f"`{f}`" for f in sboms) + " |")
+        rows.append("| SBOM (SPDX 2.3, CycloneDX 1.6) | " + " · ".join(f"`{f}`" for f in sboms) + " |")
 
     checks: list[str] = []
     if attested:
@@ -217,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--artifacts", type=Path, help="directory holding the release files")
     parser.add_argument("--signed", action="store_true", help="GPG signatures are attached")
     parser.add_argument("--attested", action="store_true", help="provenance attestations exist")
-    parser.add_argument("--sbom", action="store_true", help="an SPDX SBOM is attached")
+    parser.add_argument("--sbom", action="store_true", help="the SPDX and CycloneDX SBOMs are attached")
     parser.add_argument("--install-notes", type=Path, default=HERE / "install-notes.md")
     parser.add_argument(
         "--from-unreleased",
