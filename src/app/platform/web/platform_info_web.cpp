@@ -10,12 +10,14 @@ PlatformInfo current() {
     // called, as the desktops' OSes do when a device is first opened. The
     // device choice the desktop screens offer is what a browser has too:
     // a laptop has one webcam, a phone a front and a back one (see
-    // camera_web.cpp for how those are listed).
+    // devices_web.hpp for how those are listed).
     //
     // Qt on WebAssembly draws with WebGL, which is its OpenGL ES backend;
     // there is nothing else for the Settings screen to offer.
     return PlatformInfo{
         .is_mobile = false,
+        .camera_ids_withheld_until_use = true,
+        .camera_switch_on_scan_screen = true,
         .graphics_backends = {{.key = "opengl", .label = "WebGL"}},
         // A browser has no system fonts: these are the faces the app bundles
         // and registers (platform/web/fonts, main.cpp), the cut-down Noto

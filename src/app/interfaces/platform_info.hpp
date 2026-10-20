@@ -24,6 +24,20 @@ struct PlatformInfo {
     // On the desktops the OS prompts the first time a device is opened.
     bool is_mobile = false;
 
+    // The camera list is not trustworthy until a camera has been opened: a
+    // browser hides every camera's id and name from a page that has not been
+    // given camera access, so the list read at launch stands for "the rear
+    // camera" and "the front camera" rather than for devices. The app lists the
+    // cameras again once one is open, and a selection that no longer matches
+    // anything is carried over to the camera that faces the same way.
+    bool camera_ids_withheld_until_use = false;
+
+    // The scan screen offers a button to change camera, when there is more than
+    // one: the cameras are the ones on a phone (front and back), where the
+    // person is holding the device and cannot be sent to a settings screen to
+    // turn the picture around.
+    bool camera_switch_on_scan_screen = false;
+
     // The QRhi backends Qt actually supports here (see
     // https://doc.qt.io/qt-6/qsgrendererinterface.html), in the order the
     // Settings screen lists them. Direct3D is Windows-only, Metal is
