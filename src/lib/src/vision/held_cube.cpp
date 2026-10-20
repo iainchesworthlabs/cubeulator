@@ -5,6 +5,7 @@
 #include <cube/profiling.hpp>
 
 #include <cstddef>
+#include <iterator>
 #include <limits>
 
 namespace cube::vision {
@@ -197,7 +198,7 @@ std::array<HoldFit, 24> fit_holds(const SideRead& read, const nxn::NCube& cube,
 }
 
 float hold_clear_distance(int size) noexcept {
-    const float cells = static_cast<float>(size * size);
+    const auto cells = static_cast<float>(size * size);
     return kHoldClearDistance * std::min(1.0F, 9.0F / cells);
 }
 
@@ -241,7 +242,8 @@ int stickers_off(const SideRead& read, std::span<const solver::Color> expected,
         if (!read.found.at(cell)) {
             continue;
         }
-        const auto own = static_cast<std::size_t>(expected[cell]);
+        const auto own = static_cast<std::size_t>(
+            *std::next(expected.begin(), static_cast<std::ptrdiff_t>(cell)));
         const float to_own = colour_distance(read.lab.at(cell), colours.at(own));
         for (std::size_t other = 0; other < colours.size(); ++other) {
             if (other != own && colour_distance(read.lab.at(cell), colours.at(other)) < to_own) {

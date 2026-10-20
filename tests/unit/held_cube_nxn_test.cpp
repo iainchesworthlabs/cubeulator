@@ -132,6 +132,7 @@ TEST_CASE("the margin between two holds is no more than a 3x3 has", "[vision][he
 // What a camera can see of a turn, for docs/nxn-camera-follow.md: for every layer turn of a
 // cube and every way of holding it, how many of the side's N^2 cells it changes. Hidden;
 // prints a table.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity): a printed table, not logic
 TEST_CASE("what the camera can see of a turn", "[.observability]") {
     std::cout << "size  layer-turns-x-holds  seen  unseen  fewest-cells  median-cells  "
                  "same-as-rolling-the-cube\n";
@@ -152,7 +153,7 @@ TEST_CASE("what the camera can see of a turn", "[.observability]") {
                             const auto after = cube::nxn::camera_view(moved, hold);
                             std::size_t cells = 0;
                             for (std::size_t i = 0; i < before.size(); ++i) {
-                                cells += before[i] != after[i] ? 1U : 0U;
+                                cells += before.at(i) != after.at(i) ? 1U : 0U;
                             }
                             if (cells == 0) {
                                 ++unseen_count;
@@ -175,7 +176,7 @@ TEST_CASE("what the camera can see of a turn", "[.observability]") {
         }
         std::ranges::sort(changed);
         std::cout << size << "  " << (seen_count + unseen_count) << "  " << seen_count << "  "
-                  << unseen_count << "  " << changed.front() << "  " << changed[changed.size() / 2]
-                  << "  " << rolled << "\n";
+                  << unseen_count << "  " << changed.front() << "  "
+                  << changed.at(changed.size() / 2) << "  " << rolled << "\n";
     }
 }
