@@ -18,14 +18,23 @@ import Cubeulator
 // The surface is the 3x3 view's, where it applies, so a screen can use either:
 // faceletColors (a new object is a new cube), guideFace/guideTurns with the
 // layers the move turns (guideFirst, guideLast), playMove(), movePlayed(), the
-// hold and the viewpoint, and the drag that looks round the back. What a cube
-// that is not a 3x3 does not have is the camera's hold and pose tracking, the
-// scan rings and the other two shader styles.
+// hold and the viewpoint, the shader styles, and the drag that looks round the
+// back. What a cube that is not a 3x3 does not have is the camera's hold and
+// pose tracking, and the scan rings.
+//
+// The shader styles cost the single mesh nothing. The mesh's vertices carry the
+// colour of the sticker they belong to, and the styles' materials read it from
+// there (shaders/toon_mesh.frag, cel_mesh.frag) instead of from a uniform per
+// sticker; Borderlands' ink outline is the whole mesh again, a hair larger and
+// drawn inside out, where the 3x3 draws one per cubie.
 Item {
     id: root
 
     // The side length of a cube nothing paints; a painting brings its own.
     property int size: 3
+    // 0 = Physically-Based Realism (default), 1 = Instructional Glow,
+    // 2 = Borderlands Cel-Shading, as for Cube3DView.
+    property int shaderStyle: 0
     property color topColor: Theme.faceU
     property color bottomColor: Theme.faceD
     property color frontColor: Theme.faceF
@@ -294,17 +303,47 @@ Item {
         anchors.fill: parent
         camera: camera
 
-        environment: SceneEnvironment {
+        // The same prefiltered sky as the 3x3's, as a light probe
+        // (docs/performance.md, "The light probe").
+        Texture {
+            id: sky
+            source: "lightprobe/sky.ktx"
+        }
+
+        // Borderlands Cel-Shading's vignette and halftone post pass come from
+        // ExtendedSceneEnvironment, as on the 3x3. It is only the environment
+        // while that style is: drawing with it costs a frame about 0.05 ms of
+        // render time and shifts the edges' anti-aliasing even with nothing
+        // switched on, which the other two looks have no use for.
+        environment: root.shaderStyle === 2 ? celEnvironment : plainEnvironment
+
+        SceneEnvironment {
+            id: plainEnvironment
             backgroundMode: SceneEnvironment.Transparent
             antialiasingMode: SceneEnvironment.MSAA
             antialiasingQuality: SceneEnvironment.High
-
-            // The same prefiltered sky as the 3x3's, as a light probe
-            // (docs/performance.md, "The light probe").
-            lightProbe: Texture {
-                source: "lightprobe/sky.ktx"
-            }
+            lightProbe: sky
             probeExposure: root.evenLight ? 0.35 : 1.0
+        }
+        ExtendedSceneEnvironment {
+            id: celEnvironment
+            backgroundMode: SceneEnvironment.Transparent
+            antialiasingMode: SceneEnvironment.MSAA
+            antialiasingQuality: SceneEnvironment.High
+            lightProbe: sky
+            probeExposure: root.evenLight ? 0.35 : 1.0
+            vignetteEnabled: true
+            vignetteStrength: 10
+            effects: [celShadePost]
+        }
+        Effect {
+            id: celShadePost
+            passes: Pass {
+                shaders: Shader {
+                    stage: Shader.Fragment
+                    shader: "shaders/celshade_post.frag"
+                }
+            }
         }
 
         // Where the 3x3's 430 puts a cube of 3 x 36 at the same share of the view.
@@ -327,7 +366,7 @@ Item {
             brightness: 0.35
         }
         DirectionalLight {
-            visible: !root.evenLight
+            visible: root.shaderStyle === 0 && !root.evenLight
             eulerRotation: Qt.vector3d(-60, 20, 0)
             brightness: 1.6
         }
@@ -370,6 +409,90 @@ Item {
             specularTint: 0.1
         }
 
+        // Style 1: Instructional Glow (toon_mesh.frag, as toon.frag on the 3x3).
+        // One for the cube and what the layers leave, which sits back when
+        // guideDim asks; one for the layers in hand, which glow.
+        CustomMaterial {
+            id: glowRest
+            shadingMode: CustomMaterial.Shaded
+            fragmentShader: "shaders/toon_mesh.frag"
+            property color uBodyColor: cubeModel.body
+            property color uRimColor: Theme.accent
+            property real uRimPower: 2.2
+            property real uGlowStrength: 0.0
+            property real uTint: root.held !== null ? 1 - root.guideDim : 1
+        }
+        CustomMaterial {
+            id: glowLifted
+            shadingMode: CustomMaterial.Shaded
+            fragmentShader: "shaders/toon_mesh.frag"
+            property color uBodyColor: cubeModel.body
+            property color uRimColor: Theme.accent
+            property real uRimPower: 2.2
+            property real uGlowStrength: 1.0
+            property real uTint: 1.0
+        }
+        // Style 2: Borderlands Cel-Shading (cel_mesh.frag, as cel.frag), and the
+        // ink round it: the mesh again, a hair larger and drawn inside out, so
+        // that only the rim of its back shows past the real one.
+        CustomMaterial {
+            id: celRest
+            shadingMode: CustomMaterial.Shaded
+            fragmentShader: "shaders/cel_mesh.frag"
+            property real uTint: root.held !== null ? 1 - root.guideDim : 1
+        }
+        CustomMaterial {
+            id: celLifted
+            shadingMode: CustomMaterial.Shaded
+            fragmentShader: "shaders/cel_mesh.frag"
+            property real uTint: 1.0
+        }
+        PrincipledMaterial {
+            id: ink
+            baseColor: "black"
+            lighting: PrincipledMaterial.NoLighting
+            cullMode: Material.FrontFaceCulling
+        }
+        // The 3x3's outline stands half a unit of its 36 off each cubie; here it
+        // is the same distance off the whole cube.
+        readonly property real inkScale: 1 + (0.5 / 36) / (root.cubeSize / 2)
+
+        // The materials for the cube at rest and for what the layers leave, and
+        // for the layers in hand, in the style in use.
+        readonly property Material restMaterial: root.shaderStyle === 1 ? glowRest
+            : root.shaderStyle === 2 ? celRest : plastic
+        readonly property Material partMaterial: root.shaderStyle === 1 ? glowRest
+            : root.shaderStyle === 2 ? celRest : (root.guideDim > 0 ? dimmed : plastic)
+        readonly property Material liftedMaterial: root.shaderStyle === 1 ? glowLifted
+            : root.shaderStyle === 2 ? celLifted : plastic
+
+        // The three meshes, each drawn by the model that shows it and, in
+        // Borderlands, by its ink as well.
+        CubeNGeometry {
+            id: wholeMesh
+            model: cubeModel
+            part: 0
+            active: root.held === null
+        }
+        CubeNGeometry {
+            id: restMesh
+            model: cubeModel
+            part: 1
+            axis: root.held ? root.held.axis : 0
+            first: root.held ? root.held.first : 0
+            last: root.held ? root.held.last : 0
+            active: root.held !== null
+        }
+        CubeNGeometry {
+            id: liftedMesh
+            model: cubeModel
+            part: 2
+            axis: root.held ? root.held.axis : 0
+            first: root.held ? root.held.first : 0
+            last: root.held ? root.held.last : 0
+            active: root.held !== null
+        }
+
         // The viewpoint: the tip towards the viewer outside the turntable spin,
         // so the cube's uprights stay upright on screen however far round it is.
         Node {
@@ -395,24 +518,29 @@ Item {
                         // At rest: the whole cube, one mesh.
                         Model {
                             visible: root.held === null
-                            materials: plastic
-                            geometry: CubeNGeometry {
-                                model: cubeModel
-                                part: 0
-                                active: root.held === null
+                            materials: view3d.restMaterial
+                            geometry: wholeMesh
+                        }
+                        Loader3D {
+                            active: root.shaderStyle === 2 && root.held === null
+                            sourceComponent: Model {
+                                scale: Qt.vector3d(view3d.inkScale, view3d.inkScale, view3d.inkScale)
+                                materials: ink
+                                geometry: wholeMesh
                             }
                         }
                         // In hand: everything the layers leave...
                         Model {
                             visible: root.held !== null
-                            materials: root.guideDim > 0 ? dimmed : plastic
-                            geometry: CubeNGeometry {
-                                model: cubeModel
-                                part: 1
-                                axis: root.held ? root.held.axis : 0
-                                first: root.held ? root.held.first : 0
-                                last: root.held ? root.held.last : 0
-                                active: root.held !== null
+                            materials: view3d.partMaterial
+                            geometry: restMesh
+                        }
+                        Loader3D {
+                            active: root.shaderStyle === 2 && root.held !== null
+                            sourceComponent: Model {
+                                scale: Qt.vector3d(view3d.inkScale, view3d.inkScale, view3d.inkScale)
+                                materials: ink
+                                geometry: restMesh
                             }
                         }
                         // ...and the layers, on the pivot they turn about.
@@ -423,14 +551,16 @@ Item {
                             rotation: Quaternion.fromAxisAndAngle(axis, root.turnAngle)
 
                             Model {
-                                materials: plastic
-                                geometry: CubeNGeometry {
-                                    model: cubeModel
-                                    part: 2
-                                    axis: root.held ? root.held.axis : 0
-                                    first: root.held ? root.held.first : 0
-                                    last: root.held ? root.held.last : 0
-                                    active: root.held !== null
+                                visible: root.held !== null
+                                materials: view3d.liftedMaterial
+                                geometry: liftedMesh
+                            }
+                            Loader3D {
+                                active: root.shaderStyle === 2 && root.held !== null
+                                sourceComponent: Model {
+                                    scale: Qt.vector3d(view3d.inkScale, view3d.inkScale, view3d.inkScale)
+                                    materials: ink
+                                    geometry: liftedMesh
                                 }
                             }
                         }

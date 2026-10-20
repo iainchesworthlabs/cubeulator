@@ -223,6 +223,23 @@ ms at 9x9 natively and misses 60 fps in a browser from 7x7 (31 fps at 7x7, 20 at
 **A phone has not been measured**; the estimate is a few times the desktop's figure,
 which a thousand quads leave far inside a frame.
 
+The shader styles cost it nothing it did not already have. Instructional Glow and
+Borderlands Cel-Shading read each sticker's colour from the mesh's vertices
+(`shaders/toon_mesh.frag`, `cel_mesh.frag`; the 3x3's `toon.frag` and `cel.frag` take it
+from a uniform per sticker), so a style is a different material on the same meshes and
+changing it rebuilds nothing. Cel-Shading's ink outline is one more model per mesh,
+made only while that style is on (the 3x3's is 26, one per cubie). Its vignette and
+halftone need `ExtendedSceneEnvironment`, which is the environment only while Cel-Shading
+is: the same environment with every effect off costs a frame about 0.05 ms of render
+time (0.09 to 0.14 ms at 6x6) and moves the edges' anti-aliasing, so the other two looks
+keep the plain one. Measured with the gallery's `CUBE_GALLERY_SETTLE_MS` (a lifted
+layer, which animates throughout; render is the CPU's time recording the frame, in the
+window's own callbacks, normal priority, base and branch alternated four times,
+2x2 and 6x6): the default look 0.09 ms render and 0.025 ms sync on both; Glow 0.09 ms;
+Cel-Shading 0.17 ms; the 3x3's Cel-Shading (`Cube3DView`) 0.79 ms. Making one more view
+costs about 0.5 ms more than before (four more materials, a second environment and the
+three meshes as objects), once. GPU time was not measured.
+
 `tests/unit/nxn/mesh_test.cpp` holds the mesh to the library with no GPU (every
 sticker's quad is where the library says that sticker is; a lifted layer is the
 stickers its turn moves), and `tests/unit/cube_n_view_test.cpp` loads the view and

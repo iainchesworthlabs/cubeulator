@@ -180,6 +180,8 @@ if(CUBEULATOR_BUILD_APP)
         RESOURCES
             qt/shaders/toon.frag
             qt/shaders/cel.frag
+            qt/shaders/toon_mesh.frag
+            qt/shaders/cel_mesh.frag
             qt/shaders/celshade_post.frag
             qt/lightprobe/sky.ktx)
 

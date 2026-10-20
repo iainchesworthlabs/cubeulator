@@ -233,6 +233,28 @@ TEST_CASE("the solve screen of a 5x5 steps through its solution on the library's
     CHECK(solver.plan().current_cube() == scrambled);
 }
 
+TEST_CASE("the cube of a 5x5 is drawn in the shader style Settings has chosen",
+          "[qml][solve-screen][nxn]") {
+    // The style is the setting's, not the 3x3's alone: it reaches the cube of any size.
+    const NCube scrambled = cube::nxn::random_scramble({.size = 5, .seed = 3, .moves = 80});
+    solve_in_app(scrambled);
+    Screen screen;
+    screen.settle();
+
+    QObject* settings =
+        cube::test::qml_engine().singletonInstance<QObject*>("Cubeulator", "SettingsState");
+    REQUIRE(settings != nullptr);
+    const QVariant before = settings->property("shaderStyleIndex");
+    CHECK(screen.cube()->property("shaderStyle").toInt() == before.toInt());
+    for (const int style : {1, 2, 0}) {
+        INFO("style " << style);
+        REQUIRE(settings->setProperty("shaderStyleIndex", style));
+        CHECK(screen.cube()->property("shaderStyle").toInt() == style);
+        // Still the cube it was.
+        CHECK(screen.shows(scrambled));
+    }
+    REQUIRE(settings->setProperty("shaderStyleIndex", before));
+}
 TEST_CASE("a 5x5 can be skipped to its 3x3 stage, and finished from there",
           "[qml][solve-screen][nxn]") {
     const NCube scrambled = cube::nxn::random_scramble({.size = 5, .seed = 4, .moves = 80});
