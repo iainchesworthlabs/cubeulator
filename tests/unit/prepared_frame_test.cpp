@@ -24,6 +24,7 @@ namespace {
 
 // Threshold and trace, as prepared_frame.cpp does them: a block 0.12 of the
 // frame's smaller side, odd, 8 below the mean; opened by a 3 x 3.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the plane, then what is taken out of it.
 Contours traced_like_the_library(const cv::Mat& plane, const cv::Mat& taken_out) {
     const int block = std::max(
         3, static_cast<int>(static_cast<unsigned>(std::min(plane.rows, plane.cols) * 0.12) | 1U));
@@ -51,8 +52,8 @@ Planes planes_of(const cv::Mat& working) {
     cv::split(working, bgr.data());
     Planes planes;
     cv::Mat lowest;
-    cv::max(cv::max(bgr[0], bgr[1]), bgr[2], planes.value);
-    cv::min(cv::min(bgr[0], bgr[1]), bgr[2], lowest);
+    cv::max(cv::max(bgr.at(0), bgr.at(1)), bgr.at(2), planes.value);
+    cv::min(cv::min(bgr.at(0), bgr.at(1)), bgr.at(2), lowest);
     cv::subtract(planes.value, lowest, planes.chroma);
     return planes;
 }
@@ -86,9 +87,10 @@ Contours chroma_by_opencv(const cv::Mat& working) {
 // clipped patch on one sticker, and a little noise everywhere, so that the
 // channels differ pixel to pixel and a wrong one cannot match by luck.
 cv::Mat glared_side(cv::Size size) {
-    const std::array<Color, 9> stickers = {Color::White, Color::Red,    Color::Blue,
-                                           Color::Green, Color::White,  Color::Orange,
-                                           Color::Red,   Color::Yellow, Color::Blue};
+    const std::array<Color, 9> stickers = {
+        Color::White,  Color::Red, Color::Blue,   Color::Green, Color::White,
+        Color::Orange, Color::Red, Color::Yellow, Color::Blue,
+    };
     const float scale = static_cast<float>(size.width) / 640.0F;
     const cube::test::Pose pose{
         .centre = {static_cast<float>(size.width) / 2.0F, static_cast<float>(size.height) / 2.0F},
@@ -97,13 +99,14 @@ cv::Mat glared_side(cv::Size size) {
     };
     cv::Mat frame = cube::test::draw_side(stickers, pose, cube::test::Drawing{.size = size});
     const int pitch = static_cast<int>(40.0F * scale);
-    cv::rectangle(
-        frame,
-        cv::Rect(size.width / 2 - 2 * pitch, size.height / 2 - pitch / 2, 4 * pitch, pitch / 4),
-        cv::Scalar(255, 255, 255), cv::FILLED);
-    cv::rectangle(
-        frame, cv::Rect(size.width / 2 + pitch / 4, size.height / 2 + pitch, pitch / 3, pitch / 3),
-        cv::Scalar(254, 253, 255), cv::FILLED);
+    const int left = (size.width / 2) - (2 * pitch);
+    const int top = (size.height / 2) - (pitch / 2);
+    cv::rectangle(frame, cv::Rect(left, top, 4 * pitch, pitch / 4), cv::Scalar(255, 255, 255),
+                  cv::FILLED);
+    const int spot_left = (size.width / 2) + (pitch / 4);
+    const int spot_top = (size.height / 2) + pitch;
+    cv::rectangle(frame, cv::Rect(spot_left, spot_top, pitch / 3, pitch / 3),
+                  cv::Scalar(254, 253, 255), cv::FILLED);
     cv::Mat noise(frame.size(), frame.type());
     cv::RNG rng(11);
     rng.fill(noise, cv::RNG::NORMAL, cv::Scalar::all(0), cv::Scalar::all(6));
