@@ -155,6 +155,9 @@ Rectangle {
             return DirectScan.starting ? "Starting the camera…" : "";
         if (!DirectScan.complete)
             return ""; // no scan, so nothing to match a side against
+        // Only a 3x3 is followed: what the camera sees of a bigger cube is shown, not read.
+        if (!threeByThree)
+            return qsTrId("solve.camera.shownOnly");
         switch (HeldCube.sight) {
         case "matched":
             if (!guiding)
@@ -259,11 +262,11 @@ Rectangle {
     // Whether this solve is of a cube the camera read as a cube, which it may have read
     // wrongly: the scan screen's own way to look the colours over is only for six sides
     // that made none. Not a typed cube, a scramble, or a solve carried on from the
-    // history (none of them has a scan, and solveCamera is off for each), nor one that is
-    // not a 3x3 (only a 3x3 is read). A property and not a binding in the tests' way: the
-    // layout checks set it to see the screen at its fullest.
+    // history (none of them has a scan, and solveCamera is off for each). Any size: every
+    // size is scanned, and the colours screen looks over any. A property and not a binding
+    // in the tests' way: the layout checks set it to see the screen at its fullest.
     property bool fromScan: AppState.solveCamera && DirectScan.complete
-    readonly property bool canCheckColours: fromScan && threeByThree
+    readonly property bool canCheckColours: fromScan
     readonly property Item cube: cubeLoader.item
 
     // Turns the layers of a move on the cube on screen: all the way, then the
@@ -394,8 +397,9 @@ Rectangle {
         // follow. (The cube's box has air round the cube itself, which it
         // needs to turn a layer in; a box that is clear is a cube that is.)
         readonly property real corner: Theme.space4
-        // The camera reads a 3x3; a bigger cube has none to show yet.
-        readonly property bool cameraOn: AppState.solveCamera && root.threeByThree
+        // Every size has the preview: the cube in the hand, with a dot on each sticker of the
+        // side the camera has found. (Only a 3x3 is followed from it, see cameraWords.)
+        readonly property bool cameraOn: AppState.solveCamera
         readonly property real insetWidth: root.wide ? 184 : 124
         readonly property real insetHeight: Math.round(insetWidth * 3 / 4)
         // The label's column, and the words wrap in it. Room is kept for
@@ -593,8 +597,10 @@ Rectangle {
             width: stage.insetWidth
             height: preview.height
 
+            // A side of the cube the scan found has size x size stickers.
+            readonly property int stickerCount: DirectScan.size * DirectScan.size
             readonly property var points: DirectScan.stickerPoints
-            readonly property bool found: points.length === 9
+            readonly property bool found: points.length === stickerCount
             readonly property real frameW: Math.max(1, DirectScan.frameWidth)
             readonly property real frameH: Math.max(1, DirectScan.frameHeight)
             // The window on the picture, inside the border.
@@ -623,32 +629,45 @@ Rectangle {
             property bool mirrored: CameraController.previewMirrored
 
             function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+            // The middle of the side: the centre sticker of an odd size, the point between
+            // the four middle ones of an even size.
+            function middle() {
+                var n = DirectScan.size;
+                var lo = Math.floor((n - 1) / 2), hi = Math.ceil((n - 1) / 2);
+                var a = points[lo * n + lo], b = points[hi * n + hi];
+                return Qt.point((a.x + b.x) / 2, (a.y + b.y) / 2);
+            }
             function follow() {
                 // Asked of the points themselves: `found` may not have caught
                 // up with them yet when this runs.
-                if (points.length !== 9) {
+                if (points.length !== stickerCount) {
                     if (!lost.running)
                         lost.start();
                     return;
                 }
                 lost.stop();
-                // Corner stickers are two spacings apart; the side is three.
-                var side = 1.5 * Math.max(dist(points[0], points[2]), dist(points[6], points[8]),
-                                          dist(points[0], points[6]), dist(points[2], points[8]));
+                // The corner stickers are (size - 1) spacings apart; the side is size.
+                var n = DirectScan.size;
+                var last = stickerCount - 1;
+                var side = (n / (n - 1)) * Math.max(dist(points[0], points[n - 1]),
+                                                    dist(points[last - n + 1], points[last]),
+                                                    dist(points[0], points[last - n + 1]),
+                                                    dist(points[n - 1], points[last]));
                 if (side <= 0)
                     return;
+                var centre = middle();
                 var wanted = Math.max(wholeScale,
                                       Math.min(4 * wholeScale, cubeShare * Math.min(viewW, viewH) / side));
                 var slack = 0.1 * Math.min(viewW, viewH) / aimScale; // in frame pixels
-                if (Math.abs(points[4].x - aimX) > slack || Math.abs(points[4].y - aimY) > slack
+                if (Math.abs(centre.x - aimX) > slack || Math.abs(centre.y - aimY) > slack
                         || Math.abs(wanted / aimScale - 1) > 0.15) {
-                    aimX = points[4].x;
-                    aimY = points[4].y;
+                    aimX = centre.x;
+                    aimY = centre.y;
                     aimScale = wanted;
                 }
             }
             onPointsChanged: follow()
-            onWholeScaleChanged: if (points.length !== 9) aimScale = wholeScale
+            onWholeScaleChanged: if (points.length !== stickerCount) aimScale = wholeScale
             Timer {
                 id: lost
                 interval: inset.lostAfter
@@ -716,13 +735,14 @@ Rectangle {
                         source: DirectScan.frameSeq > 0 ? "image://scanFrame/latest#" + DirectScan.frameSeq : ""
                     }
                     Repeater {
-                        model: 9
+                        model: inset.stickerCount
                         delegate: Rectangle {
                             objectName: "solve.dot"
-                            readonly property bool there: inset.points.length === 9
+                            readonly property bool there: inset.points.length === inset.stickerCount
                             readonly property var point: there ? inset.points[index] : Qt.point(0, 0)
                             visible: there && DirectScan.frameWidth > 0
-                            width: 7; height: 7; radius: 3.5
+                            // Smaller where there are more of them to see between.
+                            width: DirectScan.size > 4 ? 5 : 7; height: width; radius: width / 2
                             x: previewImage.x + point.x * inset.shownScale - width / 2
                             y: previewImage.y + point.y * inset.shownScale - height / 2
                             color: HeldCube.sight === "matched" ? root.good : "#FFD21F"
@@ -934,11 +954,15 @@ Rectangle {
         // How the cube is being solved. The same row on both layouts; wide it
         // also says what the chosen method is, narrow there is no room. Choosing
         // a different one solves on from the cube as it stands.
+        // A 2x2 has one way to be solved (a single search for its corners), so the three
+        // methods have nothing to choose between there: the row is left off, and with it
+        // the room it takes.
         Item {
             id: methodBox
             anchors.top: parent.top
             width: parent.width
-            height: methodPicker.height + 2 * Theme.space3
+            visible: SolveController.size !== 2
+            height: visible ? methodPicker.height + 2 * Theme.space3 : 0
 
             SolveMethodPicker {
                 id: methodPicker

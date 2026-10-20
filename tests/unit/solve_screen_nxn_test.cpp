@@ -10,10 +10,12 @@
 // a scan (the rescan) is, at the size of the cube being solved.
 #include <catch2/catch_test_macros.hpp>
 
+#include "camera_preview_support.hpp"
 #include "controllers/direct_scan.hpp"
 #include "cube_view_reading.hpp"
 #include "drawn_cube.hpp"
 #include "qml_test_app.hpp"
+#include "scanned_nxn_support.hpp"
 
 #include <cube/nxn/cube.hpp>
 #include <cube/nxn/geometry.hpp>
@@ -75,22 +77,6 @@ SolveController& solve_in_app(const NCube& scrambled) {
     REQUIRE(solver.totalMoves() > 0);
     REQUIRE(solver.size() == scrambled.size());
     return solver;
-}
-
-// A scrambled cube of `size` whose six flat sides make one cube and no other, so that a
-// scan of it completes without corner views; the first seed from `seed` that does.
-[[nodiscard]] NCube unambiguous_cube(int size, unsigned seed) {
-    for (;; ++seed) {
-        const NCube tried =
-            cube::nxn::random_scramble({.size = size, .seed = seed, .moves = 25 * size});
-        cube::nxn::ScannedSides sides;
-        for (std::size_t i = 0; i < 6; ++i) {
-            sides.at(i) = cube::nxn::outside_view(tried, cube::solver::kAllFaces.at(i));
-        }
-        if (cube::nxn::assemble_all_scanned_sides(size, sides, 8).size() == 1) {
-            return tried;
-        }
-    }
 }
 
 // Whether `made` is `truth` or the same cube held another way up: a scan puts a side where
@@ -342,21 +328,127 @@ TEST_CASE("a 3x3 has no skip and still has its own view and its rescan",
     CHECK(rescan->property("visible").toBool());
 }
 
-TEST_CASE("a cube that is not a 3x3 has no camera, and still has its rescan",
-          "[qml][solve-screen][nxn]") {
+// The scan of a cube of `size` as the app does it (the camera reading six drawn sides, the
+// solver handed the cube), left with the solve screen's camera watching and the screen asked
+// for. Puts the app's state back when it goes out of scope: the 3x3 tests after these need the
+// scan as it was found.
+class ScannedAndSolving {
+public:
+    explicit ScannedAndSolving(int size)
+        : app_(cube::test::app_controllers()),
+          state_(cube::test::qml_engine().singletonInstance<QObject*>("Cubeulator", "AppState")),
+          cube_(cube::test::unambiguous_cube(size, 11)) {
+        REQUIRE(state_ != nullptr);
+        app_.directScan.setWatching(false);
+        app_.directScan.restart();
+        app_.directScan.setSize(size);
+        cube::test::show_all_sides(app_.directScan, cube_);
+        REQUIRE(app_.directScan.complete());
+        REQUIRE(wait_for([this]() { return !app_.solve.isSolving(); }, 120'000));
+        REQUIRE(app_.solve.size() == size);
+        REQUIRE(state_->setProperty("solveCamera", true));
+        app_.directScan.setWatching(true);
+    }
+    ~ScannedAndSolving() {
+        state_->setProperty("screen", QStringLiteral("launch"));
+        state_->setProperty("solveCamera", true);
+        app_.directScan.setWatching(false);
+        app_.directScan.useDefaultSize();
+        static_cast<void>(wait_for([this]() { return !app_.directScan.starting(); }));
+    }
+    ScannedAndSolving(const ScannedAndSolving&) = delete;
+    ScannedAndSolving& operator=(const ScannedAndSolving&) = delete;
+
+    [[nodiscard]] const NCube& cube() const { return cube_; }
+    [[nodiscard]] QObject* state() const { return state_; }
+    [[nodiscard]] cube::app::AppControllers& app() const { return app_; }
+
+private:
+    cube::app::AppControllers& app_;
+    QObject* state_;
+    NCube cube_;
+};
+
+TEST_CASE(
+    "a cube that is not a 3x3 has the camera preview, marked at its size, and still its rescan",
+    "[qml][solve-screen][nxn][camera-preview]") {
     for (const int size : {2, 4, 6}) {
         INFO("size " << size);
-        solve_in_app(cube::nxn::random_scramble({.size = size, .seed = 2, .moves = 60}));
+        const ScannedAndSolving scanned(size);
         Screen screen;
         screen.settle();
         CHECK(screen.cube()->property("cubeSize").toInt() == size);
         QObject* rescan = screen.find("solve.rescan");
         REQUIRE(rescan != nullptr);
         CHECK(rescan->property("visible").toBool());
-        // The camera's preview is the 3x3's, even when the flow asked for the camera.
-        QObject* camera = screen.find("solve.camera");
-        REQUIRE(camera != nullptr);
-        CHECK_FALSE(camera->property("visible").toBool());
+
+        // The camera is on the cube in the hand, as it is for a 3x3.
+        const auto* preview = qobject_cast<QQuickItem*>(screen.find("solve.camera"));
+        REQUIRE(preview != nullptr);
+        CHECK(preview->isVisible());
+
+        // A side held up marks size x size stickers on the picture.
+        const int stickers = size * size;
+        const cube::test::Pose pose = cube::test::pose_for(size);
+        for (int i = 0; i < 12; ++i) {
+            scanned.app().directScan.processFrame(cube::test::draw_side(
+                cube::nxn::outside_view(scanned.cube(), cube::solver::Face::F), pose));
+        }
+        REQUIRE(scanned.app().directScan.stickerPoints().size() == stickers);
+        QCoreApplication::processEvents();
+        int shown = 0;
+        for (const QQuickItem* dot : cube::test::items_named(screen.item(), "solve.dot")) {
+            shown += dot->isVisible() ? 1 : 0;
+        }
+        CHECK(shown == stickers);
+
+        // What it says of a bigger cube is that it is shown and not followed, and the cube
+        // is not matched against it: a side in view means nothing to the solution.
+        const auto* words = qobject_cast<QQuickItem*>(screen.find("solve.words"));
+        REQUIRE(words != nullptr);
+        CHECK(words->isVisible());
+        CHECK(words->property("text").toString() == screen.get("cameraWords").toString());
+        CHECK(words->property("text").toString().contains("shownOnly"));
+        CHECK(scanned.app().held.sight() == "none");
+        CHECK_FALSE(scanned.app().held.seen());
+
+        // Off for a solve that has no scan behind it: typed in, or carried on from history.
+        REQUIRE(scanned.state()->setProperty("solveCamera", false));
+        QCoreApplication::processEvents();
+        CHECK_FALSE(preview->isVisible());
+    }
+}
+
+TEST_CASE("the colours a camera read of a bigger cube can be looked over from the solve screen",
+          "[qml][solve-screen][nxn][review]") {
+    for (const int size : {2, 4}) {
+        INFO("size " << size);
+        const ScannedAndSolving scanned(size);
+        REQUIRE(scanned.state()->setProperty("screen", QStringLiteral("solve")));
+        Screen screen;
+        screen.settle();
+        const auto* check = qobject_cast<QQuickItem*>(screen.find("solve.checkColours"));
+        REQUIRE(check != nullptr);
+        CHECK(screen.get("canCheckColours").toBool());
+        CHECK(check->isVisible());
+
+        // To the colours screen at the cube's size...
+        REQUIRE(QMetaObject::invokeMethod(const_cast<QQuickItem*>(check), "clicked"));
+        CHECK(scanned.state()->property("screen").toString() == "colours");
+        CHECK(scanned.app().colours.size() == size);
+        CHECK(scanned.app().colours.fromScan());
+
+        // ...and back is the solve; Scan again is a scan of a cube of this size, not of a 3x3.
+        REQUIRE(QMetaObject::invokeMethod(scanned.state(), "closeColours"));
+        CHECK(scanned.state()->property("screen").toString() == "solve");
+        REQUIRE(QMetaObject::invokeMethod(scanned.state(), "reviewScanFromSolve"));
+        REQUIRE(QMetaObject::invokeMethod(scanned.state(), "closeColours"));
+        CHECK(scanned.state()->property("screen").toString() == "solve");
+        REQUIRE(QMetaObject::invokeMethod(scanned.state(), "reviewScan"));
+        REQUIRE(QMetaObject::invokeMethod(scanned.state(), "closeColours"));
+        CHECK(scanned.state()->property("screen").toString() == "scan");
+        CHECK(scanned.app().directScan.size() == size);
+        CHECK_FALSE(scanned.app().directScan.autoSize());
     }
 }
 
@@ -384,7 +476,7 @@ TEST_CASE("a bigger cube is rescanned part-way at its own size, and solved again
 
     for (const int size : {4, 5}) {
         INFO("size " << size);
-        const NCube first = unambiguous_cube(size, 70);
+        const NCube first = cube::test::unambiguous_cube(size, 70);
         solve_in_app(first);
         // Something other than 3 was the last scan's size, and the scan's own is what a
         // person may have left it at: neither is the size of the cube being solved.
@@ -403,18 +495,18 @@ TEST_CASE("a bigger cube is rescanned part-way at its own size, and solved again
         REQUIRE(rescan->property("visible").toBool());
         REQUIRE(QMetaObject::invokeMethod(rescan, "clicked"));
 
-        // The scan screen, at the size being solved and not found again; the camera of the
-        // solve screen is not carried over to a bigger cube; the clock is not started over.
+        // The scan screen, at the size being solved and not found again; the camera is on it again
+        // for the cube being solved; the clock is not started over.
         CHECK(state->property("screen").toString() == "scan");
         CHECK(camera.size() == size);
         CHECK_FALSE(camera.autoSize());
-        CHECK_FALSE(state->property("solveCamera").toBool());
+        CHECK(state->property("solveCamera").toBool());
         CHECK(state->property("elapsedSeconds").toInt() >= 42);
         CHECK(state->property("elapsedSeconds").toInt() < 45);
 
         // And a scan of the cube as it stands is solved from there: a new solution, from the
         // turn it starts at.
-        const NCube standing = unambiguous_cube(size, 200);
+        const NCube standing = cube::test::unambiguous_cube(size, 200);
         camera.setWatching(false);
         camera.restart();
         cube::test::Pose pose;
@@ -505,6 +597,18 @@ TEST_CASE("every stage a bigger cube has is worded, and a layer inside it is nam
     }
     CHECK(inner);
     CHECK(outer);
+}
+
+TEST_CASE("a 2x2 has one way to be solved, so no choice of method", "[qml][solve-screen][nxn]") {
+    for (const int size : {2, 4}) {
+        INFO("size " << size);
+        solve_in_app(cube::nxn::random_scramble({.size = size, .seed = 3, .moves = 60}));
+        Screen screen;
+        screen.settle();
+        const auto* methods = qobject_cast<QQuickItem*>(screen.find("solve.method"));
+        REQUIRE(methods != nullptr);
+        CHECK(methods->isVisible() == (size != 2));
+    }
 }
 
 TEST_CASE("a side is named by its colour at any size", "[qml][solve-screen][nxn]") {

@@ -1,0 +1,1 @@
+**Check colours and Scan again work for a bigger cube.** After the camera read a 4x4 or 5x5, the solve screen did not offer Check colours, the colours screen hid Scan again, and going back from a checked scan began a scan of a 3x3. All three are there at every size, and a new scan begins at the size of the cube you were looking at.
