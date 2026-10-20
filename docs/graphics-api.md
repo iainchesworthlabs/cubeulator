@@ -50,8 +50,9 @@ that can start here is used; each later one is where the application falls back.
 
 | Platform | Automatic chain | Notes |
 | --- | --- | --- |
-| Windows | Direct3D 11, software | the chain the application has always used, plus the software floor |
-| Linux, macOS, Android, iOS, web | *(Qt's own default)* | not guarded: the choice is Qt's |
+| Windows | Vulkan, Direct3D 11, software | Direct3D 12 is left out on purpose ([measured](#vulkan-against-direct3d-11-measured)) |
+| Linux | Vulkan, OpenGL | not run on a Linux machine yet |
+| macOS, Android, iOS, web | *(Qt's own default)* | not guarded: Metal, OpenGL ES and WebGL are the only sensible choice there |
 
 A platform with an empty chain behaves as it did before this existed. The last
 entry of a chain is the **floor**: nothing recorded can remove it, because there
@@ -131,16 +132,21 @@ three screens, first one dropped; time from the start of `main()`):
 | | Direct3D 11 | Vulkan |
 | --- | --- | --- |
 | first frame presented, best / median of 15 | 1.11 s / 1.18 s | 1.25 s / 1.36 s |
-| cost of the first frame itself (shaders, pipelines) | 115 to 147 ms | 6 to 12 ms (warm cache); 63 ms (very first run) |
+| the first frame itself (shaders, pipelines) | 115 to 147 ms | 6 to 12 ms (warm cache); 63 ms (very first run) |
+| frames over 8 ms in the first 3 s, summed, median (Home / solve 3x3 / 6x6) | 440 / 362 / 295 ms | 303 / 464 / 341 ms |
 
 Vulkan arrives **130 to 180 ms later** at the first frame - the device creation
-the performance notes put at about 200 ms - and then draws its first frame in a
+the performance notes put at about 200 ms - and then draws that first frame in a
 tenth of the time, because Qt saves a pipeline cache between runs
-(`qtpipelinecache/qqpc_vulkan`, 300 KB) and Direct3D 11 has nothing to save. In a
-fresh process that has to draw a 3D view, the harness's `[screen-cost]` case
-shows where that lands (first 3D screen of the process, tenth frame, median of
-the 8 alternated runs): **Direct3D 11 1.88 s, Vulkan 0.45 s**. Direct3D 11 pays
-for its shaders at every launch.
+(`qtpipelinecache/qqpc_vulkan`, 300 KB) and Direct3D 11 has nothing to save. But
+the application's heavy frames after it are the cube's first 3D frames, 120 to
+165 ms each on either API, and they are not shorter on Vulkan, so **in the
+application there is no start-up saving to set against the later first frame**:
+the menu and the cube are on screen about 130 ms later on Vulkan. (The saving
+exists in the harness: the `[screen-cost]` case, a fresh window drawing the whole
+scene at once, takes 1.88 s to the tenth frame of the launch screen on Direct3D
+11 and 0.45 s on Vulkan, median of the 8 alternated runs. The application builds
+the cube a frame after the menu, which is not what the harness measures.)
 
 **Steady frames** (`render.rhi_frame`, 3 s after the first frame, medians): Home
 1.30 ms Direct3D 11 / 1.12 ms Vulkan; solve 3x3 1.08 / 1.20; solve 6x6 0.39 /
