@@ -1,2 +1,5 @@
 mkdocs==1.6.1
 mkdocs-material==9.7.7
+# Floor for a transitive dependency (mkdocs -> requests -> idna): the resolver
+# otherwise picks idna 3.9.0, which CVE-2026-45409 affects (fixed in 3.15).
+idna>=3.15
