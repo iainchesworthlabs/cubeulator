@@ -8,7 +8,9 @@ the fonts, with versions and licences. The build already knows: it writes
 `third_party_notices/third-party-notices.json` for every platform, from the
 linked libraries, vcpkg's records and Qt's own SBOM manifest, and refuses to
 package while anything is unresolved (docs/licensing.md). This turns that
-inventory into SPDX 2.3, one SBOM for the release:
+inventory into SPDX 2.3, one SBOM for the release, and with `--cyclonedx-output` the
+same bill of materials as CycloneDX 1.6 (reshaped from the SPDX document, so the two
+cannot disagree):
 
     make_sbom.py --version 0.1.0-beta.1 --tag v0.1.0-beta.1 \\
         --repo iainchesworthlabs/cubeulator --files dist/files \\
@@ -40,6 +42,7 @@ import hashlib
 import json
 import re
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -228,6 +231,110 @@ def build(
     return document
 
 
+CYCLONEDX_SPEC = "1.6"
+
+# SPDX packages that are not software a person links against.
+_CDX_DATA_KINDS = {"font", "design"}
+
+
+def _cdx_licenses(*expressions: str) -> list[dict]:
+    """The first expression that says something, as CycloneDX wants it."""
+    for expression in expressions:
+        if expression and expression != "NOASSERTION":
+            if "LicenseRef-" in expression:
+                # An SPDX reference is not an identifier CycloneDX can resolve.
+                return [{"license": {"name": expression}}]
+            return [{"expression": expression}]
+    return []
+
+
+def to_cyclonedx(document: dict, *, version: str, repo: str) -> dict:
+    """The same bill of materials as CycloneDX 1.6, made from the SPDX document.
+
+    One source of truth: the SPDX document is built from the inventory, and this
+    only reshapes it, so the two cannot disagree about what is in a package.
+    Each release file is a `file` component with the SHA-256/512 and where it is
+    downloaded from; each component it holds is a component of its own, and the
+    `dependencies` say which file holds which.
+    """
+    release_ids = list(document["documentDescribes"])
+    by_id = {p["SPDXID"]: p for p in document["packages"]}
+
+    components: list[dict] = []
+    for pkg in document["packages"]:
+        ref = pkg["SPDXID"]
+        if ref in release_ids:
+            component = {
+                "type": "file",
+                "bom-ref": ref,
+                "name": pkg["name"],
+                "version": version,
+                "hashes": [
+                    {"alg": "SHA-256", "content": next(c["checksumValue"] for c in pkg["checksums"] if c["algorithm"] == "SHA256")},
+                    {"alg": "SHA-512", "content": next(c["checksumValue"] for c in pkg["checksums"] if c["algorithm"] == "SHA512")},
+                ],
+                "externalReferences": [{"type": "distribution", "url": pkg["downloadLocation"]}],
+                "licenses": _cdx_licenses(pkg["licenseDeclared"]),
+                "description": pkg["summary"],
+            }
+        else:
+            kind = (pkg.get("comment") or "").removeprefix("kind: ").split(";")[0].strip()
+            component = {
+                "type": "data" if kind in _CDX_DATA_KINDS else "library",
+                "bom-ref": ref,
+                "name": pkg["name"],
+                "licenses": _cdx_licenses(pkg["licenseConcluded"], pkg["licenseDeclared"]),
+            }
+            if pkg.get("versionInfo"):
+                component["version"] = pkg["versionInfo"]
+            copyright_text = pkg.get("copyrightText")
+            if copyright_text and copyright_text != "NOASSERTION":
+                component["copyright"] = copyright_text
+            if pkg.get("homepage"):
+                component["externalReferences"] = [{"type": "website", "url": pkg["homepage"]}]
+            if pkg.get("comment"):
+                component["description"] = pkg["comment"]
+        if not component.get("licenses"):
+            component.pop("licenses", None)
+        components.append(component)
+
+    holds: dict[str, list[str]] = {ref: [] for ref in release_ids}
+    for rel in document["relationships"]:
+        if rel["relationshipType"] == "CONTAINS" and rel["spdxElementId"] in holds:
+            holds[rel["spdxElementId"]].append(rel["relatedSpdxElement"])
+    root = f"cubeulator-{version}"
+    dependencies = [{"ref": root, "dependsOn": release_ids}]
+    dependencies += [{"ref": ref, "dependsOn": sorted(held)} for ref, held in holds.items()]
+    held_refs = {h for held in holds.values() for h in held}
+    # CycloneDX asks that every component has an entry, even an empty one.
+    dependencies += [{"ref": c["bom-ref"], "dependsOn": []} for c in components if c["bom-ref"] in held_refs]
+
+    namespace = document["documentNamespace"]
+    return {
+        "bomFormat": "CycloneDX",
+        "specVersion": CYCLONEDX_SPEC,
+        # Derived from the SPDX namespace, which is unique to this content.
+        "serialNumber": "urn:uuid:" + str(uuid.uuid5(uuid.NAMESPACE_URL, namespace)),
+        "version": 1,
+        "metadata": {
+            "timestamp": document["creationInfo"]["created"],
+            "tools": {"components": [{"type": "application", "name": "cubeulator-tools-release-make_sbom"}]},
+            "authors": [{"name": "Iain Chesworth Labs"}],
+            "component": {
+                "type": "application",
+                "bom-ref": root,
+                "name": "Cubeulator",
+                "version": version,
+                "licenses": [{"expression": "GPL-3.0-or-later"}],
+                "externalReferences": [{"type": "website", "url": f"https://github.com/{repo}"}],
+            },
+            "licenses": [{"license": {"id": "CC0-1.0"}}],
+        },
+        "components": components,
+        "dependencies": dependencies,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--version", required=True)
@@ -242,7 +349,10 @@ def main(argv: list[str] | None = None) -> int:
         help="a platform's third-party-notices.json (repeat for windows, macos, linux, web)",
     )
     parser.add_argument("--created", help="ISO time for creationInfo; default now (UTC)")
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True, help="the SPDX document")
+    parser.add_argument(
+        "--cyclonedx-output", type=Path, help="also write the same bill of materials as CycloneDX 1.6"
+    )
     args = parser.parse_args(argv)
 
     notices: dict[str, dict] = {}
@@ -272,6 +382,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     args.output.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8", newline="\n")
+    if args.cyclonedx_output is not None:
+        cdx = to_cyclonedx(document, version=args.version, repo=args.repo)
+        args.cyclonedx_output.write_text(json.dumps(cdx, indent=2) + "\n", encoding="utf-8", newline="\n")
+        print(f"{args.cyclonedx_output.name}: CycloneDX {CYCLONEDX_SPEC}, {len(cdx['components'])} components")
     counts = {p: sum(1 for k in document["packages"] if k["SPDXID"].startswith(f"SPDXRef-{p}-")) for p in notices}
     print(f"{args.output.name}: {len(document['documentDescribes'])} files, components " + ", ".join(f"{p} {n}" for p, n in counts.items()))
     return 0

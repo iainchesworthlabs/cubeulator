@@ -258,7 +258,7 @@ Two different things are called signing here.
 
 **What the release does already** (`release.yml`, [Cutting a release](releasing.md)):
 a SHA-512 manifest, a detached GPG signature on it and on every package from the
-project's key, a build-provenance attestation for each package and an SBOM. They
+project's key, a build-provenance attestation for each package and SBOMs (SPDX and CycloneDX). They
 prove where a file came from. The operating system does not look at them.
 
 **What the operating system looks at is not configured**, and no certificate is

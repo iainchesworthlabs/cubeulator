@@ -180,6 +180,7 @@ class Render(unittest.TestCase):
         "Cubeulator-0.2.0-beta.1-linux-x64.rpm",
         "Cubeulator-0.2.0-beta.1-web.zip",
         "Cubeulator-0.2.0-beta.1.spdx.json",
+        "Cubeulator-0.2.0-beta.1.cdx.json",
         "SHA512SUMS",
     ]
 
@@ -232,11 +233,11 @@ class Render(unittest.TestCase):
     def test_the_table_lists_real_files_and_only_what_was_done(self):
         out = self.render(signed=True, attested=True, sbom=True)
         self.assertIn("| Windows 10 and later, 64-bit | `Cubeulator-0.2.0-beta.1-windows-x64.exe` |", out)
-        self.assertIn("build-provenance attestations, an SPDX SBOM and GPG signatures", out)
+        self.assertIn("build-provenance attestations, SPDX and CycloneDX SBOMs and GPG signatures", out)
         self.assertIn("`gh attestation verify <file> --repo owner/repo`", out)
         self.assertIn("/docs/SECURITY.md#verifying-build-authenticity)", out)
-        self.assertIn("| SBOM (SPDX 2.3) | `Cubeulator-0.2.0-beta.1.spdx.json` |", out)
-        self.assertNotIn("SBOM (SPDX 2.3)", self.render(attested=True))
+        self.assertIn("| SBOM (SPDX 2.3, CycloneDX 1.6) | `Cubeulator-0.2.0-beta.1.spdx.json` · `Cubeulator-0.2.0-beta.1.cdx.json` |", out)
+        self.assertNotIn("SBOM (SPDX 2.3", self.render(attested=True))
         bare = self.render()
         self.assertNotIn("SECURITY.md", bare)
         self.assertIn("Self-contained and SHA-512-summed:", bare)
@@ -419,6 +420,57 @@ class Sbom(unittest.TestCase):
             self.assertIn(rel["relatedSpdxElement"], ids)
         for pid in ids:
             self.assertRegex(pid, r"^SPDXRef-[A-Za-z0-9.\-]+$")
+
+    def cdx(self):
+        return make_sbom.to_cyclonedx(self.make(), version="0.1.0-beta.1", repo="owner/repo")
+
+    def test_the_cyclonedx_bom_holds_together_and_says_what_the_spdx_one_does(self):
+        spdx, bom = self.make(), self.cdx()
+        self.assertEqual((bom["bomFormat"], bom["specVersion"]), ("CycloneDX", "1.6"))
+        refs = [c["bom-ref"] for c in bom["components"]]
+        self.assertEqual(len(refs), len(set(refs)))
+        # one component per SPDX package, the same ones
+        self.assertEqual(refs, [p["SPDXID"] for p in spdx["packages"]])
+        known = set(refs) | {bom["metadata"]["component"]["bom-ref"]}
+        for dep in bom["dependencies"]:
+            self.assertIn(dep["ref"], known)
+            for held in dep["dependsOn"]:
+                self.assertIn(held, known)
+        # the root depends on the five files, each file on its platform's components
+        root = next(d for d in bom["dependencies"] if d["ref"] == bom["metadata"]["component"]["bom-ref"])
+        self.assertEqual(root["dependsOn"], spdx["documentDescribes"])
+        for rel in spdx["relationships"]:
+            held = next(d for d in bom["dependencies"] if d["ref"] == rel["spdxElementId"])
+            self.assertIn(rel["relatedSpdxElement"], held["dependsOn"])
+
+    def test_cyclonedx_files_carry_their_hashes_and_components_their_licences(self):
+        bom = self.cdx()
+        deb = next(c for c in bom["components"] if c["name"].endswith(".deb"))
+        self.assertEqual(deb["type"], "file")
+        self.assertEqual({h["alg"] for h in deb["hashes"]}, {"SHA-256", "SHA-512"})
+        self.assertIn("/releases/download/v0.1.0-beta.1/", deb["externalReferences"][0]["url"])
+        opencv = next(c for c in bom["components"] if c["name"] == "opencv4")
+        self.assertEqual((opencv["version"], opencv["licenses"]), ("4.12.0#5", [{"expression": "Apache-2.0"}]))
+        # the option an SPDX reference names is a name, not an identifier CycloneDX resolves
+        qt = next(c for c in bom["components"] if c["name"] == "Qt Base")
+        self.assertEqual(qt["licenses"], [{"expression": "GPL-3.0-only"}])
+        font = next(c for c in bom["components"] if c["name"] == "A font")
+        self.assertEqual(font["type"], "data")
+        self.assertNotIn("licenses", font)  # NOASSERTION is left unsaid
+
+    def test_the_cyclonedx_serial_number_follows_the_content(self):
+        a, b = self.cdx(), self.cdx()
+        self.assertEqual(a["serialNumber"], b["serialNumber"])
+        self.assertRegex(a["serialNumber"], r"^urn:uuid:[0-9a-f-]{36}$")
+
+    def test_the_cyclonedx_bom_validates_against_the_schema_when_the_library_is_there(self):
+        try:
+            from cyclonedx.schema import OutputFormat, SchemaVersion
+            from cyclonedx.validation import make_schemabased_validator
+        except ImportError:
+            self.skipTest("cyclonedx-python-lib[validation] is not installed")
+        validator = make_schemabased_validator(OutputFormat.JSON, SchemaVersion.V1_6)
+        self.assertIsNone(validator.validate_str(json.dumps(self.cdx())))
 
     def test_each_file_is_described_and_holds_its_platforms_components(self):
         doc = self.make()

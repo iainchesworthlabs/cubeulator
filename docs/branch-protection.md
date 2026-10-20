@@ -103,6 +103,7 @@ that its workflow has to carry `merge_group`. The rule is:
 | `Windows (MSVC)` | `ci.yml` | when green | yes |
 | `Coverage (Linux, GCC)` | `ci.yml` | when green | yes |
 | `Analyze (C++)` | `codeql.yml` | when green | yes |
+| `Commit is green` | `release-check.yml` | no (it runs only on a pull request into `main`) | yes |
 
 Promoting a check only ever tightens the ruleset. Android, iOS and Web are
 informational (`continue-on-error`): Android and iOS are never required, and
@@ -137,20 +138,22 @@ so a release PR could not merge at all. The required checks are untouched: a
 release PR is expected to have them green, and bypassing them is a deliberate
 act, not something the ruleset allows by default.
 
-`release-check.yml` also runs on a pull request into `main`, as two jobs, both
-advisory and neither in the table above. `Release readiness` says whether the
+`release-check.yml` also runs on a pull request into `main`, as two jobs.
+`Release readiness` is advisory and not in the table above: it says whether the
 tree is a release the Release workflow will accept and what its notes would
-say. `Commit is green` says whether the PR's head commit is green on every
+say. `Commit is green`, in the table, says whether the PR's head commit is green on every
 workflow the README has a badge for (CI, CodeQL, OSV-Scanner, Zizmor). The
 nine required checks already hold the build, test, coverage, clang and CodeQL
 legs of the PR's own run, but not OSV-Scanner or Zizmor, and not the push runs
 on `develop` that the badges on `main` come to show, so a release can pass
 them and still arrive with a red badge. It waits (up to three hours) for a
 workflow that has not finished and fails at once on a red one.
-Making `Commit is green` a required check on `main` is the one change that
-would make "do not release from a red `develop`" a rule of the repository
-rather than of the maintainer; the check has to have reported on a pull request
-before the ruleset can name it.
+`Commit is green` is required on `main` so that "do not release from a red
+`develop`" is a rule of the repository and not only of the maintainer. A red
+that is not about the change (a flaky scheduled leg, in front of a hotfix) is
+handled as [Preparing the release](releasing.md#preparing-the-release) step 4
+says: re-run what is red; bypass through the pull request only when the red is
+known not to matter.
 
 ## Repository settings
 

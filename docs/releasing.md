@@ -47,13 +47,14 @@ feature/* bugfix/* ──PR──▶ merge queue ──▶ develop
 | `Cubeulator-<version>-linux-x64.deb` | Debian and Ubuntu |
 | `Cubeulator-<version>-linux-x64.rpm` | Fedora |
 | `Cubeulator-<version>-web.zip` | The browser build: the static site that [Try it in your browser](web.md) serves under `/app/`, with `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and `HOSTING.txt`, to be hosted over https. Not an installer; held by `packaging/web/check-package.sh` |
-| `SHA512SUMS` | one line per package and for the SBOM |
-| `SHA512SUMS.asc`, `<file>.asc` | detached GPG signatures, from the project key, on the manifest, every package and the SBOM |
+| `SHA512SUMS` | one line per package and for each SBOM |
+| `SHA512SUMS.asc`, `<file>.asc` | detached GPG signatures, from the project key, on the manifest, every package and each SBOM |
 | `cubeulator-signing-key.asc` | the public key, so that a download can be verified offline |
 | `Cubeulator-<version>.spdx.json` | an SPDX 2.3 SBOM: for each package, every component that ships in it, with version and licence, from the build's own third-party inventory; checksummed and signed like the packages |
+| `Cubeulator-<version>.cdx.json` | the same bill of materials as CycloneDX 1.6, for the scanners that read that format; made from the SPDX document, so the two cannot disagree; checksummed, signed and attested like it |
 
 Every package also carries a **build-provenance attestation** (Sigstore, from
-the workflow's own identity) and an SBOM attestation, held by GitHub, not as
+the workflow's own identity) and an attestation of each SBOM (SPDX and CycloneDX), held by GitHub, not as
 files.
 
 The SBOM is made by `tools/release/make_sbom.py` from the
@@ -61,7 +62,9 @@ The SBOM is made by `tools/release/make_sbom.py` from the
 `THIRD-PARTY-NOTICES.txt`; see [Licensing](licensing.md)), not by scanning the
 installers, which would list an installer and nothing in it. It refuses an
 inventory with anything unresolved and a package whose platform has no
-inventory. [Verifying a download](#verifying-a-download) says how to check each.
+inventory. The workflow reads each SBOM back from its attestation and compares
+it with the file it is releasing, so an SBOM that was attested is the SBOM that
+was attached. [Verifying a download](#verifying-a-download) says how to check each.
 
 **The packages are not OS code-signed** (no Authenticode certificate, no Apple
 Developer ID). The notes say so and say what a person will see: SmartScreen on
@@ -165,7 +168,7 @@ release of the project family reads:
 6. `**Full Changelog**: …/compare/v<previous>...v<this>` (not the first release)
 7. the `> **Pre-release.**` caveat
 
-The Artifacts sentence ("with build-provenance attestations, an SPDX SBOM and GPG
+The Artifacts sentence ("with build-provenance attestations, SPDX and CycloneDX SBOMs and GPG
 signatures") lists only what the run did. Preview it any time:
 
 ```sh
@@ -251,9 +254,19 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    readiness` check puts the rendered notes in its summary: read them there.
    `Commit is green` asks step 1's question of the PR's head commit and puts the
    table in its summary. It waits (up to three hours) for a workflow that has
-   not finished, fails at once on a red workflow or check run, and is advisory,
-   so it is the maintainer's decision, not the ruleset's, not to merge with it
-   red.
+   not finished and fails at once on a red workflow or check run. It is a
+   **required check on `main`**, so a release (or a hotfix) cannot merge from a
+   red commit without someone choosing to bypass it.
+
+   If it goes red for a reason that has nothing to do with the change (a flaky
+   scheduled leg, a runner that died), re-run what is red, which the table in
+   its summary names (`gh run rerun <id> --failed`), and then re-run this check
+   the same way; a push to the PR would restart every check instead. Merge
+   with it red (`gh pr merge --admin`: the admin role bypasses through a pull
+   request only, see [Branch protection](branch-protection.md)) only when the
+   red is real and known not to matter for the change, such as a hotfix that
+   has to go out while an unrelated leg is broken, and say why in the PR.
+
    `main`'s ruleset is in [Branch protection](branch-protection.md). It asks
    for "up to date", so anything that reaches `main` after the release PR's
    last green run (a hotfix, a back-merge) starts every check again, and the
@@ -311,7 +324,7 @@ minus the two things that cannot be undone:
 | build, package, `check-package.sh` (`packaging/web/check-package.sh` for the zip), four platforms | yes | yes |
 | `SHA512SUMS`, GPG signatures | yes, with a key made for the run | yes, the project key |
 | the provisioned key | proven to import and sign, in a keyring that is thrown away | used |
-| SBOM, provenance and SBOM attestations, `gh attestation verify` | yes | yes |
+| SPDX and CycloneDX SBOMs, provenance and SBOM attestations, `gh attestation verify`, the attested SBOMs compared with the files | yes | yes |
 | notes rendered from the changelog | yes | yes |
 | the commit is green on CI, CodeQL, OSV-Scanner and Zizmor | reported, not enforced (a rehearsal branch is rarely green) | enforced |
 | the tag, the release | **no** | yes |
