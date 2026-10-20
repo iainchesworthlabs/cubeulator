@@ -5,7 +5,7 @@ on:
     branches: [main, develop]
     tags: ["v*.*.*"]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, bugfix/ci-docs-only-proof-base]
   # The merge queue in front of develop (docs/branch-protection.md): Analyze
   # (C++) is one of the checks develop requires.
   merge_group:

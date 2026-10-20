@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, bugfix/ci-docs-only-proof-base]
   # The merge queue in front of develop (docs/branch-protection.md). A queue
   # entry runs only the jobs whose checks develop requires - clang-format,
   # clang-tidy, the three build legs and coverage - and the jobs below that are
