@@ -1402,6 +1402,11 @@ In your hands.</source>
         <extracomment>Small label above the three method buttons when the cube is bigger than 3x3: the methods apply to the 3x3 the cube has become, so they are said to be how it is finished.</extracomment>
         <translation>פֿאַרענדיקט מיט</translation>
     </message>
+    <message id="solve.camera.shownOnly">
+        <source>Your cube is on camera, but a bigger cube is not followed yet. Press Next turn after each move.</source>
+        <extracomment>Shown under the move on the solve screen of a cube bigger than 3x3, beside the camera preview: the camera shows the cube being solved, but only a 3x3's turns are recognised, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
+        <translation>אײַער קוביע איז אין דער קאַמערע, אָבער אַ גרעסערע קוביע װערט נאָך נישט נאָכגעפֿאָלגט. דריקט ״דער װײַטערדיקער דרײ״ נאָך יעדער באַװעגונג.</translation>
+    </message>
     <message id="solve.finish">
         <source>Finish</source>
         <extracomment>Replaces 'Next turn' on the last turn.</extracomment>

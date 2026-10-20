@@ -619,7 +619,8 @@ void DirectScan::processFrame(const cv::Mat& bgr, std::int64_t t_ms) {
         // The solve screen's camera: say what side is in view and leave the
         // scan alone - whether or not there is one. Nothing seen here may
         // start or change a scan.
-        read_ = cube::vision::read_side(bgr);
+        // At the size of the cube being solved: the preview marks every sticker of it.
+        read_ = cube::vision::read_side(bgr, size_);
         emit frameUpdated();
         emit frameWatched();
         return;

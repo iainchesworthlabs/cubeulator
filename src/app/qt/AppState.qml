@@ -55,8 +55,8 @@ QtObject {
             // A scan precedes whatever solve follows, so the camera has
             // something to be matched against again (resumeSolve turned it
             // off, having none).
-            // (Only a 3x3 has a camera to follow it: the held-cube match is a 3x3's.)
-            solveCamera = DirectScan.size === 3;
+            // (Every size shows it; only a 3x3's turns are followed from it.)
+            solveCamera = true;
             DirectScan.start(CameraController.selectedDeviceId);
         } else if (screen === "solve" && solveCamera) {
             // The camera the scan used stays as it is, exposure and white
@@ -76,13 +76,6 @@ QtObject {
     property bool scanComplete: false
     property var directScanConnections: Connections {
         target: DirectScan
-        // The size is found from the cube while it is being scanned, and only a
-        // 3x3 has a camera to follow it into the solve.
-        function onSizeChanged() {
-            if (state.screen === "scan") {
-                state.solveCamera = DirectScan.size === 3;
-            }
-        }
         function onScanCompleted() {
             state.scanComplete = true;
             completeBeat.restart();
@@ -252,7 +245,7 @@ QtObject {
             if (backToSolve) {
                 screen = "solve";
             } else {
-                beginScan();
+                beginScanAtSize(ColourEntry.size);
             }
         } else {
             screen = "entry";
@@ -301,6 +294,12 @@ QtObject {
         } else {
             screen = "permission";
         }
+    }
+
+    // A scan of a cube of `size` that is already known: a 3x3 is found as it always was
+    // (its size is still looked for), any other size is the one asked for.
+    function beginScanAtSize(size) {
+        beginScan(size === 3 ? undefined : size);
     }
 
     // Called once CameraPermission reports Granted while the permission
@@ -353,7 +352,7 @@ QtObject {
     // be made (the scan screen's Auto is still there to ask for it). DirectScan.size
     // may hold anything by now - the size of the scan before, or one found from a
     // cube that has since been replaced - so it is set before the screen changes:
-    // the screen starting the camera reads it (solveCamera, which follows only a 3x3).
+    // the screen starting the camera reads it.
     function rescan() {
         DirectScan.size = SolveController.size;
         if (cameraGranted || !isMobile) {

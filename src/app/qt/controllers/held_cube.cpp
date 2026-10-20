@@ -408,7 +408,9 @@ void HeldCube::onFrameWatched() {
     CUBE_ZONE_SCOPED_N("held_cube.on_frame_watched");
     const std::optional<cube::vision::SideRead>& read = scan_.read();
     const std::optional<cube::vision::SessionColours> colours = scan_.colours();
-    if (!read.has_value() || !colours.has_value() || solve_.isSolving()) {
+    // Only a 3x3 is followed: the hold and the move are matched against its nine stickers a
+    // side. A bigger cube's side is read for the preview and means nothing here.
+    if (!read.has_value() || !colours.has_value() || solve_.isSolving() || scan_.size() != 3) {
         forget();
         setSight(Sight::None);
         return;

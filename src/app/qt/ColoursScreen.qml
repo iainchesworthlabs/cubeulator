@@ -201,7 +201,7 @@ Rectangle {
         if (ColourEntry.touched)
             confirmingLeave = true;
         else
-            AppState.beginScan();
+            AppState.beginScanAtSize(root.size);
     }
     function solve() {
         AppState.solveColours();
@@ -760,7 +760,6 @@ Rectangle {
                 AppButton {
                     id: scanInstead
                     objectName: "colours.scan"
-                    visible: root.size === 3
                     height: 46
                     variant: "secondary"
                     text: root.fromScan ? qsTrId("common.scanAgain") : qsTrId("entry.scan")
@@ -791,7 +790,7 @@ Rectangle {
         onConfirmed: {
             root.confirmingLeave = false;
             if (root.leavingToScan)
-                AppState.beginScan();
+                AppState.beginScanAtSize(root.size);
             else
                 AppState.closeColours();
         }

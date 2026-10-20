@@ -1,8 +1,10 @@
 # Another size of cube
 
-The camera reads a 3x3. For a 2x2, 4x4 or 5x5 you tell Cubeulator the cube
-instead, and it works out the solution and walks you through it the same way:
-a 3D cube at the right size, the layer to turn nudging, one move at a time.
+For a 2x2, 4x4 or 5x5 you tell Cubeulator the cube, by typing its scramble or
+painting its colours, and it works out the solution and walks you through it
+the same way: a 3D cube at the right size, the layer to turn nudging, one move
+at a time. The camera can read these sizes too (below), but it is far better
+tried on a 3x3.
 
 <figure markdown="span">
   ![The screen for another size of cube: the sizes 2x2 to 5x5, with 5x5 chosen, and a scramble typed in the box.](img/entry-wide-light.webp#only-light){ loading=lazy }
@@ -37,8 +39,9 @@ Choose **Another size of cube** on the start screen, then a size from 2x2 to
   <figcaption>Painting a 4x4. The cube beside it is the cube as far as you have got.</figcaption>
 </figure>
 
-The camera is only for a 3x3, so with a 3x3 chosen there is also **Scan it
-instead**.
+**Scan it instead** is there at every size. The camera has only been tried on
+bigger cubes drawn on a screen so far, not on cubes in a hand, so if it
+misreads yours, **Check colours** puts right what it got wrong.
 
 ## Following it
 
@@ -87,7 +90,9 @@ cube beside it at the turn you select.
 
 ## What is not here yet
 
-- **The camera reads only a 3x3.** Scanning bigger cubes is planned.
+- **The camera follows only a 3x3.** On the solve screen a bigger cube is
+  shown on camera, with a dot on each sticker it finds, but a turn you make is
+  not recognised: press **Next turn** after each one.
 - **Sizes 2 to 5.** Bigger cubes are solved by the library but are not offered
   on screen yet.
 - **The words.** The new screens are in English; other languages are drafts

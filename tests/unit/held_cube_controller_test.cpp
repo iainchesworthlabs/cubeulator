@@ -9,8 +9,11 @@
 #include "controllers/direct_scan.hpp"
 #include "controllers/held_cube.hpp"
 #include "drawn_cube.hpp"
+#include "scanned_nxn_support.hpp"
 #include "solve_controller.hpp"
 
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/outside_view.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/hold.hpp>
 #include <cube/solver/solver.hpp>
@@ -566,5 +569,51 @@ TEST_CASE("a half turn made a quarter at a time is not called wrong on the way",
     CHECK(complaints == 0);
     if (camera_view(moved, *hold) != camera_view(cube, *hold)) {
         CHECK(session.moves_seen == 1);
+    }
+}
+
+TEST_CASE("a bigger cube is marked for the preview and never followed",
+          "[qt][controllers][held-cube][nxn]") {
+    for (const int size : {2, 4}) {
+        INFO("size " << size);
+        const cube::nxn::NCube cube = cube::test::unambiguous_cube(size, 11);
+        DirectScan scan;
+        SolveController solve;
+        HeldCube held{scan, solve};
+        int moves_seen = 0;
+        int holds_changed = 0;
+        QObject::connect(&held, &HeldCube::moveSeen, [&]() { ++moves_seen; });
+        QObject::connect(&held, &HeldCube::holdChanged, [&]() { ++holds_changed; });
+        QObject::connect(&scan, &DirectScan::scanCompleted, &solve,
+                         [&]() { solve.solveCube(*scan.cubeN()); });
+        scan.setSize(size);
+        cube::test::show_all_sides(scan, cube);
+        REQUIRE(scan.complete());
+        QElapsedTimer waited;
+        waited.start();
+        while (solve.isSolving() && waited.elapsed() < 120'000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        REQUIRE_FALSE(solve.isSolving());
+        REQUIRE(solve.size() == size);
+        REQUIRE(scan.colours().has_value());
+
+        // Every side of the cube, shown steadily, as a person would hold it up: the camera
+        // finds its size x size stickers for the preview, and nothing is made of them.
+        holds_changed = 0;  // the new cube to solve started from the stated hold
+        scan.setWatching(true);
+        for (const Face face : kAllFaces) {
+            for (int i = 0; i < kFramesToDoubt + 2; ++i) {
+                scan.processFrame(
+                    draw_side(cube::nxn::outside_view(cube, face), cube::test::pose_for(size)));
+            }
+            CHECK(scan.stickerPoints().size() == size * size);
+            CHECK(held.sight() == "none");
+            scan.processFrame(room({640, 360}));
+        }
+        CHECK_FALSE(held.seen());
+        CHECK(held.hold() == kStatedHold);
+        CHECK(moves_seen == 0);
+        CHECK(holds_changed == 0);
     }
 }
