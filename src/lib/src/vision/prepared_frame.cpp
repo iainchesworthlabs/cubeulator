@@ -108,10 +108,14 @@ struct Channels {
     Channels channels;
     channels.value.create(working.size(), CV_8UC1);
     channels.chroma.create(working.size(), CV_8UC1);
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic,modernize-min-max-use-initializer-list):
+    // a per-pixel loop over image rows, which is the whole of its cost. The nested
+    // max and min are not the initializer-list form on purpose: MSVC does not
+    // flatten that, and the loop was 0.35 ms with them and 1.5 with it.
     for (int row = 0; row < working.rows; ++row) {
-        const uchar* bgr = working.ptr<uchar>(row);
-        uchar* value = channels.value.ptr<uchar>(row);
-        uchar* chroma = channels.chroma.ptr<uchar>(row);
+        const auto* bgr = working.ptr<uchar>(row);
+        auto* value = channels.value.ptr<uchar>(row);
+        auto* chroma = channels.chroma.ptr<uchar>(row);
         for (int column = 0; column < working.cols; ++column, bgr += 3) {
             const uchar highest = std::max(std::max(bgr[0], bgr[1]), bgr[2]);
             const uchar lowest = std::min(std::min(bgr[0], bgr[1]), bgr[2]);
@@ -119,6 +123,7 @@ struct Channels {
             chroma[column] = static_cast<uchar>(highest - lowest);
         }
     }
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic,modernize-min-max-use-initializer-list)
     return channels;
 }
 
