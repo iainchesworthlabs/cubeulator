@@ -14,6 +14,7 @@
 #include "platform/web/devices_web.hpp"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -23,6 +24,13 @@ using cube::platform::camera::Facing;
 using cube::platform::camera::web::device_list;
 using cube::platform::camera::web::parse_cameras;
 using cube::platform::camera::web::RawCamera;
+
+// A camera as the page lists it. Not a designated initializer: the build is
+// -Werror=missing-designated-field-initializers, and most of these name one or
+// two of the three fields.
+RawCamera cam(std::string id = "", std::string label = "", std::string facing = "") {
+    return RawCamera{std::move(id), std::move(label), std::move(facing)};
+}
 
 std::vector<std::string> names(const std::vector<DeviceInfo>& devices) {
     std::vector<std::string> out;
@@ -55,8 +63,7 @@ TEST_CASE("a page's list of cameras is read three fields to a line", "[web][came
 TEST_CASE("the camera facing away is listed first, whatever order the browser lists them in",
           "[web][camera]") {
     SECTION("Safari lists the front camera first") {
-        const auto devices = device_list(
-            {{.id = "a", .label = "Front Camera"}, {.id = "b", .label = "Back Camera"}});
+        const auto devices = device_list({cam("a", "Front Camera"), cam("b", "Back Camera")});
 
         REQUIRE(devices.size() == 2);
         CHECK(devices[0].display_name == "Back Camera");
@@ -66,8 +73,8 @@ TEST_CASE("the camera facing away is listed first, whatever order the browser li
     }
 
     SECTION("Chrome's words for them") {
-        const auto devices = device_list({{.id = "a", .label = "camera2 1, facing front"},
-                                          {.id = "b", .label = "camera2 0, facing back"}});
+        const auto devices =
+            device_list({cam("a", "camera2 1, facing front"), cam("b", "camera2 0, facing back")});
 
         REQUIRE(devices.size() == 2);
         CHECK(devices[0].identifier == "b");
@@ -77,8 +84,7 @@ TEST_CASE("the camera facing away is listed first, whatever order the browser li
 
     SECTION("the open camera's own track outranks its label") {
         const auto devices =
-            device_list({{.id = "a", .label = "Camera A"},
-                         {.id = "b", .label = "Camera B", .facing = "environment"}});
+            device_list({cam("a", "Camera A"), cam("b", "Camera B", "environment")});
 
         REQUIRE(devices.size() == 2);
         CHECK(devices[0].identifier == "b");
@@ -87,23 +93,22 @@ TEST_CASE("the camera facing away is listed first, whatever order the browser li
     }
 
     SECTION("cameras that say nothing keep the browser's order, ahead of a front one") {
-        const auto devices = device_list({{.id = "a", .label = "Front Camera"},
-                                          {.id = "b", .label = "Capture card"},
-                                          {.id = "c", .label = "USB webcam"}});
+        const auto devices = device_list(
+            {cam("a", "Front Camera"), cam("b", "Capture card"), cam("c", "USB webcam")});
 
         CHECK(names(devices) ==
               std::vector<std::string>{"Capture card", "USB webcam", "Front Camera"});
     }
 
     SECTION("a laptop's one webcam is listed as it is, and is still mirrored") {
-        const auto devices = device_list({{.id = "a", .label = "Integrated Camera"}});
+        const auto devices = device_list({cam("a", "Integrated Camera")});
 
         REQUIRE(devices.size() == 1);
         CHECK(devices[0].facing == Facing::unknown);
     }
 
     SECTION("a camera with no name is given a number") {
-        const auto devices = device_list({{.id = "a"}, {.id = "b"}});
+        const auto devices = device_list({cam("a"), cam("b")});
 
         CHECK(names(devices) == std::vector<std::string>{"Camera 1", "Camera 2"});
     }
@@ -112,7 +117,7 @@ TEST_CASE("the camera facing away is listed first, whatever order the browser li
 TEST_CASE("before the browser says which cameras there are, the list is about direction",
           "[web][camera]") {
     SECTION("two cameras, nothing named: back first, then front") {
-        const auto devices = device_list({{}, {}});
+        const auto devices = device_list({cam(), cam()});
 
         REQUIRE(devices.size() == 2);
         CHECK(devices[0].identifier == "facing:environment");
