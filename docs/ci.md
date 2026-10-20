@@ -387,7 +387,7 @@ change is a reviewed diff (the exceptions are listed under the table):
 | Every GitHub Action, and the composite actions in `.github/actions` | A full commit SHA, with the version in a trailing comment | Dependabot, weekly, grouped, with a **7-day cooldown**: a release is not proposed until it has been out a week. It reads only the directories `dependabot.yml` names (`.github/workflows` and `.github/actions/web-build`), so the `actions/cache` pin in `.github/actions/vcpkg-cache` is bumped by hand |
 | CMake and Ninja (`lukka/get-cmake`) | `cmakeVersion` / `ninjaVersion`, exact, and one the pinned action's catalog lists: a CMake newer than the action (4.4.4 against `get-cmake` 4.4.2, in October 2026) fails with "Cannot match ... in the catalog" until the action is bumped. The exception is the web build (`.github/actions/web-build`), which asks for `latest` | By hand, with the actions |
 | NSIS (`choco install nsis`) | `--version`, exact | By hand |
-| `gcovr` | `==`, exact | By hand |
+| `gcovr` | `ci/requirements-coverage.txt`, exact **with hashes** (`pip install --require-hashes`), dependencies included | Dependabot (`pip`, `/ci`), weekly |
 | zizmor | `ci/requirements-zizmor.txt`, exact | Dependabot (`pip`, `/ci`), weekly |
 | mkdocs and its theme | `docs/requirements.txt`, exact (their own dependencies still float) | By hand |
 | Qt (`install-qt-action`) | `6.12.0`, the LTS line (see Toolchain versions above) | By hand, deliberately: moving Qt moves the app's platform, and its minimum macOS and Windows with it |
