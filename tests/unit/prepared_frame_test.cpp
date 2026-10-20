@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <vector>
 
 using cube::solver::Color;
@@ -146,4 +147,38 @@ TEST_CASE("a frame that is a window into a larger one is read as a frame of its 
     const cv::Mat own = view.clone();
     CHECK(cube::vision::contours_without_glare(view) == cube::vision::contours_without_glare(own));
     CHECK(cube::vision::chroma_contours(view) == cube::vision::chroma_contours(own));
+}
+
+TEST_CASE("the glare look of a prepared frame is the look of its working frame",
+          "[prepared_frame]") {
+    for (const cv::Size size : {cv::Size(640, 360), cv::Size(1280, 720), cv::Size(641, 361)}) {
+        for (const bool with_glare : {true, false}) {
+            CAPTURE(size.width, size.height, with_glare);
+            cv::Mat frame = glared_side(size);
+            if (!with_glare) {
+                // Nothing clipped anywhere: the look has nothing to cut out, and
+                // its outlines are the frame's own, handed back.
+                cv::min(frame, cv::Scalar::all(200), frame);
+            }
+            for (const int cube_size : {3, 5}) {
+                CAPTURE(cube_size);
+                const std::optional<cube::vision::PreparedFrame> prepared =
+                    cube::vision::prepare_frame(frame, cube_size);
+                REQUIRE(prepared.has_value());
+                const Contours expected =
+                    cube::vision::contours_without_glare(prepared->working, cube_size);
+                CHECK_FALSE(expected.empty());
+                CHECK(cube::vision::contours_without_glare(*prepared, cube_size) == expected);
+                if (!with_glare) {
+                    // The shortcut is the frame's own outlines, not a second trace.
+                    CHECK(expected == prepared->contours);
+                }
+                // A frame prepared for one size and looked at as another is
+                // traced against the other's block.
+                const int other = cube_size == 3 ? 5 : 3;
+                CHECK(cube::vision::contours_without_glare(*prepared, other) ==
+                      cube::vision::contours_without_glare(prepared->working, other));
+            }
+        }
+    }
 }

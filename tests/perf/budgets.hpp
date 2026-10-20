@@ -287,6 +287,7 @@ inline constexpr TimeBudget kEmptyReadTime360 = {2.0};
 // pixel at a time through Mat::at (2.2 ms against this machine's 4.4 ms of
 // calibration), which this budget is under.
 inline constexpr TimeBudget kGlareLookTime360 = {0.45};
+inline constexpr TimeBudget kClearGlareLookTime360 = {0.1};
 // 0.08 to 0.10 each: a hundred reads fed to SideScan::add, and one scanned().
 inline constexpr TimeBudget kScanAddTime = {1.0};
 inline constexpr TimeBudget kScannedTime = {1.0};

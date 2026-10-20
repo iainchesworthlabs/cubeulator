@@ -53,15 +53,21 @@ constexpr double kThresholdOffset = 8.0;
                static_cast<unsigned>(static_cast<double>(std::min(rows, cols)) * fraction) | 1U));
 }
 
+// The pixels that are bright against the mean of the block about them.
+[[nodiscard]] cv::Mat thresholded(const cv::Mat& brightness, int block) {
+    cv::Mat binary;
+    cv::adaptiveThreshold(brightness, binary, 255.0, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
+                          std::max(block, 3), kThresholdOffset);
+    return binary;
+}
+
 // Threshold and trace. `mask`, when it is not empty, is a CV_8U image the same
 // size as `brightness` whose non-zero pixels are taken out of the bright region
 // before it is traced: that is how the glare look keeps a highlight from
 // bridging two stickers.
 [[nodiscard]] std::vector<std::vector<cv::Point>> traced(const cv::Mat& brightness, int block,
                                                          const cv::Mat& mask) {
-    cv::Mat binary;
-    cv::adaptiveThreshold(brightness, binary, 255.0, cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
-                          std::max(block, 3), kThresholdOffset);
+    cv::Mat binary = thresholded(brightness, block);
     if (!mask.empty()) {
         cv::Mat kept;
         cv::bitwise_not(mask, kept);
@@ -119,13 +125,34 @@ struct Channels {
 constexpr int kGlareValue = 252;
 constexpr int kGlareChroma = 12;
 
-[[nodiscard]] cv::Mat glare_mask(const Channels& channels) {
-    cv::Mat bright;
-    cv::Mat grey;
-    cv::compare(channels.value, kGlareValue, bright, cv::CMP_GE);
-    cv::compare(channels.chroma, kGlareChroma, grey, cv::CMP_LT);
-    cv::Mat mask;
-    cv::bitwise_and(bright, grey, mask);
+// The pixels the glare look keeps out of the bright region, or an empty image
+// when there are none (which is most frames: a highlight has to fill its 5 x 5
+// neighbourhood of the *blurred* brightness to count, and be colourless in the
+// frame itself). `brightness` is the brightest channel of `working`, blurred as
+// prepare_frame blurs it; the mask is dilated by a pixel so the rim of a
+// highlight goes with its middle.
+[[nodiscard]] cv::Mat glare_mask(const cv::Mat& brightness, const cv::Mat& working) {
+    cv::Mat mask = cv::Mat::zeros(working.size(), CV_8UC1);
+    bool any = false;
+    for (int row = 0; row < working.rows; ++row) {
+        const uchar* bright = brightness.ptr<uchar>(row);
+        const uchar* bgr = working.ptr<uchar>(row);
+        uchar* out = mask.ptr<uchar>(row);
+        for (int column = 0; column < working.cols; ++column, bgr += 3) {
+            if (bright[column] < kGlareValue) {
+                continue;
+            }
+            const int highest = std::max(std::max(bgr[0], bgr[1]), bgr[2]);
+            const int lowest = std::min(std::min(bgr[0], bgr[1]), bgr[2]);
+            if (highest - lowest < kGlareChroma) {
+                out[column] = 255;
+                any = true;
+            }
+        }
+    }
+    if (!any) {
+        return {};
+    }
     cv::dilate(mask, mask, cv::Mat::ones(3, 3, CV_8U));
     return mask;
 }
@@ -166,7 +193,9 @@ std::optional<PreparedFrame> prepare_frame(const cv::Mat& bgr, int size) {
     prepared.brightness = cv::max(cv::max(channels.at(0), channels.at(1)), channels.at(2));
     cv::GaussianBlur(prepared.brightness, prepared.brightness, cv::Size(5, 5), 0.0);
 
-    prepared.contours = outlines(prepared.brightness, kBlockFraction * block_scale(size));
+    prepared.block = block_pixels(prepared.brightness.rows, prepared.brightness.cols,
+                                  kBlockFraction * block_scale(size));
+    prepared.contours = traced(prepared.brightness, prepared.block, cv::Mat{});
     return prepared;
 }
 
@@ -196,13 +225,33 @@ std::vector<std::vector<cv::Point>> contours_without_glare(const cv::Mat& workin
     if (working.empty() || working.type() != CV_8UC3) {
         return {};
     }
-    const Channels channels = channels_of(working);
-    cv::Mat brightness = channels.value;
+    cv::Mat brightness = channels_of(working).value;
     cv::GaussianBlur(brightness, brightness, cv::Size(5, 5), 0.0);
+    const cv::Mat mask = glare_mask(brightness, working);
     return traced(
         brightness,
         block_pixels(brightness.rows, brightness.cols, kBlockFraction * block_scale(size)),
-        glare_mask(channels));
+        mask.empty() ? cv::Mat{} : mask);
+}
+
+std::vector<std::vector<cv::Point>> contours_without_glare(const PreparedFrame& frame, int size) {
+    CUBE_ZONE_SCOPED_N("vision.contours_without_glare");
+    if (frame.working.empty() || frame.working.type() != CV_8UC3 ||
+        frame.brightness.size() != frame.working.size() || frame.brightness.type() != CV_8UC1) {
+        return {};
+    }
+    const int block = block_pixels(frame.brightness.rows, frame.brightness.cols,
+                                   kBlockFraction * block_scale(size));
+    const cv::Mat mask = glare_mask(frame.brightness, frame.working);
+    if (mask.empty()) {
+        // Nothing to take out: the binary is the first look's, if that was taken
+        // against the same block, and its outlines are already traced.
+        if (block == frame.block) {
+            return frame.contours;
+        }
+        return traced(frame.brightness, block, cv::Mat{});
+    }
+    return traced(frame.brightness, block, mask);
 }
 
 std::vector<std::vector<cv::Point>> chroma_contours(const cv::Mat& working, int size) {
