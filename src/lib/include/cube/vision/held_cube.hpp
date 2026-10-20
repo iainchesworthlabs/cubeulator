@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cube/nxn/cube.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/hold.hpp>
 #include <cube/vision/direct_scan.hpp>
@@ -82,11 +83,30 @@ struct HoldReading {
 [[nodiscard]] HoldReading read_hold(const SideRead& read, const solver::Cube& cube,
                                     const SessionColours& colours);
 
+// The same for a cube of any size (cube/nxn/outside_view.hpp's camera_view is what each hold
+// shows). The read is of that size: a read of another size fits nothing (all distances
+// maximal, no hold shown). docs/nxn-camera-follow.md says what changes with the size, and
+// what has not been measured.
+[[nodiscard]] std::array<HoldFit, 24> fit_holds(const SideRead& read, const nxn::NCube& cube,
+                                                const SessionColours& colours);
+[[nodiscard]] HoldReading read_hold(const SideRead& read, const nxn::NCube& cube,
+                                    const SessionColours& colours);
+
+// How far apart two holds' views must be, as a mean over the cells counted, for a read to
+// choose between them (kHoldClearDistance for a 3x3). One cell of N^2 is worth less of the
+// mean the more cells there are, so the margin shrinks with them - but never grows above a
+// 3x3's: a 2x2's cells each count for more, and a margin larger than the 3x3's would refuse
+// reads it can tell apart.
+[[nodiscard]] float hold_clear_distance(int size) noexcept;
+
 // How many of the stickers a read found are some other colour than the one
 // `expected` has there - nearer, that is, to another of the session's six
 // colours than to their own. One such is as likely a glint on a sticker as a
 // sticker in the wrong place; two or more are a different side.
 [[nodiscard]] int stickers_off(const SideRead& read, const std::array<solver::Color, 9>& expected,
+                               const SessionColours& colours);
+// The same for the N x N colours a view of a cube of any size shows.
+[[nodiscard]] int stickers_off(const SideRead& read, std::span<const solver::Color> expected,
                                const SessionColours& colours);
 
 }  // namespace cube::vision

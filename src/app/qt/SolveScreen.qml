@@ -155,18 +155,18 @@ Rectangle {
             return DirectScan.starting ? "Starting the camera…" : "";
         if (!DirectScan.complete)
             return ""; // no scan, so nothing to match a side against
-        // Only a 3x3 is followed: what the camera sees of a bigger cube is shown, not read.
-        if (!threeByThree)
-            return qsTrId("solve.camera.shownOnly");
         switch (HeldCube.sight) {
         case "matched":
             if (!guiding)
                 return "Matched to your cube";
-            // The side facing the holder is the one side the camera never
-            // sees change; say so rather than leave them waiting.
-            return movePlace === "front"
-                ? "Matched. The camera cannot see the side facing you: press Next after this move."
-                : "Matched. Make the move and it steps on by itself.";
+            // A layer the side in view does not show is one the camera never
+            // sees move (a 3x3: the side facing the holder); say so rather than
+            // leave them waiting.
+            if (HeldCube.moveHidden)
+                return threeByThree
+                    ? "Matched. The camera cannot see the side facing you: press Next after this move."
+                    : qsTrId("solve.camera.layerHidden");
+            return "Matched. Make the move and it steps on by itself.";
         case "unsure": return "That side looks the same turned. Show another to tell which way up.";
         case "wrong": return "Not the move that was asked for";
         case "unknown": return "Not the side that was expected";
@@ -481,8 +481,9 @@ Rectangle {
 
                 objectName: "solve.cube"
 
-                // The cube is shown as it is, not as a camera would see it held.
+                // Turned the way the cube is held, as the 3x3's is.
                 homeRotation: Qt.vector3d(0, 0, 0)
+                holdRotation: HeldCube.rotation
                 viewPitch: root.view.pitch
                 viewYaw: root.view.yaw
 
