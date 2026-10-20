@@ -117,6 +117,47 @@ TEST_CASE("Home has a way to another size of cube, and back", "[qml][entry]") {
     CHECK(app_state().property("screen").toString() == "launch");
 }
 
+namespace {
+
+// The 3D cubes among an item's descendants. A Loader's item is its child.
+[[nodiscard]] int cubes_in(const QQuickItem* item) {
+    int found = qstrncmp(item->metaObject()->className(), "Cube3DView", 10) == 0 ? 1 : 0;
+    for (const QQuickItem* child : item->childItems()) {
+        found += cubes_in(child);
+    }
+    return found;
+}
+
+}  // namespace
+
+TEST_CASE("Home makes the one cube it shows once its menu has been drawn", "[qml][entry][perf]") {
+    // The screen used to make both layouts' cubes, one of them never drawn, and
+    // before the first frame: of the work of arriving on Home the cube was most
+    // of it, and the person waits for the buttons (docs/performance.md,
+    // "Screens"). A cube is the most expensive thing on a screen to make; the
+    // budget is one, for the layout that is on show, and not before the menu.
+    for (const int width : {900, 400}) {
+        INFO("width " << width);
+        QQuickWindow window;
+        window.resize(width, 640);
+        QQmlComponent component(&cube::test::qml_engine());
+        component.loadFromModule("Cubeulator", "LaunchScreen");
+        std::unique_ptr<QQuickItem> screen(qobject_cast<QQuickItem*>(component.create()));
+        REQUIRE(screen != nullptr);
+        screen->setParentItem(window.contentItem());
+        screen->setWidth(width);
+        screen->setHeight(640);
+
+        // Not drawn yet: the menu is all there is. (The window is not shown;
+        // a frame swapped is what the screen waits for, and is said here.)
+        CHECK(cubes_in(screen.get()) == 0);
+        QCoreApplication::processEvents();
+        CHECK(cubes_in(screen.get()) == 0);
+        Q_EMIT window.frameSwapped();
+        CHECK(cubes_in(screen.get()) == 1);
+    }
+}
+
 TEST_CASE("the entry screen offers 2 to 5, and the camera at each", "[qml][entry]") {
     const HomeAgain home;
     const Loaded screen("EntryScreen");
