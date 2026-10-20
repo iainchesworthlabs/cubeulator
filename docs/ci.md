@@ -4,12 +4,12 @@
 
 | Workflow | Purpose | Blocking? | In the merge queue? |
 | --- | --- | --- | --- |
-| `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Not yet |
+| `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Yes, the required legs only |
 | `release.yml` | Builds the desktop packages (an installer for Windows, a disk image for macOS, a `.deb` and an `.rpm` for Linux) and the web build's zip on a version tag, signs and attests them, and attaches them to a **draft** GitHub Release with notes rendered from `CHANGELOG.md` ([Cutting a release](releasing.md)). Run by hand it is a dry run unless `dry_run` is unticked. A PR that changes it, `packaging/check-package.sh` or `tools/release/` runs only the release tools' self-test | N/A (tags and manual runs) | No |
 | `changelog-check.yml` | On a PR into `develop`: does a change a person using the app can see carry a `changelog.d/` fragment (or the `no-changelog` label), and is every fragment it adds well formed | No (advisory) | No |
 | `spike-sweep.yml` | Mondays: a `spike/*` branch whose tip is 30 days old is tagged `archive/spike-<name>` and deleted ([Investigations](investigations/README.md)). Run by hand it is a dry run unless `dry_run` is unticked | N/A (schedule and manual runs) | No |
 | `release-check.yml` | On a PR into `main`, two jobs: `Release readiness` (is this a release the Release workflow will accept, and what would its notes say, in the job summary) and `Commit is green` (is the PR's head green on every workflow the README has a badge for: CI, CodeQL, OSV-Scanner, Zizmor; waits up to three hours for ones still running, fails at once on a red one) | No (advisory) | No |
-| `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Not yet |
+| `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Yes |
 | `branch-name-check.yml` | Enforces gitflow branch naming | Yes | Yes (skipped, a pass) |
 | `dependency-review.yml` | Fails on a moderate+ vulnerability newly introduced in a PR | Yes | Yes |
 | `osv-scanner.yml` | Scans `vcpkg.json` against the OSV database | No (visible only) | No |
@@ -24,10 +24,40 @@ See [Branch protection and the merge queue](branch-protection.md) for which
 checks are required on `develop` and `main`, how the queue is configured, and
 the `merge_group` rule a workflow has to follow to be part of it.
 
+### Documentation-only changes
+
+A pull request (or merge-queue entry) whose every changed file is documentation
+builds and tests nothing. `plan` runs `.github/actions/changed-code`, which
+diffs the merge commit against its first parent (a queue entry against its
+`base_sha`) and outputs `code=false` when each changed file is under `docs/`
+(except `docs/design/`, which the icon rasterising, the packaging and the
+translation tests read), `changelog.d/`, `.github/ISSUE_TEMPLATE/`, is
+`mkdocs.yml`, a root-level `*.md` or `LICENSE*`. Anything else, an empty or
+failed diff, and every event that is not a pull request or queue entry (a
+push, a manual run, a schedule), is `code=true`.
+
+What `code=false` does, and why it is built this way:
+
+- **The required checks still report.** A job skipped by `if:` reports under
+  the raw text of its `name:` expression, not under the name it would have had,
+  so a required check skipped that way is never reported and the pull request
+  waits for it for ever (`workflow-level paths:` filters have the same
+  fault). So `clang-tidy`, the three build legs, `Coverage (Linux, GCC)` and
+  CodeQL's `Analyze (C++)` are not skipped: they run, say "Nothing to build or
+  test (documentation only)" and skip every other step, and finish in seconds
+  as successes. The build legs are given an Ubuntu runner for it, not a macOS
+  or Windows one.
+- **The rest skips whole.** Android, iOS, Web, Web tests and the Linux system
+  tests are not required, so they are skipped by `if:`. If one is ever made a
+  required check it needs the same treatment as the legs above first.
+- **Still runs on documentation:** `clang-format`, `platform-isolation`,
+  `Changelog fragment`, `Docs build (strict)`, `Validate gitflow branch name`,
+  `Scan dependency diff`, Zizmor and OSV-Scanner.
+
 ### Running some legs by hand
 
-A push or pull request always runs every leg of `ci.yml` (a queue entry would
-too, once the workflow carries `merge_group`; it does not yet). A manual
+A push or pull request always runs every leg of `ci.yml` (a queue entry runs
+only the legs `develop` requires). A manual
 dispatch can name just the ones it needs, which matters because the whole
 matrix is hours of hosted runners and the pool is shared:
 
@@ -45,7 +75,7 @@ the run rather than running nothing. `platform-isolation` is the no-`#ifdef` che
 build legs.
 `system` is the Linux job that runs the system tests under Xvfb (see
 [testing.md](testing.md#system-tests)); on Windows and macOS the same suite
-runs as a non-blocking step of their build legs.
+runs as a step of their build legs, which fails the leg.
 `web-test` is the browser's tests ([testing.md](testing.md#browser-tests)): it
 builds the `web-emscripten-diagnostics` app and the `web-emscripten-tests`
 binaries from one vcpkg tree, runs the unit, integration and performance cases
@@ -328,8 +358,8 @@ separate prebuilt install (`jurplel/install-qt-action` in CI,
 `MAX_PATH` reasons.
 
 Mobile (arm64-ios/arm64-android) vcpkg builds of opencv4 are
-new and not yet proven out in CI (the `android-build`/`ios-build` jobs stay
-`continue-on-error: true` until they are) — see
+new; they have been green on 39 of the last 40 runs, so the `android-build`/
+`ios-build` jobs have no `continue-on-error` since 2026-10-21 — see
 [Dependency strategy](dependency-strategy.md) for the evidence and the
 fallback plan if it doesn't work out.
 

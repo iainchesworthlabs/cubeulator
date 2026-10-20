@@ -70,10 +70,16 @@ Two rules keep the queue honest:
   `merge_group`.** GitHub only runs workflows that opt in on the queue's
   temporary ref, so a required check from a workflow without that trigger
   never reports, and the entry sits until `check_response_timeout_minutes`
-  expires. `branch-name-check.yml` and `dependency-review.yml` carry it today.
+  expires. `branch-name-check.yml`, `dependency-review.yml`, `ci.yml` and
+  `codeql.yml` carry it today.
 - **A workflow that produces no required check must *not* carry
   `merge_group`**, or every queue entry burns a full run of it for nothing.
-  This is why `ci.yml` and `codeql.yml` don't have it yet.
+  A workflow that produces some required checks and some that are not (`ci.yml`)
+  carries it and skips the rest itself: its Android, iOS, Web, Web tests,
+  system-test and `platform-isolation` jobs, and the experimental
+  Windows/macOS system-test step, have `github.event_name != 'merge_group'`, so
+  a queue entry runs `clang-format`, `clang-tidy`, the three build legs and
+  coverage, plus `Analyze (C++)` from `codeql.yml`.
 
 A queue entry has no PR head name, so `Validate gitflow branch name` is
 skipped there (the name was checked when the PR was opened); a skipped job
@@ -87,7 +93,8 @@ against `develop` between 17 July and 13 October 2026 (commits went in without
 a PR), and they failed on `develop` itself when they were — a required check
 that fails on the base fails every PR. They have passed on `develop`'s tip since
 14 October 2026, so what holds a check back now is the second half of the rule,
-that its workflow has to carry `merge_group`. The rule is:
+that its workflow has to carry `merge_group`. Both workflows carry it now
+(2026-10-20); what is left is the ruleset itself (below). The rule is:
 
 > A check becomes required on `develop` when it is green on the `develop` tip
 > **and** its workflow has `merge_group` added in the same change.
@@ -105,9 +112,11 @@ that its workflow has to carry `merge_group`. The rule is:
 | `Analyze (C++)` | `codeql.yml` | when green | yes |
 | `Commit is green` | `release-check.yml` | no (it runs only on a pull request into `main`) | yes |
 
-Promoting a check only ever tightens the ruleset. Android, iOS and Web are
-informational (`continue-on-error`): Android and iOS are never required, and
-Web only once it has run green on `develop`.
+Promoting a check only ever tightens the ruleset. Android, iOS, Web and Web tests no
+longer carry `continue-on-error` (2026-10-21): a red one fails the CI run and
+shows on the pull request, though none of them is a *required* check yet.
+Requiring them is the ruleset edit in
+[Promoting the build checks](#promoting-the-build-checks-on-develop).
 The system tests, `platform-isolation`, `Changelog fragment`, `Docs build
 (strict)` and `Release readiness` are not in the table either: none is required.
 
@@ -188,3 +197,28 @@ branch-protection sub-check scores more completely with a fine-grained PAT
 `SCORECARD_READ_TOKEN`, and the `repo_token` line in the workflow uncommented;
 without it, that sub-check degrades gracefully instead of failing. `scorecard.yml`
 runs on pushes to `main` and weekly, not on pull requests.
+
+## Promoting the build checks on `develop`
+
+`develop-protection` requires only `Validate gitflow branch name` and `Scan
+dependency diff`, and the queue only re-runs those, so a change that breaks the
+build or the tests reaches `develop` (#200 did, on 2026-10-18: the i18n
+catalogue test and `system.reach` were red on its push run and fixed by #202
+two merges later). With `merge_group` on `ci.yml` and `codeql.yml`, promoting
+the seven checks of the table above is one ruleset edit, by an admin:
+
+```sh
+gh api repos/iainchesworthlabs/cubeulator/rulesets/24974265 > develop-protection.json
+# add, to the required_status_checks rule's "required_status_checks" list:
+#   {"context": "clang-format"}, {"context": "clang-tidy"}, {"context": "Linux (GCC 16)"},
+#   {"context": "macOS (AppleClang)"}, {"context": "Windows (MSVC)"},
+#   {"context": "Coverage (Linux, GCC)"}, {"context": "Analyze (C++)"}
+gh api -X PUT repos/iainchesworthlabs/cubeulator/rulesets/24974265 --input develop-protection.json
+```
+
+Two costs to weigh first. Every queue entry then runs those seven jobs on the
+queue's merge ref (about an hour on a free pool, more on the shared one), and
+a cache entry is readable from its own ref, the base branch and the default
+branch only (see [Where an entry can be read from](ci.md#where-an-entry-can-be-read-from)):
+whether a `gh-readonly-queue/develop/...` ref reads `develop`'s vcpkg entries
+has not been observed, so the first entry may build the dependencies cold.

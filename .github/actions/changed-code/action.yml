@@ -1,0 +1,59 @@
+name: Changed code
+description: >-
+  Says whether a pull request or a merge-queue entry changes anything but
+  documentation. Output `code` is "true" unless every changed file is one that
+  nothing builds or tests reads. Any other event (a push, a manual run, a
+  schedule) is "true": those runs are what warm the caches and gate releases,
+  and are not worth being clever about.
+
+  Needs a checkout with the merge commit and its first parent (fetch-depth: 2)
+  for a pull request. A merge-queue entry fetches its base commit itself.
+  When it cannot tell (no diff, a failed fetch), it says "true".
+
+outputs:
+  code:
+    description: '"true" when something other than documentation changed.'
+    value: ${{ steps.diff.outputs.code }}
+
+runs:
+  using: composite
+  steps:
+    - name: Compare with the base
+      id: diff
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+      run: |
+        code=true
+        base=""
+        case "$EVENT_NAME" in
+          pull_request) base="HEAD^1" ;; # the merge commit's first parent is the base branch
+          merge_group)
+            base="$MERGE_GROUP_BASE"
+            git fetch --no-tags --depth=1 origin "$base" > /dev/null 2>&1 || base=""
+            ;;
+        esac
+        if [ -n "$base" ] && files="$(git diff --name-only "$base" HEAD 2> /dev/null)" && [ -n "$files" ]; then
+          # Documentation: what mkdocs, the changelog and GitHub's own templates
+          # read, and nothing else. docs/design is not documentation to the
+          # build (the app icon is rasterised from docs/design/identity, and
+          # strings.json feeds the packaging and the translation tests), and a
+          # Markdown file below the root could be anything's input.
+          code=false
+          while IFS= read -r f; do
+            case "$f" in
+              docs/design/*) code=true ;;
+              docs/*) ;;
+              mkdocs.yml | changelog.d/* | .github/ISSUE_TEMPLATE/*) ;;
+              */*) code=true ;;
+              *.md | LICENSE | LICENSE.*) ;;
+              *) code=true ;;
+            esac
+            [ "$code" = true ] && break
+          done <<< "$files"
+          echo "changed files: $(wc -l <<< "$files"); code: $code"
+        else
+          echo "no usable diff against '${base:-none}' for $EVENT_NAME; assuming code"
+        fi
+        echo "code=$code" >> "$GITHUB_OUTPUT"
