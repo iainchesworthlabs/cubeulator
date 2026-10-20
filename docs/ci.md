@@ -152,6 +152,11 @@ gh workflow run nightly.yml -f jobs=sanitizers               # one job (comma-se
 gh workflow run nightly.yml -f jobs=sanitizers -f ref=feature/x
 ```
 
+A pull request that changes `nightly.yml` or `ci/nightly-*.sh` runs `sanitizers`,
+`sanitizers-app` and `clang-tidy-app` on itself (not `full-ci`, which would run
+all of CI a second time, nor `report`, which needs a token that can write
+issues): the only way to see the workflow work before it is on `main`.
+
 Things worth knowing:
 
 - **A scheduled run starts from `main`.** GitHub reads the schedule from the

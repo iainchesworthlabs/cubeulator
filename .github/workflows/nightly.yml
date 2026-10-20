@@ -36,6 +36,16 @@ name: Nightly
 on:
   schedule:
     - cron: "41 20 * * *"
+  # A change to this workflow or its scripts proves itself: the three jobs that
+  # are not CI run on the pull request (a workflow that is not on main cannot
+  # be started by hand, so this is the only way to see it work before it
+  # merges). full-ci and report do not: the first would run all of CI a second
+  # time and the second needs a token that can write issues.
+  pull_request:
+    branches: [develop]
+    paths:
+      - ".github/workflows/nightly.yml"
+      - "ci/nightly-*.sh"
   workflow_dispatch:
     inputs:
       jobs:
@@ -52,9 +62,10 @@ on:
 permissions: {}
 
 concurrency:
-  group: nightly
-  # A run that is still going when the next is due finishes; one waits behind it.
-  cancel-in-progress: false
+  group: nightly-${{ github.event_name == 'pull_request' && github.ref || 'scheduled' }}
+  # A night that is still going when the next is due finishes and one waits
+  # behind it; a pull request's run is superseded by its next push.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   full-ci:
@@ -71,7 +82,7 @@ jobs:
       # Only the script is needed, not the tree: sparse, and no history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || 'develop' }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
           sparse-checkout: ci
           persist-credentials: false
 
@@ -88,7 +99,7 @@ jobs:
 
   sanitizers:
     name: ${{ matrix.name }}
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',sanitizers,')) }}
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',sanitizers,')) }}
     needs: full-ci
     runs-on: ubuntu-26.04
     timeout-minutes: 240
@@ -121,7 +132,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || 'develop' }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
           submodules: recursive
           fetch-depth: 0
           persist-credentials: false
@@ -188,7 +199,7 @@ jobs:
 
   sanitizers-app:
     name: Sanitizers - ASan + UBSan (app)
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',sanitizers-app,')) }}
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',sanitizers-app,')) }}
     needs: [full-ci, sanitizers]
     runs-on: ubuntu-26.04
     timeout-minutes: 300
@@ -205,7 +216,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || 'develop' }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
           submodules: recursive
           fetch-depth: 0
           persist-credentials: false
@@ -284,7 +295,7 @@ jobs:
 
   clang-tidy-app:
     name: clang-tidy over the app
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',clang-tidy-app,')) }}
+    if: ${{ !cancelled() && (github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || contains(format(',{0},', inputs.jobs), ',clang-tidy-app,')) }}
     needs: [full-ci, sanitizers]
     runs-on: ubuntu-26.04
     timeout-minutes: 180
@@ -295,7 +306,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || 'develop' }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
           submodules: recursive
           fetch-depth: 0
           persist-credentials: false
@@ -383,7 +394,7 @@ jobs:
 
   report:
     name: Report
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
     needs: [full-ci, sanitizers, sanitizers-app, clang-tidy-app]
     runs-on: ubuntu-26.04
     timeout-minutes: 15
@@ -395,7 +406,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || 'develop' }}
+          ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
           sparse-checkout: ci
           persist-credentials: false
 
