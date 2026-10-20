@@ -144,7 +144,12 @@ public:
             return;
         }
         location_ = tracy::SourceLocationData{
-            .name = name, .function = __func__, .file = __FILE__, .line = 0, .color = 0};
+            .name = name,
+            .function = __func__,
+            .file = __FILE__,
+            .line = 0,
+            .color = 0,
+        };
         zone_.emplace(&location_, true);
     }
 

@@ -9,7 +9,7 @@
 
 namespace cube::profiling {
 
-GpuContext* GpuContext::create_d3d11(void*, void*) noexcept {
+GpuContext* GpuContext::create_d3d11(void* /*device*/, void* /*device_context*/) noexcept {
     return nullptr;
 }
 

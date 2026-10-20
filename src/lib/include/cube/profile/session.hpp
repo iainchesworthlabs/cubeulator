@@ -39,7 +39,7 @@ struct startup_decision {
 };
 
 // The environment variable and the two flags, as the documentation spells them.
-inline constexpr char environment_variable[] = "CUBEULATOR_PROFILE";
+inline constexpr const char* environment_variable = "CUBEULATOR_PROFILE";
 inline constexpr std::string_view enable_flag = "--profile";
 inline constexpr std::string_view disable_flag = "--no-profile";
 

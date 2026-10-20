@@ -41,6 +41,8 @@ inline constexpr bool enabled = true;
 inline constexpr bool to_recorder = false;
 
 namespace detail {
+// The one process-wide flag every macro reads; an atomic cannot live anywhere else.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 inline std::atomic<bool> running{false};
 }  // namespace detail
 
@@ -125,7 +127,7 @@ void plot(const char* name, T value) {
 // ZoneValue, which cannot even compile without a CUBE_ZONE_SCOPED*() zone in
 // scope - exactly what a test for "no zone open" must not have. Here nothing
 // is open and nothing records the value.
-inline void scoped_zone_value(std::uint64_t) noexcept {}
+inline void scoped_zone_value(std::uint64_t /*number*/) noexcept {}
 
 // The manual (begin ... end) zone, made exception safe.
 //
@@ -262,7 +264,13 @@ public:
         if (zone_) {
             return;
         }
-        location_ = ___tracy_source_location_data{name, __func__, __FILE__, 0, 0};
+        location_ = ___tracy_source_location_data{
+            .name = name,
+            .function = __func__,
+            .file = __FILE__,
+            .line = 0,
+            .color = 0,
+        };
         zone_.emplace(&location_);
     }
 
@@ -284,6 +292,7 @@ private:
 inline std::uint32_t section_enter(const char* name) {
     // The name goes through "%s": SectionEnter takes a printf format, and a
     // name that is data must not be read as one.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg) - Tracy's own printf-style call.
     return active() ? tracy::Profiler::SectionEnter(0, "%s", name) : 0;
 }
 

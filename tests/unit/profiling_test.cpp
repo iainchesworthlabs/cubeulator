@@ -199,60 +199,77 @@ TEST_CASE("the scene graph's timing lines become plots", "[profiling][qsg]") {
     REQUIRE(cube::profile::is_qsg_timing_category("qt.scenegraph.time.renderer"));
     REQUIRE_FALSE(cube::profile::is_qsg_timing_category("qt.scenegraph.general"));
 
-    const auto frame = parse_qsg_timing(
-        {.category = "qt.scenegraph.time.renderloop",
-         .text = "[window 0x1ad5a6e87f0][render thread 0x1ad5befdf50] syncAndRender: frame "
-                 "rendered in 12ms, sync=3, render=4, swap=5"});
+    const auto frame = parse_qsg_timing({
+        .category = "qt.scenegraph.time.renderloop",
+        .text = "[window 0x1ad5a6e87f0][render thread 0x1ad5befdf50] syncAndRender: frame "
+                "rendered in 12ms, sync=3, render=4, swap=5",
+    });
     REQUIRE(sample_of(frame, "qsg.sync_ms") == 3.0);
     REQUIRE(sample_of(frame, "qsg.render_ms") == 4.0);
     REQUIRE(sample_of(frame, "qsg.swap_ms") == 5.0);
     REQUIRE_FALSE(frame.as_message);
 
     // The basic loop's wording, with a polish phase.
-    const auto basic = parse_qsg_timing(
-        {.category = "qt.scenegraph.time.renderloop",
-         .text = "Frame rendered with 'basic' renderloop in 4ms, polish=0, sync=1, render=2, "
-                 "swap=1, frameDelta=16"});
+    const auto basic = parse_qsg_timing({
+        .category = "qt.scenegraph.time.renderloop",
+        .text = "Frame rendered with 'basic' renderloop in 4ms, polish=0, sync=1, render=2, "
+                "swap=1, frameDelta=16",
+    });
     REQUIRE(sample_of(basic, "qsg.polish_ms") == 0.0);
     REQUIRE(sample_of(basic, "qsg.swap_ms") == 1.0);
 
     // A frame boundary line carries no phase times.
     REQUIRE(
-        parse_qsg_timing({.category = "qt.scenegraph.time.renderloop",
-                          .text = "[window 0x1][gui thread] polishAndSync: start, elapsed since "
-                                  "last call: 0 ms"})
+        parse_qsg_timing({
+                             .category = "qt.scenegraph.time.renderloop",
+                             .text = "[window 0x1][gui thread] polishAndSync: start, elapsed since "
+                                     "last call: 0 ms",
+                         })
             .samples.empty());
 
-    const auto renderer = parse_qsg_timing(
-        {.category = "qt.scenegraph.time.renderer",
-         .text = "time in renderer: total=144ms, preprocess=143, updates=0, rendering=1"});
+    const auto renderer = parse_qsg_timing({
+        .category = "qt.scenegraph.time.renderer",
+        .text = "time in renderer: total=144ms, preprocess=143, updates=0, rendering=1",
+    });
     REQUIRE(sample_of(renderer, "qsg.renderer_ms") == 144.0);
     REQUIRE(sample_of(renderer, "qsg.renderer_preprocess_ms") == 143.0);
     REQUIRE(sample_of(renderer, "qsg.renderer_rendering_ms") == 1.0);
 
-    const auto glyphs = parse_qsg_timing(
-        {.category = "qt.scenegraph.time.glyph",
-         .text = "distancefield: 38 glyphs prepared in 7ms, rendering=2, upload=4"});
+    const auto glyphs = parse_qsg_timing({
+        .category = "qt.scenegraph.time.glyph",
+        .text = "distancefield: 38 glyphs prepared in 7ms, rendering=2, upload=4",
+    });
     REQUIRE(sample_of(glyphs, "qsg.glyph_ms") == 7.0);
     REQUIRE(sample_of(glyphs, "qsg.glyph_upload_ms") == 4.0);
 }
 
 TEST_CASE("texture and shader lines are kept as messages", "[profiling][qsg]") {
-    const auto texture = parse_qsg_timing({.category = "qt.scenegraph.time.texture",
-                                           .text = "plain texture uploaded: total=6ms, upload=2"});
+    const auto texture = parse_qsg_timing({
+        .category = "qt.scenegraph.time.texture",
+        .text = "plain texture uploaded: total=6ms, upload=2",
+    });
     REQUIRE(texture.as_message);
     REQUIRE(sample_of(texture, "qsg.texture_ms") == 6.0);
-    REQUIRE(parse_qsg_timing(
-                {.category = "qt.scenegraph.time.compilation", .text = "shader compiled in 9 ms"})
+    REQUIRE(parse_qsg_timing({
+                                 .category = "qt.scenegraph.time.compilation",
+                                 .text = "shader compiled in 9 ms",
+                             })
                 .as_message);
     // An unknown category or an unreadable line is not an error: nothing to plot.
-    REQUIRE(parse_qsg_timing({.category = "qt.scenegraph.time.other", .text = "anything=4"})
+    REQUIRE(parse_qsg_timing({
+                                 .category = "qt.scenegraph.time.other",
+                                 .text = "anything=4",
+                             })
                 .samples.empty());
-    REQUIRE(parse_qsg_timing(
-                {.category = "qt.scenegraph.time.renderer", .text = "total=ms, preprocess="})
+    REQUIRE(parse_qsg_timing({
+                                 .category = "qt.scenegraph.time.renderer",
+                                 .text = "total=ms, preprocess=",
+                             })
                 .samples.empty());
     // A key must start a word: "prerender=" is not "render=".
-    REQUIRE(parse_qsg_timing(
-                {.category = "qt.scenegraph.time.renderloop", .text = "frame rendered prerender=9"})
+    REQUIRE(parse_qsg_timing({
+                                 .category = "qt.scenegraph.time.renderloop",
+                                 .text = "frame rendered prerender=9",
+                             })
                 .samples.empty());
 }
