@@ -199,9 +199,29 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    refreshed with `tools/docs/update_guide_screenshots.py`, and it names what
    does not work yet, so read its "What this release is" box against the
    changelog.
+
+   Every pull request since the last tag that a person would notice has a
+   fragment in `changelog.d/` (or the `no-changelog` label, which says it has
+   none to write). `changelog-check.yml` asks at review time; this asks for the
+   whole interval, and should print only changes nobody reads about (a
+   dependency bump, a CI change):
+
+   ```sh
+   gh pr list --base develop --state merged --search "merged:>=<date of the last tag>" -L 300 \
+       --json number,title,labels,files --jq '.[]
+       | select(([.labels[].name] | index("no-changelog")) | not)
+       | select(([.files[].path] | map(startswith("changelog.d/")) | any) | not)
+       | "\(.number) \(.title)"'
+   ```
 2. **Rehearse.** Run the pipeline as a [dry run](#the-dry-run) from `develop`
-   and read what it produced. Do this before the *first* release, and again after
-   any change to the packaging or to this workflow.
+   (better: from a scratch branch that has run `prepare_release.py` for the
+   version, so the cut, the fragments and the version check are rehearsed too)
+   and read what it produced. Do this before every release: develop moves,
+   and the dependency baseline, Qt and the runner images with it. The last
+   rehearsal (2026-10-20, 0.2.0-beta.1 prepared on a scratch branch) passed on
+   all four builds, the signing, the SBOM and every attestation, and the files
+   it produced were verified with the commands in
+   [SECURITY.md](SECURITY.md#verifying-build-authenticity).
 3. **Prepare the release on a branch.**
 
    ```sh
@@ -309,6 +329,27 @@ branch):
 ```sh
 gh workflow run release.yml --ref <branch> -f dry_run=true
 ```
+
+To rehearse a particular version end to end, prepare it on a scratch branch
+that is never merged (no pull request: a `support/` branch into `develop` is
+not a valid flow), write a draft summary and caveat so the changelog check
+passes, and dispatch from it:
+
+```sh
+git switch -c support/release-<version>-dry-run origin/develop
+python tools/release/prepare_release.py <version>      # then write the summary and the caveat
+git commit -am "Prepare <version> (scratch branch, never merged)"
+git push origin support/release-<version>-dry-run
+gh workflow run release.yml --ref support/release-<version>-dry-run -f dry_run=true
+gh run download <run id> -n release-<version> -D dryrun      # the files and notes.md
+```
+
+With a warm vcpkg cache the run takes about an hour (the desktop builds are
+the long part, then a few minutes queued for the shared runners to sign); a
+cold one is hours. Check what it made with the commands in
+[SECURITY.md](SECURITY.md#verifying-build-authenticity) (use the
+`cubeulator-signing-key.asc` in the artifact, not the project's), then delete
+the scratch branch.
 
 Dry-run attestations are real attestations of files that were never released;
 they sit in the repository's attestations list under that run and are harmless.
