@@ -60,9 +60,10 @@ solution, and shows you the turns one at a time on a 3D cube.
       checked on recorded sessions of one cube in tungsten light and in backlit
       daylight, and on a webcam by hand. Other cameras, rooms and cubes are what
       the beta is for.
-    - **A sticker cannot be corrected by hand yet.** If one is read wrongly, the
-      scan will say the six sides do not make a cube, and you start the scan
-      again.
+    - **A cube is scanned by the camera only as a 3x3.** A 2x2 to a 5x5 is
+      followed from a scramble or colours you type in
+      ([Another size of cube](other-sizes.md)); a camera scan of one is not offered
+      yet.
     - **Some of the wording is English whatever language you choose:** the scan
       screen's guidance and most of the words around the solution. See
       [Settings and shortcuts](settings.md#language).

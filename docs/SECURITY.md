@@ -42,7 +42,7 @@ ship before you publish details: the advisory is where that is agreed.
 ## Supported versions
 
 Cubeulator is pre-1.0 and every release so far is a pre-release
-(`0.1.0-beta.N`). Only the newest release is supported: a fix lands on
+(`0.x.0-beta.N`). Only the newest release is supported: a fix lands on
 `develop` and ships in the next tagged release, and an older beta is not
 patched.
 
@@ -109,3 +109,30 @@ expected: the fingerprint above is what to compare.
 
 The two answer different questions. Provenance ties the bytes to *this
 repository and build*; the signature ties them to *the maintainer's key*.
+
+### The SBOM
+
+`Cubeulator-<version>.spdx.json` is an [SPDX](https://spdx.dev/) 2.3 software bill
+of materials: for each package, every component that ships inside it, with its
+version and licence, from the build's own third-party inventory. It is
+checked the way a package is, two ways:
+
+```sh
+# the same GPG signature, and a line of SHA512SUMS
+gpg --verify Cubeulator-<version>.spdx.json.asc Cubeulator-<version>.spdx.json
+
+# the SBOM GitHub holds for a package, signed through Sigstore: prints the
+# SPDX document it attests, which must match the file you downloaded
+gh attestation verify Cubeulator-<version>-linux-x64.deb \
+    --repo iainchesworthlabs/cubeulator \
+    --predicate-type https://spdx.dev/Document/v2.3 \
+    --format json --jq '.[].verificationResult.statement.predicate' > attested.spdx.json
+```
+
+Compare `attested.spdx.json` with the downloaded file as JSON (`jq -S . file`
+on both, then `diff`): they are the same document. The attestation is made for
+each package; any of the five will do.
+
+To check without network access to GitHub's attestation store, download the
+bundle once (`gh attestation download <file> --repo iainchesworthlabs/cubeulator`)
+and pass it back with `--bundle <file>.jsonl`.

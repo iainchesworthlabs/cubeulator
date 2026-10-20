@@ -179,6 +179,7 @@ class Render(unittest.TestCase):
         "Cubeulator-0.2.0-beta.1-linux-x64.deb",
         "Cubeulator-0.2.0-beta.1-linux-x64.rpm",
         "Cubeulator-0.2.0-beta.1-web.zip",
+        "Cubeulator-0.2.0-beta.1.spdx.json",
         "SHA512SUMS",
     ]
 
@@ -233,7 +234,11 @@ class Render(unittest.TestCase):
         self.assertIn("| Windows 10 and later, 64-bit | `Cubeulator-0.2.0-beta.1-windows-x64.exe` |", out)
         self.assertIn("build-provenance attestations, an SPDX SBOM and GPG signatures", out)
         self.assertIn("`gh attestation verify <file> --repo owner/repo`", out)
+        self.assertIn("/docs/SECURITY.md#verifying-build-authenticity)", out)
+        self.assertIn("| SBOM (SPDX 2.3) | `Cubeulator-0.2.0-beta.1.spdx.json` |", out)
+        self.assertNotIn("SBOM (SPDX 2.3)", self.render(attested=True))
         bare = self.render()
+        self.assertNotIn("SECURITY.md", bare)
         self.assertIn("Self-contained and SHA-512-summed:", bare)
         self.assertNotIn("gh attestation", bare)
         self.assertNotIn(".asc", bare)
@@ -319,10 +324,41 @@ class Prepare(unittest.TestCase):
         cmake = (root / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertEqual(prepare_release.full_version(cmake), "0.1.0")
 
+    MANIFEST = textwrap.dedent(
+        """\
+        {
+          "name": "cubeulator",
+          "version": "0.1.0",
+          "dependencies": [
+            { "name": "tracy", "version>=": "0.14.1" }
+          ]
+        }
+        """
+    )
+
+    def test_the_manifest_version_follows_and_a_dependency_constraint_does_not(self):
+        root = self.tree(UNRELEASED)
+        (root / "vcpkg.json").write_text(self.MANIFEST, encoding="utf-8", newline="")
+        rc = prepare_release.main(["0.3.0-rc.1", "--root", str(root), "--date", "2026-12-01"])
+        self.assertEqual(rc, 0)
+        manifest = json.loads((root / "vcpkg.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["version"], "0.3.0")
+        self.assertEqual(manifest["dependencies"][0]["version>="], "0.14.1")
+
+    def test_check_leaves_the_manifest_alone(self):
+        root = self.tree(UNRELEASED)
+        (root / "vcpkg.json").write_text(self.MANIFEST, encoding="utf-8", newline="")
+        prepare_release.main(["0.3.0-rc.1", "--root", str(root), "--check"])
+        self.assertEqual((root / "vcpkg.json").read_text(encoding="utf-8"), self.MANIFEST)
+
     def test_the_repository_is_in_a_state_the_tools_can_work_with(self):
         cmake = (prepare_release.ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertIsNotNone(prepare_release.project_version(cmake))
         self.assertIsNotNone(prepare_release.project_prerelease(cmake))
+        manifest = (prepare_release.ROOT / "vcpkg.json").read_text(encoding="utf-8")
+        self.assertEqual(
+            prepare_release.manifest_version(manifest), prepare_release.project_version(cmake)
+        )
         log = (prepare_release.ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertEqual(changelog.validate(log), [])
 
@@ -535,6 +571,26 @@ class Fragments(unittest.TestCase):
         self.assertIn("- **Fixed it.** It was broken.", log)
         self.assertEqual(list((root / "changelog.d").glob("*.fixed.md")), [])
 
+    def test_a_fragment_that_arrives_after_the_cut_is_folded_into_the_section(self):
+        root = self.tree(GOOD)
+        self.write(root, "late.fixed.md", "**Late fix.** It arrived after the cut.")
+        # the release refuses the leftover ...
+        self.assertTrue(check_release.check(root).problems)
+        # ... and --fold puts it in the newest section, after what was there
+        self.assertEqual(prepare_release.main(["0.2.0-beta.1", "--fold", "--root", str(root)]), 0)
+        log = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("- **The solver no longer stalls.** It finishes in seconds.\n- **Late fix.** It arrived after the cut.", log)
+        self.assertIn("## [0.2.0-beta.1] - 2026-11-02", log)  # the heading keeps its date
+        self.assertEqual(list((root / "changelog.d").glob("*.fixed.md")), [])
+        self.assertEqual(changelog.validate(log, "0.2.0-beta.1"), [])
+        self.assertEqual(prepare_release.main(["0.2.0-beta.1", "--fold", "--root", str(root)]), 0)  # nothing left
+
+    def test_fold_refuses_a_section_that_is_not_the_newest(self):
+        root = self.tree(GOOD)
+        self.write(root, "late.fixed.md", "**Late fix.** It arrived after the cut.")
+        self.assertEqual(prepare_release.main(["0.1.0", "--fold", "--root", str(root)]), 1)
+        self.assertTrue((root / "changelog.d" / "late.fixed.md").exists())
+
     def test_check_keeps_the_fragments(self):
         root = self.tree()
         self.write(root, "a.fixed.md", "**Fixed it.** It was broken.")
@@ -695,6 +751,15 @@ class Check(unittest.TestCase):
         bad = UNRELEASED.replace("- **Something.** It does a thing.", "- It does a thing.")
         dry = check_release.check(self.tree(bad), dry_run=True)
         self.assertTrue(any("bold lead-in" in p for p in dry.problems))
+
+    def test_a_manifest_that_names_another_version_is_refused(self):
+        root = self.tree(GOOD)
+        manifest = root / "vcpkg.json"
+        manifest.write_text(Prepare.MANIFEST, encoding="utf-8", newline="")  # says 0.1.0
+        result = check_release.check(root, tag="v0.2.0-beta.1")
+        self.assertTrue(any("vcpkg.json says" in p for p in result.problems), result.problems)
+        manifest.write_text(Prepare.MANIFEST.replace("0.1.0", "0.2.0"), encoding="utf-8", newline="")
+        self.assertEqual(check_release.check(root, tag="v0.2.0-beta.1").problems, [])
 
     def test_the_label_is_required_to_exist(self):
         root = self.tree(GOOD, cmake='project(Cubeulator\n    VERSION 0.2.0\n    LANGUAGES CXX)\n')
