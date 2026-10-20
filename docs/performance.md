@@ -18,6 +18,8 @@ estimate.
 | The one-off setup for a size, `nxn::prepare(size)` | seconds on a phone, off the UI thread, while a person scans or enters the cube | the geometry, the cycle library and the centre search's actions are built once per size on first use; the solve itself runs on a worker already |
 | Launch to a drawn first screen | no figure is committed; under about 2 s on a desktop is proposed here | nothing waits on it but the person |
 | One UI frame | 16.7 ms (60 Hz) | the display |
+| The models in the 3x3 cube | 80 at the Physically-Based and Glow looks, 106 at the Cel look; none of them switched off | a model costs creation, sync and memory whether or not it draws ([Screens](#screens)); held by `the cube makes the models it draws and none it hides` |
+| 3D cubes made by the launch screen | 1, the layout on show, after its first frame | the same; held by `Home makes the one cube it shows once its menu has been drawn` |
 
 ## How the numbers were taken
 
@@ -330,6 +332,94 @@ app ships and the distinction could go: `app.hpp`, `app.cpp`, three callers and
 the time-budget part of [testing](testing.md). Not done here; `tests/web` no
 longer takes the probe out.
 
+### Screens
+
+How long it takes to arrive on a screen, and what the screen costs once it is
+there, from the hidden `[screen-cost]` case of the system tests
+(`tests/system/screen_cost_test.cpp`, the real application with the fake
+camera, Direct3D 11 on an RTX 4090, `PriorityClass` High, base and branch
+alternated four times, medians over the repetitions after the first). `call` is
+how long the GUI thread was held by the navigation itself - the screen being
+made - and `tenth` the time to the tenth swapped frame after it; both in ms.
+
+| Screen | `call` before | after | `tenth` before | after | idle frames a second |
+|---|---|---|---|---|---|
+| Home (launch) | 22 | 2 | 224 | **169** | 0 (the cube turns when the setting is on) |
+| Settings (wide; the narrow layout makes no cube now) | 52 | 25 | 275 | **184** | 0 |
+| Solve, 3x3 | 13 | 12 | 176 | **155** | 1 |
+| Solution, 3x3 | 11 | 11 | 181 | **165** | 0 |
+| Entry, History | 3 to 6 | 3 | 135 to 143 | 136 to 145 | 0 |
+| Scan | 4 | 4 | 137 | 136 | 22 (the camera) |
+| Solve, 6x6 (`CubeNView`) | 9 | 9 | 142 | 143 | 28 (the layer nudging) |
+
+What is in it.
+
+- **A sticker was four models and is one.** The 3x3's cube built, for each of its
+  54 stickers, a panel for each of the three looks and one for the skeleton
+  placeholder, and switched three of them off: 270 models and as many
+  materials, 26 bodies and 26 cel-look outlines among them. Each is a
+  scene-graph node that is created, synced and kept whether or not it is
+  drawn. A sticker now makes the one panel its look asks for (a `Loader3D` over
+  four components), and the outline exists only in the Cel look: **80 models
+  at the first two looks and 106 at the third**, with the same picture. That is
+  the 25 to 35 % off arriving on Home and Settings and 10 % off the solve
+  and solution screens, which already made one cube.
+- **Home built both layouts' cubes**, one never drawn. It makes the one that is
+  on show (the earlier measurement put this at 150 ms of the screen's creation,
+  [Startup](#startup)), and only after the menu's first frame has been swapped:
+  the first frame of a 3D view is the longest the GUI thread is held at
+  start-up, and the buttons are what a person waits for. The real application on
+  Vulkan, eight alternated launches, medians from the process's first log line:
+  the menu is drawn at **1.14 s instead of 1.24**, everything settled at **1.36
+  s instead of 1.46**. The screen fades in over 280 ms as before; the cube arrives
+  inside that fade.
+- **Per-frame cost was never in it.** A hidden model is not drawn: the render
+  thread's `render.frame` is 0.5 to 1.1 ms on the launch and solve screens
+  before and after (Vulkan, Tracy, three alternated captures of 8 s each), at 46
+  and 28 frames a second. What the extra models cost is the time to make them
+  and the memory they hold, which is what a phone is short of.
+- **The first 3D frame in a process is Qt's, not ours.** The first `View3D` to
+  draw takes 0.6 to 1.3 s on Direct3D 11 here (`worst_gap` of the launch
+  screen's first repetition), whatever the scene: a bare `View3D` with one cube
+  and one light, built to find out (`qml.exe`, Direct3D 11), takes 0.5 to 0.95 s,
+  and 81 cubes with four lights, the probe and MSAA take 0.4 to 0.5. Qt Quick 3D's
+  own persistent shader cache (`QtQuick3DEditorHelpers::ShaderCache::
+  setAutomaticDiskCache`, a private function) was tried in the system tests and
+  the app: it writes a 130 to 400 KB file and the first frame took the same
+  time, so it is not used. A cube that is not a 3x3 stalls once more, 130 to 350 ms,
+  for its own materials (vertex-coloured plastic); warming that up before it is
+  asked for would move the stall to the Home screen, and is left.
+- **Backends** (the same harness, the first 3D frame in the process, two runs
+  each): Direct3D 11 650 and 640 ms, Direct3D 12 580 and 490 (and 50 to 100 ms gaps
+  in steady frames, which D3D11 does not have), OpenGL 390 and 250,
+  **Vulkan 350 and 150** - the second run is faster because Qt saves a pipeline
+  cache between runs (`qtpipelinecache` under the cache directory), which the
+  Direct3D 11 backend has nothing to save for. The app's default on Windows is
+  Direct3D 11; Vulkan is the person's choice in the settings and was the one the
+  real-application runs above used. Whether Vulkan should be the default is a
+  question of which drivers are in the field, not of this machine.
+- **The render loop**: the platform default (threaded on Windows) against
+  `QSG_RENDER_LOOP=basic`, eight alternated launches, settled 2.327 s and 2.335 s
+  on a busy machine: no difference, so there is nothing to gain from changing
+  it, and the harness's pin to `basic` stays a test-only measure
+  ([testing.md](testing.md)). Vertical sync off brings the first frames in
+  earlier (settled 1.32 s to 1.15 s) and is not a thing to ship.
+- **Idle.** Home spins its cube when the setting is on, as designed, and draws
+  every frame for it (46 a second, 0.5 to 1 ms of render-thread time each); the
+  solve screens nudge the layer to move, which is the same; History, Entry,
+  Settings and the solution draw nothing at rest. Nothing is drawing that should
+  not be.
+- **Not changed, measured: Qt Quick Controls' style.** Setting
+  `QT_QUICK_CONTROLS_STYLE=Basic` moved the first sync by 12 ms in six alternated
+  launches. Declaring the screens as `source:` URLs in `Main.qml` instead of as
+  `Component`s (so the engine resolves a screen's types when it is used)
+  moved it by 40 ms in eight, which was not worth the changes to
+  `SolutionScreen`'s bindings; neither is in the tree.
+
+The case is a measurement and asserts nothing about time, because time on a
+shared machine is not a number a test can hold. What holds are the two counts in
+the [budgets](#budgets), as unit tests.
+
 ## Cubes of any size
 
 `cube::nxn` solves a cube from 2x2 to 9x9 by reduction ([nxn-solver.md](nxn-solver.md)).
@@ -417,6 +507,7 @@ By what a person waits for, and how far it is from its budget, as found:
 | An unsolvable cube is answered at once | 2.5 to 6 s | under 0.1 ms, the same `no_solution` | [#74](https://github.com/iainchesworthlabs/cubeulator/pull/74) |
 | A frame is prepared once for both readers | 4.2 ms turned, 8.2 ms at 1080p | 2.2 ms, 3.6 ms; the same reads | [#78](https://github.com/iainchesworthlabs/cubeulator/pull/78) |
 | The cube's light probe is prefiltered once, not on every `View3D`'s first frame | llvmpipe 10 to 16 s a screen with the cube; a browser without a GPU stands still for 35 s at the start and 35 s at the close | 3 to 6 s (the cube itself); the 30th frame in 2 to 4 s; the close 1 s | this change, [above](#the-light-probe) |
+| A sticker of the 3x3 cube is the one model it draws; Home makes the one cube it shows, after its menu | Home 22 ms to make and 224 ms to the tenth frame; Settings 52 and 275; the cube 268 models | 2 and 169; 25 and 184; the cube 80 models (106 in the Cel look) | this change, [above](#screens) |
 
 The solver's cost per visit fell from 1.7 to 3.4 us to 0.15 to 0.29 us; what it
 did not change is the number of visits, and that is the one lever left (below).
@@ -431,14 +522,16 @@ old search gave.
   Measured here with that branch's files: **-550 ms of startup**, and the
   kit's loader (`bundled_fonts.cpp`) costs about 20 ms of it back. The thing to
   check when the kit lands is the startup timeline above, not just the glyphs.
-- **Two cubes per screen, four models per sticker.** About 140 ms per instance
-  to create, and the 57 to 168 ms the solve screen costs to arrive. Building
-  the layout that is on show only (a `Loader` on the width breakpoint), and the
-  shader style that is in use only (a `Loader3D` over the three sticker
-  models), would remove most of it. It is in the screens the experience plan's
-  E3 is rebuilding, so it is a recommendation to that lane and not a patch
-  here; the hidden cube's `autoRotate` timer also fires at 60 Hz for a view
-  nobody sees, which is worth the same Loader.
+- **Two cubes per screen, four models per sticker** were this entry until the
+  [Screens](#screens) change: Home made the one cube it shows and each
+  sticker one model. The other screens that build both a narrow and a wide
+  layout still build both, without a cube in either (the Settings screen made
+  its cube for the narrow layout too, where it is hidden, and now does not).
+  The controls of Settings are in both layouts twice over; that was not
+  measured and is not changed.
+- **The first 3D frame**, 0.4 to 1.3 s depending on the backend, is Qt's
+  (`Screens`). The one thing it could be moved off is the person's attention:
+  the menu now draws before it, and a window-sized splash would not buy more.
 - **Showing the window and the first frame**, 577 ms and about 350 ms: the
   native window, the graphics device and the first pipelines. It does not
   change with the 3D cubes removed (the experiment above), so it is Qt and the
@@ -487,6 +580,9 @@ $BIN/cube_system_tests "[journey]"
 
 # Qt's own frame timings: launch the app with
 #   QSG_RENDER_TIMING=1  QT_LOGGING_RULES=qt.scenegraph.time.renderloop=true
+
+# the screens: arriving on each (call, tenth frame, idle frames a second)
+CUBE_SCREEN_COST=1 $BIN/cube_system_tests "[screen-cost]"
 
 # the light probe: the time to the fifth frame of a screen with the cube,
 # with the probe and without it, on the software renderer the CI uses (Mesa)

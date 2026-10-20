@@ -6,6 +6,17 @@ Rectangle {
     color: Theme.paper
     readonly property bool wide: width >= Theme.wideBreakpoint
 
+    // The cube is made once the menu has been drawn, not before: the first
+    // frame of a 3D view is the longest the GUI thread is held at start-up
+    // (docs/performance.md, "Screens"), and the person waits for the buttons,
+    // not for the cube.
+    property bool menuDrawn: false
+    Connections {
+        target: root.Window.window
+        enabled: !root.menuDrawn
+        function onFrameSwapped() { root.menuDrawn = true; }
+    }
+
     // ---- narrow (phone) ----
     Column {
         visible: !root.wide
@@ -25,15 +36,21 @@ Rectangle {
         Item {
             width: parent.width
             height: root.height - 360
-            Cube3DView {
-                width: 190; height: 190
+            // Only the layout that is on show has a cube: the other was built
+            // and never drawn, and a cube costs more to make than the rest of
+            // the screen put together.
+            Loader {
+                active: root.menuDrawn && !root.wide
                 anchors.centerIn: parent
-                shaderStyle: SettingsState.shaderStyleIndex
-                autoRotate: SettingsState.cubeAutoRotate
-                autoRotateSpeed: SettingsState.rotateSpeedValue
-                showStats: SettingsState.statsForNerds && !root.wide
-                LayoutMirroring.enabled: false
-                LayoutMirroring.childrenInherit: true
+                sourceComponent: Cube3DView {
+                    width: 190; height: 190
+                    shaderStyle: SettingsState.shaderStyleIndex
+                    autoRotate: SettingsState.cubeAutoRotate
+                    autoRotateSpeed: SettingsState.rotateSpeedValue
+                    showStats: SettingsState.statsForNerds && !root.wide
+                    LayoutMirroring.enabled: false
+                    LayoutMirroring.childrenInherit: true
+                }
             }
         }
 
@@ -179,15 +196,18 @@ Rectangle {
 
             Rectangle { anchors.left: parent.left; width: 2; height: parent.height; color: Theme.divider }
 
-            Cube3DView {
-                width: 320; height: 320
+            Loader {
+                active: root.menuDrawn && root.wide
                 anchors.centerIn: parent
-                shaderStyle: SettingsState.shaderStyleIndex
-                autoRotate: SettingsState.cubeAutoRotate
-                autoRotateSpeed: SettingsState.rotateSpeedValue
-                showStats: SettingsState.statsForNerds && root.wide
-                LayoutMirroring.enabled: false
-                LayoutMirroring.childrenInherit: true
+                sourceComponent: Cube3DView {
+                    width: 320; height: 320
+                    shaderStyle: SettingsState.shaderStyleIndex
+                    autoRotate: SettingsState.cubeAutoRotate
+                    autoRotateSpeed: SettingsState.rotateSpeedValue
+                    showStats: SettingsState.statsForNerds && root.wide
+                    LayoutMirroring.enabled: false
+                    LayoutMirroring.childrenInherit: true
+                }
             }
         }
     }

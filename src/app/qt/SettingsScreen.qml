@@ -420,15 +420,20 @@ Rectangle {
                 anchors.centerIn: parent
                 spacing: Theme.space4
 
-                Cube3DView {
-                    id: previewCube
-                    width: 280; height: 280
-                    shaderStyle: SettingsState.shaderStyleIndex
-                    autoRotate: SettingsState.cubeAutoRotate
-                    autoRotateSpeed: SettingsState.rotateSpeedValue
-                    showStats: SettingsState.statsForNerds
-                    LayoutMirroring.enabled: false
-                    LayoutMirroring.childrenInherit: true
+                // Made for the wide layout only: the narrow one has no room
+                // for it and the cube is most of what this screen costs to make.
+                Loader {
+                    id: previewLoader
+                    active: root.wide
+                    sourceComponent: Cube3DView {
+                        width: 280; height: 280
+                        shaderStyle: SettingsState.shaderStyleIndex
+                        autoRotate: SettingsState.cubeAutoRotate
+                        autoRotateSpeed: SettingsState.rotateSpeedValue
+                        showStats: SettingsState.statsForNerds
+                        LayoutMirroring.enabled: false
+                        LayoutMirroring.childrenInherit: true
+                    }
                 }
 
                 AppButton {
@@ -445,8 +450,10 @@ Rectangle {
                         // using the same layer being turned - a stand-in for
                         // "this is the layer you're about to move" until the
                         // solve-visualisation session wires up real data.
-                        previewCube.highlightedLayer = { axis: axis, layer: layer };
-                        previewCube.turnLayer(axis, layer, true);
+                        if (previewLoader.item === null)
+                            return;
+                        previewLoader.item.highlightedLayer = { axis: axis, layer: layer };
+                        previewLoader.item.turnLayer(axis, layer, true);
                     }
                 }
             }

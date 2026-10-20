@@ -30,6 +30,7 @@ add_executable(cube_system_tests
     render_test.cpp
     tour_test.cpp
     probe_cost_test.cpp
+    screen_cost_test.cpp
     known_today_test.cpp
     history_test.cpp
     entry_test.cpp
