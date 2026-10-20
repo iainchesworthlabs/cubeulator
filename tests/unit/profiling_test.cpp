@@ -5,6 +5,7 @@
 #include <cube/profiling.hpp>
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -143,6 +144,62 @@ TEST_CASE("the command line outranks the environment, and the last flag wins",
     // Only the two flags, spelled exactly, count.
     REQUIRE(decide(false, nullptr, unrelated) ==
             startup_decision{.enabled = false, .source = switch_source::build_default});
+}
+
+TEST_CASE("wait asks for the application to hold for a profiler", "[profiling][session]") {
+    // The environment's "wait" and the --profile-wait flag both start the
+    // profiler and ask to wait for a client; nothing else asks to wait.
+    REQUIRE(decide(false, "wait") == startup_decision{
+                                         .enabled = true,
+                                         .source = switch_source::environment,
+                                         .wait = true,
+                                     });
+    REQUIRE(decide(false, "WAIT").wait);
+    constexpr std::array<std::string_view, 1> wait_flag{"--profile-wait"};
+    REQUIRE(decide(false, nullptr, wait_flag) == startup_decision{
+                                                     .enabled = true,
+                                                     .source = switch_source::command_line,
+                                                     .wait = true,
+                                                 });
+    // A later --no-profile cancels it, and a plain --profile does not wait.
+    constexpr std::array<std::string_view, 2> cancelled{"--profile-wait", "--no-profile"};
+    REQUIRE_FALSE(decide(false, nullptr, cancelled).enabled);
+    REQUIRE_FALSE(decide(false, nullptr, cancelled).wait);
+    constexpr std::array<std::string_view, 1> plain{"--profile"};
+    REQUIRE_FALSE(decide(false, "wait", plain).wait);
+    REQUIRE_FALSE(decide(true, "1").wait);
+}
+
+TEST_CASE("waiting for a profiler gives up at the timeout and never longer",
+          "[profiling][session]") {
+    using cube::profile::wait_policy;
+    using std::chrono::milliseconds;
+    // Already true: no waiting at all.
+    REQUIRE(cube::profile::wait_until([] { return true; },
+                                      {.timeout = milliseconds{1000}, .poll = milliseconds{5}}));
+
+    // True on the third look: returns true, well inside the timeout.
+    int looks = 0;
+    const auto start = std::chrono::steady_clock::now();
+    const bool became_true = cube::profile::wait_until(
+        [&looks] {
+            ++looks;
+            return looks == 3;
+        },
+        {.timeout = milliseconds{5000}, .poll = milliseconds{5}});
+    REQUIRE(became_true);
+    REQUIRE(looks == 3);
+    REQUIRE(std::chrono::steady_clock::now() - start < milliseconds{2000});
+
+    // Never true: false after about the timeout, not before it.
+    const auto before = std::chrono::steady_clock::now();
+    REQUIRE_FALSE(cube::profile::wait_until(
+        [] { return false; }, wait_policy{.timeout = milliseconds{60}, .poll = milliseconds{5}}));
+    REQUIRE(std::chrono::steady_clock::now() - before >= milliseconds{60});
+
+    // A session whose profiler is not running does not wait at all.
+    const cube::profile::Session idle(startup_decision{.enabled = false});
+    REQUIRE_FALSE(idle.wait_for_profiler(milliseconds{5000}));
 }
 
 TEST_CASE("arguments_of skips the program name", "[profiling][session]") {

@@ -40,6 +40,9 @@ inline constexpr bool to_recorder = true;
 [[nodiscard]] constexpr bool active() noexcept {
     return true;
 }
+[[nodiscard]] constexpr bool connected() noexcept {
+    return false;
+}
 inline void start() noexcept {}
 inline void stop() noexcept {}
 
