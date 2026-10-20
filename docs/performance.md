@@ -405,16 +405,16 @@ What is in it.
   ([testing.md](testing.md)). Vertical sync off brings the first frames in
   earlier (settled 1.32 s to 1.15 s) and is not a thing to ship.
 - **When the solve lands** the GUI thread is held 24 to 29 ms
-  (`app.solve.apply_result`, three captures of the 3x3 demo; 30 ms at 6x6):
-  taking the result from the worker is 0.01 to 0.03 ms, the solution signal 0.005,
-  and **the state signal 24 to 28 ms**, which is the solve screen's bindings
-  re-evaluating. It is not the controller's getters (the four that build lists and
-  maps total 0.15 ms of it), not the cube's sticker colours and not the list of
-  stages - each taken out in turn changed nothing - so it is spread over the
-  screen's 50 bindings on the controller, and a QML profiler is the next tool.
-  That is a hitch of one or two frames on a desktop, and three to five on a
-  phone if it scales like the rest. The three child zones are in the tree to
-  find it with.
+  (`app.solve.apply_result`, three captures of the 3x3 demo; 30 ms at 6x6).
+  Taking the result from the worker is 0.01 to 0.03 ms and the solution signal
+  0.005; **the state signal is 24 to 28 ms, and that is the solve screen being
+  made**, because the screen change is made inside that signal (`AppState`'s
+  `showSolutionWhenReady`, and the demo's own slot). The controller's getters
+  total 0.15 ms of it, and taking the cube's sticker colours or the list of
+  stages out changed nothing. So the cost is the one `call` measures above, 11
+  to 13 ms warm, plus the signal's other listeners. A hitch of one or two frames
+  on a desktop; three to five on a phone if it scales like the rest. The three
+  child zones are in the tree to see it with.
 - **Idle.** Home spins its cube when the setting is on, as designed, and draws
   every frame for it (46 a second, 0.5 to 1 ms of render-thread time each); the
   solve screens nudge the layer to move, which is the same; History, Entry,
