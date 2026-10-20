@@ -2,13 +2,12 @@
 
 The solve screen of a 3x3 watches the cube in the person's hands: it works out how the cube is held
 (and turns the cube on screen to match), sees the move that was asked for being made and steps on
-by itself, and names a wrong turn. A 2x2, 4x4, 5x5 or 6x6 shows the camera's picture
-([`nxn-ui-parity.md`](nxn-ui-parity.md), gap 6) but follows nothing: the person presses **Next
-turn** after every move. This page is the design for closing that gap, and the record of what is
-known about it and what is not. The code is `HeldCube`
-(`src/app/qt/controllers/held_cube.cpp`) and `cube::vision::read_hold`
-(`src/lib/include/cube/vision/held_cube.hpp`); the 3x3 half is described in
-[`recovery-plan.md`](recovery-plan.md) and is not changed by any of this.
+by itself, and names a wrong turn. A 2x2, 4x4, 5x5 or 6x6 showed the camera's picture but followed
+nothing ([`nxn-ui-parity.md`](nxn-ui-parity.md), gap 6): the person pressed **Next turn** after every
+move. This page is the design for closing that gap, and the record of what is known about it and what
+is not. The code is `HeldCube` (`src/app/qt/controllers/held_cube.cpp`, `judge_n` for a cube that is
+not a 3x3) and `cube::vision::read_hold` (`src/lib/include/cube/vision/held_cube.hpp`); the 3x3 half
+is described in [`recovery-plan.md`](recovery-plan.md) and is not changed by any of this.
 
 The rule that governs all of it is the 3x3's: **a wrong read must never step the solution.** Being told
 a correct move was wrong, or having a move skipped, is worse than pressing a button. Everything below
@@ -119,16 +118,17 @@ Rescan (`solve.rescan`) and Check colours stay where they are for every size.
 
 ## Plan
 
-1. **The library** (this page's first change): `nxn::camera_view` (the side a camera sees under a hold,
-   at any size), `read_hold`, `fit_holds` and `stickers_off` for an `NCube`, `hold_clear_distance`. Tested
-   against the 3x3 (byte for byte at size 3) and on drawn sides of 2x2 to 6x6 from every hold.
-2. **The controller and the screen**: `HeldCube` follows a cube of any size; the cube on screen turns to
-   the hold; the words above. Tested with the app's own scan, solve and a camera fed drawn frames,
-   including the cases that must not step: a wrong side, a glint, a finger, a hidden layer, a move
-   half-made, noise on every cell.
-3. **A measurement**: `cube_scan holds` for a bigger cube's recording, so that the margin and the vote
-   can be set on a real cube's reads. Until it has been run on a cube *turned* in the hand, the
-   thresholds are an argument.
+1. **The library** (done, #215): `nxn::camera_view` (the side a camera sees under a hold, at any size),
+   `read_hold`, `fit_holds` and `stickers_off` for an `NCube`, `hold_clear_distance`. Tested against the 3x3
+   (byte for byte at size 3) and on drawn sides of 2x2 to 6x6 from every hold.
+2. **The controller and the screen** (done): `HeldCube::judge_n` follows a cube of any size; the cube on
+   screen turns to the hold; `HeldCube.moveHidden` and the words for a layer the camera cannot see. Tested
+   with the app's own scan, solve and a camera fed drawn frames (`held_cube_controller_test.cpp`,
+   `solve_screen_nxn_test.cpp`), including the cases that must not step: a glint on one cell, a hidden layer,
+   another side turned, a side that fits nothing.
+3. **A measurement**: `cube_scan holds` for a bigger cube's recording ([Measured](#measured)). Until it has been
+   run on a cube *turned* in the hand, the thresholds are an argument. What remains unvalidated is listed
+   there: moves on a real cube of any bigger size, a hand across the side while it is turned, a 6x6 at all.
 
 ## Measured
 

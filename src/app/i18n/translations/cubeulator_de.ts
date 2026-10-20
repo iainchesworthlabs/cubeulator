@@ -1402,10 +1402,10 @@ In deinen Händen.</translation>
         <extracomment>Small label above the three method buttons when the cube is bigger than 3x3: the methods apply to the 3x3 the cube has become, so they are said to be how it is finished.</extracomment>
         <translation>Abschließen mit</translation>
     </message>
-    <message id="solve.camera.shownOnly">
-        <source>Your cube is on camera, but a bigger cube is not followed yet. Press Next turn after each move.</source>
-        <extracomment>Shown under the move on the solve screen of a cube bigger than 3x3, beside the camera preview: the camera shows the cube being solved, but only a 3x3's turns are recognised, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
-        <translation>Dein Würfel ist im Bild, aber ein größerer Würfel wird noch nicht verfolgt. Drücke nach jedem Zug auf „Nächste Drehung“.</translation>
+    <message id="solve.camera.layerHidden">
+        <source>Matched. The camera cannot see this layer from here: press Next turn after this move.</source>
+        <extracomment>Shown beside the camera preview on the solve screen of a cube bigger than 3x3 when the layer to turn is one the side facing the camera does not show (a layer behind the front one, say): the camera cannot tell that it was turned, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
+        <translation>Erkannt. Die Kamera kann diese Ebene von hier aus nicht sehen: Drücke nach diesem Zug auf „Nächste Drehung“.</translation>
     </message>
     <message id="solve.finish">
         <source>Finish</source>

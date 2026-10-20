@@ -1402,10 +1402,10 @@ En tus manos.</translation>
         <extracomment>Small label above the three method buttons when the cube is bigger than 3x3: the methods apply to the 3x3 the cube has become, so they are said to be how it is finished.</extracomment>
         <translation>Terminar con</translation>
     </message>
-    <message id="solve.camera.shownOnly">
-        <source>Your cube is on camera, but a bigger cube is not followed yet. Press Next turn after each move.</source>
-        <extracomment>Shown under the move on the solve screen of a cube bigger than 3x3, beside the camera preview: the camera shows the cube being solved, but only a 3x3's turns are recognised, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
-        <translation>Tu cubo está en cámara, pero un cubo más grande aún no se sigue. Pulsa «Siguiente giro» después de cada movimiento.</translation>
+    <message id="solve.camera.layerHidden">
+        <source>Matched. The camera cannot see this layer from here: press Next turn after this move.</source>
+        <extracomment>Shown beside the camera preview on the solve screen of a cube bigger than 3x3 when the layer to turn is one the side facing the camera does not show (a layer behind the front one, say): the camera cannot tell that it was turned, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
+        <translation>Reconocido. La cámara no puede ver esta capa desde aquí: pulsa «Siguiente giro» después de este movimiento.</translation>
     </message>
     <message id="solve.finish">
         <source>Finish</source>

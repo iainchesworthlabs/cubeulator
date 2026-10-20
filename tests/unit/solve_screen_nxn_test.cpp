@@ -402,20 +402,62 @@ TEST_CASE(
         }
         CHECK(shown == stickers);
 
-        // What it says of a bigger cube is that it is shown and not followed, and the cube
-        // is not matched against it: a side in view means nothing to the solution.
+        // And the cube is followed from it: a side held up is matched against the cube.
         const auto* words = qobject_cast<QQuickItem*>(screen.find("solve.words"));
         REQUIRE(words != nullptr);
         CHECK(words->isVisible());
         CHECK(words->property("text").toString() == screen.get("cameraWords").toString());
-        CHECK(words->property("text").toString().contains("shownOnly"));
-        CHECK(scanned.app().held.sight() == "none");
-        CHECK_FALSE(scanned.app().held.seen());
+        CHECK_FALSE(words->property("text").toString().isEmpty());
+        CHECK(scanned.app().held.sight() == "matched");
+        CHECK(scanned.app().held.seen());
 
         // Off for a solve that has no scan behind it: typed in, or carried on from history.
         REQUIRE(scanned.state()->setProperty("solveCamera", false));
         QCoreApplication::processEvents();
         CHECK_FALSE(preview->isVisible());
+    }
+}
+
+TEST_CASE("a bigger cube turned in view of the camera steps the solution on, on the screen",
+          "[qml][solve-screen][nxn][camera-follow]") {
+    for (const int size : {4, 5}) {
+        INFO("size " << size);
+        const ScannedAndSolving scanned(size);
+        REQUIRE(scanned.state()->setProperty("screen", QStringLiteral("solve")));
+        Screen screen;
+        screen.settle();
+        SolveController& solver = scanned.app().solve;
+        cube::app::DirectScan& camera = scanned.app().directScan;
+        const cube::nxn::NCube before = solver.plan().current_cube();
+        const cube::nxn::NCube moved = solver.plan().cube_at(solver.plan().current_index() + 1);
+        const auto hold =
+            cube::test::hold_that_sees_n(before, moved, 3, solver.plan().current_move().face);
+        REQUIRE(hold.has_value());
+        const auto frame = [&](const cube::nxn::NCube& cube) {
+            return cube::test::draw_side(cube::nxn::camera_view(cube, *hold),
+                                         cube::test::pose_for(size));
+        };
+
+        // The cube is shown as it stands; the cube on screen turns to the way it is held.
+        for (int i = 0; i < 12; ++i) {
+            camera.processFrame(frame(before));
+        }
+        CHECK(scanned.app().held.hold() == *hold);
+        CHECK(solver.moveIndex() == 0);
+        camera.processFrame(cube::test::room({640, 360}));
+
+        // The move is made: the screen turns the layer and steps on by itself.
+        for (int i = 0; i < 12; ++i) {
+            camera.processFrame(frame(moved));
+        }
+        REQUIRE(wait_for([&]() { return solver.moveIndex() == 1; }));
+
+        // And the one move only.
+        for (int i = 0; i < 40; ++i) {
+            camera.processFrame(frame(moved));
+        }
+        QCoreApplication::processEvents();
+        CHECK(solver.moveIndex() == 1);
     }
 }
 
