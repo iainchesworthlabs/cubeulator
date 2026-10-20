@@ -190,7 +190,10 @@ jobs:
           CTEST_ARGS: ${{ matrix.ctest_args }}
           ASAN_OPTIONS: detect_stack_use_after_return=1:strict_string_checks=1:print_stacktrace=1
           UBSAN_OPTIONS: print_stacktrace=1
-          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppressions=${{ github.workspace }}/ci/tsan.supp
+          # OpenCV's own thread pool is not instrumented (ci/tsan.supp); one
+          # thread keeps its races out of the report in the first place.
+          OPENCV_FOR_THREADS_NUM: "1"
         # shellcheck disable=SC2086 # CTEST_ARGS is a word list on purpose
         run: ctest --preset "$PRESET" --timeout 1800 -j 4 $CTEST_ARGS
 
