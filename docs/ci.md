@@ -24,6 +24,36 @@ See [Branch protection and the merge queue](branch-protection.md) for which
 checks are required on `develop` and `main`, how the queue is configured, and
 the `merge_group` rule a workflow has to follow to be part of it.
 
+### Documentation-only changes
+
+A pull request (or merge-queue entry) whose every changed file is documentation
+builds and tests nothing. `plan` runs `.github/actions/changed-code`, which
+diffs the merge commit against its first parent (a queue entry against its
+`base_sha`) and outputs `code=false` when each changed file is under `docs/`
+(except `docs/design/`, which the icon rasterising, the packaging and the
+translation tests read), `changelog.d/`, `.github/ISSUE_TEMPLATE/`, is
+`mkdocs.yml`, a root-level `*.md` or `LICENSE*`. Anything else, an empty or
+failed diff, and every event that is not a pull request or queue entry (a
+push, a manual run, a schedule), is `code=true`.
+
+What `code=false` does, and why it is built this way:
+
+- **The required checks still report.** A job skipped by `if:` reports under
+  the raw text of its `name:` expression, not under the name it would have had,
+  so a required check skipped that way is never reported and the pull request
+  waits for it for ever (`workflow-level paths:` filters have the same
+  fault). So `clang-tidy`, the three build legs, `Coverage (Linux, GCC)` and
+  CodeQL's `Analyze (C++)` are not skipped: they run, say "Nothing to build or
+  test (documentation only)" and skip every other step, and finish in seconds
+  as successes. The build legs are given an Ubuntu runner for it, not a macOS
+  or Windows one.
+- **The rest skips whole.** Android, iOS, Web, Web tests and the Linux system
+  tests are not required, so they are skipped by `if:`. If one is ever made a
+  required check it needs the same treatment as the legs above first.
+- **Still runs on documentation:** `clang-format`, `platform-isolation`,
+  `Changelog fragment`, `Docs build (strict)`, `Validate gitflow branch name`,
+  `Scan dependency diff`, Zizmor and OSV-Scanner.
+
 ### Running some legs by hand
 
 A push or pull request always runs every leg of `ci.yml` (a queue entry runs
