@@ -25,6 +25,8 @@ set(CUBE_PLATFORM_CONTRACT_VARIABLES
     CUBEULATOR_PLATFORM_NOTICES_DIR
     CUBEULATOR_PLATFORM_SOURCES
     CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES
+    CUBEULATOR_PLATFORM_PROFILING_VULKAN
+    CUBEULATOR_PLATFORM_PROFILING_OPENGL
     CUBEULATOR_PLATFORM_LINK_LIBRARIES
     CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES
     CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS
@@ -51,8 +53,10 @@ endmacro()
 # Checks the fragment that was just included (in the caller's scope):
 #   - every contract variable is defined (an empty string is a definition);
 #   - every hook exists;
-#   - CUBEULATOR_PLATFORM_DESKTOP, CUBEULATOR_PLATFORM_TEST_HIDE_WINDOW and
-#     CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA are ON or OFF;
+#   - CUBEULATOR_PLATFORM_DESKTOP, CUBEULATOR_PLATFORM_TEST_HIDE_WINDOW,
+#     CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA and
+#     CUBEULATOR_PLATFORM_PROFILING_VULKAN and
+#     CUBEULATOR_PLATFORM_PROFILING_OPENGL are ON or OFF;
 #   - every file the fragment compiles, or names for the library to compile,
 #     exists under <app_dir> (src/app).
 # `fragment` only names it in the message.
@@ -75,7 +79,8 @@ function(cube_platform_check_contract fragment app_dir)
     endforeach()
 
     foreach(_flag CUBEULATOR_PLATFORM_DESKTOP CUBEULATOR_PLATFORM_TEST_HIDE_WINDOW
-                  CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA)
+                  CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA CUBEULATOR_PLATFORM_PROFILING_VULKAN
+                  CUBEULATOR_PLATFORM_PROFILING_OPENGL)
         if(NOT ${_flag} STREQUAL "ON" AND NOT ${_flag} STREQUAL "OFF")
             message(FATAL_ERROR
                 "${fragment}: ${_flag} must be ON or OFF, not '${${_flag}}'.")

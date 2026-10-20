@@ -1,0 +1,9 @@
+# ThreadSanitizer suppressions for the nightly's TSan build (nightly.yml).
+#
+# vcpkg builds OpenCV without TSan, and its parallel_for runs on pthreads that
+# TSan cannot see synchronise, so it reports races inside OpenCV's own code
+# (contours_truco.cpp: approxContour, in a first run, on every case that reads
+# a side). A race that lies inside OpenCV is OpenCV's, or an artefact of the
+# missing instrumentation; a race in this repository's code that merely calls
+# OpenCV still has its own frames and is not matched by these.
+race:cv::

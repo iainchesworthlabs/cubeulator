@@ -33,7 +33,12 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/posix/crash_handler_posix.cpp)
 
 # The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
-set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_d3d11_none.cpp)
+set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_none.cpp)
+
+# No Vulkan backend for Tracy here (macOS and iOS render with Metal; Android and
+# the browser have not been exercised).
+set(CUBEULATOR_PLATFORM_PROFILING_VULKAN OFF)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
 
 set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")

@@ -3,9 +3,11 @@
 #include "desktop/desktop_integration.hpp"
 #include "interfaces/crash_handler.hpp"
 #include "kit/bundled_fonts.hpp"
+#include "qsg_log_bridge.hpp"
 #include "render_profiler.hpp"
 
 #include <cube/nxn/cube.hpp>
+#include <cube/profile/session.hpp>
 #include <cube/profiling.hpp>
 #include <cube/solver/solver.hpp>
 #include <cube/version.hpp>
@@ -14,6 +16,7 @@
 #include <QMetaObject>
 #include <QQuickWindow>
 #include <QSettings>
+#include <QThreadPool>
 
 #include <algorithm>
 #include <memory>
@@ -52,9 +55,65 @@ void applyPersistedGraphicsBackend() {
     // per-platform guarding needed here.
 }
 
+// What switched the profiler on, for the one line the application logs.
+const char* profilingSwitchName(cube::profile::switch_source source) {
+    switch (source) {
+        case cube::profile::switch_source::command_line:
+            return "--profile";
+        case cube::profile::switch_source::environment:
+            return "CUBEULATOR_PROFILE";
+        case cube::profile::switch_source::build_default:
+            break;
+    }
+    return "this build profiles by default";
+}
+
+// Holds the profiler's shutdown back until the pool threads that may be inside
+// a zone have finished (a solve is one): Tracy's client must not be torn down
+// while a thread can still write to it. It must be destroyed while the
+// QGuiApplication still exists (the global pool goes with it) and before the
+// profiling Session, so main() declares it right after the application.
+class ProfilerQuiesce {
+public:
+    explicit ProfilerQuiesce(const cube::profile::Session& session) : session_(session) {}
+    ~ProfilerQuiesce() {
+        if (session_.running()) {
+            constexpr int kWaitMs = 5000;
+            QThreadPool::globalInstance()->waitForDone(kWaitMs);
+        }
+    }
+    ProfilerQuiesce(const ProfilerQuiesce&) = delete;
+    ProfilerQuiesce& operator=(const ProfilerQuiesce&) = delete;
+    ProfilerQuiesce(ProfilerQuiesce&&) = delete;
+    ProfilerQuiesce& operator=(ProfilerQuiesce&&) = delete;
+
+private:
+    const cube::profile::Session& session_;
+};
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
+    // The profiler comes first of all, so every thread the application starts
+    // can name itself to it and the whole run is on the timeline. The Tracy
+    // client linked into this binary is dormant: nothing listens and a zone is
+    // one atomic load until this says otherwise - a Debug build by default, any
+    // other build when CUBEULATOR_PROFILE is set or --profile is passed (no
+    // recompile; docs/profiling.md). Declared first so it is destroyed last,
+    // after every worker has stopped.
+    const QByteArray profile_environment = qgetenv(cube::profile::environment_variable);
+    const auto profile_arguments = cube::profile::arguments_of(argc, argv);
+    const cube::profile::Session profiling(cube::profile::decide_startup(
+        cube::profile::build_default_on(),
+        profile_environment.isNull() ? nullptr : profile_environment.constData(),
+        profile_arguments));
+    if (profiling.running()) {
+        cube::app::installQsgLogBridge();
+        qInfo("Tracy profiler started (%s): connect a Tracy 0.14 profiler to 127.0.0.1:%s",
+              profilingSwitchName(profiling.decision().source),
+              qPrintable(qEnvironmentVariable("TRACY_PORT", QStringLiteral("8086"))));
+    }
+
     // Installed before anything else so a fault during startup is captured
     // too. What it installs, if anything, is the platform's own business
     // (interfaces/crash_handler.hpp).
@@ -63,6 +122,10 @@ int main(int argc, char* argv[]) {
     applyPersistedGraphicsBackend();
 
     QGuiApplication app(argc, argv);
+
+    // Destroyed before the application (and its global thread pool) and after
+    // the runtime that owns the workers: see ProfilerQuiesce.
+    const ProfilerQuiesce profiling_quiesce(profiling);
 
     // The fonts compiled into the app (:/fonts) are registered before any QML
     // asks for a family. A build that has none is unaffected.
@@ -104,7 +167,7 @@ int main(int argc, char* argv[]) {
     // connections, not queued: the marks must timestamp the swap itself).
     // The unnamed frame set is the vision pass and "Capture" the camera -
     // three unrelated cadences, three sets.
-    if (QQuickWindow* window = runtime.window()) {
+    if (QQuickWindow* window = runtime.window(); window != nullptr && cube::profiling::active()) {
         cube::app::RenderProfiler::install(*window);
     }
 

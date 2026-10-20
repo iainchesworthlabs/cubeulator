@@ -359,6 +359,25 @@ TEST_CASE("a 3x3 is reviewed in the 3x3's view with the rows it always had",
     }
 }
 
+TEST_CASE("the cube of a bigger cube is reviewed in the shader style Settings has chosen",
+          "[qml][solution-screen][nxn]") {
+    SolveController& solver = cube::test::app_controllers().solve;
+    solver.solveCube(cube::nxn::random_scramble({.size = 4, .seed = 5, .moves = 60}));
+    REQUIRE(wait_for([&]() { return !solver.isSolving(); }, 60'000));
+
+    Screen screen;
+    screen.settle();
+    QObject* settings =
+        cube::test::qml_engine().singletonInstance<QObject*>("Cubeulator", "SettingsState");
+    REQUIRE(settings != nullptr);
+    const QVariant before = settings->property("shaderStyleIndex");
+    for (const int style : {1, 2, 0}) {
+        INFO("style " << style);
+        REQUIRE(settings->setProperty("shaderStyleIndex", style));
+        CHECK(screen.cube()->property("shaderStyle").toInt() == style);
+    }
+    REQUIRE(settings->setProperty("shaderStyleIndex", before));
+}
 // Pictures of the solution screen of a bigger cube, for looking at rather than for
 // checking. Hidden ("[.gallery]") and inert unless CUBE_GALLERY_DIR names a
 // directory: the real SolutionScreen in a real window, parked off-screen, saved as

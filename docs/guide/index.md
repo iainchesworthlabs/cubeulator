@@ -60,10 +60,11 @@ solution, and shows you the turns one at a time on a 3D cube.
       checked on recorded sessions of one cube in tungsten light and in backlit
       daylight, and on a webcam by hand. Other cameras, rooms and cubes are what
       the beta is for.
-    - **A cube is scanned by the camera only as a 3x3.** A 2x2 to a 5x5 is
-      followed from a scramble or colours you type in
-      ([Another size of cube](other-sizes.md)); a camera scan of one is not offered
-      yet.
+    - **The camera is proven on a 3x3, much less on other sizes.** A 2x2 to a
+      5x5 can be scanned too, but so far only as drawings on a screen and a few
+      recordings, not many cubes in a hand; **Check the colours** puts right
+      what it misreads, and you can type a scramble or the colours in instead
+      ([Another size of cube](other-sizes.md)).
     - **Some of the wording is English whatever language you choose:** the scan
       screen's guidance and most of the words around the solution. See
       [Settings and shortcuts](settings.md#language).

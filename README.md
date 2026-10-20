@@ -43,10 +43,16 @@ You need a camera; a webcam is enough.
 | Fedora | `Cubeulator-<version>-linux-x64.rpm` | `sudo dnf install ./Cubeulator-<version>-linux-x64.rpm` |
 | A current browser | nothing to install: [open it online](https://iainchesworthlabs.github.io/cubeulator/app/), or host `Cubeulator-<version>-web.zip` yourself | needs https (or localhost) for the camera; [how it works and what it needs](docs/web.md) |
 
-The packages are not yet signed by Microsoft or Apple, which is why Windows and
-macOS ask. What each release does carry is a SHA-512 manifest, GPG signatures,
-and a build-provenance attestation for every file; how to check them is in the
-[security policy](docs/SECURITY.md#verifying-build-authenticity).
+The packages are **not signed with a Windows (Authenticode) or Apple
+(Developer ID) certificate** in this release, which is why Windows
+(SmartScreen) and macOS (Gatekeeper) ask before they run one: *More info*, then
+*Run anyway* on Windows; right-click, then *Open* on a Mac. Nothing is wrong
+with the file, but you do not have to take that on trust. Every release carries
+a SHA-512 manifest with GPG signatures from the project's key, a
+build-provenance attestation for every file (which repository, workflow and
+commit built it), and SPDX and CycloneDX bills of materials. The
+[security policy](docs/SECURITY.md#verifying-build-authenticity) has the
+commands to check each, and the key's fingerprint to check it against.
 
 ## Using it
 

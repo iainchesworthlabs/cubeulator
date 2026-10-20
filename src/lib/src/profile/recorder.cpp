@@ -180,6 +180,14 @@ void Recorder::set_app_info(std::string_view text) {
     app_info_ = std::string(text);
 }
 
+void Recorder::add_app_info(std::string_view text) {
+    const std::scoped_lock lock(names_mutex_);
+    if (!app_info_.empty()) {
+        app_info_ += '\n';
+    }
+    app_info_ += text;
+}
+
 std::vector<Event> Recorder::snapshot() const {
     const std::uint64_t head = head_.load(std::memory_order_acquire);
     const std::uint64_t capacity = static_cast<std::uint64_t>(mask_) + 1U;

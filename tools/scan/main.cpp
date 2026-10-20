@@ -36,6 +36,7 @@
 #include <cube/model/facelet.hpp>
 #include <cube/nxn/cube.hpp>
 #include <cube/nxn/geometry.hpp>
+#include <cube/nxn/outside_view.hpp>
 #include <cube/nxn/scan_assembly.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/hold.hpp>
@@ -1310,7 +1311,89 @@ int run_ambiguity(const fs::path& session) {
     return 0;
 }
 
+// run_holds for a cube that is not a 3x3: the same questions of the same kind of recording, a
+// side of N x N cells at a time (docs/nxn-camera-follow.md, "Measured").
+int run_holds_n(const fs::path& session, int size) {
+    const std::vector<fs::path> frames = frames_of(session);
+    cube::vision::SideScan scan(size);
+    std::vector<std::optional<cube::vision::SideRead>> reads;
+    for (const fs::path& frame : frames) {
+        const cv::Mat bgr = cv::imread(frame.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        reads.push_back(prepared.has_value() ? cube::vision::read_side(*prepared, size)
+                                             : std::nullopt);
+        scan.add(reads.back());
+        if (!reads.back().has_value() && size <= cube::vision::kMaxCornerSize) {
+            scan.add_corner(prepared.has_value() ? cube::vision::read_corner(*prepared, size)
+                                                 : std::nullopt);
+        }
+    }
+    const auto scanned = scan.scanned_n();
+    if (!scanned.has_value()) {
+        fmt::print("{}: no cube, so nothing to match against\n", session.filename().string());
+        return 1;
+    }
+    fmt::print("{}: a {}x{}x{}\n", session.filename().string(), size, size, size);
+
+    std::vector<float> fit;  // best distance, steady reads
+    std::vector<float>
+        clear_by;              // how much nearer the best is than the next different-looking hold
+    std::vector<float> found;  // share of the cells the reader found, steady reads
+    std::size_t steady = 0;
+    std::size_t matched = 0;
+    std::size_t undecided = 0;
+    std::optional<cv::Point2f> previous;
+    for (const auto& read : reads) {
+        if (!read.has_value()) {
+            previous.reset();
+            continue;
+        }
+        const cv::Point2f centre = read->centres.at(read->centres.size() / 2);
+        const cv::Point2f moved = previous.has_value() ? centre - *previous : cv::Point2f{};
+        const bool still =
+            previous.has_value() && std::hypot(moved.x, moved.y) < 0.12F * read->pitch;
+        previous = centre;
+        if (!still) {
+            continue;
+        }
+        ++steady;
+        const auto fits = cube::vision::fit_holds(*read, scanned->cube, scanned->colours);
+        const auto best_view = cube::nxn::camera_view(scanned->cube, fits[0].hold);
+        fit.push_back(fits[0].distance);
+        found.push_back(static_cast<float>(read->stickers_found) / static_cast<float>(size * size));
+        for (const cube::vision::HoldFit& other : fits) {
+            if (cube::nxn::camera_view(scanned->cube, other.hold) != best_view) {
+                clear_by.push_back(other.distance - fits[0].distance);
+                break;
+            }
+        }
+        const auto reading = cube::vision::read_hold(*read, scanned->cube, scanned->colours);
+        matched += reading.holds.empty() ? 0U : 1U;
+        undecided += reading.holds.size() > 1 ? 1U : 0U;
+    }
+    fmt::print("  steady reads {}  matched {}  of those undecided between look-alikes {}\n", steady,
+               matched, undecided);
+    if (steady == 0) {
+        return 0;
+    }
+    fmt::print("  cells found:                       median {:.2f}  10% {:.2f}  min {:.2f}\n",
+               percentile(found, 0.5), percentile(found, 0.1), percentile(found, 0.0));
+    fmt::print(
+        "  distance to the hold shown:        median {:.2f}  90% {:.2f}  99% {:.2f}  max "
+        "{:.2f}\n",
+        percentile(fit, 0.5), percentile(fit, 0.9), percentile(fit, 0.99), percentile(fit, 1.0));
+    fmt::print(
+        "  clear of the next different hold:  min {:.2f}  1% {:.2f}  10% {:.2f}  median "
+        "{:.2f}  (margin {:.2f})\n",
+        percentile(clear_by, 0.0), percentile(clear_by, 0.01), percentile(clear_by, 0.1),
+        percentile(clear_by, 0.5), static_cast<double>(cube::vision::hold_clear_distance(size)));
+    return 0;
+}
+
 int run_holds(const fs::path& session) {
+    if (const int size = session_size(session); size != 3) {
+        return run_holds_n(session, size);
+    }
     const std::vector<fs::path> frames = frames_of(session);
     cube::vision::SideScan scan;
     std::vector<std::optional<cube::vision::SideRead>> reads;

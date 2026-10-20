@@ -41,14 +41,30 @@ runtime is ever added again, check that first; the overlay port
 ## Opt-in features
 
 Tracy is the one dependency that is **not** in the base list: it is the
-`profiling` manifest feature, selected by `-DCUBEULATOR_ENABLE_TRACY=ON` (the
-top-level `CMakeLists.txt` adds it to `VCPKG_MANIFEST_FEATURES` before
-`project()`, the way it already does for `tests`). A normal configure never
-resolves it, so the binary cache and every shipped package are unaffected.
-The feature asks for `tracy[on-demand]` for the target and
-`tracy[cli-tools]` as a `host` dependency, so a cross-build for a phone
-builds the capture/export tools for the machine that will run them. See
-[Profiling](profiling.md).
+`profiling` manifest feature, which the top-level `CMakeLists.txt` adds to
+`VCPKG_MANIFEST_FEATURES` before `project()` (the way it already does for
+`tests`) whenever `CUBEULATOR_ENABLE_TRACY` is on - and it is on by default on
+the desktop, off for the browser, Android and iOS, where `-DCUBEULATOR_ENABLE_TRACY=OFF`
+resolves none of it. The client ships in the desktop applications, dormant until
+the application is asked to profile (see [Profiling](profiling.md)).
+
+The `profiling` feature asks for `tracy[manual-lifetime,on-demand,only-localhost]`
+for the target - **from an overlay port**, `vcpkg-overlay-ports/tracy/`, a copy
+of the registry's port (`deps/vcpkg/ports/tracy`) with the two features the
+registry's lacks, each one line mapping a feature to the Tracy CMake option of
+the same name - and `vulkan-headers` (header-only) where Qt can render with
+Vulkan. `tracy[cli-tools]` is the separate `profiling-tools` feature, a `host`
+dependency so a cross-build for a phone builds the capture/export tools for the
+machine that will run them; a shipped build does not select it, which is why
+`capstone`, `zstd` and `ppqsort` are not in a shipped build's notices.
+
+**Keeping the overlay current:** when the vcpkg baseline moves its `tracy` port
+(`deps/vcpkg/ports/tracy/vcpkg.json` `version` / `port-version` changes), copy
+the registry's files over `vcpkg-overlay-ports/tracy/` and put the header
+comment, the two feature lines in `vcpkg.json` and the two in `portfile.cmake`
+back (`git diff --no-index deps/vcpkg/ports/tracy vcpkg-overlay-ports/tracy`
+shows exactly those). The overlay's `port-version` is the registry's plus one,
+so that the notices (`tracy 0.14.1#2`) show it is not the registry's build.
 
 ## bgfx: removed
 

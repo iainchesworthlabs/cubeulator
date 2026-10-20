@@ -618,6 +618,7 @@ Rectangle {
                     interactive: false
                     autoRotate: false
                     evenLight: true
+                    shaderStyle: SettingsState.shaderStyleIndex
                     showStats: SettingsState.statsForNerds
 
                     homeRotation: Qt.vector3d(0, 0, 0)
