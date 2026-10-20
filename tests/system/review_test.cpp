@@ -63,6 +63,13 @@ TEST_CASE("a scan that made no cube is looked over, put right and left", "[syste
         cube::systest::show_cube(*patterned);
         REQUIRE(app.wait_for([&]() { return scan.conflicted(); }, kScanTimeoutMs));
         REQUIRE(app.wait_for([&]() { return app.find("scan.checkColours") != nullptr; }));
+        // Stay on the scan screen long enough to be seen there. The reach sampler ticks every
+        // 50 ms and counts scan.sides-conflict only while this screen shows it; a click the
+        // moment the button exists leaves the screen inside one tick on a fast machine (the
+        // Windows and macOS runners: system.reach reported the state never seen on both,
+        // every run since the case was added), and it also clicks the button while it is
+        // still settling in.
+        app.pump(120);
 
         app.click("scan.checkColours");
         REQUIRE(app.wait_for([&]() { return app.screen() == "colours"; }));
