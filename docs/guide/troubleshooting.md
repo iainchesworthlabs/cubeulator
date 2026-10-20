@@ -141,7 +141,10 @@ characters. On Linux install Noto Sans CJK (`fonts-noto-cjk`); the browser
 version carries its own.
 
 **The cube is not drawn, or the window is slow.** In **Settings > Rendering**
-choose another graphics system and restart Cubeulator.
+choose another graphics system and restart Cubeulator. If Cubeulator will not
+open at all, start it once with `--graphics-api=software` (a shortcut's
+*Target* box, or a terminal) and choose from Settings; see
+[Graphics API](../graphics-api.md).
 
 **Some buttons are cut off.** The window can be as small as 360 by 560;
 below 720 pixels wide it switches to the narrow layout, which scrolls. Make

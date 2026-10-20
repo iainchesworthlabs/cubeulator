@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -63,6 +64,13 @@ private:
 // went wrong; the app carries on either way, as the window is simply grouped
 // by its executable, as it would be without this.
 [[nodiscard]] std::string apply_process_identity(std::string_view app_user_model_id);
+
+// Starts another copy of this application, detached, with these arguments (not
+// including the program name). True when the process was started; false where
+// the platform cannot start one (a phone, the browser) or the start failed.
+// Used to start again on a different graphics API when the window could not
+// be created with the first (desktop/graphics_backend.hpp).
+[[nodiscard]] bool start_again(std::span<const std::string> arguments);
 
 // How the platform's windows behave, as values the shell reads instead of
 // asking which OS it is on.

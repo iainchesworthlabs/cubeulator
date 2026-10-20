@@ -25,6 +25,10 @@ std::string apply_process_identity(std::string_view /*app_user_model_id*/) {
     return {};
 }
 
+bool start_again(std::span<const std::string> /*arguments*/) {
+    return false;
+}
+
 Traits traits() noexcept {
     return Traits{};
 }

@@ -14,6 +14,7 @@
 // stall the GUI thread.
 #include "interfaces/desktop_shell.hpp"
 
+#include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
@@ -21,7 +22,9 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QObject>
+#include <QProcess>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 namespace cube::platform::desktop_shell {
@@ -164,6 +167,14 @@ std::unique_ptr<KeepAwakeBackend> make_keep_awake_backend() {
 // sets from the application identifier; nothing else is set per process.
 std::string apply_process_identity(std::string_view /*app_user_model_id*/) {
     return {};
+}
+
+bool start_again(std::span<const std::string> arguments) {
+    QStringList list;
+    for (const std::string& argument : arguments) {
+        list.append(QString::fromStdString(argument));
+    }
+    return QProcess::startDetached(QCoreApplication::applicationFilePath(), list);
 }
 
 Traits traits() noexcept {

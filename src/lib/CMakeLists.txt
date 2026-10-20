@@ -93,6 +93,7 @@ target_sources(cube_lib
         src/diagnostics/describe.cpp
         src/diagnostics/record.cpp
         src/diagnostics/jsonl_file.cpp
+        src/graphics/backend_choice.cpp
         src/profile/qsg_timing.cpp
         src/profile/recorder.cpp
         src/profile/session.cpp
