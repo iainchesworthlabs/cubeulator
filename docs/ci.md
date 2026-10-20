@@ -7,6 +7,7 @@
 | `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Not yet |
 | `release.yml` | Builds the desktop packages (an installer for Windows, a disk image for macOS, a `.deb` and an `.rpm` for Linux) and the web build's zip on a version tag, signs and attests them, and attaches them to a **draft** GitHub Release with notes rendered from `CHANGELOG.md` ([Cutting a release](releasing.md)). Run by hand it is a dry run unless `dry_run` is unticked. A PR that changes it, `packaging/check-package.sh` or `tools/release/` runs only the release tools' self-test | N/A (tags and manual runs) | No |
 | `changelog-check.yml` | On a PR into `develop`: does a change a person using the app can see carry a `changelog.d/` fragment (or the `no-changelog` label), and is every fragment it adds well formed | No (advisory) | No |
+| `nightly.yml` | Every evening (UTC), against the tip of `develop`: the whole of `ci.yml` with every leg including `perf` and `web-perf`, read job by job; the library under ASan + UBSan and under TSan; the Qt app under ASan + UBSan; clang-tidy over `src/app`. Opens one `nightly` issue when something that gates is red, closes it when a night is green ([Nightly](#nightly)) | No (an issue, never a check) | No |
 | `spike-sweep.yml` | Mondays: a `spike/*` branch whose tip is 30 days old is tagged `archive/spike-<name>` and deleted ([Investigations](investigations/README.md)). Run by hand it is a dry run unless `dry_run` is unticked | N/A (schedule and manual runs) | No |
 | `release-check.yml` | On a PR into `main`, two jobs: `Release readiness` (is this a release the Release workflow will accept, and what would its notes say, in the job summary) and `Commit is green` (is the PR's head green on every workflow the README has a badge for: CI, CodeQL, OSV-Scanner, Zizmor; waits up to three hours for ones still running, fails at once on a red one) | No (advisory) | No |
 | `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Not yet |
@@ -124,6 +125,57 @@ gh variable delete CONTROL_RUNNER_JSON                                          
   actionlint does not parse `$/` yet (as of 1.7.12,
   [rhysd/actionlint#711](https://github.com/rhysd/actionlint/issues/711));
   nothing in this repository runs it.
+
+## Nightly
+
+`nightly.yml` runs what is too heavy or too unstable for every pull request,
+once a day, against `develop`. It reports; it blocks nothing: no ruleset names
+a check from it, and it has no `merge_group` trigger.
+
+| Job | What it runs | Counts as |
+| --- | --- | --- |
+| `full-ci` | Dispatches `ci.yml` on `develop` with every leg (`legs=` all of them, plus `perf` and `web-perf`, which `all` leaves out) and waits for it. The report reads the run **job by job**, because a run is "success" when a `continue-on-error` job or step failed: the porting legs (Android, iOS, Web, Web tests) and the Windows and macOS system tests (`System tests (experimental off Linux)`) are exactly that on a pull request, and a red one there is invisible. A "success" job that carries a failure annotation is listed as a hidden failure. | gating, except Android, iOS and the two wall-time legs, and hidden failures |
+| `sanitizers` | `cube::lib` and `cube::platform` (no Qt, no app) in two builds: the debug preset's own ASan + UBSan at `-O1`, and Release flags with `-fsanitize=thread` (without the `slow` corpora, which are single-threaded). No other leg runs a sanitizer build: `clang-tidy` builds one and never runs it, and the coverage leg turns them off. | gating |
+| `sanitizers-app` | The same ASan + UBSan debug build with the Qt app: the controller and QML tests, then the system tests under Xvfb. Leak detection is off here (Mesa and fontconfig leak by design). | informational |
+| `clang-tidy-app` | clang-tidy over `src/app`, which the `clang-tidy` leg of `ci.yml` cannot see (it configures with the app off). It does not fail: it counts distinct findings by check in the run summary and uploads the log, so a baseline and a no-new-findings ratchet can be set from real numbers. | informational |
+| `report` | A table in the run summary, and one issue labelled `nightly`: opened (or commented on) when a gating job is red, commented on and closed when a night is green. | - |
+
+*Informational* means shown, never the reason an issue is opened. Promote a job
+to gating by editing the `kind` table in `ci/nightly-report.sh` once it has been
+green for a while.
+
+Running it by hand:
+
+```sh
+gh workflow run nightly.yml                                  # everything, on develop
+gh workflow run nightly.yml -f jobs=sanitizers               # one job (comma-separated)
+gh workflow run nightly.yml -f jobs=sanitizers -f ref=feature/x
+```
+
+Things worth knowing:
+
+- **A scheduled run starts from `main`.** GitHub reads the schedule from the
+  default branch and checks that branch out; every checkout here names `ref:
+  develop`, but the file itself has to be on `main` before the first night. Until
+  the next release (or a hotfix PR to `main` that carries just this file, as
+  `cache-hygiene.yml` once did) neither the schedule nor `gh workflow run` can
+  find it; the scripts it runs are read from `develop`, so only the workflow
+  file has to travel. The local actions (`$/.github/actions/...`) resolve at
+  the workflow's own commit, so they come from `main` too.
+- **Its cache is `main`'s.** A scheduled run's `ref` is `main`, so its own vcpkg
+  cache reads and writes are `main`'s (see [Where an entry can be read
+  from](#where-an-entry-can-be-read-from)), not `develop`'s; the dispatched CI
+  run is on `develop`, and uses `develop`'s. The first night after a dependency
+  change is a cold one for the `sanitizers`, `sanitizers-app` and
+  `clang-tidy-app` jobs. They share the `x64-linux` triplet cache with the other
+  Linux legs, so they add no cache family of their own.
+- **Pool use.** `full-ci` is a waiting job plus the up-to-twelve jobs of the
+  dispatched run, so the nightly's other jobs `need` it: the peak is about 14
+  of the 20 hosted jobs for the first hour and a half and 3 after. It starts at
+  20:41 UTC, hours before the weekly scans (03:17-03:50 Monday).
+- **Timeouts and shape.** 6 h for `full-ci` (the dispatched run's own slowest
+  leg is the macOS build), 4-5 h for the sanitizer jobs, one matrix entry at
+  a time.
 
 ## The vcpkg binary cache
 
