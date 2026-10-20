@@ -5,6 +5,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # The merge queue in front of develop (docs/branch-protection.md). A queue
+  # entry runs only the jobs whose checks develop requires - clang-format,
+  # clang-tidy, the three build legs and coverage - and the jobs below that are
+  # not required skip themselves on this event, so an entry costs those seven
+  # and nothing else. The rest of CI has already run on the pull request.
+  merge_group:
+    types: [checks_requested]
   # Manual runs can name the legs they want, so a fix to one platform does
   # not pay for all of them (the full matrix is hours of hosted runners and
   # the pool is shared with other repositories):
@@ -84,7 +91,7 @@ jobs:
   # build legs, so a violation is reported even while a porting leg is red.
   platform-isolation:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - platform-isolation' || 'platform-isolation' }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',platform-isolation,') }}
+    if: ${{ github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',platform-isolation,')) }}
     # Seconds-long, so routed like clang-format: by the CONTROL_RUNNER_JSON
     # repository variable, with a fork PR pinned to the hosted image (see
     # docs/ci.md). The fleet image ships pwsh, which the check needs.
@@ -460,7 +467,7 @@ jobs:
       # runners' graphics is what this step finds out, and it is reported
       # rather than forced green (docs/testing.md, "System tests").
       - name: System tests (experimental off Linux)
-        if: ${{ !cancelled() && runner.os != 'Linux' && steps.build.outcome == 'success' }}
+        if: ${{ !cancelled() && github.event_name != 'merge_group' && runner.os != 'Linux' && steps.build.outcome == 'success' }}
         continue-on-error: true
         run: ctest --preset ${{ matrix.preset }}-system --output-on-failure
 
@@ -534,7 +541,7 @@ jobs:
 
   android-build:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Android (arm64-v8a)' || 'Android (arm64-v8a)' }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',android,') }}
+    if: ${{ github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',android,')) }}
     # ubuntu-26.04, matching every other build agent - see the diagnostic
     # step below for why this needed a closer look before deciding whether
     # to stay here.
@@ -703,7 +710,7 @@ jobs:
   # same composite action, because that publish only runs for main.
   web-build:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Web (WebAssembly)' || 'Web (WebAssembly)' }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',web,') }}
+    if: ${{ github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',web,')) }}
     runs-on: ubuntu-26.04
     # Not required until it has run green on develop, like the other porting
     # legs (docs/ci.md).
@@ -755,7 +762,7 @@ jobs:
   # test binaries as WebAssembly under Node, and the app driven in Chromium.
   web-test:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Web tests (Node + Chromium)' || 'Web tests (Node + Chromium)' }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',web-test,') }}
+    if: ${{ github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',web-test,')) }}
     runs-on: ubuntu-26.04
     # Not required until it has run green on develop, like the other porting
     # legs (docs/ci.md). The browser suite draws in software, one page at a
@@ -902,7 +909,7 @@ jobs:
 
   ios-build:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - iOS (device, build-only, unsigned)' || 'iOS (device, build-only, unsigned)' }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',ios,') }}
+    if: ${{ github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',ios,')) }}
     # Pinned to macos-15, not the newer macos-26: confirmed in CI that
     # libwebp's arm64-ios build intermittently fails vcpkg_fixup_pkgconfig
     # on macos-26 ("pkg-config --exists libsharpyuv failed") - a known,
@@ -976,7 +983,7 @@ jobs:
   # under src/app/qt - reported here, not gated (docs/testing.md).
   system-tests:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - System tests (Linux, Xvfb + software GL)' || 'System tests (Linux, Xvfb + software GL)' }}
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',system,') }}
+    if: ${{ github.event_name != 'merge_group' && (github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',system,')) }}
     runs-on: ubuntu-26.04
     # See the equivalent comment on build-and-test.
     env:
