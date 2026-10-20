@@ -294,7 +294,10 @@ void SolveController::applySolveResult() {
     }
     CUBE_MESSAGE("solve.finished");
     CUBE_SECTION_LEAVE(solve_section_);
-    stepped_ = solveWatcher_.result();
+    {
+        CUBE_ZONE_SCOPED_N("app.solve.take_result");
+        stepped_ = solveWatcher_.result();
+    }
     land();
 }
 
@@ -307,8 +310,14 @@ void SolveController::land() {
     resume_turn_ = 0;
     isSolving_ = false;
     continuation_ = solving_continuation_;
-    emit solutionChanged();
-    emit stateChanged();
+    {
+        CUBE_ZONE_SCOPED_N("app.solve.emit_solution");
+        emit solutionChanged();
+    }
+    {
+        CUBE_ZONE_SCOPED_N("app.solve.emit_state");
+        emit stateChanged();
+    }
 }
 
 QVariantList SolveController::topColors() const {
