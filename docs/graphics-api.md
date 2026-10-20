@@ -57,6 +57,20 @@ A platform with an empty chain behaves as it did before this existed. The last
 entry of a chain is the **floor**: nothing recorded can remove it, because there
 is nothing below it.
 
+**Direct3D 11 is the default on Windows**, and it stays so until the numbers
+below are reproduced on more than one machine. To use Vulkan:
+
+- for one launch, `Cubeulator.exe --graphics-api=vulkan`;
+- for good, **Settings > Rendering > Vulkan** (this is how the developer's own
+  machine runs on it). If Vulkan cannot start there, the launch goes on to
+  Direct3D 11 by itself;
+- to make it everyone's default, change one line: put `"vulkan"` first in
+  `automatic_graphics_backends` in
+  `src/app/platform/windows/platform_info_windows.cpp`
+  (`{"vulkan", "d3d11", "software"}`; Direct3D 12 is best left out, see
+  [below](#vulkan-against-direct3d-11-measured)). The same line in
+  `platform_info_linux.cpp` does it for Linux.
+
 ## The guard
 
 The API cannot be changed once the window exists, and Qt does not always fail
