@@ -726,8 +726,8 @@ TEST_CASE("one cell saying a move was made is not a move on a bigger cube",
         const auto will_be = cube::nxn::camera_view(moved, *hold);
         auto glint = was;
         for (std::size_t cell = 0; cell < was.size(); ++cell) {
-            if (was[cell] != will_be[cell]) {
-                glint[cell] = will_be[cell];
+            if (was.at(cell) != will_be.at(cell)) {
+                glint.at(cell) = will_be.at(cell);
                 break;
             }
         }
@@ -791,7 +791,7 @@ TEST_CASE("a bigger cube's side the camera sees whole but wrong is doubted, slow
     // Every other cell of the side the wrong colour.
     auto stripes = cube::nxn::camera_view(before, *hold);
     for (std::size_t cell = 0; cell < stripes.size(); cell += 2) {
-        stripes[cell] = stripes[cell] == Color::White ? Color::Yellow : Color::White;
+        stripes.at(cell) = stripes.at(cell) == Color::White ? Color::Yellow : Color::White;
     }
     session.show(stripes, kFramesToDoubt - 2);
     CHECK(session.held.sight() != "unknown");

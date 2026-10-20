@@ -60,7 +60,7 @@ inline void show_all_sides(app::DirectScan& scan, const nxn::NCube& cube) {
     const auto b = nxn::camera_view(after, hold);
     std::size_t cells = 0;
     for (std::size_t i = 0; i < a.size(); ++i) {
-        cells += a[i] != b[i] ? 1U : 0U;
+        cells += a.at(i) != b.at(i) ? 1U : 0U;
     }
     return cells;
 }
