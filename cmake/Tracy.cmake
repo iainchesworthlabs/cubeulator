@@ -10,9 +10,10 @@
 # variant is a set of empty macros: a build without Tracy pays nothing for the
 # instrumentation and does not even need Tracy present.
 #
-# ON by default on the desktop (the default is settled in the top-level
-# CMakeLists.txt, before project(), because it selects a vcpkg feature), OFF
-# for the browser, Android, iOS and Windows on ARM. ON does not mean running:
+# ON by default (settled in the top-level CMakeLists.txt, before project(),
+# because it selects a vcpkg feature; the web, Android and iOS presets turn it
+# OFF, so does a coverage build, and so must a Windows-on-ARM configure). ON
+# does not mean running:
 # the client is the overlay port's (vcpkg-overlay-ports/tracy), built for MANUAL LIFETIME and
 # loopback-only listening, so a process that never calls
 # cube::profiling::start() has no Tracy thread, no socket and no broadcast, and

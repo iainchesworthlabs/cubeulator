@@ -17,7 +17,7 @@ and is **dormant until the application is told to profile**:
 | **Debug** | at launch, with no flag | `--no-profile`, or `CUBEULATOR_PROFILE=0` |
 | **Release** (and every other configuration) | never, unless asked | `--profile`, or `CUBEULATOR_PROFILE=1` - no recompile, on the binary that was shipped |
 | `*-profiling` presets | at launch (they exist to take traces) | `--no-profile` |
-| browser, Android, iOS, Windows on ARM, coverage builds | not built in (Tracy defaults off; the browser has its own [recorder](#in-the-browser)) | |
+| web, Android and iOS presets, coverage builds, Windows on ARM (configure it `OFF`) | not built in (the browser has its own [recorder](#in-the-browser)) | |
 
 "Dormant" is meant literally - see [What a shipped build costs](#what-a-shipped-build-costs).
 
@@ -95,9 +95,12 @@ The measured cost of both states against a build with Tracy compiled out is in
 ## Building
 
 Nothing to configure for a desktop build: `CUBEULATOR_ENABLE_TRACY` defaults to
-`ON` where Tracy runs, and `OFF` for the browser, Android, iOS, Windows on ARM
-and coverage builds (decided in the top-level `CMakeLists.txt`, before `project()`, because it
-selects a vcpkg feature). `-DCUBEULATOR_ENABLE_TRACY=OFF` opts a build out; the
+`ON`; the web, Android and iOS presets turn it `OFF`, and so does a coverage build
+(the default is settled in the top-level `CMakeLists.txt`, before `project()`,
+because it selects a vcpkg feature, and the platform is not known until after
+it - which is why the presets, not CMake, name the platforms without Tracy).
+Windows on ARM is one: the port does not support it, so configure it with
+`-DCUBEULATOR_ENABLE_TRACY=OFF`. That flag opts any build out; the
 macros then compile to nothing and Tracy need not be installed at all.
 
 The option adds the `profiling` vcpkg manifest feature, which supplies

@@ -46,15 +46,16 @@ endif()
 # dormant in them: the one switch CUBEULATOR_ENABLE_TRACY (declared in
 # cmake/Tracy.cmake) both makes the profiler client resolvable and turns the
 # instrumentation macros real, and cube::profile::Session decides at run time
-# whether the client is started (docs/profiling.md). It defaults off where
-# Tracy's client cannot run or has not been exercised: the browser (which has
-# the in-process recorder instead), Android and iOS, Windows on ARM - and for a
-# coverage build, whose timings are not about the program.
-# The default has to be settled here, before project(), because it selects a
-# vcpkg manifest feature; -DCUBEULATOR_ENABLE_TRACY=OFF opts a build out.
+# whether the client is started (docs/profiling.md). The default has to be
+# settled here, before project(), because it selects a vcpkg manifest feature -
+# and the platform is not known until Platform.cmake, after project(), so which
+# platforms have no Tracy is the presets' say, not this file's: the web,
+# Android and iOS presets set CUBEULATOR_ENABLE_TRACY=OFF (the browser has the
+# in-process recorder instead). It defaults off for a coverage build, whose
+# timings are not about the program; configure Windows on ARM (the port does
+# not support it) with -DCUBEULATOR_ENABLE_TRACY=OFF.
 if(NOT DEFINED CUBEULATOR_ENABLE_TRACY)
-    if(CUBEULATOR_ENABLE_PROFILE_RECORDER OR CUBEULATOR_ENABLE_COVERAGE
-       OR VCPKG_TARGET_TRIPLET MATCHES "emscripten|android|ios|uwp|^arm.*-windows")
+    if(CUBEULATOR_ENABLE_PROFILE_RECORDER OR CUBEULATOR_ENABLE_COVERAGE)
         set(_cubeulator_tracy_default OFF)
     else()
         set(_cubeulator_tracy_default ON)

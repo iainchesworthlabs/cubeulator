@@ -158,8 +158,8 @@ worker that adds the two headers and reloads the page once.
   or ASan (real MSVC Debug); disabled automatically under clang-cl.
 - `CUBEULATOR_ENABLE_COVERAGE` (default `OFF`) — gcov instrumentation; only
   the `linux-gcc-coverage` preset turns this on.
-- `CUBEULATOR_ENABLE_TRACY` (default `ON` on Windows, Linux and macOS; `OFF`
-  for the browser, Android, iOS, Windows on ARM and coverage builds) — the Tracy profiler
+- `CUBEULATOR_ENABLE_TRACY` (default `ON`; the web, Android and iOS presets
+  and coverage builds set it `OFF`, and so must a Windows-on-ARM configure) — the Tracy profiler
   client and its instrumentation (`cmake/Tracy.cmake`). Adds the `profiling`
   vcpkg manifest feature (the `tracy` overlay port in
   `vcpkg-overlay-ports/`, and the Vulkan headers where Qt can render with
