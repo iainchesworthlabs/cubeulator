@@ -346,6 +346,21 @@ Item {
             enabled: DirectScan.sidesRead > 0
             onClicked: DirectScan.restart()
         }
+        // Front and back, where the device has both and the person is holding
+        // it (PlatformFacts.cameraSwitchOnScanScreen). A different camera is a
+        // different picture of everything, so the scan begins again on it.
+        // Not while one is still opening: DirectScan keeps the first.
+        AppButton {
+            objectName: "scan.switchCamera"
+            height: 42
+            visible: PlatformFacts.cameraSwitchOnScanScreen && CameraController.devices.length > 1
+            enabled: !DirectScan.starting
+            variant: "secondary"; text: qsTrId("scan.more.switchCamera")
+            onClicked: {
+                CameraController.selectNextDevice();
+                DirectScan.start(CameraController.selectedDeviceId);
+            }
+        }
         // In place of Start over when the camera would not start: the same
         // start the screen made on entry (AppState.onScreenChanged), so a
         // permission now granted or a camera now free works without going

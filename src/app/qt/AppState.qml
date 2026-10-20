@@ -30,6 +30,22 @@ QtObject {
     // DirectScan.start() to have a selectedDeviceId ready.
     Component.onCompleted: CameraController.refreshDevices()
 
+    // Where the platform hides the cameras until one has been opened (a
+    // browser: see PlatformFacts.cameraIdsWithheldUntilUse), the list read at
+    // startup only says "a rear camera and a front camera". Read it again once
+    // a camera is open, for the real list, which is what the scan screen's
+    // switch button steps through. The controller carries the selection over.
+    property bool cameraWasRunning: false
+    property var cameraListConnections: Connections {
+        target: DirectScan
+        function onRunningChanged() {
+            const running = DirectScan.running;
+            if (running && !state.cameraWasRunning && PlatformFacts.cameraIdsWithheldUntilUse)
+                CameraController.refreshDevices();
+            state.cameraWasRunning = running;
+        }
+    }
+
     // Whether the solve screen keeps the camera. It does, to see how the
     // cube is being held; the solve-screen demo (CUBE_SOLVE_DEMO) turns it
     // off, having no scan for the camera to be matched against.

@@ -10,6 +10,8 @@ namespace cube::app {
 PlatformFacts::PlatformFacts(QObject* parent) : QObject(parent) {
     const auto info = cube::platform::platform_info::current();
     is_mobile_ = info.is_mobile;
+    camera_ids_withheld_until_use_ = info.camera_ids_withheld_until_use;
+    camera_switch_on_scan_screen_ = info.camera_switch_on_scan_screen;
     for (const auto& backend : info.graphics_backends) {
         graphics_backends_.append(QVariantMap{
             {QStringLiteral("key"), QString::fromStdString(backend.key)},
@@ -26,6 +28,14 @@ PlatformFacts::PlatformFacts(QObject* parent) : QObject(parent) {
 
 bool PlatformFacts::isMobile() const noexcept {
     return is_mobile_;
+}
+
+bool PlatformFacts::cameraIdsWithheldUntilUse() const noexcept {
+    return camera_ids_withheld_until_use_;
+}
+
+bool PlatformFacts::cameraSwitchOnScanScreen() const noexcept {
+    return camera_switch_on_scan_screen_;
 }
 
 QVariantList PlatformFacts::graphicsBackends() const {
