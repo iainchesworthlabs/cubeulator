@@ -170,7 +170,10 @@ jobs:
           CXX_FLAGS: ${{ matrix.cxx_flags }}
           CXX_FLAGS_DEBUG: ${{ matrix.cxx_flags_debug }}
         run: |
-          args=(-DCMAKE_CXX_COMPILER=g++-16 -DCUBEULATOR_BUILD_APP=OFF)
+          # Tracy off: it is on by default in the debug presets (PR #211), and a
+          # sanitizer run measures nothing a profiler could use, while its
+          # instrumentation and a sanitizer runtime would sit in one binary.
+          args=(-DCMAKE_CXX_COMPILER=g++-16 -DCUBEULATOR_BUILD_APP=OFF -DCUBEULATOR_ENABLE_TRACY=OFF)
           if [ -n "$CXX_FLAGS" ]; then
             args+=("-DCMAKE_CXX_FLAGS=$CXX_FLAGS" "-DCMAKE_EXE_LINKER_FLAGS=$CXX_FLAGS" "-DCMAKE_SHARED_LINKER_FLAGS=$CXX_FLAGS")
           fi
@@ -268,6 +271,7 @@ jobs:
           -DCMAKE_CXX_COMPILER=g++-16
           -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
           -DCMAKE_CXX_FLAGS_DEBUG="-O1 -g"
+          -DCUBEULATOR_ENABLE_TRACY=OFF
 
       - name: Build
         run: cmake --build --preset linux-gcc-debug
