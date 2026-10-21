@@ -1,7 +1,8 @@
 name: Release
 
 # Builds the desktop packages (an installer for Windows, a disk image for macOS,
-# a .deb and an .rpm for Linux) and the web build's zip, signs and attests
+# a .deb and an .rpm for Linux), the iPhone app (an ad-hoc .ipa for the
+# maintainer's own devices) and the web build's zip, signs and attests
 # them, renders the release notes from CHANGELOG.md and, for a real release,
 # creates a DRAFT GitHub Release. How to cut one is docs/releasing.md.
 #
@@ -33,6 +34,13 @@ on:
         description: >-
           Dry run: build, sign with a throwaway key and render the notes, but
           create no tag and no release. Untick for a real release.
+        type: boolean
+        default: true
+      ios:
+        description: >-
+          Build the iPhone app too, signed ad hoc with the Apple signing secrets
+          (docs/ios-install.md). A tag push always builds it. Untick to
+          rehearse the rest without a Mac and without those secrets.
         type: boolean
         default: true
       unsigned:
@@ -75,6 +83,7 @@ jobs:
       from_unreleased: ${{ steps.check.outputs.from_unreleased }}
       publish: ${{ steps.mode.outputs.publish }}
       dry_run: ${{ steps.mode.outputs.dry_run }}
+      ios: ${{ steps.mode.outputs.ios }}
     steps:
       # The whole history, with the tags: whether a release commit sits on main
       # and whether the tag exists need it.
@@ -98,10 +107,12 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           DRY_RUN_INPUT: ${{ inputs.dry_run }}
+          IOS_INPUT: ${{ inputs.ios }}
         run: |
           publish=false
           dry_run=true
           pushed_tag=""
+          ios=true
           if [ "$EVENT" = "push" ]; then
             # A tag was pushed: the tag is the release.
             publish=true
@@ -111,12 +122,18 @@ jobs:
             publish=true
             dry_run=false
           fi
+          # A tag push builds iOS whatever was ticked: the release is not the
+          # place to leave a platform out by accident. Only a dispatch can.
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$IOS_INPUT" = "false" ]; then
+            ios=false
+          fi
           {
             echo "publish=$publish"
             echo "dry_run=$dry_run"
             echo "pushed_tag=$pushed_tag"
+            echo "ios=$ios"
           } >> "$GITHUB_OUTPUT"
-          echo "event=$EVENT publish=$publish dry_run=$dry_run tag=${pushed_tag:-<made at the end>}"
+          echo "event=$EVENT publish=$publish dry_run=$dry_run ios=$ios tag=${pushed_tag:-<made at the end>}"
 
       # The version is the one CMakeLists.txt declares; the tag, the changelog
       # section and the package names must all agree with it
@@ -388,6 +405,34 @@ jobs:
             Cubeulator-*.rpm
           if-no-files-found: error
 
+  # The iPhone app: the Qt app for iOS (arm64) built by Xcode on a hosted Mac,
+  # signed ad hoc with the maintainer's Apple Distribution certificate and an
+  # ad-hoc provisioning profile, packed as an .ipa with an over-the-air install
+  # manifest. The build, the signing and their checks are
+  # .github/workflows/ios-device.yml, which the maintainer also runs by hand;
+  # this calls it so that the package a release attaches is the one that is
+  # installed, not a test build. It installs only on devices registered in the
+  # profile (docs/ios-install.md). The secrets are named here, one by one, and
+  # not inherited. Holding Apple's signing material, it has no other permission.
+  ios:
+    name: Build the iOS app
+    needs: verify
+    if: ${{ github.event_name != 'pull_request' && needs.verify.outputs.ios == 'true' }}
+    permissions:
+      contents: read
+    uses: $/.github/workflows/ios-device.yml
+    with:
+      version: ${{ needs.verify.outputs.version }}
+      tag: ${{ needs.verify.outputs.tag }}
+      signed: true
+      save_cache: false
+    secrets:
+      IOS_DIST_CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
+      IOS_DIST_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_PROVISIONING_PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
+
   # The browser build: Qt and OpenCV for WebAssembly, as one directory of static
   # files, zipped with the licence, the notices and a note on hosting it
   # (packaging/web/). It is the same site docs.yml publishes under /app/, built
@@ -455,8 +500,10 @@ jobs:
   # repository.
   sign:
     name: Sign, attest and render the notes
-    needs: [verify, build, web]
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [verify, build, web, ios]
+    # The iOS job is skipped only when a dispatch asked for no iPhone build;
+    # one that ran and failed stops the release here like any other platform.
+    if: ${{ github.event_name != 'pull_request' && !cancelled() && needs.verify.result == 'success' && needs.build.result == 'success' && needs.web.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.ios.result) }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -466,6 +513,7 @@ jobs:
       VERSION: ${{ needs.verify.outputs.version }}
       TAG: ${{ needs.verify.outputs.tag }}
       REPO: ${{ github.repository }}
+      IOS: ${{ needs.verify.outputs.ios }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -486,9 +534,16 @@ jobs:
           ls -l
           # Exactly one package per platform, named for this version, or
           # something is wrong.
-          for pattern in "Cubeulator-${VERSION}-windows-x64.exe" "Cubeulator-${VERSION}-macos-arm64.dmg" \
-                         "Cubeulator-${VERSION}-linux-x64.deb" "Cubeulator-${VERSION}-linux-x64.rpm" \
-                         "Cubeulator-${VERSION}-web.zip"; do
+          patterns=("Cubeulator-${VERSION}-windows-x64.exe" "Cubeulator-${VERSION}-macos-arm64.dmg"
+                    "Cubeulator-${VERSION}-linux-x64.deb" "Cubeulator-${VERSION}-linux-x64.rpm"
+                    "Cubeulator-${VERSION}-web.zip")
+          expected=5
+          if [ "$IOS" = "true" ]; then
+            # The iPhone app and the over-the-air manifest that names it.
+            patterns+=("Cubeulator-${VERSION}-ios.ipa" "Cubeulator-${VERSION}-ios-manifest.plist")
+            expected=7
+          fi
+          for pattern in "${patterns[@]}"; do
             n=$(find . -maxdepth 1 -name "$pattern" | wc -l)
             if [ "$n" -ne 1 ]; then
               echo "::error::expected one $pattern, found $n"
@@ -496,8 +551,8 @@ jobs:
             fi
           done
           n=$(find . -maxdepth 1 -type f | wc -l)
-          if [ "$n" -ne 5 ]; then
-            echo "::error::expected five packages, found $n files"
+          if [ "$n" -ne "$expected" ]; then
+            echo "::error::expected $expected files, found $n"
             exit 1
           fi
 
@@ -517,12 +572,16 @@ jobs:
       - name: Make the SBOMs (SPDX and CycloneDX)
         shell: bash
         run: |
+          notices=(--notices windows=inventory/notices-windows-x64/third-party-notices.json
+                   --notices macos=inventory/notices-macos-arm64/third-party-notices.json
+                   --notices linux=inventory/notices-linux-x64/third-party-notices.json
+                   --notices web=inventory/notices-web/third-party-notices.json)
+          if [ "$IOS" = "true" ]; then
+            notices+=(--notices ios=inventory/notices-ios/third-party-notices.json)
+          fi
           python3 tools/release/make_sbom.py \
             --version "$VERSION" --tag "$TAG" --repo "$REPO" --files dist/files \
-            --notices windows=inventory/notices-windows-x64/third-party-notices.json \
-            --notices macos=inventory/notices-macos-arm64/third-party-notices.json \
-            --notices linux=inventory/notices-linux-x64/third-party-notices.json \
-            --notices web=inventory/notices-web/third-party-notices.json \
+            "${notices[@]}" \
             --output "dist/files/Cubeulator-${VERSION}.spdx.json" \
             --cyclonedx-output "dist/files/Cubeulator-${VERSION}.cdx.json"
 
@@ -612,12 +671,16 @@ jobs:
             gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 --armor --detach-sign "$1" 3<<<"$passphrase"
           }
           cd dist/files
-          for f in SHA512SUMS Cubeulator-*.exe Cubeulator-*.dmg Cubeulator-*.deb Cubeulator-*.rpm Cubeulator-*.zip Cubeulator-*.spdx.json Cubeulator-*.cdx.json; do
+          # No iPhone files when a dispatch left the iPhone build out.
+          shopt -s nullglob
+          signed_files=(SHA512SUMS Cubeulator-*.exe Cubeulator-*.dmg Cubeulator-*.deb Cubeulator-*.rpm Cubeulator-*.zip
+                        Cubeulator-*.ipa Cubeulator-*-ios-manifest.plist Cubeulator-*.spdx.json Cubeulator-*.cdx.json)
+          for f in "${signed_files[@]}"; do
             sign "$f"
             gpg --verify "$f.asc" "$f"
           done
           echo "signed=true" >> "$GITHUB_OUTPUT"
-          echo "Signed SHA512SUMS, both SBOMs and five packages with key $keyid."
+          echo "Signed ${#signed_files[@]} files (SHA512SUMS, both SBOMs, the packages) with key $keyid."
 
       # Keyless SLSA provenance: which repository, workflow and commit built
       # these bytes. The GPG signature says who vouches for them; the two are
@@ -630,6 +693,7 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
+            dist/files/*.ipa
             dist/files/*.zip
 
       - name: Attest the SBOM
@@ -640,6 +704,7 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
+            dist/files/*.ipa
             dist/files/*.zip
           sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.spdx.json
 
@@ -651,6 +716,7 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
+            dist/files/*.ipa
             dist/files/*.zip
           sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.cdx.json
 
@@ -663,7 +729,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for f in dist/files/*.exe dist/files/*.dmg dist/files/*.deb dist/files/*.rpm dist/files/*.zip; do
+          for f in dist/files/*.exe dist/files/*.dmg dist/files/*.deb dist/files/*.rpm dist/files/*.ipa dist/files/*.zip; do
             ok=false
             for attempt in 1 2 3 4 5 6; do
               if gh attestation verify "$f" --repo "$REPO" > /dev/null 2>&1; then

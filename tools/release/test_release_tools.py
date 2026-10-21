@@ -178,6 +178,7 @@ class Render(unittest.TestCase):
         "Cubeulator-0.2.0-beta.1-macos-arm64.dmg",
         "Cubeulator-0.2.0-beta.1-linux-x64.deb",
         "Cubeulator-0.2.0-beta.1-linux-x64.rpm",
+        "Cubeulator-0.2.0-beta.1-ios.ipa",
         "Cubeulator-0.2.0-beta.1-web.zip",
         "Cubeulator-0.2.0-beta.1.spdx.json",
         "Cubeulator-0.2.0-beta.1.cdx.json",
@@ -191,7 +192,7 @@ class Render(unittest.TestCase):
             repo="owner/repo",
             names=self.NAMES,
             install_template=(
-                "## Installing\n\nRun `@WINDOWS@`; `@MACOS@`; `@DEB@`; `@RPM@`; host `@WEB@`.\n"
+                "## Installing\n\nRun `@WINDOWS@`; `@MACOS@`; `@DEB@`; `@RPM@`; `@IOS@`; host `@WEB@`.\n"
             ),
         )
         base.update(kw)
@@ -248,6 +249,16 @@ class Render(unittest.TestCase):
         out = self.render()
         self.assertIn("`Cubeulator-0.2.0-beta.1-linux-x64.deb`", out)
         self.assertIn("host `Cubeulator-0.2.0-beta.1-web.zip`", out)
+
+    def test_the_iphone_package_has_its_own_row_and_install_name(self):
+        out = self.render(attested=True)
+        self.assertIn("| iPhone (ad hoc: installs only on devices registered to the maintainer) | `Cubeulator-0.2.0-beta.1-ios.ipa` |", out)
+        self.assertIn("`Cubeulator-0.2.0-beta.1-ios.ipa`;", out)
+        preview = notes.render(
+            GOOD, version="0.2.0-beta.1", tag="v0.2.0-beta.1", repo="owner/repo",
+            install_template="phone `@IOS@`",
+        )
+        self.assertIn("phone `Cubeulator-0.2.0-beta.1-ios.ipa`", preview)
 
     def test_the_web_package_has_its_own_row(self):
         out = self.render(attested=True)
@@ -385,6 +396,7 @@ class Sbom(unittest.TestCase):
         "macos": "Cubeulator-0.1.0-beta.1-macos-arm64.dmg",
         "deb": "Cubeulator-0.1.0-beta.1-linux-x64.deb",
         "rpm": "Cubeulator-0.1.0-beta.1-linux-x64.rpm",
+        "ios": "Cubeulator-0.1.0-beta.1-ios.ipa",
         "web": "Cubeulator-0.1.0-beta.1-web.zip",
     }
 
@@ -406,7 +418,7 @@ class Sbom(unittest.TestCase):
             files=files if files is not None else self.files(),
             notices=notices
             if notices is not None
-            else {p: self.INVENTORY for p in ("windows", "macos", "linux", "web")},
+            else {p: self.INVENTORY for p in ("windows", "macos", "linux", "ios", "web")},
             created=make_sbom.datetime(2026, 10, 14, tzinfo=make_sbom.timezone.utc),
         )
 
@@ -474,7 +486,7 @@ class Sbom(unittest.TestCase):
 
     def test_each_file_is_described_and_holds_its_platforms_components(self):
         doc = self.make()
-        self.assertEqual(len(doc["documentDescribes"]), 5)
+        self.assertEqual(len(doc["documentDescribes"]), 6)
         for file_pkg in (p for p in doc["packages"] if "packageFileName" in p):
             held = [r for r in doc["relationships"] if r["spdxElementId"] == file_pkg["SPDXID"]]
             self.assertEqual(len(held), 3, file_pkg["name"])
@@ -530,7 +542,7 @@ class Sbom(unittest.TestCase):
             [r["relatedSpdxElement"] for r in held],
         )
         with self.assertRaises(make_sbom.SbomError):
-            self.make(notices={p: self.INVENTORY for p in ("windows", "macos", "linux")})
+            self.make(notices={p: self.INVENTORY for p in ("windows", "macos", "linux", "ios")})
 
     def test_files_that_are_not_packages_are_left_out(self):
         files = self.files("windows")
