@@ -22,8 +22,10 @@ cv::Mat bgr_from_bgra(const BgraBuffer& buffer, double clockwise_degrees) {
         return {};
     }
 
-    // A header over the OS's pixels, no copy; cvtColor writes the copy.
-    // OpenCV's step is a pointer-sized count of bytes, which is the stride.
+    // A header over the OS's pixels, no copy; cvtColor writes the copy. OpenCV's
+    // step is a count of bytes, which is the stride. cv::Mat has no constructor
+    // over read-only memory; the header is only ever read.
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
     const cv::Mat bgra(buffer.height, buffer.width, CV_8UC4, const_cast<std::uint8_t*>(buffer.data),
                        buffer.stride_bytes);
     cv::Mat bgr;
