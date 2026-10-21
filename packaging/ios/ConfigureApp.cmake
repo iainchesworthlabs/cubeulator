@@ -17,6 +17,32 @@ set(CUBEULATOR_BUNDLE_EXECUTABLE "${CUBEULATOR_APP_DISPLAY_NAME}")
 # iOS takes X.Y.Z only; the pre-release label stays in the file name of the IPA.
 set(CUBEULATOR_BUNDLE_SHORT_VERSION "${PROJECT_VERSION}")
 set(CUBEULATOR_BUNDLE_BUILD "${CUBEULATOR_IOS_BUILD_NUMBER}")
+# The camera text in each language the app has it in, for the system's own prompt:
+# <language>.lproj/InfoPlist.strings, written at configure time like the assets.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(_lproj_dir "${CMAKE_BINARY_DIR}/packaging/ios/lproj")
+execute_process(
+    COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/packaging/ios/make_infoplist_strings.py"
+        --catalogues "${PROJECT_SOURCE_DIR}/src/app/i18n" --out "${_lproj_dir}"
+    RESULT_VARIABLE _rc
+    OUTPUT_QUIET)
+if(NOT _rc EQUAL 0)
+    message(FATAL_ERROR "make_infoplist_strings.py failed (${_rc})")
+endif()
+file(GLOB _catalogues CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/app/i18n/translations/cubeulator_*.ts")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/packaging/ios/make_infoplist_strings.py"
+    "${PROJECT_SOURCE_DIR}/src/app/i18n/languages.json" ${_catalogues})
+file(STRINGS "${_lproj_dir}/languages.txt" _lprojs)
+set(CUBEULATOR_BUNDLE_LOCALIZATIONS "")
+foreach(_lproj IN LISTS _lprojs)
+    string(APPEND CUBEULATOR_BUNDLE_LOCALIZATIONS "        <string>${_lproj}</string>\n")
+    set(_strings "${_lproj_dir}/${_lproj}.lproj/InfoPlist.strings")
+    target_sources(${target} PRIVATE "${_strings}")
+    set_source_files_properties("${_strings}" PROPERTIES MACOSX_PACKAGE_LOCATION "${_lproj}.lproj")
+endforeach()
+string(REGEX REPLACE "\n$" "" CUBEULATOR_BUNDLE_LOCALIZATIONS "${CUBEULATOR_BUNDLE_LOCALIZATIONS}")
+
 set(_plist "${CMAKE_BINARY_DIR}/packaging/ios/Info.plist")
 configure_file("${PROJECT_SOURCE_DIR}/packaging/ios/Info.plist.in" "${_plist}" @ONLY)
 

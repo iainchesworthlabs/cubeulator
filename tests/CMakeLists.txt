@@ -210,6 +210,7 @@ endif()
 
 # --- Integration tests: exercise several components together --------------
 add_executable(cube_integration_tests
+    integration/camera_frame_test.cpp
     integration/platform_integration_test.cpp)
 
 # The camera cases go through the OpenCV capture loop's backend

@@ -8,7 +8,10 @@
 
   NSCameraUsageDescription is the string `permission.system.camera` from
   docs/design/strings.json, as for the macOS bundle. Without the key iOS ends
-  the program the moment it asks for the camera.
+  the program the moment it asks for the camera. Its translations are the
+  <language>.lproj/InfoPlist.strings that make_infoplist_strings.py writes
+  from the app's catalogues (iOS reads them in the language of the device),
+  and CFBundleLocalizations lists those languages.
 
   CFBundleShortVersionString is the plain X.Y.Z (iOS accepts no label), and
   CFBundleVersion is the build number: the workflow passes its run number, so
@@ -34,6 +37,10 @@
     <string>@CUBEULATOR_BUNDLE_SHORT_VERSION@</string>
     <key>CFBundleVersion</key>
     <string>@CUBEULATOR_BUNDLE_BUILD@</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+@CUBEULATOR_BUNDLE_LOCALIZATIONS@
+    </array>
     <key>CFBundleIconName</key>
     <string>AppIcon</string>
     <key>LSRequiresIPhoneOS</key>
