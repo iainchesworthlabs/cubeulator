@@ -193,21 +193,21 @@ struct named {
 // source is read.
 asked_for read_sources(const request& asked, const platform& offered,
                        std::vector<std::string>& notes) {
-    const std::array<named, 4> sources{{
-        {
+    const std::array<named, 4> sources{
+        named{
             .from = source::command_line,
             .key = asked.command_line ? normalised(*asked.command_line) : std::string(),
         },
-        {
+        named{
             .from = source::environment,
             .key = asked.environment ? normalised(*asked.environment) : std::string(),
         },
-        {
+        named{
             .from = source::qt_environment,
             .key = asked.qt_environment ? normalised(*asked.qt_environment) : std::string(),
         },
-        {.from = source::setting, .key = normalised(asked.setting)},
-    }};
+        named{.from = source::setting, .key = normalised(asked.setting)},
+    };
 
     asked_for out;
     for (const named& s : sources) {
