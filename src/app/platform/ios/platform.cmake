@@ -29,11 +29,15 @@ set(CUBEULATOR_PLATFORM_NOTICES_DIR ".")
 # built as C++23 like the rest, with automatic reference counting. It is not held
 # to -Werror (cmake/CompilerWarnings.cmake keys the warning set on C++), because
 # Apple's headers change with the SDK.
-enable_language(OBJCXX)
-set(CMAKE_OBJCXX_STANDARD 23)
-set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
-set(CMAKE_OBJCXX_EXTENSIONS OFF)
-string(APPEND CMAKE_OBJCXX_FLAGS " -fobjc-arc")
+# (tests/platform/check_fragments.cmake includes every fragment in script mode, on
+# whatever host runs the tests, where a language cannot be enabled.)
+if(NOT CMAKE_SCRIPT_MODE_FILE)
+    enable_language(OBJCXX)
+    set(CMAKE_OBJCXX_STANDARD 23)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+    set(CMAKE_OBJCXX_EXTENSIONS OFF)
+    string(APPEND CMAKE_OBJCXX_FLAGS " -fobjc-arc")
+endif()
 
 set(CUBEULATOR_PLATFORM_SOURCES
     platform/ios/camera_ios.mm
