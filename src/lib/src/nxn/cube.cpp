@@ -304,6 +304,36 @@ Result<std::array<Color, 6>> scheme_of(int size, std::span<const Color> facelets
     return scheme;
 }
 
+std::vector<std::array<Color, 6>> standard_renamings(const NCube& cube) {
+    std::vector<std::array<Color, 6>> renamings;
+    const Result<std::array<Color, 6>> scheme = scheme_of(cube);
+    const Result<NCube> solved = NCube::solved(cube.size());
+    if (!scheme || !solved) {
+        return renamings;
+    }
+    // The schemes a standard cube wears: the solved cube, held every way up.
+    const Geometry& geometry = cube.geometry();
+    for (std::size_t rotation = 0; rotation < geometry.rotations().size(); ++rotation) {
+        NCube held = *solved;
+        held.apply(geometry.rotation_permutation(rotation));
+        const Result<std::array<Color, 6>> standard = scheme_of(held);
+        if (!standard) {
+            continue;
+        }
+        // The colour on each face of the cube, becoming the colour on that face of the standard
+        // cube. The scheme names six different colours, so this is a renaming of all of them.
+        std::array<Color, 6> renaming{};
+        for (const Face face : kAllFaces) {
+            renaming.at(slot_of(scheme->at(static_cast<std::size_t>(face)))) =
+                standard->at(static_cast<std::size_t>(face));
+        }
+        if (std::ranges::find(renamings, renaming) == renamings.end()) {
+            renamings.push_back(renaming);
+        }
+    }
+    return renamings;
+}
+
 Result<solver::Cube> NCube::to_cube3() const {
     const int n = size();
     if (n < 3 || !is_reduced()) {

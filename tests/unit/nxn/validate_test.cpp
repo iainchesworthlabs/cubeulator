@@ -757,3 +757,137 @@ TEST_CASE("at size 2 the oracle accepts exactly the positions turns reach",
     CHECK(rejected_inside == 0);
     CHECK(outside > 10000);
 }
+
+namespace {
+
+using Renaming = std::array<Color, 6>;
+
+constexpr Renaming kKeepNames = {Color::White, Color::Yellow, Color::Green,
+                                 Color::Blue,  Color::Orange, Color::Red};
+
+// The same cube with the names of two colours exchanged: a mirror image of the cube, which no
+// turn of it and no way of holding it undoes.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the names trade places, so order is moot
+Facelets with_names_exchanged(Facelets facelets, Color a, Color b) {
+    for (Color& colour : facelets) {
+        if (colour == a) {
+            colour = b;
+        } else if (colour == b) {
+            colour = a;
+        }
+    }
+    return facelets;
+}
+
+Facelets renamed(Facelets facelets, const Renaming& to) {
+    for (Color& colour : facelets) {
+        colour = to.at(static_cast<std::size_t>(colour));
+    }
+    return facelets;
+}
+
+std::size_t colours_that_differ(const Renaming& a, const Renaming& b) {
+    std::size_t differ = 0;
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        differ += a.at(i) != b.at(i) ? 1U : 0U;
+    }
+    return differ;
+}
+
+}  // namespace
+
+TEST_CASE("a cube coloured the usual way wears a standard scheme, held any way",
+          "[nxn][validate][scheme]") {
+    for (const int size : kSizes) {
+        INFO("size " << size);
+        const NCube cube = cube::nxn::random_scramble({.size = size, .seed = 7U, .moves = 30});
+        const std::vector<Renaming> renamings = cube::nxn::standard_renamings(cube);
+        CHECK(renamings.size() == 24);
+        CHECK(std::ranges::find(renamings, kKeepNames) != renamings.end());
+
+        // Held another way up it is the same colours on other faces: still a standard scheme.
+        const Geometry& geometry = Geometry::of(size);
+        for (std::size_t rotation = 0; rotation < geometry.rotations().size(); ++rotation) {
+            NCube held = cube;
+            held.apply(geometry.rotation_permutation(rotation));
+            const std::vector<Renaming> again = cube::nxn::standard_renamings(held);
+            CHECK(std::ranges::find(again, kKeepNames) != again.end());
+        }
+    }
+}
+
+TEST_CASE("a cube with two colour names exchanged is valid, and wears no standard scheme",
+          "[nxn][validate][scheme]") {
+    // What validate() cannot see, and standard_renamings() can: an even size has no centres to
+    // say which colour is which, so a scan that names red as orange and orange as red is a
+    // complete, valid cube - the mirror image of the one in the hand.
+    for (const int size : kSizes) {
+        INFO("size " << size);
+        const Facelets real = scrambled(size, 11U, 30);
+        for (const auto& [a, b] :
+             {std::pair{Color::Red, Color::Orange}, std::pair{Color::Green, Color::Blue},
+              std::pair{Color::White, Color::Yellow}, std::pair{Color::Red, Color::Green}}) {
+            const Facelets traded = with_names_exchanged(real, a, b);
+            const auto cube = NCube::from_facelets(size, traded);
+            REQUIRE(cube.has_value());
+            if (size % 2 == 0) {
+                // Valid, and the thing the scan has to notice for itself.
+                CHECK(verdict(size, traded).ok());
+            }
+            const std::vector<Renaming> renamings = cube::nxn::standard_renamings(*cube);
+            CHECK(renamings.size() == 24);
+            CHECK(std::ranges::find(renamings, kKeepNames) == renamings.end());
+
+            // Each renaming makes the cube wear a standard scheme.
+            for (const Renaming& renaming : renamings) {
+                const auto fixed = NCube::from_facelets(size, renamed(traded, renaming));
+                REQUIRE(fixed.has_value());
+                const std::vector<Renaming> after = cube::nxn::standard_renamings(*fixed);
+                CHECK(std::ranges::find(after, kKeepNames) != after.end());
+            }
+            // And putting the two names back is one of them.
+            Renaming back = kKeepNames;
+            back.at(static_cast<std::size_t>(a)) = b;
+            back.at(static_cast<std::size_t>(b)) = a;
+            CHECK(std::ranges::find(renamings, back) != renamings.end());
+        }
+    }
+}
+
+TEST_CASE("the renamings that make a standard scheme differ in at least four colours",
+          "[nxn][validate][scheme]") {
+    // So whatever the light does to the colours as they are measured, which of the renamings
+    // fits them best is a question about four or more colours at once.
+    const NCube traded = *NCube::from_facelets(
+        4, with_names_exchanged(scrambled(4, 3U, 30), Color::Red, Color::Orange));
+    const std::vector<Renaming> renamings = cube::nxn::standard_renamings(traded);
+    REQUIRE(renamings.size() == 24);
+    for (std::size_t a = 0; a < renamings.size(); ++a) {
+        for (std::size_t b = a + 1; b < renamings.size(); ++b) {
+            CHECK(colours_that_differ(renamings.at(a), renamings.at(b)) >= 4);
+        }
+    }
+}
+
+TEST_CASE("a cube with no scheme to read has no renamings", "[nxn][validate][scheme]") {
+    // Stickers of the same colours, put where no cube has them: the corners of a solved 4x4 with
+    // two stickers of different corners exchanged. Some of those show two colours of one axis
+    // on a corner, and the corners then agree on no scheme to read.
+    const Facelets solved_stickers = solved(4);
+    std::size_t without_scheme = 0;
+    for (std::size_t a = 0; a < 8; ++a) {
+        for (std::size_t b = a + 1; b < 8; ++b) {
+            for (std::size_t sticker = 0; sticker < 3; ++sticker) {
+                Facelets bad = solved_stickers;
+                std::swap(bad.at(corner_stickers(4, a).at(sticker)),
+                          bad.at(corner_stickers(4, b).at((sticker + 1) % 3)));
+                const auto cube = NCube::from_facelets(4, bad);
+                if (cube.has_value() && !cube::nxn::scheme_of(*cube).has_value()) {
+                    ++without_scheme;
+                    CHECK(cube::nxn::standard_renamings(*cube).empty());
+                }
+            }
+        }
+    }
+    CHECK(without_scheme > 0);
+}

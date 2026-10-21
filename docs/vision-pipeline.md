@@ -710,6 +710,27 @@ cubes, and nothing but a 3x3 has been read on a real cube.
   more than one cube is `ambiguous_scan` until corner views settle it, and asks for "two sides at
   once" (see below). `SideScan::scanned_n()` / `cube_n()` give the cube of any size (an `NCube`);
   `scanned()` / `cube()` are the 3x3's.
+- **An even size's colour scheme is checked for its handedness** (`assemble_n`,
+  `repaired_scheme`). Reading the scheme off the corners means `validate` accepts a cube
+  whatever its colours are called, so a naming with two colours traded makes a complete, valid
+  cube - the mirror image of the one in the hand. Red and orange are the pair: on the real 4x4
+  sessions of 2026-10-17 their clusters were 24 Lab from trading in the distance matching
+  early in the evening and 2 by the last, the hue test never applied (the white and the yellow
+  read orange under the lamp, and the dark blue is no colour at all), and replayed with a
+  little less green two of three sessions named every red sticker orange. A real cube's
+  scheme has a handedness that no turning undoes, and exchanging two names reverses it, so a
+  naming whose cubes wear no standard scheme (`cube::nxn::standard_renamings`) is renamed by
+  the one of the 24 renamings that make one which the measured colours fit best (plain Lab to
+  the palette; they differ in at least four colours, so the pair that was confused is the
+  cheap one: on the drawn evening lamp the chosen renaming is 35 Lab cheaper than the next
+  best, where the red-or-orange call it replaces was within 1). The trace says so
+  (`scheme_fix`, with the cost of the choice and of the next best), the cube's colours (`ScannedCubeN::colours`) are renamed with it so the camera
+  follows the right colours, and candidates that wear no standard scheme under the new names
+  are dropped. A naming that already makes a standard scheme is left alone, and an odd size
+  never reaches this: its centres pin the names, and a wrong one is repaired by trading
+  them. A cube whose scheme really is a mirror image of the usual one (an old Japanese-scheme
+  cube) would be renamed to the usual one; the solver already takes the usual scheme to be
+  that of every physical cube (`canonical_color`).
 - **What the oracle cannot see.** Two stickers of one ring of centres that were swapped by
   a misnaming give a cube nothing can tell from the right one (centres have no identity),
   and of two wing stickers a few per cent do: see the investigation. A scan of a bigger

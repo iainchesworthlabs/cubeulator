@@ -243,6 +243,19 @@ struct NameExchange {
     float centre_distance = 0.0F;
 };
 
+// The colours of a cube of an even size renamed to put it in the scheme of a standard cube, when
+// the naming left it in another (red and orange traded, say: see assemble_n).
+struct SchemeFix {
+    // For each colour, by solver::Color's number, the colour it was renamed to; itself when it
+    // kept its name.
+    std::array<solver::Color, 6> renamed_to{};
+    // The summed Lab distance, to the palette, of the six colours as measured and named as this
+    // renaming has them; and the same of the next best renaming that would also have made a
+    // standard scheme. How far apart they are is how sure the choice was.
+    float cost = 0.0F;
+    float runner_up_cost = 0.0F;
+};
+
 // How the cube was put together from the six named sides, or why it was not:
 // the working of the assembly step, read-only, for whoever is finding out why
 // a scan came out as it did (docs/diagnostics.md).
@@ -266,6 +279,8 @@ struct AssemblyTrace {
     // Why assembling the naming as it stands failed, when it was tried.
     std::optional<CubeError> direct_error;
     std::optional<NameExchange> exchange;
+    // A cube of an even size, whose colours were renamed to make a standard scheme.
+    std::optional<SchemeFix> scheme_fix;
     // Why there is no cube.
     std::optional<CubeError> error;
 };
