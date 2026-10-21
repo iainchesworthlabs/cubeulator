@@ -2001,7 +2001,7 @@ constexpr float kMaxMedianStickerOfCell = 1.0F;
     if (stats.oversized > 0) {
         CUBE_ZONE_SCOPED_N("vision.direct_scan.read_side_glare_look");
         const std::vector<std::vector<cv::Point>> glare_contours =
-            contours_without_glare(frame.working, size);
+            contours_without_glare(frame, size);
         attempt.outlines.at(static_cast<std::size_t>(FrameLook::glare)) = glare_contours.size();
         const std::vector<Blob> without_glare =
             sticker_blobs(glare_contours, frame.working, tuning, forgiving);

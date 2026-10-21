@@ -487,10 +487,36 @@ What is in it.
     loop and gains the same. The look's outlines, per frame it is taken on: 2.77
     to 1.51 ms on a 3x3 session, 3.75 to 1.71 on a 4x4 (960 px wide), 4.96 to 1.70 on
     a 5x5; `timing.glare_look.640x360` 0.52 to 0.27 of the calibration workload.
-    235 recorded sessions (98,440 frames, 52,614 reads, 216 of them by this look)
-    give the same digest before and after, `cube_scan digest`: every blob count
-    and outline count per look, the lattice's residuals, and each read's centres,
-    pitch, found flags and Lab colours, bit for bit.
+    Then the look stopped redoing what `prepare_frame` had done: it takes the
+    blurred brightness the frame already has (the look blurred the same maximum
+    again), finds the pixels to cut out in one pass that reads a pixel's colour
+    only where the blurred brightness is 252 or more, hands back the first
+    look's own outlines when there are none (67 of 108 glare-look frames of a
+    4x4 session, none of a daylight-backlit 3x3 session, where a window is
+    clipped), and otherwise starts from the first look's threshold, which the
+    prepared frame now keeps (a 640 x 360 plane, 0.23 MB more allocated by a
+    read). Per frame it is taken on: 2.77 to 0.82 ms on the 3x3 session, 3.75 to
+    0.40 on the 4x4, 4.96 to 0.79 on the 5x5; `timing.glare_look.640x360` 0.52 to
+    0.09 (0.03 with nothing clipped). `read_side` of the same sessions, a frame in
+    all: 2.35 to 1.67, 3.40 to 1.63, 3.66 to 1.83 ms.
+  - **The first look's passes had the same loop.** `prepare_frame` took the
+    brightest channel with `split` and two `max`es (0.34 ms of a 640 x 360
+    frame, three planes allocated). It and the chroma look now share
+    `cube/vision/detail/channel_kernels.hpp`, which CMake chooses
+    (`CUBEULATOR_SIMD`, [Building](building.md)): OpenCV's 128-bit intrinsics
+    where the target has them (SSE2, NEON, a browser's simd128), the scalar loop
+    elsewhere. The vector form is 0.045 ms and allocates no planes. A wider tier
+    was measured and left out: the kernel is within 0.025 ms of the memory floor
+    (copying the frame is 0.014), so AVX2 could save about 0.02 ms a frame and
+    would need a CPU probe per compiler. `prepare_frame` p50 over a 3x3 session,
+    alternated with the build before: 1.92, 1.88, 1.69 ms to 1.85, 1.66, 1.52; a
+    read allocates 1.30 MB, not 2.22.
+  - **Evidence.** 235 recorded sessions (98,440 frames, 52,614 reads, 216 of them
+    by the glare look) give the same digest, before and after every step above and
+    with `-DCUBEULATOR_SIMD=generic` and `vector128` alike. The digest
+    (`cube_scan digest`) is every blob count and outline count per look, the
+    lattice's residuals, and each read's centres, pitch, found flags and Lab
+    colours, bit for bit.
   - One thing the look does that reads as an oversight and is kept, because a
     read depends on it: `contours_without_glare` blurs the brightness in place
     and then judges "clipped" (252 and up) on the *blurred* value, and

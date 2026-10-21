@@ -59,6 +59,14 @@ struct PreparedFrame {
     // Outlines of the bright regions of `working` against their surroundings:
     // the stickers, and anything else bright and bounded by something darker.
     std::vector<std::vector<cv::Point>> contours;
+    // The block, in pixels, `contours` was thresholded against, and the
+    // threshold itself before it was opened and traced: what lets a look that
+    // would use the same block start from it instead of thresholding again, or
+    // hand `contours` back when it has nothing to change in it
+    // (contours_without_glare). 0 and empty for a frame not made by
+    // prepare_frame, whose outlines no look takes.
+    int block = 0;
+    cv::Mat binary;
 };
 
 // Nothing for a frame that is empty or is not 8-bit BGR.
@@ -114,6 +122,14 @@ struct PreparedFrame {
 // carries a little chroma even under a lamp - and the mask is dilated by a pixel
 // so the rim of a highlight goes with its middle.
 [[nodiscard]] std::vector<std::vector<cv::Point>> contours_without_glare(const cv::Mat& working,
+                                                                         int size = 3);
+
+// The same outlines, from a prepared frame: its brightness is the one the glare
+// look would blur from `working`, and when no pixel of it is clipped and
+// colourless (most frames) the look's outlines are the frame's own, which are
+// handed back untraced. The result is the one contours_without_glare(
+// frame.working, size) gives, for a frame made by prepare_frame.
+[[nodiscard]] std::vector<std::vector<cv::Point>> contours_without_glare(const PreparedFrame& frame,
                                                                          int size = 3);
 
 // The outlines of regions that are strongly coloured, taken from the frame's

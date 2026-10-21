@@ -191,6 +191,7 @@ target_include_directories(cube_lib
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
         "$<BUILD_INTERFACE:${CUBEULATOR_PROFILING_DIR}>"
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/variants/simd-${CUBEULATOR_SIMD_RESOLVED}>"
         "$<INSTALL_INTERFACE:include>")
 
 target_compile_features(cube_lib PUBLIC cxx_std_23)

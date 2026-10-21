@@ -121,6 +121,10 @@ include(Sanitizers)
 include(Coverage)
 include(Tracy)
 include(ProfileRecorder)
+include(Simd)
+
+# Which variants/simd-<name> cube::lib is built with (cmake/Simd.cmake).
+cube_resolve_simd(CUBEULATOR_SIMD_RESOLVED)
 include(MobileDependencies)
 
 cube_configure_mobile_dependencies()
@@ -160,4 +164,5 @@ message(STATUS "Cubeulator ${CUBEULATOR_VERSION_FULL}")
 message(STATUS "  Build app   : ${CUBEULATOR_BUILD_APP}")
 message(STATUS "  Build tests : ${CUBEULATOR_BUILD_TESTS}")
 message(STATUS "  Tracy       : ${CUBEULATOR_ENABLE_TRACY}")
+message(STATUS "  SIMD kernels: ${CUBEULATOR_SIMD_RESOLVED}")
 message(STATUS "  Recorder    : ${CUBEULATOR_ENABLE_PROFILE_RECORDER}")

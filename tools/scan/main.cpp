@@ -1942,6 +1942,7 @@ int run_glare_cost(const fs::path& session, int runs) {
     };
     std::size_t frames = 0;
     std::size_t looked = 0;
+    std::size_t nothing_clipped = 0;
     double read_ms = 0.0;
     double look_ms = 0.0;
     for (const fs::path& path : frames_of(session)) {
@@ -1967,18 +1968,19 @@ int run_glare_cost(const fs::path& session, int runs) {
         double best = 1e9;
         for (int run = 0; run < runs; ++run) {
             const auto start = Clock::now();
-            const auto contours = cube::vision::contours_without_glare(prepared->working, size);
+            const auto contours = cube::vision::contours_without_glare(*prepared, size);
             best = std::min(best, ms(Clock::now() - start));
-            if (contours.empty() && run < 0) {
-                return 1;
+            if (run == 0 && contours == prepared->contours) {
+                ++nothing_clipped;
             }
         }
         look_ms += best;
     }
     fmt::print(
-        "{}: {} frames, the glare look taken on {}; read_side {:.3f} ms a frame, the look's "
+        "{}: {} frames, the glare look taken on {} ({} with nothing to cut out); read_side {:.3f} "
+        "ms a frame, the look's "
         "outlines {:.3f} ms a frame it was taken on ({:.3f} ms a frame of the session)\n",
-        session.filename().string(), frames, looked,
+        session.filename().string(), frames, looked, nothing_clipped,
         frames == 0 ? 0.0 : read_ms / static_cast<double>(frames),
         looked == 0 ? 0.0 : look_ms / static_cast<double>(looked),
         frames == 0 ? 0.0 : look_ms / static_cast<double>(frames));

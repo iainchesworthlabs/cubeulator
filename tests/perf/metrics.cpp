@@ -602,8 +602,8 @@ namespace {
 // The outlines of the glare look, which the reader takes on a frame with an
 // outline too big to be a sticker in it: the channels of the working frame, a
 // threshold and a trace, 3.3 ms of a scan frame's 8.5 once.
-[[nodiscard]] auto tracing_without_glare(const cv::Mat& working) {
-    return [&working] -> std::uint64_t { return vision::contours_without_glare(working).size(); };
+[[nodiscard]] auto tracing_without_glare(const vision::PreparedFrame& frame) {
+    return [&frame] -> std::uint64_t { return vision::contours_without_glare(frame).size(); };
 }
 
 [[nodiscard]] auto reading_corner(const cv::Mat& frame) {
@@ -680,12 +680,18 @@ std::vector<Metric> read_timing_metrics() {
                         time_against_calibration(reading_side(nothing360), b::kFastRuns),
                         b::kEmptyReadTime360, kNoSeed));
 
-    const std::optional<vision::PreparedFrame> prepared = vision::prepare_frame(frame360);
-    if (prepared.has_value()) {
-        out.push_back(
-            timed("timing.glare_look.640x360",
-                  time_against_calibration(tracing_without_glare(prepared->working), b::kFastRuns),
-                  b::kGlareLookTime360, kNoSeed));
+    // The glare look's outlines: of a frame with a highlight in it, which are
+    // traced afresh, and of one with nothing clipped, which are the frame's own.
+    const std::optional<vision::PreparedFrame> glared =
+        vision::prepare_frame(glared_side_frame(kSceneSizes.front()));
+    const std::optional<vision::PreparedFrame> clear = vision::prepare_frame(frame360);
+    if (glared.has_value() && clear.has_value()) {
+        out.push_back(timed("timing.glare_look.640x360",
+                            time_against_calibration(tracing_without_glare(*glared), b::kFastRuns),
+                            b::kGlareLookTime360, kNoSeed));
+        out.push_back(timed("timing.glare_look.640x360_nothing_clipped",
+                            time_against_calibration(tracing_without_glare(*clear), b::kFastRuns),
+                            b::kClearGlareLookTime360, kNoSeed));
     }
 
     const cv::Mat corner360 = corner_frame(test::scramble(1), kSceneSizes.front());
