@@ -70,7 +70,8 @@ TEST_CASE("the channel kernels match OpenCV's, whatever the variant", "[channel_
         // shorter than a vector, and the working frame itself.
         for (const int width : {1, 2, 15, 16, 17, 31, 32, 33, 47, 64, 100, 640}) {
             CAPTURE(width);
-            check_against_opencv(random_bgr(cv::Size(width, 7), 1000 + width));
+            check_against_opencv(
+                random_bgr(cv::Size(width, 7), 1000U + static_cast<std::uint64_t>(width)));
         }
         check_against_opencv(random_bgr(cv::Size(641, 361), 7));
     }
