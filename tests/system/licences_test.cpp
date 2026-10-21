@@ -99,7 +99,7 @@ TEST_CASE("Licences lists every component and every bundled font, and opens each
         // Archivo and IBM Plex Mono are bundled with the app, so they are in the
         // list: found there by the name the build gave them, and opened.
         const QVariantList components = app.runtime().about().components();
-        for (const QString family : {QStringLiteral("Archivo"), QStringLiteral("IBM Plex Mono")}) {
+        for (const QString& family : {QStringLiteral("Archivo"), QStringLiteral("IBM Plex Mono")}) {
             INFO("font: " << family.toStdString());
             int row = 0;
             for (int i = 0; i < components.size(); ++i) {
