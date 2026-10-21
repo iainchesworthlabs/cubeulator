@@ -26,6 +26,7 @@ left, and why it was not done here.
 | 8 | Scanning with edge views and corner views | yes | sizes 2 to 5 on screen | the corner reader goes to 6x6 (`kMaxCornerSize`); 6x6 to 9x9 are solved by the library but the entry and scan screens offer 2 to 5 | **By design** (the plan adds a size to the screens once its measurements are in) |
 | 9 | Resume a solve from History without a camera | no camera (no scan to match) | no camera | a solve carried on from History has no scan | **By design**, the same at every size |
 | 10 | The user guide said the camera reads only a 3x3 | | | text not updated when scanning other sizes landed | **Fixed** (`docs/guide/other-sizes.md`) |
+| 11 | Camera preview and following after the colours were corrected (Check the colours, put right, Solve) | gone | gone | `AppState.solveColours` turned `solveCamera` off for every cube it solved, "a typed cube from then on"; and the camera's colours were still filed under the names the scan gave, which is the wrong way round for exactly what is corrected (red and orange traded) | **Fixed**, at every size. A cube that began as a finished scan keeps the camera (`ColourEntry.solve` answers `camera`), and `DirectScan.putRight` files what the camera measured under the names the person gave. The solve screen no longer offers to look the scan over again, as it is not the cube. Held by drawn frames of a 4x4 with red and orange traded; **not** seen with a real cube |
 
 ## Features checked and level
 

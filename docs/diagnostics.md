@@ -201,7 +201,7 @@ a bad result can be captured while it is on screen rather than reconstructed:
 
 | Member | Holds |
 | --- | --- |
-| `scan` | The scan controller: running, watching, complete, conflicted, ambiguous, the frame size, the device, `lock` (the photometry report), `scan` (a full `scan` record's `data`, from `SideScan::diagnose()`: sides with their read counts and rolls, naming, assembly, result), `scanned_state` and `session_colours` once complete. |
+| `scan` | The scan controller: running, watching, complete, conflicted, ambiguous, the frame size, the device, `lock` (the photometry report), `scan` (a full `scan` record's `data`, from `SideScan::diagnose()`: sides with their read counts and rolls, naming, assembly, result), `scanned_state` and `session_colours` once complete, and `corrected_colours` once a person has put the cube right and solved it (what the camera is then matched against; `session_colours` stays the scan's own). |
 | `solve` | The solve controller, as a `solve` record: method, the cube now, the whole move list, the index. |
 | `held` | The camera's hold on the cube: `hold`, `seen`, `sight`, `wrong_side`. |
 

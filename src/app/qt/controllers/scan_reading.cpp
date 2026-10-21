@@ -9,6 +9,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 #include <vector>
 
 namespace cube::app {
@@ -171,6 +172,39 @@ std::optional<Reading> reading_from_named_sides(const cube::vision::ColorResolut
         return std::nullopt;
     }
     return reading;
+}
+
+cube::vision::SessionColours colours_after_correction(
+    const cube::vision::SessionColours& measured, const std::vector<std::int8_t>& as_read,
+    const std::vector<std::int8_t>& as_corrected) {
+    constexpr std::size_t kColours = std::tuple_size_v<cube::vision::SessionColours>;
+    if (as_read.size() != as_corrected.size()) {
+        return measured;
+    }
+    // For each colour now, how many of its stickers the scan named each colour.
+    std::array<std::array<int, kColours>, kColours> named{};
+    for (std::size_t i = 0; i < as_corrected.size(); ++i) {
+        const auto now = static_cast<std::size_t>(as_corrected.at(i));
+        const auto then = static_cast<std::size_t>(as_read.at(i));
+        if (as_corrected.at(i) >= 0 && now < kColours && as_read.at(i) >= 0 && then < kColours) {
+            ++named.at(now).at(then);
+        }
+    }
+    cube::vision::SessionColours colours = measured;
+    for (std::size_t now = 0; now < kColours; ++now) {
+        // The colour the scan named most of them; its own on a tie, so that a colour
+        // nobody touched is never moved.
+        std::size_t most = now;
+        for (std::size_t then = 0; then < kColours; ++then) {
+            if (named.at(now).at(then) > named.at(now).at(most)) {
+                most = then;
+            }
+        }
+        if (named.at(now).at(most) > 0) {
+            colours.at(now) = measured.at(most);
+        }
+    }
+    return colours;
 }
 
 namespace {
