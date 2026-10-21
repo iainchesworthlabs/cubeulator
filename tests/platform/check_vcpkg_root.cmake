@@ -96,15 +96,25 @@ function(expect_ok what)
     endif()
 endfunction()
 
+# CMake wraps long error text at 80 columns, so the output is compared with its
+# runs of white space collapsed to one space.
+function(_flat_log out)
+    string(REGEX REPLACE "[ 	
+]+" " " flat "${log}")
+    set(${out} "${flat}" PARENT_SCOPE)
+endfunction()
+
 function(expect_in_log what text)
-    string(FIND "${log}" "${text}" at)
+    _flat_log(flat)
+    string(FIND "${flat}" "${text}" at)
     if(at EQUAL -1)
         message(FATAL_ERROR "${what}: expected '${text}' in the output.\n${log}")
     endif()
 endfunction()
 
 function(expect_not_in_log what text)
-    string(FIND "${log}" "${text}" at)
+    _flat_log(flat)
+    string(FIND "${flat}" "${text}" at)
     if(NOT at EQUAL -1)
         message(FATAL_ERROR "${what}: did not expect '${text}' in the output.\n${log}")
     endif()
@@ -195,21 +205,26 @@ endif()
 expect_in_log("dead toolchain" "does not exist")
 
 # --- dead link at deps/vcpkg ---------------------------------------------
+# The link is a symbolic link where the machine lets this user make one, and
+# otherwise a directory junction (what the repo's Windows developers have),
+# which needs no privilege. Which of the two is found out by trying, not by
+# asking what the OS is: that is a CMake decision made elsewhere.
 set(link "${super}/deps/vcpkg")
 set(target "${WORK_DIR}/link-target")
 file(MAKE_DIRECTORY "${super}/deps" "${target}")
-if(WIN32)
-    # A junction, as the repo's developers use; needs no privilege.
+file(CREATE_LINK "${target}" "${link}" SYMBOLIC RESULT made)
+if(NOT made STREQUAL "0")
+    find_program(CMD_EXECUTABLE cmd)
+    if(NOT CMD_EXECUTABLE)
+        message(FATAL_ERROR "dead link: cannot make a symbolic link (${made}) and there is no cmd to make a junction.")
+    endif()
     string(REPLACE "/" "\\" link_native "${link}")
     string(REPLACE "/" "\\" target_native "${target}")
     execute_process(COMMAND cmd /c mklink /J "${link_native}" "${target_native}"
         RESULT_VARIABLE rc OUTPUT_QUIET ERROR_QUIET)
-else()
-    execute_process(COMMAND "${CMAKE_COMMAND}" -E create_symlink "${target}" "${link}"
-        RESULT_VARIABLE rc)
-endif()
-if(NOT rc EQUAL 0)
-    message(FATAL_ERROR "dead link: could not make a link at ${link}.")
+    if(NOT rc EQUAL 0)
+        message(FATAL_ERROR "dead link: could not make a junction at ${link}.")
+    endif()
 endif()
 file(REMOVE_RECURSE "${target}")
 configure(b-link "")
@@ -219,10 +234,9 @@ endif()
 expect_in_log("dead link" "is a link to")
 expect_in_log("dead link" "does not exist")
 expect_not_in_log("dead link" "Initialising vendored vcpkg submodule")
-if(WIN32)
+file(REMOVE "${link}")
+if(IS_SYMLINK "${link}" AND CMD_EXECUTABLE)
     execute_process(COMMAND cmd /c rmdir "${link_native}" OUTPUT_QUIET ERROR_QUIET)
-else()
-    file(REMOVE "${link}")
 endif()
 
 message(STATUS "vcpkg root selection behaves as documented")
