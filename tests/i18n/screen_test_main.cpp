@@ -4,6 +4,7 @@
 // Nothing here needs a real display: the screens are made as items and read
 // back (the way the solve lane's cube_qml_tests read the 3D cube), so the
 // offscreen platform is enough and the run is the same headless on CI.
+#include "kit/bundled_fonts.hpp"
 #include "screen_app.hpp"
 #include "test_platform.hpp"
 
@@ -56,14 +57,15 @@ int main(int argc, char* argv[]) {
 
     QGuiApplication app(argc, argv);
 
-    // The app's own face (Archivo) is not installed on a test machine and the
-    // repository ships none yet, so every string is set in the machine's
-    // default: Segoe UI on a Windows runner, DejaVu Sans, a good deal wider, on
-    // a Linux one. A layout that holds in one and not the other is a layout
-    // that depends on the font, so a developer can say which face to check
-    // against: CUBE_I18N_TEST_FONT="DejaVu Sans" on a machine that has it, or
-    // any wide face (Verdana) where it does not.
-    if (const QString family = qEnvironmentVariable("CUBE_I18N_TEST_FONT"); !family.isEmpty()) {
+    // The app's own face (Archivo) is compiled in and registered at start-up,
+    // as in the app, so every string is set in the face the design asks for on
+    // every machine. A developer can check a layout against another face
+    // instead - CUBE_I18N_TEST_FONT="DejaVu Sans" (the Linux leg's default
+    // before the faces were bundled) or any wide face such as Verdana - and
+    // then Archivo is left unregistered and the name is substituted.
+    if (const QString family = qEnvironmentVariable("CUBE_I18N_TEST_FONT"); family.isEmpty()) {
+        cube::app::kit::installBundledFonts();
+    } else {
         // The screens ask for Archivo by name, so it is the name that is
         // substituted; setting the application font would not reach them.
         QFont::insertSubstitution(QStringLiteral("Archivo"), family);

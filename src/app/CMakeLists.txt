@@ -340,6 +340,22 @@ if(CUBEULATOR_BUILD_APP)
     target_sources(cube_app_qml PRIVATE
         qt/kit/bundled_fonts.hpp
         qt/kit/bundled_fonts.cpp)
+
+    # The design's Latin faces (qt/fonts/: Archivo, IBM Plex Mono; their OFL
+    # texts sit beside them and the generated notices list them) where the
+    # platform says to. Without them Theme.qml names two families the machine
+    # does not have, Qt searches every font it has for them at the first text
+    # (about 350 ms) and sets the text in its default face instead.
+    if(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS)
+        file(GLOB _cube_latin_fonts CONFIGURE_DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/qt/fonts/*.ttf"
+            "${CMAKE_CURRENT_SOURCE_DIR}/qt/fonts/*.otf")
+        qt_add_resources(cube_app_qml "latin_fonts"
+            PREFIX "/fonts"
+            BASE "${CMAKE_CURRENT_SOURCE_DIR}/qt/fonts"
+            FILES ${_cube_latin_fonts})
+        unset(_cube_latin_fonts)
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------

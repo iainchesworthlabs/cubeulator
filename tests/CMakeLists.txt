@@ -306,6 +306,7 @@ if(CUBEULATOR_BUILD_APP)
 
     add_executable(cube_qml_tests
         qml_test_main.cpp
+        unit/bundled_fonts_test.cpp
         unit/colours_screen_test.cpp
         unit/complete_screen_test.cpp
         unit/cube_view_reading_test.cpp
@@ -338,6 +339,13 @@ if(CUBEULATOR_BUILD_APP)
 
     # qml_test_app.hpp, shared by every test file here, sits beside the main.
     target_include_directories(cube_qml_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+
+    # The notices the build generated, which cube_app embeds as :/licences/* for
+    # the screens that show them: unit/bundled_fonts_test.cpp holds every
+    # bundled font to being in them, with its licence text.
+    target_compile_definitions(cube_qml_tests PRIVATE
+        "CUBE_NOTICES_JSON=\"${PROJECT_BINARY_DIR}/third_party_notices/third-party-notices.json\"")
+    add_dependencies(cube_qml_tests cube_third_party_notices)
 
     # On Windows the Qt runtime and the QML modules the app imports are
     # copied next to cube_app.exe when it is built; this binary sits in the

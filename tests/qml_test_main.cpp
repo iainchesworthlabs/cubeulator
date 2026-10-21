@@ -4,6 +4,7 @@
 // No window is ever shown: the 3D cube is read back from its nodes' own
 // transforms, which need neither a GPU nor a display, so the offscreen
 // platform is enough and the suite runs the same on a headless CI machine.
+#include "kit/bundled_fonts.hpp"
 #include "qml_test_app.hpp"
 #include "test_platform.hpp"
 
@@ -46,6 +47,10 @@ int main(int argc, char* argv[]) {
     }
 
     QGuiApplication app(argc, argv);
+
+    // The app's own faces, registered as the app does at start-up, so that the
+    // screens are laid out in the type the design asks for on every machine.
+    cube::app::kit::installBundledFonts();
 
     // The engine goes first: it is made after the controllers and so torn
     // down before them, as in the app.

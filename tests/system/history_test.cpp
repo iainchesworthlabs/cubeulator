@@ -180,6 +180,16 @@ TEST_CASE("solves are listed newest first, and deleted or cleared only after ask
         CHECK(app.runtime().solve().moveIndex() == 2);
         app.click("solution.back");
         REQUIRE(app.wait_for([&]() { return app.screen() == "history"; }));
+        // The list makes its rows when it is next polished; on a slow runner that
+        // is after the screen has changed (macOS, narrow, found them not yet).
+        CHECK(app.wait_for([&]() {
+            for (QQuickItem* item : app.find_all("history.row2")) {
+                if (item->isVisible()) {
+                    return true;
+                }
+            }
+            return false;
+        }));
         CHECK(app.find("history.row2") != nullptr);
 
         // Delete asks first, and the safe choice leaves it be.

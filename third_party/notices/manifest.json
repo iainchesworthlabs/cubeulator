@@ -220,7 +220,7 @@
         "src/app/qt/fonts/Archivo"
       ],
       "licenseFile": "src/app/qt/fonts/OFL-Archivo.txt",
-      "notes": "Bundled by the kit (feature/ax-kit) under src/app/qt/fonts/; emitted once those files exist. Copyright line taken from the vendored OFL text."
+      "notes": "Regular, Bold and ExtraBold, unmodified, compiled into the app under :/fonts and registered at start-up on every platform but the browser (src/app/qt/fonts/, which has the provenance and hashes). Copyright line taken from the vendored OFL text."
     },
     {
       "id": "font-ibm-plex-mono",
@@ -235,7 +235,7 @@
         "src/app/qt/fonts/IBMPlexMono"
       ],
       "licenseFile": "src/app/qt/fonts/OFL-IBMPlexMono.txt",
-      "notes": "Bundled by the kit under src/app/qt/fonts/; emitted once those files exist."
+      "notes": "Medium, unmodified, compiled into the app under :/fonts and registered at start-up on every platform but the browser (src/app/qt/fonts/, which has the provenance and hashes)."
     },
     {
       "id": "font-noto-sans-hebrew",
