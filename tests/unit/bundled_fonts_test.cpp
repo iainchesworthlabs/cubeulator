@@ -89,7 +89,6 @@ TEST_CASE("The families Theme.qml names are the ones the bundle carries", "[font
     }
 }
 
-#ifdef CUBE_NOTICES_JSON
 // The notices the build generates are what cube_app embeds as
 // :/licences/third-party-notices.json for the screens that list them, and what
 // the desktop packages carry as THIRD-PARTY-NOTICES.txt. The OFL asks that a
@@ -114,8 +113,9 @@ TEST_CASE("Every bundled font is in the notices, with its licence text", "[fonts
             const QJsonObject component = value.toObject();
             // "Archivo (typeface)" is the notice for "Archivo", and for the
             // legacy names its weights register under ("Archivo ExtraBold").
-            const QString name =
-                component.value(QStringLiteral("name")).toString().section(QStringLiteral(" ("), 0, 0);
+            const QString name = component.value(QStringLiteral("name"))
+                                     .toString()
+                                     .section(QStringLiteral(" ("), 0, 0);
             if (component.value(QStringLiteral("kind")).toString() == QStringLiteral("font") &&
                 family.startsWith(name)) {
                 found = component;
@@ -138,4 +138,3 @@ TEST_CASE("Every bundled font is in the notices, with its licence text", "[fonts
         CHECK_FALSE(value.toString().contains(QStringLiteral("Font file")));
     }
 }
-#endif
