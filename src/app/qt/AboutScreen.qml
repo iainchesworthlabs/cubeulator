@@ -142,16 +142,22 @@ Rectangle {
                     x: -Theme.space6
                     width: scroller.width
                     ListRow {
+                        id: licencesRow
                         objectName: "about.licences"
                         title: qsTrId("about.licences")
                         inset: Theme.space6
+                        handlesMoves: true
+                        onMoved: (delta) => { if (delta > 0) sourceRow.forceActiveFocus(Qt.TabFocusReason); }
                         onClicked: AppState.openLicences()
                     }
                     // The GPL obliges the app to say where its source is, so
                     // this is on the screen, not a level down. The address is
                     // shown whole, so that it can be read and typed.
                     ListRow {
+                        id: sourceRow
                         objectName: "about.source"
+                        handlesMoves: true
+                        onMoved: (delta) => { if (delta < 0) licencesRow.forceActiveFocus(Qt.BacktabFocusReason); }
                         title: qsTrId("about.source")
                         value: AboutInfo.sourceUrl
                         inset: Theme.space6

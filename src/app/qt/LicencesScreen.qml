@@ -32,6 +32,9 @@ Rectangle {
     // The entry being read: -1 is the list.
     property int selected: -1
     readonly property bool reading: selected >= 0 && selected < entries.length
+    // Null when no notice is open; the bindings below test it, not `reading`,
+    // because the two change one after the other and a binding that read one
+    // and then the other could see them disagree.
     readonly property var current: reading ? entries[selected] : null
 
     function goBack() {
@@ -139,6 +142,18 @@ Rectangle {
                     value: modelData.licence
                     onClicked: root.open(index)
                     onActiveFocusChanged: if (activeFocus) ListView.view.positionViewAtIndex(index, ListView.Contain)
+                    // Up and Down move along the list itself, not the tab chain
+                    // (which on macOS skips what Tab does not reach).
+                    handlesMoves: true
+                    onMoved: (delta) => {
+                        const next = index + delta;
+                        if (next < 0 || next >= ListView.view.count)
+                            return;
+                        ListView.view.positionViewAtIndex(next, ListView.Contain);
+                        const row = ListView.view.itemAtIndex(next);
+                        if (row)
+                            row.forceActiveFocus(delta > 0 ? Qt.TabFocusReason : Qt.BacktabFocusReason);
+                    }
                 }
             }
         }
@@ -159,7 +174,7 @@ Rectangle {
                 Text {
                     objectName: "licences.detail.name"
                     width: parent.width
-                    text: root.reading ? (root.current.own === true ? qsTrId("licences.own") : root.current.name) : ""
+                    text: root.current ? (root.current.own === true ? qsTrId("licences.own") : root.current.name) : ""
                     wrapMode: Text.Wrap
                     font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 20
                     color: Theme.ink
@@ -172,7 +187,7 @@ Rectangle {
                     visible: text !== ""
                     // The version and the licence identifier: data, not words.
                     text: {
-                        if (!root.reading)
+                        if (!root.current)
                             return "";
                         const version = root.current.own === true ? "" : root.current.version;
                         return version === "" ? root.current.licence : version + " · " + root.current.licence;
@@ -212,14 +227,14 @@ Rectangle {
                         activeFocusOnTab: true
                         cursorVisible: false
                         wrapMode: TextEdit.Wrap
-                        text: root.reading ? root.current.text : ""
+                        text: root.current ? root.current.text : ""
                         font.family: Theme.fontMono; font.pixelSize: 12
                         color: Theme.ink
                         selectionColor: Theme.accent
                         LayoutMirroring.enabled: false
                         horizontalAlignment: TextEdit.AlignLeft
                         Accessible.role: Accessible.StaticText
-                        Accessible.name: root.reading ? root.current.name : ""
+                        Accessible.name: root.current ? root.current.name : ""
                         Accessible.description: text
 
                         // A long text is read with the keyboard: the arrows and the

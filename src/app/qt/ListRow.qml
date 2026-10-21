@@ -22,7 +22,11 @@ Item {
     property bool chevron: true
     // How far the text and the chevron are from the row's edges.
     property real inset: Theme.space4
+    // Up and Down. A row whose neighbours it knows handles them itself
+    // (`handlesMoves`); otherwise it follows the tab chain.
+    property bool handlesMoves: false
     signal clicked()
+    signal moved(int delta)
 
     // 64, and taller for a title or a value that needs more lines.
     implicitHeight: Math.max(64, texts.implicitHeight + Theme.space3 * 2)
@@ -38,11 +42,19 @@ Item {
     Keys.onEnterPressed: root.clicked()
     Keys.onSpacePressed: root.clicked()
     Keys.onDownPressed: {
+        if (root.handlesMoves) {
+            root.moved(1);
+            return;
+        }
         const next = root.nextItemInFocusChain(true);
         if (next)
             next.forceActiveFocus(Qt.TabFocusReason);
     }
     Keys.onUpPressed: {
+        if (root.handlesMoves) {
+            root.moved(-1);
+            return;
+        }
         const previous = root.nextItemInFocusChain(false);
         if (previous)
             previous.forceActiveFocus(Qt.BacktabFocusReason);
