@@ -1,0 +1,99 @@
+name: iOS device build
+
+# The Qt app as an iPhone application (arm64), built by Xcode on a hosted Mac:
+# the build for the maintainer's own devices, not a store build
+# (docs/ios-install.md). Run by hand:
+#
+#   gh workflow run ios-device.yml --ref <branch>
+#
+# The library leg of CI (ios-build) compiles only cube::lib, without Qt. This one
+# builds the whole app against Qt's static iOS kit, so it is where a missing
+# static plugin or an unresolved symbol shows up.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ios-device:
+    name: iOS device (arm64)
+    # macos-15, not macos-26, for the reason on CI's ios-build job: libwebp's
+    # arm64-ios build fails vcpkg_fixup_pkgconfig on macos-26 (vcpkg#50681).
+    runs-on: macos-15
+    timeout-minutes: 150
+    # Caps vcpkg's build parallelism, as on the other legs (opencv4 builds here).
+    env:
+      VCPKG_MAX_CONCURRENCY: "2"
+    steps:
+      # fetch-depth: 0 and the submodule: vcpkg's version resolution reads
+      # historical trees of deps/vcpkg (see CI's build legs).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Restore vcpkg binaries
+        id: vcpkg-cache
+        uses: ./.github/actions/vcpkg-cache/restore
+        with:
+          triplet: arm64-ios
+
+      - name: Install CMake 4 + Ninja
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        with:
+          cmakeVersion: "4.4.2"
+          ninjaVersion: "1.13.2"
+
+      # Qt's iOS kit (static), and the macOS kit that aqtinstall's --autodesktop
+      # installs beside it for the host tools a cross build runs (moc, rcc,
+      # qmlcachegen, shader baking). The aqtinstall pin is the Windows leg's: the
+      # last release predates the Qt 6.11+ repository layout.
+      - name: Install Qt (iOS kit and macOS host kit)
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        with:
+          version: "6.12.0"
+          host: mac
+          target: ios
+          arch: ios
+          dir: ${{ runner.temp }}
+          aqtsource: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
+          modules: "qtquick3d qtshadertools"
+          cache: false
+
+      # Where the action put the two kits, which the preset reads (the runner
+      # context is not available in a job-level env).
+      - name: Name the Qt kits
+        run: |
+          echo "QT_ROOT_DIR=$RUNNER_TEMP/Qt/6.12.0/ios" >> "$GITHUB_ENV"
+          echo "QT_HOST_PATH=$RUNNER_TEMP/Qt/6.12.0/macos" >> "$GITHUB_ENV"
+
+      - name: Show the toolchain
+        run: |
+          cmake --version | head -n 1
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          for kit in "$QT_ROOT_DIR/lib/cmake/Qt6/qt.toolchain.cmake" "$QT_HOST_PATH/lib/cmake/Qt6/Qt6Config.cmake"; do
+            [ -e "$kit" ] || { echo "::error::$kit is not there: the Qt install put its kits somewhere else (look at the install step's log)"; ls "$RUNNER_TEMP/Qt" "$RUNNER_TEMP/Qt/6.12.0" || true; exit 1; }
+          done
+
+      - name: Configure
+        run: cmake --preset ios-device-release -DCUBEULATOR_IOS_BUILD_NUMBER="$GITHUB_RUN_NUMBER"
+
+      - name: Build
+        run: cmake --build --preset ios-device-release
+
+      # Saved even when a later step fails: otherwise a red leg throws away every
+      # package vcpkg had already built.
+      - name: Save vcpkg binaries
+        if: ${{ always() }}
+        uses: ./.github/actions/vcpkg-cache/save
+        with:
+          triplet: arm64-ios
+          restored: ${{ steps.vcpkg-cache.outputs.listing }}

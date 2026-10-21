@@ -14,6 +14,10 @@ from the colours in tokens.json) and writes, under --out:
     hicolor/scalable/apps/<id>.svg          Linux, the icon theme layout
     hicolor/<n>x<n>/apps/<id>.png           Linux: 48 64 128 256
 
+With --ios-assets it writes instead (and only) the iOS asset catalogue Xcode
+compiles, <out>/Assets.xcassets: the single 1024 px AppIcon (opaque, the system
+rounds it) and the LaunchBackground colour in its light and dark forms.
+
 Nothing here is drawn by hand: every pixel comes from the SVGs. The small sizes
 (16, 20, 24, 32) use icon-small.svg, which drops the grid lines and thickens the
 outline, as identity/README.md says.
@@ -28,6 +32,7 @@ in silence.
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import re
 import struct
@@ -357,15 +362,24 @@ def render_mac(svg, size, paper):
 # File formats
 # ---------------------------------------------------------------------------
 
-def png_bytes(rgba, size):
+def png_bytes(rgba, size, opaque=False):
+    """RGBA, or RGB with no alpha channel when `opaque` (iOS rejects an app icon
+    that has one)."""
     def chunk(kind, data):
         body = kind + data
         return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
 
     stride = size * 4
-    raw = b"".join(b"\x00" + rgba[y * stride:(y + 1) * stride] for y in range(size))
+    rows = [rgba[y * stride:(y + 1) * stride] for y in range(size)]
+    if opaque:
+        def rgb(row):
+            out = bytearray(3 * size)
+            out[0::3], out[1::3], out[2::3] = row[0::4], row[1::4], row[2::4]
+            return bytes(out)
+        rows = [rgb(row) for row in rows]
+    raw = b"".join(b"\x00" + row for row in rows)
     return (b"\x89PNG\r\n\x1a\n"
-            + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2 if opaque else 6, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(raw, 9))
             + chunk(b"IEND", b""))
 
@@ -449,13 +463,62 @@ def build(identity: Path, out: Path, basename: str, app_id: str):
         write(out / "hicolor" / f"{n}x{n}" / "apps" / f"{app_id}.png", png_bytes(plain("full", n), n))
 
 
+def build_ios_assets(identity: Path, tokens: Path, out: Path):
+    """<out>/Assets.xcassets: AppIcon (1024 px, full bleed) and LaunchBackground."""
+    full_path = identity / "icon.svg"
+    if not full_path.is_file():
+        raise SystemExit(f"missing {full_path}")
+    paper = json.loads(tokens.read_text(encoding="utf-8"))["color"]["paper"]
+
+    def components(hexcolour):
+        h = hexcolour.lstrip("#")
+        return {"alpha": "1.000",
+                **{name: f"{int(h[i:i + 2], 16) / 255:.3f}"
+                   for name, i in (("red", 0), ("green", 2), ("blue", 4))}}
+
+    info = {"author": "xcode", "version": 1}
+    catalogue = out / "Assets.xcassets"
+    documents = {
+        catalogue / "Contents.json": {"info": info},
+        catalogue / "AppIcon.appiconset" / "Contents.json": {
+            "images": [{"filename": "AppIcon-1024.png", "idiom": "universal",
+                        "platform": "ios", "size": "1024x1024"}],
+            "info": info},
+        catalogue / "LaunchBackground.colorset" / "Contents.json": {
+            "colors": [
+                {"color": {"color-space": "srgb", "components": components(paper["light"])},
+                 "idiom": "universal"},
+                {"appearances": [{"appearance": "luminosity", "value": "dark"}],
+                 "color": {"color-space": "srgb", "components": components(paper["dark"])},
+                 "idiom": "universal"}],
+            "info": info},
+    }
+    files = {path: (json.dumps(doc, indent=2) + "\n").encode("utf-8")
+             for path, doc in documents.items()}
+    files[catalogue / "AppIcon.appiconset" / "AppIcon-1024.png"] = png_bytes(
+        render_plain(parse_svg(full_path), 1024), 1024, opaque=True)
+    for path, data in files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Leave an unchanged file alone so that build systems do not see a new timestamp.
+        if not path.exists() or path.read_bytes() != data:
+            path.write_bytes(data)
+        print(f"  {path}")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--identity", type=Path, required=True, help="docs/design/identity")
     ap.add_argument("--out", type=Path, required=True, help="output directory")
+    ap.add_argument("--ios-assets", action="store_true",
+                    help="write the iOS asset catalogue (Assets.xcassets) to --out, and nothing else")
+    ap.add_argument("--tokens", type=Path, default=None,
+                    help="docs/design/tokens.json, for the launch colour (default: beside --identity)")
     ap.add_argument("--basename", default="Cubeulator", help="file name of the .ico and .icns")
     ap.add_argument("--app-id", default="com.iainchesworthlabs.cubeulator", help="Linux icon name")
     args = ap.parse_args(argv)
+    if args.ios_assets:
+        build_ios_assets(args.identity, args.tokens or args.identity.parent / "tokens.json", args.out)
+        return 0
     build(args.identity, args.out, args.basename, args.app_id)
     return 0
 
