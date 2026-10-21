@@ -9,7 +9,7 @@ import Cubeulator
 QtObject {
     id: state
 
-    property string screen: "launch" // launch | entry | colours | permission | scan | solve | settings | history | complete | solution
+    property string screen: "launch" // launch | entry | colours | permission | scan | solve | settings | history | about | licences | complete | solution
 
     // Camera-access screens exist only for mobile platforms, where the OS
     // requires an explicit in-app permission prompt. Desktop platforms grant
@@ -173,6 +173,36 @@ QtObject {
 
     function closeHistory() {
         screen = "launch";
+    }
+
+    // About, and the notices under it (docs/design/screens/about.md, licences.md).
+    // About is entered from Settings and from the macOS menu; back goes to where
+    // it was opened from, wherever it was. Licences is a level under it.
+    property string aboutFrom: "settings"
+
+    // The screens it is safe to leave for About and come back to: not mid-scan
+    // or mid-solve, where leaving would throw the person's place away.
+    readonly property bool canOpenAbout: screen === "launch" || screen === "settings"
+        || screen === "history" || screen === "complete" || screen === "about" || screen === "licences"
+
+    function openAbout() {
+        if (!canOpenAbout)
+            return;
+        if (screen !== "about" && screen !== "licences")
+            aboutFrom = screen;
+        screen = "about";
+    }
+
+    function closeAbout() {
+        screen = aboutFrom;
+    }
+
+    function openLicences() {
+        screen = "licences";
+    }
+
+    function closeLicences() {
+        screen = "about";
     }
 
     // Carries on the unfinished solve the history holds, from the turn it was

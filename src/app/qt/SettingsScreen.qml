@@ -289,18 +289,16 @@ Rectangle {
             }
         }
 
-        // E4a: the way to About on Windows and Linux, which have no menu bar
-        // (platforms.md). A placeholder row; E3a/E3b replace it with the real
-        // About row and screen.
+        // The way to About on Windows and Linux, which have no menu bar
+        // (platforms.md). There is no About on a phone.
         Column {
             width: parent.width
-            // Reads AppInfo, which only the desktop shell registers.
             visible: !AppState.isMobile
             AppButton {
                 objectName: "settings.about"
                 variant: "ghost"
                 text: qsTrId("settings.about")
-                onClicked: AppInfo.showAbout()
+                onClicked: AppState.openAbout()
             }
         }
 

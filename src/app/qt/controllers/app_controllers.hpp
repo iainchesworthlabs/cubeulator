@@ -1,5 +1,6 @@
 #pragma once
 
+#include "controllers/about_info.hpp"
 #include "controllers/camera_controller.hpp"
 #include "controllers/colour_entry.hpp"
 #include "controllers/diagnostics.hpp"
@@ -44,6 +45,9 @@ struct AppControllers {
     CameraController camera;
     // The scan screen's controller.
     DirectScan directScan;
+    // What the About and Licences screens show: the name, the version, the
+    // publisher, and the third-party notices the build generated.
+    AboutInfo about;
     // What the platform says about itself; QML binds to it instead of
     // testing Qt.platform.os.
     PlatformFacts platform;

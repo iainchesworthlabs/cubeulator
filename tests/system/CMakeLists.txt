@@ -33,6 +33,7 @@ add_executable(cube_system_tests
     screen_cost_test.cpp
     known_today_test.cpp
     history_test.cpp
+    licences_test.cpp
     entry_test.cpp
     review_test.cpp
     progress_listener.cpp)

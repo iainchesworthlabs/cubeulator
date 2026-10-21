@@ -11,7 +11,8 @@ class QQmlApplicationEngine;
 
 namespace cube::app {
 
-// The app's name and version for QML, until E3b's About screen. Read-only.
+// The app's name and version for QML. Read-only. (The About screen reads them
+// from AboutInfo, which every build has; this is the desktop shell's.)
 class AppInfo : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString name READ name CONSTANT FINAL)
@@ -30,14 +31,6 @@ public:
     // `git describe` at build time: the release tag, or the commit.
     [[nodiscard]] QString build() const;
     [[nodiscard]] bool nativeMenuBar() const;
-
-    // Asks for the placeholder About (DesktopShell.qml). The Settings
-    // screen's About row calls this until E3b puts a real About screen on
-    // the navigation stack, at which point both go away.
-    Q_INVOKABLE void showAbout() { emit aboutRequested(); }
-
-signals:
-    void aboutRequested();
 };
 
 // What QML reads from the desktop shell: KeepAwake and AppInfo, registered as

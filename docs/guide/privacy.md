@@ -89,7 +89,8 @@ scanning will then say *Camera unavailable*.
 ## Third-party code
 
 Cubeulator is built from open-source components, which are credited in the
-installed package and in [Licensing](../licensing.md). Each release file
+installed package, in the app (**Settings > About Cubeulator > Licences**) and
+in [Licensing](../licensing.md). Each release file
 carries a GPG signature and a build attestation, so you can
 [check](../SECURITY.md#verifying-build-authenticity) that a download is the one
 this project built.

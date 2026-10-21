@@ -75,6 +75,8 @@ if(CUBEULATOR_BUILD_APP)
     # so the two are constructed and wired together in C++.
     # ---------------------------------------------------------------------
     add_library(cube_app_controllers STATIC
+        qt/controllers/about_info.hpp
+        qt/controllers/about_info.cpp
         qt/controllers/app_controllers.hpp
         qt/controllers/app_controllers.cpp
         qt/controllers/camera_controller.hpp
@@ -106,6 +108,11 @@ if(CUBEULATOR_BUILD_APP)
         qt/solve_controller.cpp)
 
     target_include_directories(cube_app_controllers PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/qt")
+
+    # The publisher the About screen names: one line, in cmake/AppIdentity.cmake.
+    include("${PROJECT_SOURCE_DIR}/cmake/AppIdentity.cmake")
+    target_compile_definitions(cube_app_controllers PRIVATE
+        "CUBEULATOR_PUBLISHER_NAME=\"${CUBEULATOR_PUBLISHER}\"")
 
     target_link_libraries(cube_app_controllers
         PUBLIC
@@ -165,6 +172,9 @@ if(CUBEULATOR_BUILD_APP)
             qt/SettingsScreen.qml
             qt/CompleteScreen.qml
             qt/HistoryScreen.qml
+            qt/AboutScreen.qml
+            qt/LicencesScreen.qml
+            qt/ListRow.qml
             qt/ConfirmDialog.qml
             qt/SolutionScreen.qml
             qt/TurnArrow.qml
@@ -326,7 +336,7 @@ endif()
 # ---------------------------------------------------------------------------
 if(TARGET cube_app)
     include(ThirdPartyNotices)
-    cube_add_third_party_notices(cube_app)
+    cube_add_third_party_notices(cube_app cube_app_qml)
 endif()
 
 # ---------------------------------------------------------------------------
