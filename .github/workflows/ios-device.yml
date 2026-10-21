@@ -23,7 +23,8 @@ on:
       release_tag:
         description: >-
           The GitHub release the .ipa and manifest.plist will be uploaded to by
-          hand, which the manifest's download address names (default: v<version>).
+          hand, which the manifest's download address names (default: v<version>; a
+          build started by a push names `ios-test`).
           The workflow uploads nothing to it.
         type: string
         default: ""
@@ -272,7 +273,11 @@ jobs:
         run: |
           set -euo pipefail
           ipa="Cubeulator-$FULL-ios-adhoc.ipa"
-          tag="${RELEASE_TAG:-v$FULL}"
+          # A push (no input) is a test build: its manifest names the release `ios-test`,
+          # which docs/ios-install.md has the maintainer make once and reuse.
+          if [ -n "$RELEASE_TAG" ]; then tag="$RELEASE_TAG"
+          elif [ "$GITHUB_EVENT_NAME" = push ]; then tag=ios-test
+          else tag="v$FULL"; fi
           rm -rf stage ios-dist && mkdir -p stage/Payload ios-dist
           ditto "$APP" stage/Payload/Cubeulator.app
           (cd stage && ditto -c -k --keepParent Payload "../ios-dist/$ipa")

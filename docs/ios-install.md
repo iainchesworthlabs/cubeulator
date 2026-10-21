@@ -100,17 +100,18 @@ somewhere safe outside the repository, which is public.
 
 ## Build it
 
-The workflow is `.github/workflows/ios-device.yml`:
+The workflow is `.github/workflows/ios-device.yml`. It builds Qt's static iOS kit and
+the app on a hosted Mac (an hour or more the first time, while vcpkg builds OpenCV;
+about twenty minutes after), signs the app when the five secrets are set, and
+uploads an artifact named `cubeulator-ios-adhoc` holding the `.ipa` and a
+`manifest.plist`. It runs on every push to a `feature/ios-*` or `bugfix/ios-*`
+branch; a dispatch (`gh workflow run ios-device.yml --ref <branch>`) works once the
+workflow is on `main`.
 
-```sh
-gh workflow run ios-device.yml --ref develop
-```
+## Install from a Windows PC
 
-It builds Qt's static iOS kit and the app on a hosted Mac (an hour or more, the
-first time, while vcpkg builds OpenCV), and uploads an artifact with the `.ipa`
-and a `manifest.plist` for the over-the-air install.
-
-## Install
+You do not need a Mac. The phone installs the app from a link in Safari, over the
+air; all the PC does is carry two files to an address on the web.
 
 Safari installs an ad-hoc app from a link of the form
 
@@ -118,23 +119,52 @@ Safari installs an ad-hoc app from a link of the form
 itms-services://?action=download-manifest&url=<https URL of manifest.plist>
 ```
 
-The manifest names the app and where its `.ipa` is. Both must be on an
-**https** address the phone can reach without signing in: a GitHub release's
-files are (the repository is public). So:
+The manifest names the app and where its `.ipa` is. Both must be on an **https**
+address the phone can reach without signing in. A GitHub release's files are (the
+repository is public; the `.ipa` is useless to anyone else, because it installs
+only on the devices in the profile). One release, `ios-test`, is made once and reused
+for every test build:
 
-1. Upload the `.ipa` and the `manifest.plist` of the workflow's artifact to a
-   GitHub release (a pre-release is enough).
-2. On the phone, open the link in **Safari** (not in Chrome, and not inside an
-   app's own browser): send it to yourself by e-mail or a message and tap it
-   there, or open the page that makes it.
-3. iOS asks whether to install Cubeulator. Confirm; the icon appears on the Home
-   Screen and fills in as it downloads.
-4. If iOS says the developer is **untrusted**, go to *Settings, General, VPN &
-   Device Management*, choose the developer app and tap **Trust**. A
-   distribution certificate normally does not need this.
+```sh
+# Git Bash or PowerShell, in a clone of the repository; <run> is the workflow run's id
+gh run download <run> --repo iainchesworthlabs/cubeulator -n cubeulator-ios-adhoc -D ios-dist
+gh release create ios-test --repo iainchesworthlabs/cubeulator --prerelease \
+    --title "iOS test build" --notes "Ad-hoc build for registered devices. Not for anyone else." \
+    ios-dist/*.ipa ios-dist/manifest.plist
+# next time:  gh release upload ios-test ios-dist/* --clobber --repo iainchesworthlabs/cubeulator
+```
 
-An update is the same again with a newer build: iOS replaces the app and keeps
-its data.
+Then on the phone:
+
+1. Put this line in an e-mail to yourself (or a message, or a note) and open it on the
+   phone:
+
+    ```text
+    itms-services://?action=download-manifest&url=https://github.com/iainchesworthlabs/cubeulator/releases/download/ios-test/manifest.plist
+    ```
+
+    Tap the link. The documentation site's `install-ios.html` page makes the same link
+    with a button (`?tag=ios-test` names the release), once the site has been
+    published from `main`; the e-mail needs nothing published.
+2. iOS asks whether to install Cubeulator. Confirm; the icon appears on the Home Screen
+   and fills in as it downloads.
+3. If iOS says the developer is **untrusted**, go to *Settings, General, VPN & Device
+   Management*, choose the developer app and tap **Trust**. A distribution certificate
+   normally does not need this.
+4. The first time the app opens the camera, iOS asks; allow it.
+
+An update is the same again with a newer build: iOS replaces the app and keeps its data.
+
+Other routes exist, and none is needed: Apple Configurator and Xcode's *Devices*
+window install an `.ipa` over a cable but only run on a Mac; Windows tools such as
+Sideloadly install by signing the app again with an Apple ID, which makes the ad-hoc
+profile pointless.
+
+!!! note "If the link does nothing, or the download fails"
+    GitHub sends a release file through a redirect, and iOS is fussier about the
+    manifest than a browser is. If the link opens but the install never starts, the
+    manifest (not the signing) is the first suspect: say so, and the files can be put
+    at a plainer address.
 
 ## Add a device
 
@@ -168,7 +198,7 @@ window. Supporting the iPad properly is a change to the build's device family
 
 | What happens | Likely cause |
 | --- | --- |
-| Tapping the link does nothing | Not in Safari. Open it in Safari |
+| Tapping the link does nothing | Not in Safari (an e-mail app's own viewer, or a link in another browser). Open it in Safari |
 | "Unable to install", or the icon is dimmed and stays on *Waiting* | The phone is not in the profile this build was signed with: [add it](#add-a-device) and build again |
 | iOS asks to trust the developer | Step 4 of [Install](#install) |
 | It opened before and now closes at once | The profile expired ([above](#when-the-signing-runs-out)) |
