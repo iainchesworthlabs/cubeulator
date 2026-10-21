@@ -262,10 +262,12 @@ Rectangle {
     // Whether this solve is of a cube the camera read as a cube, which it may have read
     // wrongly: the scan screen's own way to look the colours over is only for six sides
     // that made none. Not a typed cube, a scramble, or a solve carried on from the
-    // history (none of them has a scan, and solveCamera is off for each). Any size: every
-    // size is scanned, and the colours screen looks over any. A property and not a binding
-    // in the tests' way: the layout checks set it to see the screen at its fullest.
-    property bool fromScan: AppState.solveCamera && DirectScan.complete
+    // history (none of them has a scan, and solveCamera is off for each), and not a cube
+    // the person has already put right (the camera stays on it, but what the scan read is
+    // not the cube any more, so there is nothing of the scan's to look over). Any size:
+    // every size is scanned, and the colours screen looks over any. A property and not a
+    // binding in the tests' way: the layout checks set it to see the screen at its fullest.
+    property bool fromScan: AppState.solveCamera && DirectScan.complete && !DirectScan.corrected
     readonly property bool canCheckColours: fromScan
     readonly property Item cube: cubeLoader.item
 

@@ -298,13 +298,16 @@ QtObject {
         }
     }
 
-    // Solves the cube typed in, once it is a valid one, and shows the solve
-    // screen: there is no camera for it to be matched against.
+    // Solves the cube on the colours screen, once it is a valid one, and shows the solve
+    // screen. A cube typed in has no camera for it to be matched against. One the camera
+    // read and a person put right keeps it: the camera is on that cube, and the scan has
+    // been told which colours are which now (result.camera: ColourEntry.solve), so the
+    // preview stays and the cube in the hand is still followed.
     function solveColours() {
         var result = ColourEntry.solve();
         if (result.ok) {
             coloursFromScan = false;
-            solveCamera = false;
+            solveCamera = result.camera === true;
             elapsedSeconds = 0;
             screen = "solve";
         }

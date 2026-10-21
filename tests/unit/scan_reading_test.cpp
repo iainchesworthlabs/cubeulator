@@ -13,6 +13,9 @@
 #include <cube/nxn/strategy.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/vision/color_resolution.hpp>
+#include <cube/vision/direct_scan.hpp>
+
+#include <opencv2/core.hpp>
 
 #include <algorithm>
 #include <array>
@@ -313,4 +316,81 @@ TEST_CASE("a 5x5 scan is read for review at its size, doubts and all", "[scan_re
         side.assign(16, Facelet{.color = FacetColor::red, .confidence = 1.0F});
     }
     CHECK_FALSE(cube::app::reading_from_named_sides(four).has_value());
+}
+
+namespace {
+
+// Six colours that measure differently, indexed by cube::solver::Color: the values stand for
+// nothing but which colour they belong to.
+cube::vision::SessionColours distinct_colours() {
+    cube::vision::SessionColours colours{};
+    for (std::size_t i = 0; i < colours.size(); ++i) {
+        const auto at = static_cast<float>(i);
+        colours.at(i) = cv::Vec3f(10.0F * at, 20.0F * at, 30.0F * at);
+    }
+    return colours;
+}
+
+constexpr auto kRed = static_cast<std::size_t>(Color::Red);
+constexpr auto kOrange = static_cast<std::size_t>(Color::Orange);
+
+// A cube's stickers as a scan would have them, 16 of each colour for a 4x4.
+std::vector<std::int8_t> four_by_four() {
+    std::vector<std::int8_t> stickers;
+    for (int colour = 0; colour < 6; ++colour) {
+        stickers.insert(stickers.end(), 16, static_cast<std::int8_t>(colour));
+    }
+    return stickers;
+}
+
+}  // namespace
+
+TEST_CASE("colours put right keep what the camera measured, under the names the person gave",
+          "[scan_reading][correction]") {
+    const cube::vision::SessionColours measured = distinct_colours();
+    const std::vector<std::int8_t> read = four_by_four();
+
+    SECTION("a cube left as it was keeps every colour") {
+        CHECK(cube::app::colours_after_correction(measured, read, read) == measured);
+    }
+
+    SECTION("a few stickers put right move no colour") {
+        std::vector<std::int8_t> corrected = read;
+        // Two reds that were orange, and two oranges that were red: the cube is still one.
+        corrected.at((kRed * 16) + 3) = static_cast<std::int8_t>(Color::Orange);
+        corrected.at((kRed * 16) + 9) = static_cast<std::int8_t>(Color::Orange);
+        corrected.at((kOrange * 16) + 1) = static_cast<std::int8_t>(Color::Red);
+        corrected.at((kOrange * 16) + 12) = static_cast<std::int8_t>(Color::Red);
+        CHECK(cube::app::colours_after_correction(measured, read, corrected) == measured);
+    }
+
+    SECTION("red and orange traded all over the cube trade what they measured, and nothing else") {
+        std::vector<std::int8_t> corrected = read;
+        for (std::int8_t& sticker : corrected) {
+            if (sticker == static_cast<std::int8_t>(Color::Red)) {
+                sticker = static_cast<std::int8_t>(Color::Orange);
+            } else if (sticker == static_cast<std::int8_t>(Color::Orange)) {
+                sticker = static_cast<std::int8_t>(Color::Red);
+            }
+        }
+        const cube::vision::SessionColours now =
+            cube::app::colours_after_correction(measured, read, corrected);
+        CHECK(now.at(kRed) == measured.at(kOrange));
+        CHECK(now.at(kOrange) == measured.at(kRed));
+        for (const Color other : {Color::White, Color::Yellow, Color::Green, Color::Blue}) {
+            CHECK(now.at(static_cast<std::size_t>(other)) ==
+                  measured.at(static_cast<std::size_t>(other)));
+        }
+    }
+
+    SECTION("stickers that do not pair up, or are not painted, change nothing") {
+        std::vector<std::int8_t> shorter = read;
+        shorter.pop_back();
+        CHECK(cube::app::colours_after_correction(measured, read, shorter) == measured);
+
+        std::vector<std::int8_t> unpainted = read;
+        std::ranges::fill(unpainted, kUnpainted);
+        CHECK(cube::app::colours_after_correction(measured, read, unpainted) == measured);
+        CHECK(cube::app::colours_after_correction(measured, unpainted, read) == measured);
+    }
 }

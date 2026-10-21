@@ -215,6 +215,21 @@ std::optional<Reading> DirectScan::reviewReading() const {
     return std::nullopt;
 }
 
+bool DirectScan::putRight(const std::vector<std::int8_t>& as_read,
+                          const std::vector<std::int8_t>& as_corrected) {
+    if (!scanned_n_.has_value()) {
+        return false;
+    }
+    const auto size = static_cast<std::size_t>(scanned_n_->cube.size());
+    const std::size_t stickers = 6 * size * size;
+    if (as_read.size() != stickers || as_corrected.size() != stickers) {
+        return false;
+    }
+    corrected_colours_ = colours_after_correction(scanned_n_->colours, as_read, as_corrected);
+    emit correctionChanged();
+    return true;
+}
+
 QVariantList DirectScan::sides() const {
     QVariantList out;
     for (const auto& side : sides_) {
@@ -303,6 +318,10 @@ cube::diagnostics::Json DirectScan::diagnosticState() const {
     if (scanned_n_.has_value()) {
         state.set("scanned_state", cube::diagnostics::cube_json(scanned_n_->cube));
         state.set("session_colours", cube::diagnostics::to_json(scanned_n_->colours));
+        // What the camera is matched against once a person has put the cube right.
+        if (corrected_colours_.has_value()) {
+            state.set("corrected_colours", cube::diagnostics::to_json(*corrected_colours_));
+        }
     }
     return state;
 }
@@ -564,6 +583,10 @@ void DirectScan::restart() {
     settling_corner_.clear();
     scanned_.reset();
     scanned_n_.reset();
+    if (corrected_colours_.has_value()) {
+        corrected_colours_.reset();
+        emit correctionChanged();
+    }
     size_locked_ = false;
     size_votes_.clear();
     if (diagnosing()) {

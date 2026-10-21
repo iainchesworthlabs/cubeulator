@@ -9,6 +9,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 // What the camera read, as the review screen takes it (CubeEdit's Reading): the
 // stickers named, and the ones the reader was not sure of marked.
@@ -44,6 +45,22 @@ inline constexpr float kDoubtBelow = 0.3F;
 // scan has not named its sides (fewer than six captured, or naming failed).
 [[nodiscard]] std::optional<Reading> reading_from_named_sides(
     const cube::vision::ColorResolution& naming);
+
+// What each colour measured, once a person has put the cube the scan made right.
+//
+// `measured` is the scan's own: each colour's median over the stickers the scan gave that
+// name. The names are what a correction changes and the measurements are not - paint a
+// sticker, or every sticker of two colours, another name and what the camera saw there is
+// the same. So each colour of the corrected cube takes the measurement of the colour most of
+// its stickers were named by in the scan (`as_read`, the stickers as the scan had them, and
+// `as_corrected`, as they are now; both numbered as cube::nxn::NCube numbers them). A few
+// stickers put right leave every colour as it was; red and orange traded all over the cube
+// trade their measurements, which is what lets the camera still find a cube whose red and
+// orange it had the wrong way round. Anything that does not pair up (different lengths, a
+// colour with no stickers) is left as measured.
+[[nodiscard]] cube::vision::SessionColours colours_after_correction(
+    const cube::vision::SessionColours& measured, const std::vector<std::int8_t>& as_read,
+    const std::vector<std::int8_t>& as_corrected);
 
 // A cube as a camera might have misread it, for trying the review screen without one
 // (CUBE_REVIEW_DEMO, main.cpp): a cube of `size` scrambled from `seed`, two stickers
