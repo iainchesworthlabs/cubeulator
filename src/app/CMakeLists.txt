@@ -16,6 +16,8 @@ add_library(cube_platform
     interfaces/crash_handler.hpp
     interfaces/paths.hpp
     interfaces/platform_info.hpp
+    platform/detail/camera_frame.hpp
+    platform/detail/camera_frame.cpp
     platform/detail/capture_thread_scope.hpp
     platform/detail/opencv_capture_loop.hpp
     platform/detail/opencv_capture_loop.cpp

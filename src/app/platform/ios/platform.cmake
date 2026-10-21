@@ -25,8 +25,22 @@ set(CUBEULATOR_PLATFORM_QT_ARCH_DIRS "")
 # Not installed by CPack: see the packaging note below.
 set(CUBEULATOR_PLATFORM_NOTICES_DIR ".")
 
+# The camera is AVFoundation, which is Objective-C++ (platform/ios/camera_ios.mm):
+# built as C++23 like the rest, with automatic reference counting. It is not held
+# to -Werror (cmake/CompilerWarnings.cmake keys the warning set on C++), because
+# Apple's headers change with the SDK.
+# (tests/platform/check_fragments.cmake includes every fragment in script mode, on
+# whatever host runs the tests, where a language cannot be enabled.)
+if(NOT CMAKE_SCRIPT_MODE_FILE)
+    enable_language(OBJCXX)
+    set(CMAKE_OBJCXX_STANDARD 23)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+    set(CMAKE_OBJCXX_EXTENSIONS OFF)
+    string(APPEND CMAKE_OBJCXX_FLAGS " -fobjc-arc")
+endif()
+
 set(CUBEULATOR_PLATFORM_SOURCES
-    platform/ios/camera_ios.cpp
+    platform/ios/camera_ios.mm
     platform/ios/paths_ios.cpp
     platform/ios/platform_info_ios.cpp
     platform/posix/capture_thread_scope_posix.cpp
@@ -44,7 +58,11 @@ set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
 # The vector kernels follow the architecture (cmake/Simd.cmake).
 set(CUBEULATOR_PLATFORM_SIMD auto)
 
-set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "")
+# AVFoundation captures, CoreMedia and CoreVideo carry its frames, UIKit opens the
+# app's settings page.
+set(CUBEULATOR_PLATFORM_LINK_LIBRARIES
+    "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo"
+    "-framework Foundation" "-framework UIKit")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS "")
 
