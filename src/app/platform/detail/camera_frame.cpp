@@ -24,8 +24,8 @@ cv::Mat bgr_from_bgra(const BgraBuffer& buffer, double clockwise_degrees) {
 
     // A header over the OS's pixels, no copy; cvtColor writes the copy.
     // OpenCV's step is a pointer-sized count of bytes, which is the stride.
-    const cv::Mat bgra(buffer.height, buffer.width, CV_8UC4,
-                       const_cast<std::uint8_t*>(buffer.data), buffer.stride_bytes);
+    const cv::Mat bgra(buffer.height, buffer.width, CV_8UC4, const_cast<std::uint8_t*>(buffer.data),
+                       buffer.stride_bytes);
     cv::Mat bgr;
     cv::cvtColor(bgra, bgr, cv::COLOR_BGRA2BGR);
 

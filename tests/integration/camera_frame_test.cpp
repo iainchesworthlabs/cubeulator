@@ -16,8 +16,8 @@
 #include <limits>
 #include <vector>
 
-using cube::platform::camera::detail::BgraBuffer;
 using cube::platform::camera::detail::bgr_from_bgra;
+using cube::platform::camera::detail::BgraBuffer;
 using cube::platform::camera::detail::FrameMailbox;
 using cube::platform::camera::detail::quarter_turn_degrees;
 
