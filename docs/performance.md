@@ -487,7 +487,18 @@ What is in it.
     loop and gains the same. The look's outlines, per frame it is taken on: 2.77
     to 1.51 ms on a 3x3 session, 3.75 to 1.71 on a 4x4 (960 px wide), 4.96 to 1.70 on
     a 5x5; `timing.glare_look.640x360` 0.52 to 0.27 of the calibration workload.
-    235 recorded sessions (98,440 frames, 52,614 reads, 216 of them by this look)
+    Then the look stopped redoing what `prepare_frame` had done: it takes the
+    blurred brightness the frame already has (the look blurred the same maximum
+    again), finds the pixels to cut out in one pass that reads a pixel's colour
+    only where the blurred brightness is 252 or more, hands back the first
+    look's own outlines when there are none (67 of 108 glare-look frames of a
+    4x4 session, none of a daylight-backlit 3x3 session, where a window is
+    clipped), and otherwise starts from the first look's threshold, which the
+    prepared frame now keeps (a 640 x 360 plane, 0.23 MB more allocated by a
+    read). Per frame it is taken on: 2.77 to 0.82 ms on the 3x3 session, 3.75 to
+    0.40 on the 4x4, 4.96 to 0.79 on the 5x5; `timing.glare_look.640x360` 0.52 to
+    0.09 (0.03 with nothing clipped). `read_side` of the same sessions, a frame in
+    all: 2.35 to 1.67, 3.40 to 1.63, 3.66 to 1.83 ms. 235 recorded sessions (98,440 frames, 52,614 reads, 216 of them by this look)
     give the same digest before and after, `cube_scan digest`: every blob count
     and outline count per look, the lattice's residuals, and each read's centres,
     pitch, found flags and Lab colours, bit for bit.

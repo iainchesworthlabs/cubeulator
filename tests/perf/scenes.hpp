@@ -47,6 +47,19 @@ inline constexpr std::array<SceneSize, 3> kSceneSizes = {{{640, 360}, {1280, 720
     return test::draw_side(kMixedSide, pose, test::Drawing{.size = {size.width, size.height}});
 }
 
+// The same side with a highlight across the plastic between two rows of
+// stickers: a band of clipped, colourless pixels, which the glare look takes out
+// of the bright region and so has to trace afresh.
+[[nodiscard]] inline cv::Mat glared_side_frame(SceneSize size) {
+    cv::Mat frame = side_frame(size);
+    const int pitch = size.width / 16;
+    cv::rectangle(frame,
+                  cv::Rect(size.width / 2 - 2 * pitch, size.height / 2 - pitch / 2, 4 * pitch,
+                           std::max(pitch / 4, 3)),
+                  cv::Scalar(255, 255, 255), cv::FILLED);
+    return frame;
+}
+
 // Two sides of `cube` meeting at an edge, as a camera turned to the corner sees
 // them (the pose of the corner reader's own tests, scaled to the frame).
 [[nodiscard]] inline cv::Mat corner_frame(const solver::Cube& cube, SceneSize size) {
