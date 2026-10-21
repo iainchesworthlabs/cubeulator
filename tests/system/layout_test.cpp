@@ -35,6 +35,7 @@ struct Screen {
 constexpr Screen kScreens[] = {
     {"launch", false},   {"permission", false}, {"scan", false},     {"solve", true},
     {"settings", false}, {"history", false},    {"complete", false}, {"solution", true},
+    {"about", false},    {"licences", false},
 };
 
 // Puts `screen` up the way the tests that cannot walk to it do.

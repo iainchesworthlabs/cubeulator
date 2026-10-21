@@ -312,12 +312,12 @@ on Windows); the whole macOS step is about 28 minutes.
   with no test change, and what it does is for a case of its own.
 - **QML warnings are failures.** `diagnostics.cpp` collects what the app's own
   QML printed; the journey cases assert it is nothing.
-- **Two files are added from `tests/CMakeLists.txt`**, not listed in
+- **One file is added from `tests/CMakeLists.txt`**, not listed in
   `tests/system/CMakeLists.txt`: `tests/i18n/system/language_test.cpp` (the
   language switched live in the real window; see
-  [Translation tests](#translation-tests)) and, where the platform has a
-  desktop shell, `tests/system/desktop_shell_test.cpp` (the placeholder About).
-  They are in the walk like any other case.
+  [Translation tests](#translation-tests)). It is in the walk like any other
+  case. (The desktop shell's placeholder About had one too, until About became
+  a screen: `tests/system/licences_test.cpp`.)
 - **Nothing of a person's is read or written.** The settings store is a
   temporary directory (`QSettings::setPath`), and so is the app's data folder,
   where the history of solves is kept: `system_test_main.cpp` points

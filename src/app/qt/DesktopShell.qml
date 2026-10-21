@@ -7,7 +7,7 @@ import Cubeulator
 //   * the keyboard shortcuts of docs/design/accessibility.md, "Everywhere":
 //     Settings, Help, a new scan from Home, full screen, quit;
 //   * on macOS, the native menu bar of platforms.md, "Menus (macOS)";
-//   * a placeholder About, until E3b builds the About screen.
+//   * the way to the About screen from the macOS menu bar (Settings has its own).
 //
 // Hooked in from Main.qml with one line:
 //
@@ -42,7 +42,7 @@ Item {
     signal handEntryRequested()
 
     function showAbout() {
-        aboutPlaceholder.open();
+        AppState.openAbout();
     }
 
     function toggleFullScreen() {
@@ -87,6 +87,8 @@ Item {
     Action {
         id: aboutAction
         text: qsTrId("about.title")
+        // Not mid-scan or mid-solve, where leaving would throw the place away.
+        enabled: AppState.canOpenAbout
         onTriggered: shell.showAbout()
     }
 
@@ -207,58 +209,5 @@ Item {
         if (shell.nativeMenuBar) {
             shell.window.menuBar = macMenuBar.createObject(shell.window.contentItem);
         }
-    }
-
-    // About, until E3b: the name and the version, which is what the
-    // packages promise. It is replaced, not extended.
-    //
-    // A Popup rather than a Dialog: the style's dialog brings a header and
-    // footer of its own, in a look the rest of the app does not have.
-    Popup {
-        id: aboutPlaceholder
-        parent: Overlay.overlay
-        anchors.centerIn: parent
-        modal: true
-        width: Math.min(320, Overlay.overlay ? Overlay.overlay.width - 32 : 320)
-        padding: 24
-
-        background: Rectangle {
-            color: Theme.paper
-            border.width: 1
-            border.color: Theme.ink
-        }
-
-        // Accessible attaches to an Item, so it sits on the content item
-        // rather than on the Popup.
-        contentItem: Column {
-            objectName: "about.placeholder"
-            spacing: 8
-            Accessible.role: Accessible.Dialog
-            Accessible.name: qsTrId("about.title")
-            Text {
-                text: AppInfo.name
-                font.pixelSize: 28
-                font.weight: Font.ExtraBold
-                color: Theme.ink
-            }
-            Text {
-                objectName: "about.version"
-                text: qsTrId("about.version").arg(AppInfo.version)
-                font.pixelSize: 16
-                color: Theme.ink
-            }
-            Item { width: 1; height: 8 }
-            AppButton {
-                objectName: "about.close"
-                text: qsTrId("common.close")
-                variant: "secondary"
-                onClicked: aboutPlaceholder.close()
-            }
-        }
-    }
-
-    Connections {
-        target: AppInfo
-        function onAboutRequested() { shell.showAbout(); }
     }
 }

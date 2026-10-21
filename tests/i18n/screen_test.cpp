@@ -650,6 +650,32 @@ void holds_the_layout_of(const char* language, std::initializer_list<const char*
     }
 }
 
+// The Licences screen with the notice of one component open: the longest name
+// the list has, which is the heading that wraps the most.
+void reading_the_longest_name(Screen& screen) {
+    const QVariantList entries = screen.item()->property("entries").toList();
+    int longest = 1;
+    for (int i = 1; i < entries.size(); ++i) {
+        if (entries[i].toMap().value("name").toString().size() >
+            entries[longest].toMap().value("name").toString().size()) {
+            longest = i;
+        }
+    }
+    REQUIRE(QMetaObject::invokeMethod(screen.item(), "open", Q_ARG(QVariant, QVariant(longest))));
+}
+
+// The notices missing, for as long as this is in scope: the screen says so.
+struct NoticesMissing {
+    NoticesMissing() {
+        t::controllers().about.setNoticesPath(QStringLiteral("no-such-notices.json"));
+    }
+    ~NoticesMissing() {
+        t::controllers().about.setNoticesPath(cube::app::AboutInfo::defaultNoticesPath());
+    }
+    NoticesMissing(const NoticesMissing&) = delete;
+    NoticesMissing& operator=(const NoticesMissing&) = delete;
+};
+
 // Every converted screen, at both sizes, in `language`: no string cut off, run
 // off the window or out of its pane, and no label out of its button. The
 // pseudo-locale is the proxy for a real translation (40% longer than the
@@ -700,6 +726,14 @@ void holds_the_layout_in(const char* language) {
         holds_the_layout_of(language, {"HistoryScreen"});
     }
     t::controllers().history.clear();
+    // About, and the notices under it: the list, a notice open (at the longest
+    // name), and the notices missing.
+    holds_the_layout_of(language, {"AboutScreen", "LicencesScreen"});
+    holds_the_layout_of(language, {"LicencesScreen"}, reading_the_longest_name);
+    {
+        const NoticesMissing missing;
+        holds_the_layout_of(language, {"LicencesScreen"});
+    }
 }
 
 }  // namespace
@@ -1157,6 +1191,69 @@ TEST_CASE("a label is not wider than the box it is set in, in any of the nine sc
     }
 }
 
+// What About and Licences say, in the app's language: the name and the build's
+// version, the publisher, and a row for Cubeulator itself and each component, by
+// the name the build gave it. What is on show is what the build generated.
+TEST_CASE("About names the app, its version and its publisher; Licences lists what ships",
+          "[i18n][screen][about]") {
+    in_language("en");
+    {
+        const Screen about("AboutScreen", 900, 640);
+        const QStringList shown = about.texts();
+        const QString version =
+            qtTrId("about.version").arg(t::controllers().about.displayVersion());
+        CHECK(shown.contains(QStringLiteral("Cubeulator")));
+        CHECK(shown.contains(qtTrId("about.what")));
+        CHECK(about.item_named(QStringLiteral("about.version")) != nullptr);
+        CHECK(about.item_named(QStringLiteral("about.version"))->property("text").toString() ==
+              version);
+        CHECK(about.item_named(QStringLiteral("about.author"))->property("text").toString() ==
+              qtTrId("about.author").arg(t::controllers().about.publisher()));
+        CHECK(shown.contains(qtTrId("about.licences")));
+        CHECK(shown.contains(qtTrId("about.source")));
+        // The address is shown whole, so that it can be read and typed.
+        CHECK(shown.contains(t::controllers().about.sourceUrl()));
+    }
+    {
+        const Screen licences("LicencesScreen", 900, 640);
+        const QStringList shown = licences.texts();
+        CHECK(shown.contains(qtTrId("licences.title")));
+        CHECK(shown.contains(qtTrId("licences.intro")));
+        // Cubeulator's own row, by its translated name (it is the app's), and
+        // the first component by the name the build gave it.
+        CHECK(shown.contains(qtTrId("licences.own")));
+        const QVariantList components = t::controllers().about.components();
+        REQUIRE_FALSE(components.isEmpty());
+        CHECK(shown.contains(components.first().toMap().value("name").toString()));
+    }
+}
+
+// A notice is a legal text in the words its authors chose, never translated and
+// set left to right, in a right-to-left language as in any other; the heading and
+// the chrome around it are the app's and are mirrored.
+TEST_CASE("a notice stays left to right in a right-to-left language", "[i18n][screen][about]") {
+    for (const char* language : {"he", "ar", "yi"}) {
+        in_language(language);
+        INFO(language);
+        Screen licences("LicencesScreen", 900, 640);
+        REQUIRE(QMetaObject::invokeMethod(licences.item(), "open", Q_ARG(QVariant, QVariant(1))));
+        licences.settle();
+        QQuickItem* notice = licences.item_named(QStringLiteral("licences.text"));
+        REQUIRE(notice != nullptr);
+        CHECK(notice->property("effectiveHorizontalAlignment").toInt() ==
+              static_cast<int>(Qt::AlignLeft));
+        // The text is what the build generated, not a translation of it.
+        const QVariantList components = t::controllers().about.components();
+        CHECK(notice->property("text").toString() ==
+              components.at(0).toMap().value("text").toString());
+        // The back button is on the trailing side's opposite: at the right edge.
+        QQuickItem* back = licences.item_named(QStringLiteral("licences.back"));
+        REQUIRE(back != nullptr);
+        CHECK(back->mapToItem(licences.item(), QPointF(0, 0)).x() > licences.item()->width() / 2);
+    }
+    in_language("en");
+}
+
 // A picture of a screen in a language, for whoever reviews what the pseudo-locale
 // and a right-to-left language look like. Hidden: it writes files, and the
 // system tests' screenshot tour (tests/system) is the permanent one.
@@ -1196,6 +1293,11 @@ TEST_CASE("a picture of a screen in a language", "[.shots]") {
     }
 
     Screen screen(type, size.at(0).toInt(), size.at(1).toInt());
+    // The Licences screen with a notice open (CUBE_I18N_SHOT_OPEN=<row>).
+    if (const int row = qEnvironmentVariable("CUBE_I18N_SHOT_OPEN").toInt(); row > 0) {
+        REQUIRE(QMetaObject::invokeMethod(screen.item(), "open", Q_ARG(QVariant, QVariant(row))));
+        screen.settle();
+    }
     QQuickWindow window;
     screen.show_in(window);
     QCoreApplication::processEvents();

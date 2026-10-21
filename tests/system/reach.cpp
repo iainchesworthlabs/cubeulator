@@ -28,6 +28,8 @@ const std::vector<ScreenDef>& screen_inventory() {
         {"solve", "SolveScreen.qml", ""},
         {"settings", "SettingsScreen.qml", ""},
         {"history", "HistoryScreen.qml", ""},
+        {"about", "AboutScreen.qml", ""},
+        {"licences", "LicencesScreen.qml", ""},
         {"entry", "EntryScreen.qml", ""},
         {"colours", "ColoursScreen.qml", ""},
         {"complete", "CompleteScreen.qml", ""},
@@ -47,7 +49,15 @@ const std::map<QString, QString>& unpressable_controls() {
     // None now. permission.notNow was below the bottom of a phone-sized
     // window until the permission screen was rebuilt; the layout case that
     // listed it failed the day that landed, which is what it is for.
-    static const std::map<QString, QString> controls = {};
+    // Keyed as the sampler keys a control: its name, and the layout it was on.
+    static const std::map<QString, QString> controls = {
+        {"about.source@narrow",
+         "opens the address in the system's browser, which a test must not start; "
+         "tests/system/licences_test.cpp checks that the row shows the address"},
+        {"about.source@wide",
+         "opens the address in the system's browser, which a test must not start; "
+         "tests/system/licences_test.cpp checks that the row shows the address"},
+    };
     return controls;
 }
 
@@ -195,6 +205,23 @@ const std::vector<StateDef>& state_inventory() {
          [](App& a) { return a.screen() == "history" && a.runtime().history().count() > 0; }, ""},
         {"history", "off",
          [](App& a) { return a.screen() == "history" && !a.runtime().history().keep(); }, ""},
+        {"about", "default", [](App& a) { return a.screen() == "about"; }, ""},
+        {"licences", "list",
+         [](App& a) {
+             QQuickItem* item = a.screen_item();
+             return a.screen() == "licences" && item != nullptr &&
+                    !item->property("reading").toBool() && on_show(a, "licences.list");
+         },
+         ""},
+        {"licences", "detail",
+         [](App& a) {
+             QQuickItem* item = a.screen_item();
+             return a.screen() == "licences" && item != nullptr &&
+                    item->property("reading").toBool();
+         },
+         ""},
+        {"licences", "unavailable",
+         [](App& a) { return a.screen() == "licences" && on_show(a, "licences.unavailable"); }, ""},
         {"history", "confirm-delete",
          [](App& a) { return a.screen() == "history" && on_show(a, "history.deleteDialog"); }, ""},
         {"history", "confirm-clear",

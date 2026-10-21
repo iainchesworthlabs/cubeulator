@@ -51,6 +51,7 @@ public:
     [[nodiscard]] SolveController& solve() noexcept { return controllers_.solve; }
     [[nodiscard]] HeldCube& held() noexcept { return controllers_.held; }
     [[nodiscard]] SolveHistory& history() noexcept { return controllers_.history; }
+    [[nodiscard]] AboutInfo& about() noexcept { return controllers_.about; }
 
 private:
     // What both constructors do once the members are there.

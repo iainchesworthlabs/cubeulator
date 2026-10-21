@@ -30,6 +30,8 @@ ApplicationWindow {
             case "solve": return solveScreen;
             case "settings": return settingsScreen;
             case "history": return historyScreen;
+            case "about": return aboutScreen;
+            case "licences": return licencesScreen;
             case "complete": return completeScreen;
             case "solution": return solutionScreen;
             default: return launchScreen;
@@ -73,7 +75,7 @@ ApplicationWindow {
         }
     }
 
-    // E4a: desktop shortcuts, the macOS menu bar and the placeholder About.
+    // E4a: desktop shortcuts and the macOS menu bar.
     // Not on a phone: it needs the desktop shell's singletons (KeepAwake,
     // AppInfo), which AppRuntime registers only where that shell is built.
     Loader {
@@ -89,6 +91,8 @@ ApplicationWindow {
     Component { id: solveScreen; SolveScreen {} }
     Component { id: settingsScreen; SettingsScreen {} }
     Component { id: historyScreen; HistoryScreen {} }
+    Component { id: aboutScreen; AboutScreen {} }
+    Component { id: licencesScreen; LicencesScreen {} }
     Component { id: completeScreen; CompleteScreen {} }
     Component {
         id: solutionScreen
