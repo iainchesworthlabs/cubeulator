@@ -251,8 +251,9 @@ jobs:
           VERSION: ${{ steps.version.outputs.base }}
         run: |
           set -euo pipefail
-          app="$(find build/ios-device-release -type d -name Cubeulator.app -path '*Release-iphoneos*' | head -n 1)"
-          [ -n "$app" ] || { echo "::error::no Cubeulator.app was built under build/ios-device-release"; find build/ios-device-release -maxdepth 3 -name '*.app' || true; exit 1; }
+          # CMAKE_RUNTIME_OUTPUT_DIRECTORY is <build>/bin, and Xcode adds the configuration.
+          app="build/ios-device-release/bin/Release/Cubeulator.app"
+          [ -d "$app" ] || { echo "::error::no Cubeulator.app was built at $app"; find build/ios-device-release -name '*.app' -maxdepth 4 || true; exit 1; }
           echo "path=$app" >> "$GITHUB_OUTPUT"
           if [ "$SIGNED" = true ]; then flag=--signed; else flag=; fi
           # shellcheck disable=SC2086  # $flag is one word or nothing

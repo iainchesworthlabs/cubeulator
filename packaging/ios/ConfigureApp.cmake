@@ -24,6 +24,10 @@ set_target_properties(${target} PROPERTIES
     OUTPUT_NAME "${CUBEULATOR_BUNDLE_EXECUTABLE}"
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST "${_plist}"
+    # Xcode checks the plist's identifier against its own setting (CMake would
+    # otherwise invent com.yourcompany.<name>), and the profile is matched on it.
+    MACOSX_BUNDLE_GUI_IDENTIFIER "${CUBEULATOR_BUNDLE_ID}"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${CUBEULATOR_BUNDLE_ID}"
     # iPhone only for now (1); the iPad is 2.
     XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1"
     # The icon set Info.plist.in's CFBundleIconName names; without this Xcode
