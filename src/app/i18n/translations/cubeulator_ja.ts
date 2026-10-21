@@ -470,6 +470,46 @@ In your hands.</source>
         <extracomment>What this stage does, in one sentence.</extracomment>
         <translation>上面と下面の回転と、ほかの4面の半回転だけで、残りを完成させます。</translation>
     </message>
+    <message id="stage.parity.title">
+        <source>Set up</source>
+        <extracomment>Name of the first stage of a solve of a cube bigger than 3x3 when it needs one. Shown with a number, like the other stages. 'Parity' is the cuber's word; do not use it.</extracomment>
+        <translation>調整</translation>
+    </message>
+    <message id="stage.parity.what">
+        <source>A few turns first, so that pairing up the pieces cannot leave two of them swapped, which only a big cube can do.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>ピースを組み合わせたあとに2つが入れ替わったまま残ることがないように、先に数回転します。そうなるのは大きなキューブだけです。</translation>
+    </message>
+    <message id="stage.centres.title">
+        <source>Centres</source>
+        <extracomment>Name of a stage of a solve of a cube bigger than 3x3: gathering the middle stickers of each side.</extracomment>
+        <translation>中心</translation>
+    </message>
+    <message id="stage.centres.what">
+        <source>Gather the middle stickers of each side into one block of a single colour.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>各面の中央のステッカーを、1色のかたまりにそろえます。</translation>
+    </message>
+    <message id="stage.edges.title">
+        <source>Edges</source>
+        <extracomment>Name of a stage of a solve of a cube bigger than 3x3: pairing the edge pieces.</extracomment>
+        <translation>辺</translation>
+    </message>
+    <message id="stage.edges.what">
+        <source>Pair up the edge pieces into whole edges, so that the cube has twelve edges like a 3x3.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>辺のピースをペアにして1本の辺にまとめ、3x3と同じ12本の辺にします。</translation>
+    </message>
+    <message id="stage.corners.title">
+        <source>Corners</source>
+        <extracomment>Name of the only stage of a solve of a 2x2.</extracomment>
+        <translation>角</translation>
+    </message>
+    <message id="stage.corners.what">
+        <source>Put the eight corners where they belong. A 2x2 has nothing else.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>8つの角のピースを所定の位置に入れます。2x2には、ほかのピースはありません。</translation>
+    </message>
     <message id="home.lede">
         <source>Show your cube to the camera, then follow one turn at a time until it is solved.</source>
         <extracomment>One sentence under the headline on the home screen.</extracomment>
@@ -484,6 +524,76 @@ In your hands.</source>
         <source>History</source>
         <extracomment>Button. Opens the list of past solves.</extracomment>
         <translation>履歴</translation>
+    </message>
+    <message id="home.other">
+        <source>Another size of cube</source>
+        <extracomment>Button on Home. Opens the screen for a cube the camera does not read: a different size, or a cube typed in as the scramble that mixed it up.</extracomment>
+        <translation>別のサイズのキューブ</translation>
+    </message>
+    <message id="entry.title">
+        <source>Another cube</source>
+        <extracomment>Title of the screen reached from Home by "Another size of cube".</extracomment>
+        <translation>別のキューブ</translation>
+    </message>
+    <message id="entry.size.label">
+        <source>Size</source>
+        <extracomment>Small heading above the buttons that choose the size of the cube: 2×2, 3×3 and so on.</extracomment>
+        <translation>サイズ</translation>
+    </message>
+    <message id="entry.size.option">
+        <source>%1×%1</source>
+        <extracomment>A size of cube on a button: the side length twice, as in 5×5. %1 is the number in the reader's own digits.</extracomment>
+        <translation>%1×%1</translation>
+    </message>
+    <message id="entry.size.camera">
+        <source>The camera reads this cube. Scan it, or type its scramble here.</source>
+        <extracomment>Under the size buttons: the camera reads every size offered.</extracomment>
+        <translation>カメラはこのキューブを読み取れます。スキャンするか、スクランブルをここに入力してください。</translation>
+    </message>
+    <message id="entry.scramble.label">
+        <source>Its scramble</source>
+        <extracomment>Small heading above the box where the scramble is typed. A scramble is the list of moves that mixed the cube up, as a timer or a puzzle site shows it.</extracomment>
+        <translation>スクランブル</translation>
+    </message>
+    <message id="entry.scramble.placeholder">
+        <source>Type or paste the moves, such as R U R' U' F2 2R Rw</source>
+        <extracomment>Grey text in the empty scramble box, showing what a scramble looks like. The moves are cubing notation and are not translated.</extracomment>
+        <translation>回転を入力または貼り付け（例: R U R' U' F2 2R Rw）</translation>
+    </message>
+    <message id="entry.scramble.help">
+        <source>Write the moves with a space between them. U' turns the other way and F2 is a half turn. 2R is the second layer in from R, and Rw turns two layers together.</source>
+        <extracomment>Under the scramble box. The letters and marks are notation and stay as they are.</extracomment>
+        <translation>回転は、間にスペースを入れて書きます。U'は逆向きの回転、F2は半回転です。2RはR側から2段目だけを回し、Rwは2段をまとめて回します。</translation>
+    </message>
+    <message id="entry.solve">
+        <source>Solve it</source>
+        <extracomment>Main button of the screen for another size of cube. Works out the solution from the scramble.</extracomment>
+        <translation>解く</translation>
+    </message>
+    <message id="entry.scan">
+        <source>Scan it instead</source>
+        <extracomment>Button shown when 3×3 is chosen. Goes to the camera.</extracomment>
+        <translation>代わりにスキャン</translation>
+    </message>
+    <message id="entry.error.unknownMove">
+        <source>‘%1’ is not a move. Moves look like R, U', F2, 2R or Rw.</source>
+        <extracomment>Shown under the scramble box when a word in it is not a move. %1 is that word.</extracomment>
+        <translation>「%1」は回転ではありません。回転はR、U'、F2、2R、Rwのように書きます。</translation>
+    </message>
+    <message id="entry.error.layer">
+        <source>‘%1’ turns a layer that a %2×%2 cube does not have.</source>
+        <extracomment>Shown when a move names a layer the chosen size does not have, such as 5R on a 4×4. %1 is that move, %2 the size in the reader's own digits.</extracomment>
+        <translation>「%1」は、%2×%2のキューブにはない段を回します。</translation>
+    </message>
+    <message id="entry.error.empty">
+        <source>Type the scramble first.</source>
+        <extracomment>Shown when Solve it is pressed with nothing typed.</extracomment>
+        <translation>先にスクランブルを入力してください。</translation>
+    </message>
+    <message id="entry.error.solved">
+        <source>Those moves leave the cube as it was. Type a scramble that mixes it up.</source>
+        <extracomment>Shown when the scramble turns the cube back to solved, so there is nothing to solve.</extracomment>
+        <translation>この回転ではキューブは元のままです。キューブが混ざるスクランブルを入力してください。</translation>
     </message>
     <message id="home.findingCamera">
         <source>Looking for a camera…</source>
@@ -713,7 +823,7 @@ In your hands.</source>
     <message id="scan.guide.ambiguousCorner">
         <source>Turn the cube slowly to show the corner where %1, %2 and %3 meet.</source>
         <extracomment>Guidance when six sides are read and fit together in more than one way, and showing one particular corner (two or three sides in one view) would tell the cubes they make apart. %1, %2 and %3 are the colours of the centres of the three sides that meet there - colour.white and the like, in no particular order. Shown in place of scan.guide.ambiguous, which says only that two sides should show at once.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>%1、%2、%3が集まる角が見えるように、キューブをゆっくり回してください。</translation>
     </message>
     <message id="scan.guide.complete">
         <source>All six sides make a valid cube. Working out the solution…</source>
@@ -739,6 +849,11 @@ In your hands.</source>
         <source>Start over</source>
         <extracomment>Button. Forgets the sides read so far.</extracomment>
         <translation>最初からやり直す</translation>
+    </message>
+    <message id="scan.size.auto">
+        <source>Auto</source>
+        <extracomment>Button on the scan screen beside the sizes of cube: the app finds the size of the cube from what the camera sees.</extracomment>
+        <translation>自動</translation>
     </message>
     <message id="scan.checkColours">
         <source>Check the colours</source>
@@ -912,6 +1027,11 @@ In your hands.</source>
         <extracomment>Instruction at the top when checking a scan.</extracomment>
         <translation>各面をキューブと見比べます。色を選んで、間違っているステッカーをタップしてください。</translation>
     </message>
+    <message id="review.intro.enterN">
+        <source>Hold your cube any way up. Call the side facing up the top and the side facing you the front. Pick a colour, then tap or drag over the stickers of that colour on the side shown. The sides named round it are the ones against its edges.</source>
+        <extracomment>Instruction at the top of entering a cube of any size by hand. Replaces review.intro.enter for a cube that has no centre sticker to name each side by.</extracomment>
+        <translation>キューブはどの向きで持っても構いません。上を向いている面を上面、自分のほうを向いている面を正面と呼びます。色を選んで、表示されている面でその色のステッカーをタップまたはドラッグしてください。周りに示された面は、その面の辺に接している面です。</translation>
+    </message>
     <message id="review.centre">
         <source>The centre never changes. It names the side.</source>
         <extracomment>Shown when the person taps a centre sticker, which cannot be edited.</extracomment>
@@ -931,6 +1051,56 @@ In your hands.</source>
         <source>48 stickers to fill in</source>
         <extracomment>Status line before anything is entered. A cube has 54 stickers; the six centres are already set.</extracomment>
         <translation>ステッカーが残り48枚</translation>
+    </message>
+    <message id="review.status.emptyN">
+        <source>%1 stickers to fill in</source>
+        <extracomment>Status line before anything is entered, for a cube of any size. %1 is how many stickers the cube has, in the reader's own digits.</extracomment>
+        <translation>ステッカーが残り%1枚</translation>
+    </message>
+    <message id="review.fault.noScheme">
+        <source>These colours cannot be the six sides of one cube.</source>
+        <extracomment>Says what is wrong with colours that fit in no cube: two colours that belong on opposite sides sit next to each other.</extracomment>
+        <translation>これらの色は、1つのキューブの6面にはなりえません。</translation>
+    </message>
+    <message id="review.fault.centreColours">
+        <source>The middle stickers of a side do not hold each colour equally often.</source>
+        <extracomment>Says what is wrong when the middle stickers of one side's ring have the wrong mix of colours.</extracomment>
+        <translation>ある面の中央のステッカーで、各色の数が同じになっていません。</translation>
+    </message>
+    <message id="review.fault.unknownPiece">
+        <source>A piece shows colours that no piece of a cube has.</source>
+        <extracomment>Says what is wrong when a corner or an edge has two colours that are never next to each other.</extracomment>
+        <translation>キューブのどのピースにもない色の組み合わせのピースがあります。</translation>
+    </message>
+    <message id="review.fault.repeatedPiece">
+        <source>Two pieces show the same colours, so another piece is missing.</source>
+        <extracomment>Says what is wrong when the same corner or edge is entered twice.</extracomment>
+        <translation>2つのピースが同じ色になっているため、別のピースが足りません。</translation>
+    </message>
+    <message id="review.fault.twistedCorner">
+        <source>A corner looks turned in place.</source>
+        <extracomment>Says what is wrong when the corners are right but one is twisted.</extracomment>
+        <translation>角のピースが1つ、その場で回ったように見えます。</translation>
+    </message>
+    <message id="review.fault.flippedEdge">
+        <source>An edge looks flipped.</source>
+        <extracomment>Says what is wrong when the edges are right but one has its two colours the wrong way round.</extracomment>
+        <translation>辺のピースが1つ、裏返ったように見えます。</translation>
+    </message>
+    <message id="review.fault.swappedPieces">
+        <source>Two pieces look swapped.</source>
+        <extracomment>Says what is wrong when two pieces are in each other's places.</extracomment>
+        <translation>2つのピースが入れ替わっているように見えます。</translation>
+    </message>
+    <message id="review.clearAll">
+        <source>Clear all</source>
+        <extracomment>Button at the top of the hand-entry screen. Unsets every sticker of every side.</extracomment>
+        <translation>すべて消去</translation>
+    </message>
+    <message id="review.fillSide">
+        <source>Fill this side</source>
+        <extracomment>Button under the colours on the hand-entry screen. Paints every sticker of the side being edited with the colour chosen.</extracomment>
+        <translation>この面を塗りつぶす</translation>
     </message>
     <message id="review.status.partial" numerus="yes">
         <source>%Ln stickers to go</source>
@@ -1036,6 +1206,78 @@ In your hands.</source>
             <numerusform>%1: 残り%Ln枚</numerusform>
         </translation>
     </message>
+    <message id="review.notUpright">
+        <source>The camera could not tell which way up each side was held, so each is shown as it saw it. Compare every side with your cube, and turn any that is the wrong way round.</source>
+        <extracomment>Shown on the check screen when the camera named the colours of the sides but could not fit them together into a cube, so it does not know which way up each side was held. Each side is shown as the camera saw it and may need turning (review.turnSide).</extracomment>
+        <translation>カメラは各面がどちら向きで持たれていたかを判断できなかったため、各面はカメラが見たままの向きで表示されています。各面をキューブと見比べ、向きが違うものは回してください。</translation>
+    </message>
+    <message id="review.doubt.note" numerus="yes">
+        <source>The camera was not sure of %Ln stickers. They are marked with a ?.</source>
+        <extracomment>Shown on the check screen when the camera was unsure of some stickers. %n is how many. The mark is a question mark drawn on the sticker itself; keep the question mark as the plain Latin character.</extracomment>
+        <translation>
+            <numerusform>カメラが自信を持てなかったステッカーが%Ln枚あります。? の印が付いています。</numerusform>
+        </translation>
+    </message>
+    <message id="review.a11y.stickerUnsure">
+        <source>%1, row %2, column %3: %4. The camera was not sure of this one.</source>
+        <extracomment>Screen-reader name of a sticker the camera was unsure of. Like review.a11y.sticker, with the extra sentence. %1 is a colourSide string, %2 and %3 are 1 to 9, %4 a colour name or colour.unset.</extracomment>
+        <translation>%1、%2行目、%3列目: %4。カメラはこのステッカーに自信がありません。</translation>
+    </message>
+    <message id="review.undo">
+        <source>Undo</source>
+        <extracomment>Button on the colours screen. Takes back the last change.</extracomment>
+        <translation>元に戻す</translation>
+    </message>
+    <message id="review.redo">
+        <source>Redo</source>
+        <extracomment>Button on the colours screen. Puts back the change that Undo took back.</extracomment>
+        <translation>やり直す</translation>
+    </message>
+    <message id="review.revert">
+        <source>Back to the scan</source>
+        <extracomment>Button on the check screen. Puts every sticker back as the camera read it, taking back all the corrections made here. Undo can bring them back.</extracomment>
+        <translation>スキャン結果に戻す</translation>
+    </message>
+    <message id="review.turnSide">
+        <source>Turn this side</source>
+        <extracomment>Button on the colours screen. Turns the side being edited a quarter turn clockwise, as seen from outside, in the picture only: for a side the camera read the wrong way up. It does not turn the cube.</extracomment>
+        <translation>この面を回す</translation>
+    </message>
+    <message id="review.describe.open">
+        <source>Describe this side</source>
+        <extracomment>Button on the colours screen. Opens a box to type the colours of the whole side as letters instead of tapping each sticker.</extracomment>
+        <translation>この面を文字で入力</translation>
+    </message>
+    <message id="review.describe.help">
+        <source>Type the colours of this side (%1) as you see it on your cube, left to right, a row at a time: W white, Y yellow, G green, B blue, O orange, R red. Use ? for a sticker you cannot tell. Spaces and slashes are ignored.</source>
+        <extracomment>Instruction above the box where a side is described in letters. %1 is the side's name (colourSide.red, side.top and the like). The letters W Y G B O R are fixed, like the letters of a move, and are not translated; say in the language which colour each stands for, naming the colours as in colour.*.</extracomment>
+        <translation>お持ちのキューブで見たとおりに、この面(%1)の色を左から右へ、1行ずつ入力してください。W は白、Y は黄、G は緑、B は青、O はオレンジ、R は赤です。区別できないステッカーは ? にします。スペースとスラッシュは無視されます。</translation>
+    </message>
+    <message id="review.describe.field">
+        <source>Colours of this side, as letters</source>
+        <extracomment>Screen-reader name of the box where a side is described in letters.</extracomment>
+        <translation>この面の色(文字で入力)</translation>
+    </message>
+    <message id="review.describe.apply">
+        <source>Use these</source>
+        <extracomment>Button under the box where a side is described in letters. Paints the side with what was typed.</extracomment>
+        <translation>これを使う</translation>
+    </message>
+    <message id="review.describe.tooFew">
+        <source>That is only %1 of the %2 colours this side needs.</source>
+        <extracomment>Shown when the description of a side has too few colours. %1 is how many were typed and %2 how many stickers the side has, in the reader's own digits.</extracomment>
+        <translation>この面に必要な%2色のうち、まだ%1色です。</translation>
+    </message>
+    <message id="review.describe.tooMany">
+        <source>That is %1 colours, but this side has only %2 stickers.</source>
+        <extracomment>Shown when the description of a side has too many colours. %1 is how many were typed and %2 how many stickers the side has, in the reader's own digits. %1 is always larger than %2.</extracomment>
+        <translation>%1色ありますが、この面のステッカーは%2枚だけです。</translation>
+    </message>
+    <message id="review.describe.unknownLetter">
+        <source>‘%1’ is not a colour. Use W, Y, G, B, O or R, or ? for a sticker you cannot tell.</source>
+        <extracomment>Shown when the description of a side has a letter that is no colour. %1 is that letter. The letters W Y G B O R are fixed and not translated.</extracomment>
+        <translation>「%1」は色ではありません。W、Y、G、B、O、R を使うか、区別できないステッカーは ? にしてください。</translation>
+    </message>
     <message id="solve.working">
         <source>Working out the solution…</source>
         <extracomment>Shown while the solution is computed.</extracomment>
@@ -1130,6 +1372,36 @@ In your hands.</source>
         <source>Back one</source>
         <extracomment>Button. Undoes the last turn on screen so the person can undo it on the cube.</extracomment>
         <translation>ひとつ戻る</translation>
+    </message>
+    <message id="solve.move.layer">
+        <source>%1 · layer %2 · %3</source>
+        <extracomment>The move in words for a layer inside a cube bigger than 3x3. %1 is the side, as 'Right side' or 'Top'; %2 is how far in the layer is counted from that side, starting at 1 for the outer layer; %3 is 'quarter turn' or 'half turn'. The dots are separators.</extracomment>
+        <translation>%1 · %2段目 · %3</translation>
+    </message>
+    <message id="solve.move.layers">
+        <source>%1 · layers %2 to %3 · %4</source>
+        <extracomment>The same for several layers turned together. %2 and %3 are the nearest and the farthest layer, counted from the side as above; %4 is 'quarter turn' or 'half turn'.</extracomment>
+        <translation>%1 · %2段目から%3段目 · %4</translation>
+    </message>
+    <message id="solve.skipToCore">
+        <source>Skip to the 3x3 stage</source>
+        <extracomment>Button on the solve screen of a cube bigger than 3x3. Jumps over the stages that pair up its pieces.</extracomment>
+        <translation>3x3の段階へ進む</translation>
+    </message>
+    <message id="solve.skipToCore.note">
+        <source>Use this once you have paired up the centres and edges yourself. The cube on screen jumps to the 3x3 it should now be.</source>
+        <extracomment>Explains the button above it, for someone who can already solve a 3x3.</extracomment>
+        <translation>中心と辺を自分でそろえ終えたら、このボタンを使います。画面のキューブは、そろえたあとの3x3の状態に切り替わります。</translation>
+    </message>
+    <message id="solve.method.finishWith">
+        <source>Finish with</source>
+        <extracomment>Small label above the three method buttons when the cube is bigger than 3x3: the methods apply to the 3x3 the cube has become, so they are said to be how it is finished.</extracomment>
+        <translation>仕上げの方法</translation>
+    </message>
+    <message id="solve.camera.layerHidden">
+        <source>Matched. The camera cannot see this layer from here: press Next turn after this move.</source>
+        <extracomment>Shown beside the camera preview on the solve screen of a cube bigger than 3x3 when the layer to turn is one the side facing the camera does not show (a layer behind the front one, say): the camera cannot tell that it was turned, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
+        <translation>合っています。この向きではカメラがこの部分を見られません。この手を終えたら「次の回転」を押してください。</translation>
     </message>
     <message id="solve.finish">
         <source>Finish</source>
@@ -1400,6 +1672,16 @@ In your hands.</source>
             <numerusform>%Ln回転</numerusform>
         </translation>
     </message>
+    <message id="solution.layer">
+        <source>layer %1</source>
+        <extracomment>A turn of a layer inside a cube bigger than 3x3, in a row of the list of turns, between the side and the direction ('Right side · layer 2 · upwards · quarter turn'). %1 is how far in the layer is, counted from the side, starting at 1 for the outer layer, in the reader's own digits.</extracomment>
+        <translation>%1段目</translation>
+    </message>
+    <message id="solution.layers">
+        <source>layers %1 to %2</source>
+        <extracomment>The same for several layers turned together. %1 and %2 are the nearest and the farthest layer, counted from the side as above.</extracomment>
+        <translation>%1段目から%2段目</translation>
+    </message>
     <message id="solution.a11y.turn">
         <source>Turn %1. %2</source>
         <extracomment>Screen-reader name of one row in the list. %2 is a turn sentence.</extracomment>
@@ -1431,6 +1713,11 @@ In your hands.</source>
         <source>Unfinished · turn %1 of %2</source>
         <extracomment>One row, for a solve left part-way.</extracomment>
         <translation>解き途中 · %2回転中の%1回転目</translation>
+    </message>
+    <message id="history.item.size">
+        <source>%1×%1 · %2</source>
+        <extracomment>Start of one row for a cube that is not a 3x3: its size, as in 5×5 (%1 is the side length twice, in the reader's own digits), then the rest of the row (history.item.done or history.item.unfinished) as %2.</extracomment>
+        <translation>%1×%1 · %2</translation>
     </message>
     <message id="history.delete">
         <source>Delete</source>
@@ -1757,27 +2044,27 @@ In your hands.</source>
     <message id="settings.dev.diagnostics">
         <source>Write diagnostics to a file</source>
         <extracomment>Developer builds only. A switch in Settings. While it is on, the app writes what it reads and decides - colours, how they were named, how the cube was put together - to a file a developer can open while the app runs. Off at every start.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>診断情報をファイルに書き出す</translation>
     </message>
     <message id="settings.dev.diagnosticsFrames">
         <source>Also keep camera frames</source>
         <extracomment>Developer builds only. A switch in Settings, under the diagnostics switch; it only takes effect while that one is on. The frames show whatever the camera sees, which can be a person.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>カメラのフレームも保存する</translation>
     </message>
     <message id="settings.dev.diagnosticsSnapshot">
         <source>Snapshot now</source>
         <extracomment>Developer builds only. A button in Settings. Writes the scan and the solve as they stand, in one record, to the diagnostics file.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>今すぐスナップショットを取る</translation>
     </message>
     <message id="diagnostics.marker">
         <source>Writing diagnostics to %1</source>
         <extracomment>Developer builds only. A strip on every screen while the diagnostics file is being written, so that it is never silent. %1 is the file's path.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>診断情報を%1に書き込み中</translation>
     </message>
     <message id="diagnostics.markerFrames">
         <source>Writing diagnostics and camera frames to %1</source>
         <extracomment>Developer builds only. As diagnostics.marker, when camera frames are being kept as well. %1 is the folder the diagnostics are written to.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>診断情報とカメラのフレームを%1に書き込み中</translation>
     </message>
     <message id="about.title">
         <source>About Cubeulator</source>

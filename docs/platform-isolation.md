@@ -47,6 +47,11 @@ platform's fragment. Every other CMake file reads what the fragment declared:
 | What | Where it is declared | Who reads it |
 |---|---|---|
 | Source files compiled into `cube_platform` | `CUBEULATOR_PLATFORM_SOURCES` | `src/app/CMakeLists.txt` |
+| The Direct3D 11 Tracy GPU backend, compiled into `cube::lib` when Tracy is on (`windows/tracy_gpu_d3d11_windows.cpp`, or `posix/tracy_gpu_direct3d_none.cpp`) | `CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES` | `src/lib/CMakeLists.txt` |
+| Whether the platform has OpenGL for Tracy's OpenGL GPU backend (`src/lib/src/profile/tracy_gpu.cpp`, or the `tracy_gpu_opengl_none.cpp` stub; not on Apple, where Tracy's header refuses to compile) | `CUBEULATOR_PLATFORM_PROFILING_OPENGL` | `src/lib/CMakeLists.txt` |
+| Whether the platform has Vulkan for Tracy's Vulkan GPU backend (`src/lib/src/profile/tracy_gpu_vulkan.cpp`, with the Vulkan headers, and the app's `qt/render_profiler_vulkan.cpp`), or gets the `*_none.cpp` stubs | `CUBEULATOR_PLATFORM_PROFILING_VULKAN` | `src/lib/CMakeLists.txt`, `src/app/CMakeLists.txt` |
+| Whether a graphics backend can start here, asked before Qt creates the window (`interfaces/graphics_probe.hpp`: Vulkan, Direct3D 12 and 11 on Windows, Vulkan on Linux, `posix/graphics_probe_none.cpp` elsewhere; `detail/vulkan_probe.cpp` is the loader-agnostic Vulkan part) | the file named in `CUBEULATOR_PLATFORM_SOURCES` | `src/app/qt/main.cpp` (through `desktop/graphics_backend.cpp`) |
+| Which 128-bit vector kernels `cube::lib` is built with: `auto` (from the target architecture: x86-64 and arm64) or `vector128` (the browser, whose `-msimd128` the architecture check cannot see) | `CUBEULATOR_PLATFORM_SIMD` | `cmake/Simd.cmake` |
 | System libraries (`strmiids`, `dbghelp`, ...) | `CUBEULATOR_PLATFORM_LINK_LIBRARIES` | `src/app/CMakeLists.txt` |
 | Qt libraries a platform file needs | `CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES` | `src/app/CMakeLists.txt` |
 | C-runtime defines (`_CRT_SECURE_NO_WARNINGS`) | `CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS` | `cube_platform`, every test target |
@@ -58,6 +63,7 @@ platform's fragment. Every other CMake file reads what the fragment declared:
 | Whether the system tests' window is made invisible (transparent, click-through, never activated) | `CUBEULATOR_PLATFORM_TEST_HIDE_WINDOW` | `tests/system/app.cpp`, through `cube_test_platform_facts.hpp` |
 | What a test binary has to be told at link time (the browser: threads, stack, memory, Node) | `CUBEULATOR_PLATFORM_TEST_LINK_OPTIONS` | `tests/` (`cube_test_platform`) |
 | Whether the camera is a native device the test program can open from its own thread (the camera cases under `tests/integration`) | `CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA` | `tests/CMakeLists.txt` |
+| Whether the app carries Archivo and IBM Plex Mono and registers them at start-up (every platform but the browser) | `CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS` | `src/app/CMakeLists.txt` |
 | Work before packages are found | `cube_platform_prepare_dependencies()` | `cmake/MobileDependencies.cmake` |
 | Qt runtime next to the app (windeployqt) | `cube_platform_deploy_qt_runtime()` | `src/app/CMakeLists.txt` |
 | One more Qt library next to a binary (QtTest, for the system tests) | `cube_platform_deploy_qt_library()` | `tests/system/CMakeLists.txt` |

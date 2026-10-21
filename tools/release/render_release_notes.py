@@ -50,6 +50,7 @@ PLATFORMS: tuple[tuple[str, str], ...] = (
     (".dmg", "macOS 14.4 and later, Apple Silicon"),
     (".deb", "Linux, Debian and Ubuntu"),
     (".rpm", "Linux, Fedora"),
+    (".ipa", "iPhone (ad hoc: installs only on devices registered to the maintainer)"),
     (".zip", "Web: any current browser (static files to host)"),
 )
 
@@ -67,6 +68,7 @@ def expected_names(version: str) -> list[str]:
         f"Cubeulator-{version}-macos-arm64.dmg",
         f"Cubeulator-{version}-linux-x64.deb",
         f"Cubeulator-{version}-linux-x64.rpm",
+        f"Cubeulator-{version}-ios.ipa",
         f"Cubeulator-{version}-web.zip",
     ]
 
@@ -81,14 +83,14 @@ def _files_for(names: list[str], suffix: str) -> list[str]:
     return sorted(n for n in names if n.lower().endswith(suffix))
 
 
-def install_section(template: str, names: list[str], version: str) -> str:
-    """The template with the real package names in it."""
+def install_section(template: str, names: list[str], version: str, tag: str) -> str:
+    """The template with the real package names, and this release's tag, in it."""
     fallback = dict(zip((s for s, _ in PLATFORMS), expected_names(version)))
     filled = template
-    for token, suffix in (("@WINDOWS@", ".exe"), ("@MACOS@", ".dmg"), ("@DEB@", ".deb"), ("@RPM@", ".rpm"), ("@WEB@", ".zip")):
+    for token, suffix in (("@WINDOWS@", ".exe"), ("@MACOS@", ".dmg"), ("@DEB@", ".deb"), ("@RPM@", ".rpm"), ("@IOS@", ".ipa"), ("@WEB@", ".zip")):
         files = _files_for(names, suffix)
         filled = filled.replace(token, files[0] if files else fallback[suffix])
-    return filled.strip("\n")
+    return filled.replace("@TAG@", tag).strip("\n")
 
 
 def artifacts_section(
@@ -98,7 +100,7 @@ def artifacts_section(
     if attested:
         proofs.append("build-provenance attestations")
     if sbom:
-        proofs.append("an SPDX SBOM")
+        proofs.append("SPDX and CycloneDX SBOMs")
     if signed:
         proofs.append("GPG signatures")
     if proofs:
@@ -113,10 +115,20 @@ def artifacts_section(
         if files:
             rows.append(f"| {label} | " + " · ".join(f"`{f}`" for f in files) + " |")
 
+    sboms = (_files_for(names, ".spdx.json") + _files_for(names, ".cdx.json")) if sbom else []
+    if sboms:
+        rows.append("| SBOM (SPDX 2.3, CycloneDX 1.6) | " + " · ".join(f"`{f}`" for f in sboms) + " |")
+
     checks: list[str] = []
     if attested:
         checks.append(f"`gh attestation verify <file> --repo {repo}`")
     checks.append("`SHA512SUMS`" + ("(`.asc`) + per-file `.asc`" if signed else ""))
+    if attested or signed:
+        # The SBOM's own check is in the page, not in a table cell.
+        checks.append(
+            f"[how to check each, the SBOM included](https://github.com/{repo}/blob/{tag}"
+            "/docs/SECURITY.md#verifying-build-authenticity)"
+        )
     rows.append("| Verification | " + "; ".join(checks) + " |")
 
     readme = f"https://github.com/{repo}/blob/{tag}/README.md#install"
@@ -179,7 +191,7 @@ def render(
     for title, content in body.subsections:
         parts.append(f"### {title}\n\n{content}")
     if install_template.strip():
-        parts.append(install_section(install_template, names, version))
+        parts.append(install_section(install_template, names, version, tag))
     parts.append(
         artifacts_section(names, repo=repo, tag=tag, signed=signed, attested=attested, sbom=sbom)
     )
@@ -207,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--artifacts", type=Path, help="directory holding the release files")
     parser.add_argument("--signed", action="store_true", help="GPG signatures are attached")
     parser.add_argument("--attested", action="store_true", help="provenance attestations exist")
-    parser.add_argument("--sbom", action="store_true", help="an SPDX SBOM is attached")
+    parser.add_argument("--sbom", action="store_true", help="the SPDX and CycloneDX SBOMs are attached")
     parser.add_argument("--install-notes", type=Path, default=HERE / "install-notes.md")
     parser.add_argument(
         "--from-unreleased",

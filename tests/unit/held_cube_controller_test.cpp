@@ -9,8 +9,12 @@
 #include "controllers/direct_scan.hpp"
 #include "controllers/held_cube.hpp"
 #include "drawn_cube.hpp"
+#include "scanned_nxn_support.hpp"
 #include "solve_controller.hpp"
 
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/outside_view.hpp>
+#include <cube/nxn/stepped_plan.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/hold.hpp>
 #include <cube/solver/solver.hpp>
@@ -567,4 +571,231 @@ TEST_CASE("a half turn made a quarter at a time is not called wrong on the way",
     if (camera_view(moved, *hold) != camera_view(cube, *hold)) {
         CHECK(session.moves_seen == 1);
     }
+}
+
+// ---- a cube of another size --------------------------------------------------------------
+
+// The same, for a cube bigger than a 3x3: scanned from drawn sides, handed to the solver, and
+// watched. `now()` is the cube the solution stands at (the scan names it as its centres do).
+struct BigSession {
+    DirectScan scan;
+    SolveController solve;
+    HeldCube held{scan, solve};
+    int size;
+    int holds_changed = 0;
+    int moves_seen = 0;
+
+    explicit BigSession(int cube_size, unsigned seed = 11) : size(cube_size) {
+        const cube::nxn::NCube cube = cube::test::unambiguous_cube(size, seed);
+        QObject::connect(&scan, &DirectScan::scanCompleted, &solve,
+                         [this]() { solve.solveCube(*scan.cubeN()); });
+        scan.setSize(size);
+        cube::test::show_all_sides(scan, cube);
+        REQUIRE(scan.complete());
+        QElapsedTimer waited;
+        waited.start();
+        while (solve.isSolving() && waited.elapsed() < 120'000) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        REQUIRE_FALSE(solve.isSolving());
+        REQUIRE(solve.size() == size);
+        REQUIRE_FALSE(solve.plan().at_end());
+        QObject::connect(&held, &HeldCube::holdChanged, [this]() { ++holds_changed; });
+        QObject::connect(&held, &HeldCube::moveSeen, [this]() { ++moves_seen; });
+        scan.setWatching(true);
+    }
+
+    [[nodiscard]] const cube::nxn::NCube& now() const { return solve.plan().current_cube(); }
+    [[nodiscard]] cube::nxn::NCube after_move() const {
+        return solve.plan().cube_at(solve.plan().current_index() + 1);
+    }
+    [[nodiscard]] Face asked_face() const { return solve.plan().current_move().face; }
+    void show(const cv::Mat& frame, int frames) {
+        for (int i = 0; i < frames; ++i) {
+            scan.processFrame(frame);
+        }
+    }
+    void show(const cube::nxn::NCube& cube, const Hold& hold, int frames) {
+        show(draw_side(cube::nxn::camera_view(cube, hold), cube::test::pose_for(size)), frames);
+    }
+    void show(const std::vector<Color>& stickers, int frames) {
+        show(draw_side(stickers, cube::test::pose_for(size)), frames);
+    }
+    void look_away() { scan.processFrame(room({640, 360})); }
+};
+
+using cube::test::cells_changed;
+using cube::test::hold_that_sees_n;
+
+TEST_CASE("a bigger cube is marked for the preview and is held as the camera sees it",
+          "[qt][controllers][held-cube][nxn]") {
+    for (const int size : {4, 5}) {
+        INFO("size " << size);
+        BigSession session(size);
+        CHECK(session.held.hold() == kStatedHold);
+        CHECK_FALSE(session.held.seen());
+
+        for (const Hold& hold : all_holds()) {
+            session.look_away();
+            session.show(session.now(), hold, kFramesToTrust);
+            CHECK(session.scan.stickerPoints().size() == size * size);
+            CHECK(session.held.hold() == hold);
+            CHECK(session.held.sight() == "matched");
+        }
+        CHECK(session.held.seen());
+        CHECK(session.moves_seen == 0);
+        // Watching never adds to the scan.
+        CHECK(session.scan.sidesRead() == 6);
+    }
+}
+
+TEST_CASE("the move asked for, made in view of the camera, is seen once on a bigger cube",
+          "[qt][controllers][held-cube][nxn]") {
+    for (const int size : {4, 5}) {
+        INFO("size " << size);
+        BigSession session(size);
+        const cube::nxn::NCube before = session.now();
+        const cube::nxn::NCube moved = session.after_move();
+        const auto hold = hold_that_sees_n(before, moved, 3, session.asked_face());
+        REQUIRE(hold.has_value());
+
+        session.show(before, *hold, kFramesToTrust);
+        REQUIRE(session.held.hold() == *hold);
+        REQUIRE_FALSE(session.held.moveHidden());
+        CHECK(session.moves_seen == 0);
+
+        // Hands go on the cube, the move is made, and the same side comes back.
+        session.look_away();
+        session.show(moved, *hold, kFramesToTrust - 2);
+        CHECK(session.moves_seen == 0);
+        session.show(moved, *hold, 2);
+        CHECK(session.moves_seen == 1);
+        // Said, and not done: stepping the solution is the screen's to do.
+        CHECK(session.solve.moveIndex() == 0);
+        session.show(moved, *hold, kFramesToDoubt);
+        CHECK(session.moves_seen == 1);
+
+        // On to the next move: the same side is the cube as expected, and nothing more is
+        // seen of a move that has been made.
+        session.solve.nextMove();
+        session.show(moved, *hold, kFramesToTrust);
+        CHECK(session.moves_seen == 1);
+        CHECK(session.held.sight() == "matched");
+    }
+}
+
+TEST_CASE("a layer the camera cannot see turned is not followed, and says so",
+          "[qt][controllers][held-cube][nxn]") {
+    BigSession session(4);
+    const cube::nxn::NCube before = session.now();
+    const cube::nxn::NCube moved = session.after_move();
+    // From a hold in which the move changes nothing of the side in view.
+    std::optional<Hold> blind;
+    for (const Hold& hold : all_holds()) {
+        if (cells_changed(before, moved, hold) == 0) {
+            blind = hold;
+            break;
+        }
+    }
+    REQUIRE(blind.has_value());
+    session.show(before, *blind, kFramesToTrust);
+    REQUIRE(session.held.hold() == *blind);
+    CHECK(session.held.moveHidden());
+
+    session.show(moved, *blind, 3 * kFramesToDoubt);
+    CHECK(session.moves_seen == 0);
+    CHECK(session.held.sight() == "matched");
+}
+
+TEST_CASE("one cell saying a move was made is not a move on a bigger cube",
+          "[qt][controllers][held-cube][nxn]") {
+    for (const int size : {4, 5}) {
+        INFO("size " << size);
+        BigSession session(size);
+        const cube::nxn::NCube before = session.now();
+        const cube::nxn::NCube moved = session.after_move();
+        const auto hold = hold_that_sees_n(before, moved, 3, session.asked_face());
+        REQUIRE(hold.has_value());
+        session.show(before, *hold, kFramesToTrust);
+        REQUIRE(session.held.hold() == *hold);
+        session.look_away();
+
+        // The cube as it stood, with one of the cells the move changes showing what the move
+        // would give it: a glint.
+        const auto was = cube::nxn::camera_view(before, *hold);
+        const auto will_be = cube::nxn::camera_view(moved, *hold);
+        auto glint = was;
+        for (std::size_t cell = 0; cell < was.size(); ++cell) {
+            if (was.at(cell) != will_be.at(cell)) {
+                glint.at(cell) = will_be.at(cell);
+                break;
+            }
+        }
+        session.show(glint, 3 * kFramesToDoubt);
+        CHECK(session.moves_seen == 0);
+    }
+}
+
+TEST_CASE("a turn of some other side is named on a bigger cube",
+          "[qt][controllers][held-cube][nxn]") {
+    for (const int size : {4, 5}) {
+        INFO("size " << size);
+        BigSession session(size);
+        const cube::nxn::NCube before = session.now();
+
+        // Some other side's outer layer, turned where the camera can see the difference.
+        std::optional<cube::nxn::LayerMove> wrong;
+        std::optional<Hold> hold;
+        for (const Face face : kAllFaces) {
+            if (face == session.asked_face()) {
+                continue;
+            }
+            cube::nxn::NCube strayed = before;
+            const cube::nxn::LayerMove move{.face = face, .depth = 0, .turns = 1};
+            strayed.apply(move);
+            if (const auto witness = hold_that_sees_n(before, strayed, 3, face);
+                witness.has_value()) {
+                wrong = move;
+                hold = witness;
+                break;
+            }
+        }
+        REQUIRE(wrong.has_value());
+        cube::nxn::NCube strayed = before;
+        strayed.apply(*wrong);
+
+        session.show(before, *hold, kFramesToTrust);
+        REQUIRE(session.held.sight() == "matched");
+        session.look_away();
+
+        session.show(strayed, *hold, kFramesToTrust);
+        CHECK(session.held.sight() != "wrong");
+        session.show(strayed, *hold, kFramesToAccuse);
+        CHECK(session.held.sight() == "wrong");
+        CHECK(session.held.wrongSide() == side_letter(wrong->face));
+        // Named, and nothing else.
+        CHECK(session.moves_seen == 0);
+        CHECK(session.solve.moveIndex() == 0);
+    }
+}
+
+TEST_CASE("a bigger cube's side the camera sees whole but wrong is doubted, slowly",
+          "[qt][controllers][held-cube][nxn]") {
+    BigSession session(5);
+    const cube::nxn::NCube before = session.now();
+    const auto hold = hold_that_sees_n(before, session.after_move(), 3, session.asked_face());
+    REQUIRE(hold.has_value());
+    session.show(before, *hold, kFramesToTrust);
+    session.look_away();
+
+    // Every other cell of the side the wrong colour.
+    auto stripes = cube::nxn::camera_view(before, *hold);
+    for (std::size_t cell = 0; cell < stripes.size(); cell += 2) {
+        stripes.at(cell) = stripes.at(cell) == Color::White ? Color::Yellow : Color::White;
+    }
+    session.show(stripes, kFramesToDoubt - 2);
+    CHECK(session.held.sight() != "unknown");
+    session.show(stripes, 4);
+    CHECK(session.held.sight() == "unknown");
+    CHECK(session.moves_seen == 0);
 }

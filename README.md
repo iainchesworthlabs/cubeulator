@@ -15,7 +15,7 @@ you the solution turn by turn on a 3D cube.
 
 > **Status: pre-release.** For Windows, macOS and Linux, and in a browser. The scan has been
 > checked on recorded sessions and a webcam, not yet across cameras, rooms and
-> cubes, and a sticker read wrongly cannot yet be corrected by hand.
+> cubes; a sticker read wrongly is put right by hand on the colours screen.
 > [CHANGELOG.md](CHANGELOG.md) says
 > what each release does and what is not yet proven.
 
@@ -25,7 +25,7 @@ pictures of every screen, live at
 **[iainchesworthlabs.github.io/cubeulator](https://iainchesworthlabs.github.io/cubeulator/)**.
 
 <p align="center">
-  <img src="docs/guide/img/solve-middle-wide-light.webp" alt="The solve screen: a 3D cube with the layer to turn nudged, the stage list, and Next move." width="720">
+  <img src="docs/guide/img/solve-middle-wide-light.webp" alt="The solve screen: a 3D cube with the layer to turn nudged, the stage list, and Next turn." width="720">
 </p>
 
 ## Install
@@ -43,10 +43,16 @@ You need a camera; a webcam is enough.
 | Fedora | `Cubeulator-<version>-linux-x64.rpm` | `sudo dnf install ./Cubeulator-<version>-linux-x64.rpm` |
 | A current browser | nothing to install: [open it online](https://iainchesworthlabs.github.io/cubeulator/app/), or host `Cubeulator-<version>-web.zip` yourself | needs https (or localhost) for the camera; [how it works and what it needs](docs/web.md) |
 
-The packages are not yet signed by Microsoft or Apple, which is why Windows and
-macOS ask. What each release does carry is a SHA-512 manifest, GPG signatures,
-and a build-provenance attestation for every file; how to check them is in the
-[security policy](docs/SECURITY.md#verifying-build-authenticity).
+The packages are **not signed with a Windows (Authenticode) or Apple
+(Developer ID) certificate** in this release, which is why Windows
+(SmartScreen) and macOS (Gatekeeper) ask before they run one: *More info*, then
+*Run anyway* on Windows; right-click, then *Open* on a Mac. Nothing is wrong
+with the file, but you do not have to take that on trust. Every release carries
+a SHA-512 manifest with GPG signatures from the project's key, a
+build-provenance attestation for every file (which repository, workflow and
+commit built it), and SPDX and CycloneDX bills of materials. The
+[security policy](docs/SECURITY.md#verifying-build-authenticity) has the
+commands to check each, and the key's fingerprint to check it against.
 
 ## Using it
 
@@ -60,8 +66,13 @@ and a build-provenance attestation for every file; how to check them is in the
    (CFOP, about 50) or *Advanced* (the fewest, about 20) on the solve screen at
    any time.
 4. Follow the 3D cube one turn at a time. The camera stays on, so it sees the
-   side you turned and steps on by itself; **Next move** (or the right arrow)
+   side you turned and steps on by itself; **Next turn** (or the right arrow)
    steps when it cannot.
+
+A sticker the camera got wrong is put right on **Check the colours**, without
+scanning again. For a 2×2 up to a 5×5, choose **Another size of cube** on the
+start screen and scan it, or type the scramble or the colours in. The camera is proven on a 3×3 and
+much less on the other sizes.
 
 The [user guide](https://iainchesworthlabs.github.io/cubeulator/guide/) goes
 through each screen, and says what to do when a side will not read.

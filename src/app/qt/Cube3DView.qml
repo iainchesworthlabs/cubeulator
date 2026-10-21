@@ -367,7 +367,21 @@ Item {
     // The guide restarts once things have settled: a step of the solve
     // changes the painting, the side and the turn count together, and the
     // layer should be picked up once, from the cube as repainted.
-    function scheduleGuide() { Qt.callLater(root.applyGuide); }
+    // A Timer of the view's own, not Qt.callLater: a callLater scheduled as the
+    // screen is torn down (a step of the solve, then the screen leaves) runs
+    // after the view's context has gone, and the call into stopNudge() raises
+    // "Property 'stopNudge' ... is not a function (exception occurred during
+    // delayed function evaluation)". That warning failed the macOS system
+    // walk (history_test.cpp, "an unfinished solve is carried on") on every
+    // run for days. A Timer is destroyed with the view and never fires after.
+    // Restarting it is the same coalescing callLater gave.
+    Timer {
+        id: guideSoon
+        interval: 0
+        onTriggered: root.applyGuide()
+    }
+
+    function scheduleGuide() { guideSoon.restart(); }
 
     function applyGuide() {
         if (playing)
@@ -855,14 +869,18 @@ Item {
                                     // to the next cubie) so neighbouring
                                     // cubies' outlines don't fuse into one
                                     // blob.
-                                    Model {
-                                        visible: root.shaderStyle === 2
-                                        source: "#Cube"
-                                        scale: Qt.vector3d((root.cubieSize + 1) / 100, (root.cubieSize + 1) / 100, (root.cubieSize + 1) / 100)
-                                        materials: PrincipledMaterial {
-                                            baseColor: "black"
-                                            lighting: PrincipledMaterial.NoLighting
-                                            cullMode: Material.FrontFaceCulling
+                                    Loader3D {
+                                        active: root.shaderStyle === 2
+                                        sourceComponent: Component {
+                                            Model {
+                                                source: "#Cube"
+                                                scale: Qt.vector3d((root.cubieSize + 1) / 100, (root.cubieSize + 1) / 100, (root.cubieSize + 1) / 100)
+                                                materials: PrincipledMaterial {
+                                                    baseColor: "black"
+                                                    lighting: PrincipledMaterial.NoLighting
+                                                    cullMode: Material.FrontFaceCulling
+                                                }
+                                            }
                                         }
                                     }
 
@@ -907,6 +925,23 @@ Item {
                                             position: Qt.vector3d(axisVec[0] * faceOffset, axisVec[1] * faceOffset, axisVec[2] * faceOffset)
                                             eulerRotation: Qt.vector3d(orient.rx, orient.ry, 0)
 
+                                            // The panel this sticker draws now,
+                                            // and only that one: it is made when
+                                            // it is wanted (a style or the
+                                            // skeleton asks for it) and gone
+                                            // when it is not. All four used to
+                                            // be made for every sticker and
+                                            // three of them hidden, which was
+                                            // most of the Models in the scene
+                                            // (docs/performance.md, "Screens").
+                                            readonly property real panelScale: root.cubieSize * root.stickerInset / 100
+                                            readonly property Component panel: root.skeleton && !painted
+                                                ? skeletonPanel
+                                                : root.shaderStyle === 1 ? glowPanel
+                                                : root.shaderStyle === 2 ? celPanel : pbrPanel
+
+                                            Loader3D { sourceComponent: stickerNode.panel }
+
                                             // Style 0: Physically-Based
                                             // Realism (default). Roughness/
                                             // metalness/specular/clearcoat
@@ -915,18 +950,20 @@ Item {
                                             // coat. Environment reflections
                                             // come from the shared lightProbe
                                             // set on `environment`.
-                                            Model {
-                                                visible: root.shaderStyle === 0 && stickerNode.solid
-                                                source: "#Rectangle"
-                                                scale: Qt.vector3d(root.cubieSize * root.stickerInset / 100, root.cubieSize * root.stickerInset / 100, 1)
-                                                materials: PrincipledMaterial {
-                                                    baseColor: stickerNode.shownColor
-                                                    roughness: root.evenLight ? 0.6 : 0.35
-                                                    metalness: 0.0
-                                                    specularAmount: root.evenLight ? 0.25 : 0.6
-                                                    specularTint: 0.1
-                                                    clearcoatAmount: root.evenLight ? 0.08 : 0.35
-                                                    clearcoatRoughnessAmount: 0.12
+                                            Component {
+                                                id: pbrPanel
+                                                Model {
+                                                    source: "#Rectangle"
+                                                    scale: Qt.vector3d(stickerNode.panelScale, stickerNode.panelScale, 1)
+                                                    materials: PrincipledMaterial {
+                                                        baseColor: stickerNode.shownColor
+                                                        roughness: root.evenLight ? 0.6 : 0.35
+                                                        metalness: 0.0
+                                                        specularAmount: root.evenLight ? 0.25 : 0.6
+                                                        specularTint: 0.1
+                                                        clearcoatAmount: root.evenLight ? 0.08 : 0.35
+                                                        clearcoatRoughnessAmount: 0.12
+                                                    }
                                                 }
                                             }
 
@@ -934,18 +971,19 @@ Item {
                                             // Quantized-band diffuse + fresnel
                                             // rim (toon.frag) plus an emissive
                                             // boost on the layer called out.
-                                            Model {
-                                                visible: root.shaderStyle === 1 && stickerNode.solid
-                                                source: "#Rectangle"
-                                                scale: Qt.vector3d(root.cubieSize * root.stickerInset / 100, root.cubieSize * root.stickerInset / 100, 1)
-
-                                                materials: CustomMaterial {
-                                                    shadingMode: CustomMaterial.Shaded
-                                                    fragmentShader: "shaders/toon.frag"
-                                                    property color uBaseColor: stickerNode.shownColor
-                                                    property color uRimColor: Theme.accent
-                                                    property real uRimPower: 2.2
-                                                    property real uGlowStrength: stickerNode.calledOut ? 1.0 : 0.0
+                                            Component {
+                                                id: glowPanel
+                                                Model {
+                                                    source: "#Rectangle"
+                                                    scale: Qt.vector3d(stickerNode.panelScale, stickerNode.panelScale, 1)
+                                                    materials: CustomMaterial {
+                                                        shadingMode: CustomMaterial.Shaded
+                                                        fragmentShader: "shaders/toon.frag"
+                                                        property color uBaseColor: stickerNode.shownColor
+                                                        property color uRimColor: Theme.accent
+                                                        property real uRimPower: 2.2
+                                                        property real uGlowStrength: stickerNode.calledOut ? 1.0 : 0.0
+                                                    }
                                                 }
                                             }
 
@@ -957,14 +995,16 @@ Item {
                                             // halftone/grunge/vignette look is
                                             // a screen-space post pass on
                                             // `environment`, not per-sticker.
-                                            Model {
-                                                visible: root.shaderStyle === 2 && stickerNode.solid
-                                                source: "#Rectangle"
-                                                scale: Qt.vector3d(root.cubieSize * root.stickerInset / 100, root.cubieSize * root.stickerInset / 100, 1)
-                                                materials: CustomMaterial {
-                                                    shadingMode: CustomMaterial.Shaded
-                                                    fragmentShader: "shaders/cel.frag"
-                                                    property color uBaseColor: stickerNode.shownColor
+                                            Component {
+                                                id: celPanel
+                                                Model {
+                                                    source: "#Rectangle"
+                                                    scale: Qt.vector3d(stickerNode.panelScale, stickerNode.panelScale, 1)
+                                                    materials: CustomMaterial {
+                                                        shadingMode: CustomMaterial.Shaded
+                                                        fragmentShader: "shaders/cel.frag"
+                                                        property color uBaseColor: stickerNode.shownColor
+                                                    }
                                                 }
                                             }
 
@@ -980,14 +1020,16 @@ Item {
                                             // style anyway. NoLighting keeps
                                             // the dimness constant as the cube
                                             // rotates.
-                                            Model {
-                                                visible: root.skeleton && !stickerNode.painted
-                                                source: "#Rectangle"
-                                                scale: Qt.vector3d(root.cubieSize * root.stickerInset / 100, root.cubieSize * root.stickerInset / 100, 1)
-                                                materials: PrincipledMaterial {
-                                                    baseColor: "#C9C5C5"
-                                                    lighting: PrincipledMaterial.NoLighting
-                                                    opacity: 0.16
+                                            Component {
+                                                id: skeletonPanel
+                                                Model {
+                                                    source: "#Rectangle"
+                                                    scale: Qt.vector3d(stickerNode.panelScale, stickerNode.panelScale, 1)
+                                                    materials: PrincipledMaterial {
+                                                        baseColor: "#C9C5C5"
+                                                        lighting: PrincipledMaterial.NoLighting
+                                                        opacity: 0.16
+                                                    }
                                                 }
                                             }
                                         }

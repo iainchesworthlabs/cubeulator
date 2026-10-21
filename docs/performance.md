@@ -14,8 +14,12 @@ estimate.
 |---|---|---|
 | One camera frame, `direct_scan.process_frame` | 33 ms, all of it, on the GUI thread | `DirectScan` polls at about 30 Hz (`kPollIntervalMs`); a pass longer than the interval delays the next frame and everything else on that thread |
 | One solve, `solver.solve` | seconds on a phone, for every input | the solve screen waits for it; no search path may be unbounded (`solver.hpp`) |
+| One solve of a cube of any size, `nxn::solve` | seconds on a phone, for every input; under a quarter of a second on a desktop at every size to 9x9 | the same: the solve screen waits for it, and the work is a fixed pipeline of table lookups with no unbounded search ([Cubes of any size](#cubes-of-any-size)) |
+| The one-off setup for a size, `nxn::prepare(size)` | seconds on a phone, off the UI thread, while a person scans or enters the cube | the geometry, the cycle library and the centre search's actions are built once per size on first use; the solve itself runs on a worker already |
 | Launch to a drawn first screen | no figure is committed; under about 2 s on a desktop is proposed here | nothing waits on it but the person |
 | One UI frame | 16.7 ms (60 Hz) | the display |
+| The models in the 3x3 cube | 80 at the Physically-Based and Glow looks, 106 at the Cel look; none of them switched off | a model costs creation, sync and memory whether or not it draws ([Screens](#screens)); held by `the cube makes the models it draws and none it hides` |
+| 3D cubes made by the launch screen | 1, the layout on show, after its first frame | the same; held by `Home makes the one cube it shows once its menu has been drawn` |
 
 ## How the numbers were taken
 
@@ -46,6 +50,89 @@ estimate.
 
 Zone names are in [profiling.md](profiling.md#zones). Each row is `develop` as
 it was when the measurement was taken.
+
+### Pass of 2026-10-18 (feature/scan-edge-and-square base, Tracy 0.14.1)
+
+Taken on this branch (`feature/tracy-profiling`, built on
+`feature/scan-edge-and-square`) with the Tracy 0.14.1 upgrade, the first
+capture after the render-thread and NxN instrumentation landed. Same machine
+and method as below, so the numbers compare with the tables that follow.
+
+#### The 3x3 solver
+
+`cube_solve_bench`, Beginner, 28 solves, seeds 0-27, 25-move scrambles:
+
+| Zone | Per solve | Share | |
+|---|---|---|---|
+| `solver.middle_edges` | 70 ms | 75% | |
+| `solver.cross` | 13.7 ms | 15% | |
+| `solver.corners` | 8.4 ms | 9% | |
+| `solver.oll`, `.pll`, `.algorithm_search`, `.merge_adjacent_moves` | under 0.1 ms | 0% | |
+| **`solver.solve`** | **96 ms** mean, p95 131, max 202 | | 95.9 ms mean unattached (bench digest `1bc470006f988409`) |
+
+All of it is `solver.piece_search`: 22.8 million nodes over the corpus,
+948 000 per solve, at **99 ns a node** - the 2.4 us a node of the old table
+above is gone (the arena, the open addressing and the packed signatures).
+What remains is the node *count*: `middle_edges` alone visits about
+three quarters of them.
+
+Opportunities, in order of value:
+
+- **Do not expand a turn of the face the parent turned.** Two same-face
+  quarter turns in a row are always redundant or reachable through the merged
+  multi-turn, so skipping those children is provably safe and cuts the
+  expansions by about a quarter (12 children to 9) - roughly 20 ms of a
+  Beginner solve, for one line of pruning in `piece_search`.
+- `map_codes` walks the packed codes through `FaceletMap::at()`, a
+  bounds-checked `std::array` access, several times per node on a provably
+  masked index; an unchecked read (with a comment and the perf test to hold
+  it) is the other piece of the remaining per-node cost.
+- The stage postconditions are checked by scanning `goal.keys` before the
+  dedup insert; nothing found today, but a hash of the goal keys would be
+  the next cut if the searches ever grow.
+
+#### Cubes of any size
+
+`cube_nxn_bench solve 2 9 10`, unattached: mean ms per solve at each size -
+2x2 0.0, 3x3 19.9, 4x4 134, 5x5 173, 6x6 334, 7x7 412, 8x8 616, **9x9 742**.
+A 9x9 is over the quarter-second budget this page states above; 6x6 to 9x9
+all are. The new per-stage zones say where:
+
+| Zone | Total over the run | Share |
+|---|---|---|
+| `nxn.centres` | 4771 ms | 66% |
+| `nxn.core` (the 3x3 stage) | 2447 ms | 34% |
+| `nxn.edges` | 38 ms | 1% |
+| `nxn.plan`, `nxn.plan_edges`, `nxn.parity` | under 1 ms | 0% |
+
+The centre solver (`solve_centre_stickers`) is the hotspot for big cubes and
+grows with the cube; the wing-edge reduction is already negligible. The core
+stage is the two-phase solver's fixed 39 ms and only matters at the sizes
+where the centres are still cheap.
+
+#### The render thread (new instrumentation)
+
+A `CUBE_SOLVE_DEMO` session, 447 frames in 18 s on the solve screen:
+`render.frame` mean 4.1 ms, but the first painted frames are **154 ms** -
+startup painting, not QML loading (`app.load_qml`), is where the first
+picture's cost sits, and it is the number to watch on slower hardware.
+`render.frame_ms` and `capture.interval_ms` plots carry the cadences now, so
+a capture shows frame gaps without exporting events.
+
+GPU zones: on OpenGL (this box's software GL) 402 frames resolved, about
+1-2 us each for the demo scene - the bracket works end to end and the GPU
+timeline appears. On Direct3D 11 the context and its per-frame Collect run,
+but the timestamps stalled after the first frames on this machine with no
+Tracy diagnostic logged; that path is in place but is not yet trusted on
+this box. Vulkan, Metal and D3D12 have no GPU zone (see
+[profiling.md](profiling.md#the-render-pass-cpu-and-gpu)).
+
+#### The baseline
+
+`tools/perf/tracy_baseline.json` was re-baselined for this branch (33 zones;
+the scan-edge "looks" added ten new ones, and `solver.assemble_all`,
+`vision.direct_scan.scanned` and `vision.resolve_colors` measured 3-20x
+faster than the old baseline's, which is the scan-edge work showing).
 
 ### The solver
 
@@ -118,6 +205,46 @@ views' models) and 347 ms (332 of it creating pipelines).
 Tracy's `UI` and `Capture` frame sets record the same cadence but
 `tracy-csvexport` does not export frame times, so they are read in the GUI.
 
+### The 3D view of a cube of any size
+
+`CubeNView.qml` draws a cube that is not a 3x3 (`Cube3DView.qml` is the 3x3's and is
+unchanged). It is **three scene objects at every size**: the cube at rest is one
+mesh, and while layers turn it is two, the layers on a pivot and the rest, with solid
+plastic where they part (`cube::nxn::build_mesh`, `CubeNGeometry`). Nothing is built
+per cubie or bound per sticker, so a move costs the same at 2x2 and 9x9: picking
+layers up and putting them down is two or three mesh builds, 0.1 to 0.2 ms. A whole
+cube is 12 N^2 quads (108 at 3x3, 972 at 9x9).
+
+Measured in the prototype it came from (`tools/cube3d_prototype`, 2026-10-16, on the
+development machine, scene-graph work per frame, mean): 0.2 ms native and 0.4 ms in a
+browser at every size from 3x3 to 9x9, 60 fps throughout. The same cube built the way
+the 3x3's is, a model per cubie and a binding per sticker, costs 0.6 ms at 3x3 and 6.7
+ms at 9x9 natively and misses 60 fps in a browser from 7x7 (31 fps at 7x7, 20 at 9x9).
+**A phone has not been measured**; the estimate is a few times the desktop's figure,
+which a thousand quads leave far inside a frame.
+
+The shader styles cost it nothing it did not already have. Instructional Glow and
+Borderlands Cel-Shading read each sticker's colour from the mesh's vertices
+(`shaders/toon_mesh.frag`, `cel_mesh.frag`; the 3x3's `toon.frag` and `cel.frag` take it
+from a uniform per sticker), so a style is a different material on the same meshes and
+changing it rebuilds nothing. Cel-Shading's ink outline is one more model per mesh,
+made only while that style is on (the 3x3's is 26, one per cubie). Its vignette and
+halftone need `ExtendedSceneEnvironment`, which is the environment only while Cel-Shading
+is: the same environment with every effect off costs a frame about 0.05 ms of render
+time (0.09 to 0.14 ms at 6x6) and moves the edges' anti-aliasing, so the other two looks
+keep the plain one. Measured with the gallery's `CUBE_GALLERY_SETTLE_MS` (a lifted
+layer, which animates throughout; render is the CPU's time recording the frame, in the
+window's own callbacks, normal priority, base and branch alternated four times,
+2x2 and 6x6): the default look 0.09 ms render and 0.025 ms sync on both; Glow 0.09 ms;
+Cel-Shading 0.17 ms; the 3x3's Cel-Shading (`Cube3DView`) 0.79 ms. Making one more view
+costs about 0.5 ms more than before (four more materials, a second environment and the
+three meshes as objects), once. GPU time was not measured.
+
+`tests/unit/nxn/mesh_test.cpp` holds the mesh to the library with no GPU (every
+sticker's quad is where the library says that sticker is; a lifted layer is the
+stickers its turn moves), and `tests/unit/cube_n_view_test.cpp` loads the view and
+reads every sticker back out of it at every size, after every kind of move.
+
 ### Startup
 
 From the start of `app.load_qml` to its end, four warm runs at High priority,
@@ -151,6 +278,36 @@ and materials per sticker, of which one is ever drawn.
 When the solve finishes, `app.solve.apply_result` (the result landing on the GUI
 thread, which includes creating the solve screen and its cube) was 57 ms and
 168 ms in two solves: a hitch of three to ten frames as the screen appears.
+
+### Start-up timeline, with the start-up zones
+
+Taken 2026-10-21 with `Cubeulator.exe --profile-wait` (the profiler is attached
+before `main()` builds anything, so `app.i18n_install` and `app.load_qml` are
+in the trace), Vulkan, RelWithDebInfo, High priority, three launches; times in
+ms from the moment the profiler connected, which is about 530 ms into the
+process (the C++ runtime, Qt's own start and the profiler's wait).
+
+| Step | at | takes |
+|---|---|---|
+| `app.i18n_install` | 533 | 2 |
+| `app.load_qml` (the engine builds Main.qml and Home's menu, no cube) | 535 | **460 to 500** |
+| the window, the scene graph (`render.scenegraph_initialized`) | 1020 to 1194 | ~175 |
+| the graphics device (Vulkan; the first `render.sync` follows it) | 1194 to 1398 | ~200 |
+| the menu's sync, then its first render (`render.frame` 128 ms, the pipelines) | 1417, 1450 | 25 to 30, 128 |
+| the menu is on screen | ~1580 | |
+
+So of the 1.05 s from QML load to the menu, `app.load_qml` is 46 %, the window and
+the graphics device 36 %, the first render 14 %. The cube follows the menu and is
+not in this table.
+
+**With the fonts bundled**, `app.load_qml` is 248, 337 and 299 ms where the same
+launches without them are 491, 461 and 392: about **150 ms less (-35 %)**, and the
+first sync 30 to 90 ms earlier. (The six files of `feature/ax-kit` loaded from a
+directory through a one-line change to `bundled_fonts.cpp` that is not in the
+tree.) That is a quarter of what the table under [Startup](#startup) had
+measured when the machine was slower, so what the fonts are worth depends on
+what the machine's font lookup costs; they remain the largest single item of
+`app.load_qml` that is ours to remove.
 
 ### The light probe
 
@@ -222,6 +379,229 @@ app ships and the distinction could go: `app.hpp`, `app.cpp`, three callers and
 the time-budget part of [testing](testing.md). Not done here; `tests/web` no
 longer takes the probe out.
 
+### Screens
+
+How long it takes to arrive on a screen, and what the screen costs once it is
+there, from the hidden `[screen-cost]` case of the system tests
+(`tests/system/screen_cost_test.cpp`, the real application with the fake
+camera, Direct3D 11 on an RTX 4090, `PriorityClass` High, base and branch
+alternated four times, medians over the repetitions after the first). `call` is
+how long the GUI thread was held by the navigation itself - the screen being
+made - and `tenth` the time to the tenth swapped frame after it; both in ms.
+
+| Screen | `call` before | after | `tenth` before | after | idle frames a second |
+|---|---|---|---|---|---|
+| Home (launch) | 22 | 2 | 224 | **169** | 0 (the cube turns when the setting is on) |
+| Settings (wide; the narrow layout makes no cube now) | 52 | 25 | 275 | **184** | 0 |
+| Solve, 3x3 | 13 | 12 | 176 | **155** | 1 |
+| Solution, 3x3 | 11 | 11 | 181 | **165** | 0 |
+| Entry, History | 3 to 6 | 3 | 135 to 143 | 136 to 145 | 0 |
+| Scan | 4 | 4 | 137 | 136 | 22 (the camera) |
+| Solve, 6x6 (`CubeNView`) | 9 | 9 | 142 | 143 | 28 (the layer nudging) |
+
+What is in it.
+
+- **A sticker was four models and is one.** The 3x3's cube built, for each of its
+  54 stickers, a panel for each of the three looks and one for the skeleton
+  placeholder, and switched three of them off: 270 models and as many
+  materials, 26 bodies and 26 cel-look outlines among them. Each is a
+  scene-graph node that is created, synced and kept whether or not it is
+  drawn. A sticker now makes the one panel its look asks for (a `Loader3D` over
+  four components), and the outline exists only in the Cel look: **80 models
+  at the first two looks and 106 at the third**, with the same picture. That is
+  the 25 to 35 % off arriving on Home and Settings and 10 % off the solve
+  and solution screens, which already made one cube.
+- **Home built both layouts' cubes**, one never drawn. It makes the one that is
+  on show (the earlier measurement put this at 150 ms of the screen's creation,
+  [Startup](#startup)), and only after the menu's first frame has been swapped:
+  the first frame of a 3D view is the longest the GUI thread is held at
+  start-up, and the buttons are what a person waits for. The real application on
+  Vulkan, eight alternated launches, medians from the process's first log line:
+  the menu is drawn at **1.14 s instead of 1.24**, everything settled at **1.36
+  s instead of 1.46**. The screen fades in over 280 ms as before; the cube arrives
+  inside that fade.
+- **Per-frame cost was never in it.** A hidden model is not drawn: the render
+  thread's `render.frame` is 0.5 to 1.1 ms on the launch and solve screens
+  before and after (Vulkan, Tracy, three alternated captures of 8 s each), at 46
+  and 28 frames a second. What the extra models cost is the time to make them
+  and the memory they hold, which is what a phone is short of.
+- **The first 3D frame in a process is Qt's, not ours.** The first `View3D` to
+  draw takes 0.6 to 1.3 s on Direct3D 11 here (`worst_gap` of the launch
+  screen's first repetition), whatever the scene: a bare `View3D` with one cube
+  and one light, built to find out (`qml.exe`, Direct3D 11), takes 0.5 to 0.95 s,
+  and 81 cubes with four lights, the probe and MSAA take 0.4 to 0.5. Qt Quick 3D's
+  own persistent shader cache (`QtQuick3DEditorHelpers::ShaderCache::
+  setAutomaticDiskCache`, a private function) was tried in the system tests and
+  the app: it writes a 130 to 400 KB file and the first frame took the same
+  time, so it is not used. A cube that is not a 3x3 stalls once more, 130 to 350 ms,
+  for its own materials (vertex-coloured plastic); warming that up before it is
+  asked for would move the stall to the Home screen, and is left.
+- **Backends** (the same harness, the first 3D frame in the process, two runs
+  each): Direct3D 11 650 and 640 ms, Direct3D 12 580 and 490 (and 50 to 100 ms gaps
+  in steady frames, which D3D11 does not have), OpenGL 390 and 250,
+  **Vulkan 350 and 150** - the second run is faster because Qt saves a pipeline
+  cache between runs (`qtpipelinecache` under the cache directory), which the
+  Direct3D 11 backend has nothing to save for. The app's default on Windows is
+  Direct3D 11; Vulkan is the person's choice in the settings and was the one the
+  real-application runs above used. Whether Vulkan should be the default is a
+  question of which drivers are in the field, not of this machine; the A/B
+  of the two on the real application (start-up, frames, memory, driver
+  coverage) and the fallback that makes the question safe to answer are in
+  [Graphics API](graphics-api.md).
+- **The render loop**: the platform default (threaded on Windows) against
+  `QSG_RENDER_LOOP=basic`, eight alternated launches, settled 2.327 s and 2.335 s
+  on a busy machine: no difference, so there is nothing to gain from changing
+  it, and the harness's pin to `basic` stays a test-only measure
+  ([testing.md](testing.md)). Vertical sync off brings the first frames in
+  earlier (settled 1.32 s to 1.15 s) and is not a thing to ship.
+- **When the solve lands** the GUI thread is held 24 to 29 ms
+  (`app.solve.apply_result`, three captures of the 3x3 demo; 30 ms at 6x6).
+  Taking the result from the worker is 0.01 to 0.03 ms and the solution signal
+  0.005; **the state signal is 24 to 28 ms, and that is the solve screen being
+  made**, because the screen change is made inside that signal (`AppState`'s
+  `showSolutionWhenReady`, and the demo's own slot). The controller's getters
+  total 0.15 ms of it, and taking the cube's sticker colours or the list of
+  stages out changed nothing. So the cost is the one `call` measures above, 11
+  to 13 ms warm, plus the signal's other listeners. A hitch of one or two frames
+  on a desktop; three to five on a phone if it scales like the rest. The three
+  child zones are in the tree to see it with.
+- **The scan screen at rest** (the fake camera's drawn 640 x 360 frames, 66
+  frames of the system tests under Tracy, Direct3D 11): `direct_scan.process_frame`
+  is **8.5 ms** a frame on average, 7.0 at best and 13.0 at worst, a quarter of
+  the 33 ms budget (a phone at 3 to 5 times a desktop core would be over it on
+  average). Where it goes: `read_side_glare_look` 3.5 ms (almost all of it
+  `contours_without_glare`, 3.3), `read_side` 2.9 over two calls, `prepare_frame`
+  1.1 over two, the pitch look 1.0, the second look 0.9. The glare look runs on
+  every frame that has an outline too big to be a sticker in it, glare or not.
+  The preview's `QImage` copy (`app.frame_image.request`) is 0.065 ms: the video
+  upload is not a cost.
+  - **Where the glare look's 3.3 ms went** (`cube_scan glare-cost`, 640 x 360
+    working frame, fastest of three runs): **2.4 ms was `channels_of`**, the loop
+    that takes the brightest and darkest channel of every pixel, which read each
+    one through `Mat::at<Vec3b>` and wrote two planes through `Mat::at<uchar>`.
+    The same arithmetic by row pointers is 0.35 ms (OpenCV's `split` and `max` /
+    `min` is 0.3 and allocates five planes; `v_load_deinterleave` is 0.04 and is
+    not used, to keep the reader free of per-platform intrinsics). The rest is
+    the box-filter threshold (0.5), the trace (0.5 to 1), the blur (0.08), the
+    mask and the open (0.1 each). `chroma_contours`, the chroma look, shared the
+    loop and gains the same. The look's outlines, per frame it is taken on: 2.77
+    to 1.51 ms on a 3x3 session, 3.75 to 1.71 on a 4x4 (960 px wide), 4.96 to 1.70 on
+    a 5x5; `timing.glare_look.640x360` 0.52 to 0.27 of the calibration workload.
+    Then the look stopped redoing what `prepare_frame` had done: it takes the
+    blurred brightness the frame already has (the look blurred the same maximum
+    again), finds the pixels to cut out in one pass that reads a pixel's colour
+    only where the blurred brightness is 252 or more, hands back the first
+    look's own outlines when there are none (67 of 108 glare-look frames of a
+    4x4 session, none of a daylight-backlit 3x3 session, where a window is
+    clipped), and otherwise starts from the first look's threshold, which the
+    prepared frame now keeps (a 640 x 360 plane, 0.23 MB more allocated by a
+    read). Per frame it is taken on: 2.77 to 0.82 ms on the 3x3 session, 3.75 to
+    0.40 on the 4x4, 4.96 to 0.79 on the 5x5; `timing.glare_look.640x360` 0.52 to
+    0.09 (0.03 with nothing clipped). `read_side` of the same sessions, a frame in
+    all: 2.35 to 1.67, 3.40 to 1.63, 3.66 to 1.83 ms.
+  - **The first look's passes had the same loop.** `prepare_frame` took the
+    brightest channel with `split` and two `max`es (0.34 ms of a 640 x 360
+    frame, three planes allocated). It and the chroma look now share
+    `cube/vision/detail/channel_kernels.hpp`, which CMake chooses
+    (`CUBEULATOR_SIMD`, [Building](building.md)): OpenCV's 128-bit intrinsics
+    where the target has them (SSE2, NEON, a browser's simd128), the scalar loop
+    elsewhere. The vector form is 0.045 ms and allocates no planes. A wider tier
+    was measured and left out: the kernel is within 0.025 ms of the memory floor
+    (copying the frame is 0.014), so AVX2 could save about 0.02 ms a frame and
+    would need a CPU probe per compiler. `prepare_frame` p50 over a 3x3 session,
+    alternated with the build before: 1.92, 1.88, 1.69 ms to 1.85, 1.66, 1.52; a
+    read allocates 1.30 MB, not 2.22.
+  - **Evidence.** 235 recorded sessions (98,440 frames, 52,614 reads, 216 of them
+    by the glare look) give the same digest, before and after every step above and
+    with `-DCUBEULATOR_SIMD=generic` and `vector128` alike. The digest
+    (`cube_scan digest`) is every blob count and outline count per look, the
+    lattice's residuals, and each read's centres, pitch, found flags and Lab
+    colours, bit for bit.
+  - One thing the look does that reads as an oversight and is kept, because a
+    read depends on it: `contours_without_glare` blurs the brightness in place
+    and then judges "clipped" (252 and up) on the *blurred* value, and
+    "colourless" on the unblurred chroma. A highlight has to fill its 5 x 5
+    neighbourhood to be taken out.
+- **Idle.** Home spins its cube when the setting is on, as designed, and draws
+  every frame for it (46 a second, 0.5 to 1 ms of render-thread time each); the
+  solve screens nudge the layer to move, which is the same; History, Entry,
+  Settings and the solution draw nothing at rest. Nothing is drawing that should
+  not be.
+- **Not changed, measured: Qt Quick Controls' style.** Setting
+  `QT_QUICK_CONTROLS_STYLE=Basic` moved the first sync by 12 ms in six alternated
+  launches. Declaring the screens as `source:` URLs in `Main.qml` instead of as
+  `Component`s (so the engine resolves a screen's types when it is used)
+  moved it by 40 ms in eight, which was not worth the changes to
+  `SolutionScreen`'s bindings; neither is in the tree.
+
+The case is a measurement and asserts nothing about time, because time on a
+shared machine is not a number a test can hold. What holds are the two counts in
+the [budgets](#budgets), as unit tests.
+
+## Cubes of any size
+
+`cube::nxn` solves a cube from 2x2 to 9x9 by reduction ([nxn-solver.md](nxn-solver.md)).
+What a person waits for is two things: the **setup** for a size, built once per
+process on first use (`nxn::prepare(size, method)`: the turn tables, the library
+of 3-cycles the wings and centres are built from, and the centre search's
+actions), and the **solve** that follows it. The app does the first on a worker
+while a person is scanning or entering a cube, and the second on the solve's
+worker thread already.
+
+`cube_nxn_bench time` measures both (setup alone first, then ten seeded
+scrambles with the setup in place), in the build it is given. `tools/nxn_bench/
+standalone.py` compiles it straight from the sources for a target the build does
+not make it for (no OpenCV, no Qt): WebAssembly to run under Node, or an arm64
+Android executable to `adb push` to a phone.
+
+Taken 2026-10-16, 10 scrambles of 60 + 10 N layer turns per size, one thread:
+
+| Size | Moves | Native setup | Native solve (median / max) | Wasm setup | Wasm solve (median / max) |
+|---|---|---|---|---|---|
+| 2x2 | 8 | 0 | 3.2 / 9.3 ms | 0 | 3.2 / 4.5 ms |
+| 3x3 | 19 | 0 | 31 / 33 ms | 0 | 39 / 44 ms |
+| 4x4 | 134 | 23 ms | 42 / 50 ms | 26 ms | 48 / 51 ms |
+| 5x5 | 172 | 47 ms | 41 / 47 ms | 33 ms | 50 / 55 ms |
+| 6x6 | 333 | 109 ms | 63 / 71 ms | 81 ms | 72 / 86 ms |
+| 7x7 | 412 | 172 ms | 73 / 80 ms | 139 ms | 89 / 98 ms |
+| 8x8 | 616 | 310 ms | 115 / 125 ms | 248 ms | 144 / 155 ms |
+| 9x9 | 742 | 462 ms | 164 / 187 ms | 379 ms | 203 / 228 ms |
+
+- **Native**: `windows-msvc-fastdebug` (RelWithDebInfo), MSVC 19.51, the 32-core
+  development machine, shared with other builds (so noise of tens of percent).
+- **Wasm**: the same sources through `emcc -O2` (Emscripten 5.0.5, the one the Qt
+  wasm kit needs), run under Node 24.19 (V8, the engine Chromium uses), on the
+  same machine. Not a browser tab, but the same engine and the same compiler; the
+  browser's own cost (a page that is busy, a throttled background tab) is not in
+  it. The 3x3 method's tables (`Advanced`, built once for any size) are 26 ms
+  native and 117 ms in wasm, and are charged to nobody above.
+- **Memory**: the peak working set of the whole process, setup and solves, is
+  22 MB native for every size to 7x7 and 36 MB at 9x9 (the process itself, with
+  the 3x3 tables, is 22); under Node it is 52 to 67 MB (Node's own is about 50).
+  The tables are not a memory concern at any size.
+- **A refused cube is not free, at 2x2.** Handed an unsolvable cube (a twisted
+  corner), `solve()` refuses a 3x3 at once and a 4x4 to 7x7 in 3 to 40 ms, but a
+  2x2 only after about a second: its search is exhaustive, against 8 ms for one
+  that can be solved. Nothing in the app hands it one (hand entry, a scan's
+  assembly and a history entry are validated first, by `nxn::validate`), but
+  `solve()` is public and promises bounded work on every input; asking the
+  oracle first would make the refusal instant.
+
+**On a phone** this is an estimate until a phone has run it: a phone's big core is
+about a third to two thirds of this machine's for code like this, a mid-range
+one a quarter, so a 7x7's setup is about 0.3 to 0.7 s and its solve 0.15 to 0.3 s,
+and a 9x9's 1 to 2 s and 0.4 to 0.8 s: seconds, at the very worst, for the
+sizes the app is meant to offer. `standalone.py android` builds the executable
+for the measurement. When it has been taken the figures replace this paragraph.
+
+**Held by the performance tier** (`cube_perf_tests`, [testing.md](testing.md)):
+the moves per size over a six-scramble corpus and the cycles each size's library
+holds, counted and exact on every machine, a quarter above what they measure
+(`budgets.hpp`, `kNxnSizes`); and, opt-in with the other wall-time checks, a
+5x5, 7x7 and 9x9 solve against the calibration workload (10.4, 15.6 and 39.8
+times it now; budgets 40, 60, 150). The setup is not timed there: it can be made
+once per process.
+
 ## Ranking
 
 By what a person waits for, and how far it is from its budget, as found:
@@ -245,6 +625,8 @@ By what a person waits for, and how far it is from its budget, as found:
 | An unsolvable cube is answered at once | 2.5 to 6 s | under 0.1 ms, the same `no_solution` | [#74](https://github.com/iainchesworthlabs/cubeulator/pull/74) |
 | A frame is prepared once for both readers | 4.2 ms turned, 8.2 ms at 1080p | 2.2 ms, 3.6 ms; the same reads | [#78](https://github.com/iainchesworthlabs/cubeulator/pull/78) |
 | The cube's light probe is prefiltered once, not on every `View3D`'s first frame | llvmpipe 10 to 16 s a screen with the cube; a browser without a GPU stands still for 35 s at the start and 35 s at the close | 3 to 6 s (the cube itself); the 30th frame in 2 to 4 s; the close 1 s | this change, [above](#the-light-probe) |
+| A sticker of the 3x3 cube is the one model it draws; Home makes the one cube it shows, after its menu | Home 22 ms to make and 224 ms to the tenth frame; Settings 52 and 275; the cube 268 models | 2 and 169; 25 and 184; the cube 80 models (106 in the Cel look) | this change, [above](#screens) |
+| Archivo and IBM Plex Mono are bundled and registered at start-up, not named and looked for | `app.load_qml` 513 ms, first frame 934 ms (English, same binary with the bundle skipped) | **303 ms, 749 ms**; the other languages unchanged | this change, [below](#the-fonts) |
 
 The solver's cost per visit fell from 1.7 to 3.4 us to 0.15 to 0.29 us; what it
 did not change is the number of visits, and that is the one lever left (below).
@@ -252,21 +634,80 @@ Over 2000 further scrambles the new search had no failure, a mean of 104 ms, a
 95th percentile of 186 ms and a worst of 341 ms; 120 more gave the digest the
 old search gave.
 
+### The fonts
+
+`Theme.qml` names Archivo and IBM Plex Mono. Nothing bundled them on the desktop
+and no machine measured here had them, so Qt set every string in its default
+face (Tahoma on Windows, not the Segoe UI of the app's own chrome) and paid for
+the family it did not have at the first text: it looks through every font the
+system has before it gives up. Measured in a twenty-line Qt program on a
+machine with 300 families, cold: the first text in an installed family 15 ms, in
+one that is not **350 ms** (320 to 365 over three runs), and the same text with
+the four Latin files registered by `addApplicationFont` **3 ms + 15 ms**. What
+does not help: `QFont::insertSubstitution` (the family is looked for first), and
+listing the families on a thread (that reads names, not the lookup). Doing the
+lookup on another thread does help, because its result is the font database's,
+not the thread's (a 50 ms saving of `app.load_qml`, since the GUI thread asks for
+the family 85 ms in), and it is what [#230](https://github.com/iainchesworthlabs/cubeulator/pull/230)
+did; with the fonts bundled it is worth nothing (`app.load_qml` 263 and 254 ms,
+seven alternated pairs, its own thread 18 ms), so it was dropped.
+
+The four Latin files `feature/ax-kit` carries (Archivo Regular, Bold and ExtraBold;
+IBM Plex Mono Medium, 740 KB) are compiled in under `:/fonts` and registered at
+start-up on every platform but the browser (`CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS`).
+Same binary, the bundle skipped by an environment variable in one build against
+the bundle, alternated five times at High priority, Windows, RelWithDebInfo,
+`--profile-wait`:
+
+| `app.load_qml` / the first frame's end (ms from `app.i18n_install`), medians | skipped | bundled |
+|---|---|---|
+| English | 513 / 934 | **303 / 749** |
+| Japanese (ten alternated pairs) | 519 / not taken | 515 / not taken |
+| Hebrew | 521 / 951 | 512 / 946 |
+| Arabic | 513 / 943 | 509 / 940 |
+
+So it is 210 ms of start-up in the Latin-script languages, and nothing in the rest:
+Japanese and Chinese are set in a system face chosen by language (no missing
+family to look for), and Hebrew, Arabic and Yiddish are set in Archivo, which has
+no glyphs for them (see [What was not fixed](#what-was-not-fixed)). (The
+machine was shared: Japanese read 388 to 534 ms from one set of runs to the next
+on one binary, so only alternated pairs are compared.)
+
+The Latin text now looks like the design (Archivo, IBM Plex Mono for numerals)
+where it was Tahoma; the launch screen in all nine languages before and after is
+on the pull request. Japanese and Chinese did not change (the same system
+faces), and in the right-to-left languages only the Latin words changed (the
+brand name): the Hebrew, Arabic and Yiddish text is drawn in the same fallback
+face as before.
+
+The test programs register the bundle as the app does, so the layout and overlap
+checks run in Archivo on every machine (`docs/i18n.md`); they were green in it:
+`cube_qml_tests` (91 cases), `cube_i18n_screen_tests` (14), and the system tests'
+`[language]` cases (8).
+
 ## What was not fixed
 
-- **The fonts.** The cost is the fonts being named and not shipped, which
-  `feature/ax-kit` already fixes by bundling six font files and loading them.
-  Measured here with that branch's files: **-550 ms of startup**, and the
-  kit's loader (`bundled_fonts.cpp`) costs about 20 ms of it back. The thing to
-  check when the kit lands is the startup timeline above, not just the glyphs.
-- **Two cubes per screen, four models per sticker.** About 140 ms per instance
-  to create, and the 57 to 168 ms the solve screen costs to arrive. Building
-  the layout that is on show only (a `Loader` on the width breakpoint), and the
-  shader style that is in use only (a `Loader3D` over the three sticker
-  models), would remove most of it. It is in the screens the experience plan's
-  E3 is rebuilding, so it is a recommendation to that lane and not a patch
-  here; the hidden cube's `autoRotate` timer also fires at 60 Hz for a view
-  nobody sees, which is worth the same Loader.
+- **The fonts, for the right-to-left languages.** Archivo and IBM Plex Mono are
+  bundled now ([above](#what-was-fixed)), but Archivo has no Hebrew or Arabic
+  glyphs, and `Theme.qml` names Archivo for those languages too: Qt then looks
+  through the system's fonts for one that has the script, and that search costs
+  the same ~300 ms the missing family did (Hebrew text in Archivo, in a
+  twenty-line Qt program: 295 ms the first time, three runs each, with and without the bundle).
+  `app.load_qml` in Hebrew and Arabic is 510 to 520 ms with or without the
+  bundle. What removes it is naming a face that has the script, which the kit
+  plans (`NotoSansHebrew.ttf`, `NotoSansArabic.ttf` on `feature/ax-kit`,
+  chosen by language in its `Theme.qml`); it changes the look, as the Latin
+  faces did.
+- **Two cubes per screen, four models per sticker** were this entry until the
+  [Screens](#screens) change: Home made the one cube it shows and each
+  sticker one model. The other screens that build both a narrow and a wide
+  layout still build both, without a cube in either (the Settings screen made
+  its cube for the narrow layout too, where it is hidden, and now does not).
+  The controls of Settings are in both layouts twice over; that was not
+  measured and is not changed.
+- **The first 3D frame**, 0.4 to 1.3 s depending on the backend, is Qt's
+  (`Screens`). The one thing it could be moved off is the person's attention:
+  the menu now draws before it, and a window-sized splash would not buy more.
 - **Showing the window and the first frame**, 577 ms and about 350 ms: the
   native window, the graphics device and the first pipelines. It does not
   change with the 3D cubes removed (the experiment above), so it is Qt and the
@@ -315,6 +756,9 @@ $BIN/cube_system_tests "[journey]"
 
 # Qt's own frame timings: launch the app with
 #   QSG_RENDER_TIMING=1  QT_LOGGING_RULES=qt.scenegraph.time.renderloop=true
+
+# the screens: arriving on each (call, tenth frame, idle frames a second)
+CUBE_SCREEN_COST=1 $BIN/cube_system_tests "[screen-cost]"
 
 # the light probe: the time to the fifth frame of a screen with the cube,
 # with the probe and without it, on the software renderer the CI uses (Mesa)

@@ -46,10 +46,20 @@ add_test(NAME platform_fragments_satisfy_contract
     COMMAND "${CMAKE_COMMAND}" "-DREPO_ROOT=${PROJECT_SOURCE_DIR}"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/platform/check_fragments.cmake")
 
+# Which vcpkg checkout a configure uses (cmake/VcpkgRoot.cmake): the shared
+# store, a root you name, a toolchain you pass, and what is said when the
+# submodule path is a dead link. Script mode against a fake upstream repository;
+# no network, and the real deps/vcpkg is not touched.
+add_test(NAME vcpkg_root_selection
+    COMMAND "${CMAKE_COMMAND}" "-DREPO_ROOT=${PROJECT_SOURCE_DIR}"
+        "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/vcpkg_root_selection"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/platform/check_vcpkg_root.cmake")
+
 # --- Unit tests: fast, isolated, one behaviour each -----------------------
 add_executable(cube_unit_tests
     unit/error_test.cpp
     unit/version_test.cpp
+    unit/graphics_backend_choice_test.cpp
     unit/profiling_test.cpp
     unit/profile_recorder_test.cpp
     unit/color_resolution_test.cpp
@@ -57,9 +67,16 @@ add_executable(cube_unit_tests
     unit/recording_v2_test.cpp
     unit/diagnostics_test.cpp
     unit/direct_scan_test.cpp
+    unit/direct_scan_nxn_test.cpp
     unit/sticker_colour_test.cpp
+    unit/prepared_frame_test.cpp
+    unit/channel_kernels_test.cpp
     unit/read_set_test.cpp
     unit/corner_view_test.cpp
+    unit/corner_view_nxn_test.cpp
+    unit/quad_fit_test.cpp
+    unit/drawn_cube_test.cpp
+    unit/held_cube_nxn_test.cpp
     unit/held_cube_test.cpp
     unit/lib_stub_functions_test.cpp
     unit/solver/cube_test.cpp
@@ -81,7 +98,13 @@ add_executable(cube_unit_tests
     unit/nxn/model_test.cpp
     unit/nxn/solve_test.cpp
     unit/nxn/strategy_test.cpp
-    unit/nxn/cube3_test.cpp)
+    unit/nxn/cube3_test.cpp
+    unit/nxn/mesh_test.cpp
+    unit/nxn/notation_test.cpp
+    unit/nxn/stepped_plan_test.cpp
+    unit/nxn/outside_view_test.cpp
+    unit/nxn/validate_test.cpp
+    unit/nxn/scan_assembly_test.cpp)
 
 target_link_libraries(cube_unit_tests
     PRIVATE
@@ -97,7 +120,7 @@ target_link_libraries(cube_unit_tests
 # choice, so a wrong directory on the include path cannot go unnoticed.
 set_source_files_properties(unit/profiling_test.cpp PROPERTIES
     COMPILE_DEFINITIONS
-        "CUBE_EXPECT_TRACY=$<BOOL:${CUBEULATOR_ENABLE_TRACY}>;CUBE_EXPECT_RECORDER=$<BOOL:${CUBEULATOR_ENABLE_PROFILE_RECORDER}>")
+        "CUBE_EXPECT_TRACY=$<BOOL:${CUBEULATOR_ENABLE_TRACY}>;CUBE_EXPECT_RECORDER=$<BOOL:${CUBEULATOR_ENABLE_PROFILE_RECORDER}>;CUBE_EXPECT_PROFILE_DEFAULT=${CUBEULATOR_PROFILE_DEFAULT_ON}")
 
 # White-box include path for last_layer_test.cpp only: it includes
 # cube::lib's private last_layer.hpp directly, because the F2L-preservation
@@ -196,6 +219,7 @@ endif()
 
 # --- Integration tests: exercise several components together --------------
 add_executable(cube_integration_tests
+    integration/camera_frame_test.cpp
     integration/platform_integration_test.cpp)
 
 # The camera cases go through the OpenCV capture loop's backend
@@ -254,12 +278,17 @@ if(CUBEULATOR_BUILD_APP)
 
     add_executable(cube_qt_controller_tests
         qt_test_main.cpp
+        unit/about_info_test.cpp
         unit/camera_controller_test.cpp
+        unit/colour_entry_test.cpp
+        unit/cube_edit_test.cpp
         unit/diagnostics_controller_test.cpp
         unit/direct_scan_controller_test.cpp
         unit/frame_image_provider_test.cpp
         unit/held_cube_controller_test.cpp
+        unit/misscan_review_test.cpp
         unit/platform_facts_test.cpp
+        unit/scan_reading_test.cpp
         unit/solve_controller_test.cpp
         unit/solve_history_test.cpp)
 
@@ -289,12 +318,20 @@ if(CUBEULATOR_BUILD_APP)
 
     add_executable(cube_qml_tests
         qml_test_main.cpp
+        unit/bundled_fonts_test.cpp
+        unit/colours_screen_test.cpp
         unit/complete_screen_test.cpp
+        unit/cube_view_reading_test.cpp
+        unit/cube_n_view_test.cpp
         unit/cube_view_test.cpp
         unit/direct_scan_screen_test.cpp
+        unit/entry_screen_test.cpp
+        unit/licences_screen_test.cpp
         unit/solve_camera_inset_test.cpp
         unit/solve_screen_gallery_test.cpp
+        unit/solve_screen_nxn_test.cpp
         unit/solve_screen_test.cpp
+        unit/solution_screen_nxn_test.cpp
         unit/solution_screen_test.cpp)
 
     target_link_libraries(cube_qml_tests
@@ -315,6 +352,13 @@ if(CUBEULATOR_BUILD_APP)
 
     # qml_test_app.hpp, shared by every test file here, sits beside the main.
     target_include_directories(cube_qml_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+
+    # The notices the build generated, which cube_app embeds as :/licences/* for
+    # the screens that show them: unit/bundled_fonts_test.cpp holds every
+    # bundled font to being in them, with its licence text.
+    target_compile_definitions(cube_qml_tests PRIVATE
+        "CUBE_NOTICES_JSON=\"${PROJECT_BINARY_DIR}/third_party_notices/third-party-notices.json\"")
+    add_dependencies(cube_qml_tests cube_third_party_notices)
 
     # On Windows the Qt runtime and the QML modules the app imports are
     # copied next to cube_app.exe when it is built; this binary sits in the
@@ -511,6 +555,7 @@ endif()
 if(CUBEULATOR_BUILD_APP AND TARGET cube_app_desktop)
     add_executable(cube_desktop_tests
         qt_test_main.cpp
+        unit/graphics_backend_guard_test.cpp
         unit/keep_awake_test.cpp
         unit/window_geometry_test.cpp)
 
@@ -533,18 +578,4 @@ if(CUBEULATOR_BUILD_APP AND TARGET cube_app_desktop)
 
     catch_discover_tests(cube_desktop_tests DISCOVERY_MODE PRE_TEST
         WORKING_DIRECTORY "$<TARGET_FILE_DIR:cube_desktop_tests>")
-endif()
-
-# The placeholder About, driven through the real window by the system tests
-# (tests/system, E0a). Added to that binary from here, deferred, as the
-# translation block above does, so that it does not matter whether tests/system
-# comes before or after this block in this file.
-if(CUBEULATOR_BUILD_APP AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/system/CMakeLists.txt")
-    function(cube_desktop_extend_system_tests)
-        if(TARGET cube_system_tests AND TARGET cube_app_desktop)
-            target_sources(cube_system_tests PRIVATE
-                "${CMAKE_CURRENT_SOURCE_DIR}/system/desktop_shell_test.cpp")
-        endif()
-    endfunction()
-    cmake_language(DEFER CALL cube_desktop_extend_system_tests)
 endif()

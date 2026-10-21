@@ -2,7 +2,8 @@
 
 How a version of Cubeulator becomes downloadable packages on a GitHub Release
 (an installer for Windows, a disk image for macOS, a `.deb` and an `.rpm` for
-Linux, and the browser build's site as a zip), with the
+Linux, an ad-hoc `.ipa` for the maintainer's iPhone, and the browser build's
+site as a zip), with the
 notes, the checksums and the signatures that go with them. The workflow is
 `.github/workflows/release.yml`; the tools are in `tools/release/`; what is in
 the packages is [Packaging the desktop app](packaging.md).
@@ -46,14 +47,17 @@ feature/* bugfix/* ──PR──▶ merge queue ──▶ develop
 | `Cubeulator-<version>-macos-arm64.dmg` | macOS 14.4 and later, Apple Silicon |
 | `Cubeulator-<version>-linux-x64.deb` | Debian and Ubuntu |
 | `Cubeulator-<version>-linux-x64.rpm` | Fedora |
+| `Cubeulator-<version>-ios.ipa` | The iPhone app, signed ad hoc with the maintainer's Apple Distribution certificate and an ad-hoc provisioning profile (built by `.github/workflows/ios-device.yml`, which `release.yml` calls). It installs only on iPhones registered in that profile, so it is not a download for everyone: [Installing on an iPhone](ios-install.md). A release without the iOS secrets fails, unless a dispatch unticks `ios` |
+| `Cubeulator-<version>-ios-manifest.plist` | The over-the-air install manifest that names the `.ipa` by its release URL, for the install page on the documentation site, `install-ios.html?tag=<tag>` (default: the latest release), which builds the `itms-services://` link from the tag because GitHub strips that link from release-note markdown; the release notes link to the page. It names the `.ipa`'s release-asset URL. Checksummed and signed like the packages |
 | `Cubeulator-<version>-web.zip` | The browser build: the static site that [Try it in your browser](web.md) serves under `/app/`, with `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and `HOSTING.txt`, to be hosted over https. Not an installer; held by `packaging/web/check-package.sh` |
-| `SHA512SUMS` | one line per package and for the SBOM |
-| `SHA512SUMS.asc`, `<file>.asc` | detached GPG signatures, from the project key, on the manifest, every package and the SBOM |
+| `SHA512SUMS` | one line per package and for each SBOM |
+| `SHA512SUMS.asc`, `<file>.asc` | detached GPG signatures, from the project key, on the manifest, every package and each SBOM |
 | `cubeulator-signing-key.asc` | the public key, so that a download can be verified offline |
 | `Cubeulator-<version>.spdx.json` | an SPDX 2.3 SBOM: for each package, every component that ships in it, with version and licence, from the build's own third-party inventory; checksummed and signed like the packages |
+| `Cubeulator-<version>.cdx.json` | the same bill of materials as CycloneDX 1.6, for the scanners that read that format; made from the SPDX document, so the two cannot disagree; checksummed, signed and attested like it |
 
 Every package also carries a **build-provenance attestation** (Sigstore, from
-the workflow's own identity) and an SBOM attestation, held by GitHub, not as
+the workflow's own identity) and an attestation of each SBOM (SPDX and CycloneDX), held by GitHub, not as
 files.
 
 The SBOM is made by `tools/release/make_sbom.py` from the
@@ -61,7 +65,9 @@ The SBOM is made by `tools/release/make_sbom.py` from the
 `THIRD-PARTY-NOTICES.txt`; see [Licensing](licensing.md)), not by scanning the
 installers, which would list an installer and nothing in it. It refuses an
 inventory with anything unresolved and a package whose platform has no
-inventory. [Verifying a download](#verifying-a-download) says how to check each.
+inventory. The workflow reads each SBOM back from its attestation and compares
+it with the file it is releasing, so an SBOM that was attested is the SBOM that
+was attached. [Verifying a download](#verifying-a-download) says how to check each.
 
 **The packages are not OS code-signed** (no Authenticode certificate, no Apple
 Developer ID). The notes say so and say what a person will see: SmartScreen on
@@ -87,7 +93,9 @@ project(Cubeulator VERSION 0.1.0 ...)
 set(CUBEULATOR_VERSION_PRERELEASE "beta.1")     # "" for a final release
 ```
 
-`tools/release/prepare_release.py` sets both. Everything else follows:
+`tools/release/prepare_release.py` sets both, and the manifest's own `"version"`
+in `vcpkg.json` to match (`check_release.py` fails a tree where they differ).
+Everything else follows:
 
 | | |
 |---|---|
@@ -96,6 +104,7 @@ set(CUBEULATOR_VERSION_PRERELEASE "beta.1")     # "" for a final release
 | Windows installer, version resource | `0.1.0-beta.1` (the resource's numeric fields are `0,1,0,0`) |
 | `.deb`, AppStream | `0.1.0~beta.1` (`~` sorts before `0.1.0`, so `apt upgrade` takes a beta to the final) |
 | `.rpm` | version `0.1.0`, release `0.beta.1` (`1` for a final) |
+| `vcpkg.json` | `"version": "0.1.0"` (vcpkg takes no label) |
 | macOS `Info.plist` | `0.1.0` (macOS wants three numbers) |
 
 The Release workflow refuses a tag that does not name the pair exactly.
@@ -162,7 +171,7 @@ release of the project family reads:
 6. `**Full Changelog**: …/compare/v<previous>...v<this>` (not the first release)
 7. the `> **Pre-release.**` caveat
 
-The Artifacts sentence ("with build-provenance attestations, an SPDX SBOM and GPG
+The Artifacts sentence ("with build-provenance attestations, SPDX and CycloneDX SBOMs and GPG
 signatures") lists only what the run did. Preview it any time:
 
 ```sh
@@ -196,9 +205,29 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    refreshed with `tools/docs/update_guide_screenshots.py`, and it names what
    does not work yet, so read its "What this release is" box against the
    changelog.
+
+   Every pull request since the last tag that a person would notice has a
+   fragment in `changelog.d/` (or the `no-changelog` label, which says it has
+   none to write). `changelog-check.yml` asks at review time; this asks for the
+   whole interval, and should print only changes nobody reads about (a
+   dependency bump, a CI change):
+
+   ```sh
+   gh pr list --base develop --state merged --search "merged:>=<date of the last tag>" -L 300 \
+       --json number,title,labels,files --jq '.[]
+       | select(([.labels[].name] | index("no-changelog")) | not)
+       | select(([.files[].path] | map(startswith("changelog.d/")) | any) | not)
+       | "\(.number) \(.title)"'
+   ```
 2. **Rehearse.** Run the pipeline as a [dry run](#the-dry-run) from `develop`
-   and read what it produced. Do this before the *first* release, and again after
-   any change to the packaging or to this workflow.
+   (better: from a scratch branch that has run `prepare_release.py` for the
+   version, so the cut, the fragments and the version check are rehearsed too)
+   and read what it produced. Do this before every release: develop moves,
+   and the dependency baseline, Qt and the runner images with it. The last
+   rehearsal (2026-10-20, 0.2.0-beta.1 prepared on a scratch branch) passed on
+   all four builds, the signing, the SBOM and every attestation, and the files
+   it produced were verified with the commands in
+   [SECURITY.md](SECURITY.md#verifying-build-authenticity).
 3. **Prepare the release on a branch.**
 
    ```sh
@@ -207,17 +236,40 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    python tools/release/prepare_release.py 0.1.0-beta.1
    ```
 
-   That moves `[Unreleased]` under `## [0.1.0-beta.1] - <today>` and sets the
-   version pair. It says what the section still needs (the summary, the bold
-   lead-ins, the caveat); write those. `--check` changes nothing and only says
-   what is wrong. Open a PR into `develop`; it goes through the merge queue like
-   any other.
+   That moves `[Unreleased]` under `## [0.1.0-beta.1] - <today>`, merges the
+   `changelog.d/` fragments in, and sets the version pair and the manifest's.
+   It says what the section still needs (the summary, the bold lead-ins, the
+   caveat); write those. `--check` changes nothing and only says what is wrong.
+   Open a PR into `develop`; it goes through the merge queue like any other.
+
+   Pull requests that were open when you prepared the release can merge after
+   it, each with a fragment, and the release then fails `check_release.py` (its
+   notes would miss them). Fold them into the section that is already cut:
+
+   ```sh
+   python tools/release/prepare_release.py 0.1.0-beta.1 --fold
+   ```
+
+   It adds every fragment still in `changelog.d/` to that version's section
+   (which must be the newest) and deletes them; it does not touch the version.
+   Do it in a PR before the release PR is opened, not after.
 4. **Open the release PR**: `develop` → `main`, merge commit. The `Release
    readiness` check puts the rendered notes in its summary: read them there.
    `Commit is green` asks step 1's question of the PR's head commit and puts the
-   table in its summary. It is red while CI is still running on that commit
-   (re-run it when CI has finished) and it is advisory, so it is the
-   maintainer's decision, not the ruleset's, not to merge with it red.
+   table in its summary. It waits (up to three hours) for a workflow that has
+   not finished and fails at once on a red workflow or check run. It is a
+   **required check on `main`**, so a release (or a hotfix) cannot merge from a
+   red commit without someone choosing to bypass it.
+
+   If it goes red for a reason that has nothing to do with the change (a flaky
+   scheduled leg, a runner that died), re-run what is red, which the table in
+   its summary names (`gh run rerun <id> --failed`), and then re-run this check
+   the same way; a push to the PR would restart every check instead. Merge
+   with it red (`gh pr merge --admin`: the admin role bypasses through a pull
+   request only, see [Branch protection](branch-protection.md)) only when the
+   red is real and known not to matter for the change, such as a hotfix that
+   has to go out while an unrelated leg is broken, and say why in the PR.
+
    `main`'s ruleset is in [Branch protection](branch-protection.md). It asks
    for "up to date", so anything that reaches `main` after the release PR's
    last green run (a hotfix, a back-merge) starts every check again, and the
@@ -272,10 +324,10 @@ minus the two things that cannot be undone:
 | | dry run | release |
 |---|---|---|
 | version, changelog and tag checks | yes (`[Unreleased]` stands in for a section not cut yet) | yes |
-| build, package, `check-package.sh` (`packaging/web/check-package.sh` for the zip), four platforms | yes | yes |
+| build, package, `check-package.sh` (`packaging/web/check-package.sh` for the zip), five platforms (the iPhone app is checked by `packaging/ios/verify_ipa.sh` inside its build) | yes | yes |
 | `SHA512SUMS`, GPG signatures | yes, with a key made for the run | yes, the project key |
 | the provisioned key | proven to import and sign, in a keyring that is thrown away | used |
-| SBOM, provenance and SBOM attestations, `gh attestation verify` | yes | yes |
+| SPDX and CycloneDX SBOMs, provenance and SBOM attestations, `gh attestation verify`, the attested SBOMs compared with the files | yes | yes |
 | notes rendered from the changelog | yes | yes |
 | the commit is green on CI, CodeQL, OSV-Scanner and Zizmor | reported, not enforced (a rehearsal branch is rarely green) | enforced |
 | the tag, the release | **no** | yes |
@@ -294,12 +346,55 @@ branch):
 gh workflow run release.yml --ref <branch> -f dry_run=true
 ```
 
+To rehearse a particular version end to end, prepare it on a scratch branch
+that is never merged (no pull request: a `support/` branch into `develop` is
+not a valid flow), write a draft summary and caveat so the changelog check
+passes, and dispatch from it:
+
+```sh
+git switch -c support/release-<version>-dry-run origin/develop
+python tools/release/prepare_release.py <version>      # then write the summary and the caveat
+git commit -am "Prepare <version> (scratch branch, never merged)"
+git push origin support/release-<version>-dry-run
+gh workflow run release.yml --ref support/release-<version>-dry-run -f dry_run=true
+gh run download <run id> -n release-<version> -D dryrun      # the files and notes.md
+```
+
+With a warm vcpkg cache the run takes about an hour (the desktop builds are
+the long part, then a few minutes queued for the shared runners to sign); a
+cold one is hours. Check what it made with the commands in
+[SECURITY.md](SECURITY.md#verifying-build-authenticity) (use the
+`cubeulator-signing-key.asc` in the artifact, not the project's), then delete
+the scratch branch.
+
 Dry-run attestations are real attestations of files that were never released;
 they sit in the repository's attestations list under that run and are harmless.
 
 A PR that changes `release.yml`, `check-package.sh` or `tools/release/` runs the
 tools' self-test and lets GitHub parse the file; `ci.yml` already builds and
 checks the packages on every push.
+
+## The iPhone signing material
+
+The iPhone app is signed with an Apple Distribution certificate and an ad-hoc
+provisioning profile, held as five repository secrets (the names Word Jewels
+Solver uses, set from files kept off the repository; the walk-through of
+making them is [Installing on an iPhone](ios-install.md)):
+
+| Secret | Value |
+|---|---|
+| `IOS_DIST_CERTIFICATE_BASE64` | the Apple Distribution certificate with its private key, a `.p12`, base64 |
+| `IOS_DIST_CERTIFICATE_PASSWORD` | its passphrase |
+| `IOS_PROVISIONING_PROFILE_BASE64` | the ad-hoc provisioning profile for `com.iainchesworthlabs.cubeulator` and the registered devices, base64 |
+| `APPLE_TEAM_ID` | the Apple team identifier |
+| `APPLE_PROVISIONING_PROFILE_NAME` | the profile's name exactly as the portal shows it |
+
+A release (and a dry run) with the iPhone build on and one of them missing
+fails in the iOS job before anything is built. The profile expires after a year
+and when a device is added; a stale one is found by the job, which says when it
+expired. The embedded profile **lists the registered devices' identifiers**, so
+the `.ipa` of a public release carries them: the owner has decided to accept
+that (2026-10-21), and the release page says only registered devices install.
 
 ## The signing key
 
@@ -365,6 +460,7 @@ The workflow refuses, with the reason in the log, when:
 | A dispatched release names a tag that exists | |
 | A package fails `packaging/check-package.sh` | Qt, the executable, the icon, the identifier, the camera string, the notices: the same checks `ci.yml` makes on every push |
 | A platform produces no package, or two | |
+| The iPhone signing secrets are missing, the profile does not match them, or has expired | the iOS job says which; a tag push cannot leave the iPhone build out, a dispatch can untick `ios` |
 | The signing key is not provisioned (a real release) | unless `unsigned` is ticked |
 | A package has no attestation that verifies | |
 

@@ -5,6 +5,7 @@
 // docs/testing.md) - so nothing here picks one.
 #include "app.hpp"
 #include "diagnostics.hpp"
+#include "kit/bundled_fonts.hpp"
 #include "reach.hpp"
 #include "test_platform.hpp"
 
@@ -174,13 +175,13 @@ int main(int argc, char* argv[]) {
     QGuiApplication app(argc, argv);
     cube::systest::install_warning_capture();
 
-    // The app's own face (Archivo) is not installed on a test machine and the
-    // repository ships none yet, so every string is set in the machine's
-    // default: Segoe UI on Windows, DejaVu Sans - a good deal wider - on a
-    // Linux runner. CUBE_I18N_TEST_FONT=<face> substitutes a face for Archivo,
-    // so that the layout checks can be run against a wide one where the
-    // default is narrow (docs/i18n.md, "Which face the layout checks run in").
-    if (const QString family = qEnvironmentVariable("CUBE_I18N_TEST_FONT"); !family.isEmpty()) {
+    // The app's own face (Archivo) is compiled in and registered at start-up,
+    // as in the app. CUBE_I18N_TEST_FONT=<face> checks the layouts against
+    // another face instead: Archivo is then left unregistered and its name
+    // substituted (docs/i18n.md, "Which face the layout checks run in").
+    if (const QString family = qEnvironmentVariable("CUBE_I18N_TEST_FONT"); family.isEmpty()) {
+        cube::app::kit::installBundledFonts();
+    } else {
         QFont::insertSubstitution(QStringLiteral("Archivo"), family);
         QFont font = QGuiApplication::font();
         font.setFamily(family);

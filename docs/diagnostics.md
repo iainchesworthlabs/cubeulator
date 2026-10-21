@@ -92,9 +92,10 @@ Colours are CIELAB, `[L, a, b]` (L 0 to 100). Names are fixed words: `white`,
 `yellow`, `red`, `orange`, `green`, `blue`, `unknown`; errors are the
 `CubeError` enumerator's name (`ambiguous_scan`, `invalid_cube_state`, ...).
 A number that is not finite is `null`, so a line is always valid JSON. Cube
-states are the 54-character `U R F D L B` strings of
-[recording-format.md](recording-format.md#manifestjson) (`state`), so a cube
-on screen can be pasted into a manifest.
+states are the `U R F D L B` strings of
+[recording-format.md](recording-format.md#manifestjson) (`state`: 54 characters
+for a 3x3, `6 * size^2` for the other sizes), so a cube on screen can be pasted
+into a manifest.
 
 ### Record kinds
 
@@ -140,6 +141,7 @@ lightness floor: `unknown`), `neutral_white`, `warm_cast_white` or `hue_band`.
 | `settling_corner` | When `path` is `ambiguous`: the three centre colours of the corner whose view would tell the most of the cubes still possible apart - what the scan screen asks the person to show. `null` otherwise. |
 | `direct_error` | Why assembling the naming as it stood failed, when it did. |
 | `exchange` | The pair traded when `path` is `names_exchanged`: `first_side`, `second_side` (indices into `sides`), `first_name`, `second_name`, `centre_distance` (the closest-looking pair wins). |
+| `scheme_fix` | A cube of an even size (no centres to pin the names) whose naming made a cube that wears no standard scheme - red and orange traded, say - and was renamed to make one. `renamed` lists only the colours that changed, as `{"red": "orange", "orange": "red"}`; `cost` is how far the six colours as measured sit from the palette under the new names and `runner_up_cost` the same under the next best renaming that also makes a standard scheme (the wider apart, the surer the choice). `null` when the naming already made a standard scheme, and at every odd size. `naming` still shows the names the clusters were first given. |
 | `error` | Why there is no cube. |
 
 **`camera`** - the camera and its photometry lock. `data.event` is
@@ -182,9 +184,13 @@ view from the cube as it stood, and after the move, and how many stickers
 (`stickers_off`) plainly disagree.
 
 **`solve`** - when a solution lands (`event: "solution"`) and on every step
-(`event: "state"`): `method`, `is_solving`, `move_index`, `total_moves`,
-`current_move`, `moves` (the whole solution in standard notation), `cube` (the
-state now), `started_from`, `solved`, `stage`.
+(`event: "state"`): `method`, `size` (the cube's side length, 2 to 9), `is_solving`,
+`move_index`, `total_moves`, `current_move`, `moves` (the whole solution in
+standard notation, wide moves and all for a big cube), `cube` (the state now),
+`started_from`, `solved`, `stage`. `cube` and `started_from` are the state
+strings of [the recording manifest](recording-format.md#manifestjson): 54
+characters for a 3x3, `6 * size^2` for the other sizes, so one can be pasted into
+a manifest together with the `size`.
 
 **`snapshot`** - see below.
 

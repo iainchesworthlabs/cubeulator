@@ -4,6 +4,9 @@
 set(CUBEULATOR_PLATFORM_DISPLAY_NAME "macOS")
 set(CUBEULATOR_PLATFORM_DESKTOP ON)
 # A native camera device, opened from the calling thread? (cmake/Platform.cmake)
+# Archivo and IBM Plex Mono are compiled in and registered at start-up
+# (src/app/CMakeLists.txt).
+set(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS ON)
 set(CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA ON)
 
 # No display is needed for the test binaries' items that are never shown.
@@ -30,7 +33,19 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/macos/paths_macos.cpp
     platform/macos/platform_info_macos.cpp
     platform/posix/capture_thread_scope_posix.cpp
-    platform/posix/crash_handler_posix.cpp)
+    platform/posix/crash_handler_posix.cpp
+    platform/posix/graphics_probe_none.cpp)
+
+# The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
+set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_none.cpp)
+
+# No Vulkan backend for Tracy here (macOS and iOS render with Metal; Android and
+# the browser have not been exercised).
+set(CUBEULATOR_PLATFORM_PROFILING_VULKAN OFF)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
+
+# The vector kernels follow the architecture (cmake/Simd.cmake).
+set(CUBEULATOR_PLATFORM_SIMD auto)
 
 set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")

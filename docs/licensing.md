@@ -150,10 +150,10 @@ Windows-only; `forkfd` is Android-only; the Cocoa plugin, the Darwin
 permission plugins and `qeventdispatcher_cf` are macOS-only; and Qt GUI
 depends on QtDBus on macOS but not on Windows [V]. Edges that exist on only
 some platforms are kept per platform (`platformDepends`) so a macOS-only
-dependency is not applied to Windows. **Linux and iOS have not been read**,
-so on those platforms the snapshot over-includes rather than guesses (the
+dependency is not applied to Windows. **Linux has not been read**,
+so on that platform the snapshot over-includes rather than guesses (the
 WebAssembly kit has been read: `web` is in `verifiedPlatforms` since
-2026-10-14; see the known gaps in
+2026-10-14, and the iOS kit's SBOMs since 2026-10-21; see the known gaps in
 [section 6](#6-how-the-notices-are-produced));
 `tools/licences/qt_sbom_manifest.py` re-derives it from any Qt install's
 `sbom/` directory, and maps each library file name (`libqcocoa.a`,
@@ -172,7 +172,7 @@ Libraries) or a written offer, the licence text, and no further restrictions
 |---|---|---|---|---|
 | Lucide icon shapes (`Icon.qml`: camera, globe, menu, sun, refresh) | ISC, (c) Lucide Icons and Contributors [V: Lucide `LICENSE`] | `licences/ISC.txt` + the copyright line | all | notice must appear in all copies |
 | Feather-derived shapes (chevron-left, chevron-right, check, alert-triangle, help-circle) | MIT, (c) 2013-present Cole Bemis [V: same file lists these as Feather-derived] | `licences/MIT.txt` + the copyright line | all | notice |
-| Archivo, IBM Plex Mono, Noto Sans Hebrew, Noto Sans Arabic (to be bundled by the kit under `src/app/qt/fonts/`; the files are on `feature/ax-kit`) | OFL-1.1 [V: each family's OFL text, vendored by the kit] | the kit's `OFL-<family>.txt` beside the fonts; the manifest's `licenseFile` points at it | **not yet**: the font files are not on `develop`, so no build bundles them (`Theme.qml` names Archivo and IBM Plex Mono and falls back to the system's face). The manifest entries are dormant until the files exist | OFL: licence text travels with the fonts, no sale of the fonts alone, reserved font names ("Plex"). Copyright lines are copied from the OFL texts: Archivo (c) 2020 The Archivo Project Authors; IBM Plex Mono (c) 2017 IBM Corp.; Noto Sans Hebrew and Arabic (c) 2022 The Noto Project Authors. **Any font file under `assets/` or `src/app/qt/` that no emitted manifest component claims is an unresolved error**, so a new font cannot ship unnoticed |
+| Archivo and IBM Plex Mono (`src/app/qt/fonts/`, on every platform but the browser); Noto Sans Hebrew and Noto Sans Arabic (to be bundled by the kit under the same folder; the files are on `feature/ax-kit`) | OFL-1.1 [V: each family's OFL text, vendored by the kit] | the kit's `OFL-<family>.txt` beside the fonts; the manifest's `licenseFile` points at it | Archivo and IBM Plex Mono: **yes**, compiled in under `:/fonts` and registered at start-up (the browser does not bundle them, but its notices list them too: the scan is by tree, not by platform). Their entries, with the full OFL text and the copyright line, are in the embedded `:/licences/third-party-notices.json` that the Licences screen is to list, and `tests/unit/bundled_fonts_test.cpp` (`[licences]`) fails if a font the app registers is not in it, and `tests/unit/licences_screen_test.cpp` and `tests/system/licences_test.cpp` hold the screen to listing every one of them (About > Licences, `LicencesScreen.qml`), each opening to its full text. The Noto Hebrew and Arabic entries are dormant until the kit adds the files | OFL: licence text travels with the fonts, no sale of the fonts alone, reserved font names ("Plex"). Copyright lines are copied from the OFL texts: Archivo (c) 2020 The Archivo Project Authors; IBM Plex Mono (c) 2017 IBM Corp.; Noto Sans Hebrew and Arabic (c) 2022 The Noto Project Authors. **Any font file under `assets/` or `src/app/qt/` that no emitted manifest component claims is an unresolved error**, so a new font cannot ship unnoticed |
 | Noto Sans JP and Noto Sans SC, cut down to the characters the translations and the language names use (`src/app/platform/web/fonts/`; `tools/fonts/subset_cjk.py`) | OFL-1.1 [V: `OFL-NotoSansJP.txt` and `OFL-NotoSansSC.txt` there, and the licence field of each subset's own name table] | `OFL-NotoSans<JP,SC>.txt` beside the subsets; the manifest's `licenseFile` points at it | the **browser build only**, compiled in under `:/fonts` (a browser has no system fonts); the desktops use the system's faces and bundle nothing | OFL: licence text and the copyright line travel with them: (c) 2014-2021 Adobe, Reserved Font Name "Source". The subsets are modified (cut down, unhinted) and keep the names Noto Sans JP and Noto Sans SC, which do not contain the reserved name, as the OFL requires. Provenance and hashes are in `src/app/platform/web/fonts/README.md`. The manifest entries are limited to the `web` platform, so they are emitted for that build and no other |
 
 The vendored M3T tracker (MIT, with `filesystem.h`, nanoflann and
@@ -197,19 +197,21 @@ tools/tests only.
 
 | port | version | SPDX | ships | why / obligation |
 |---|---|---|---|---|
-| opencv4 | 4.12.0#5 | Apache-2.0 (port says `null`; the copyright file is Apache-2.0 plus SoftFloat and a CHI-table notice) | all (the browser build is smaller, see 2.5) | Apache: licence copy; keep the bundled notices in its copyright file. Features: calib3d, core, fs, intrinsics, jpeg, png, quirc, thread, tiff, webp, + dshow/msmf (W), v4l (L). `highgui`, `gtk` and `win32ui` are not requested (see the Linux-specific finding below) |
-| libjpeg-turbo | 3.2.0 | BSD-3-Clause (port); the file also carries the IJG licence | all | notice in docs |
-| libpng | 1.6.58 | libpng-2.0 | all | notice; no misrepresentation |
+| opencv4 | 4.14.0 | Apache-2.0 (port says `null`; the copyright file is Apache-2.0 plus SoftFloat and a CHI-table notice) | all (the browser build is smaller, see 2.5) | Apache: licence copy; keep the bundled notices in its copyright file. Features: calib3d, core, fs, intrinsics, jpeg, png, quirc, thread, tiff, webp, + dshow/msmf (W), v4l (L). `highgui`, `gtk` and `win32ui` are not requested (see the Linux-specific finding below) |
+| libjpeg-turbo | 3.2.0#1 | BSD-3-Clause (port); the file also carries the IJG licence | all | notice in docs |
+| libpng | 1.6.59 | libpng-2.0 | all | notice; no misrepresentation |
+| libspng | 0.7.4#1 | BSD-2-Clause | all | notice (OpenCV 4.14's PNG codec) |
 | tiff | 4.7.2 | libtiff | all | notice |
-| libwebp | 1.6.0#2 | BSD-3-Clause | all | notice |
-| liblzma | 5.8.3 | 0BSD (liblzma) | all | none (0BSD); the copyright file notes LGPL getopt only for the CLI tools, which are not built |
-| zlib | 1.3.2#1 | Zlib | all | none for binaries beyond not misrepresenting |
+| libwebp | 1.6.0#3 | BSD-3-Clause | all | notice |
+| liblzma | 5.8.4 | 0BSD (liblzma) | all | none (0BSD); the copyright file notes LGPL getopt only for the CLI tools, which are not built |
+| zlib | 1.3.2#2 | Zlib | all | none for binaries beyond not misrepresenting |
 | quirc | 1.2 | ISC | all | notice |
 | fmt | 12.2.0 | MIT | all (`cube_lib`) | notice |
 | bgfx (+ libsquish, lodepng, mgnlibs, miniz, stb, tinyexr) | 1.129.8940-496#1 | BSD-2-Clause AND CC0-1.0 | **removed from `vcpkg.json`** - it was declared but nothing linked it [V: the file API's link line of `cube_app` had no bgfx; `src/render` was a stub] | none |
 | cpu-features | 0.11.0 | Apache-2.0 [V: port manifest] | A | OpenCV's dependency on Android only; Apache: licence copy |
-| catch2 **[T]** | 3.15.2 | BSL-1.0 | no | tests only |
-| tracy **[T]** | 0.13.1 | BSD-3-Clause | no | the opt-in `profiling` feature (`CUBEULATOR_ENABLE_TRACY`, off in every release preset); a profiling build is a development build and is not packaged. Its command-line tools are host tools; see [Profiling](profiling.md#licence) |
+| catch2 **[T]** | 3.16.0 | BSL-1.0 | no | tests only |
+| tracy **[T]** | 0.14.1 (overlay port-version 2) | BSD-3-Clause | **yes, on the desktop** | the `profiling` feature (`CUBEULATOR_ENABLE_TRACY`, on by default on Windows, Linux and macOS): the client library is linked into the desktop applications (`TracyClient.dll` on Windows), dormant until the application is started with `--profile` / `CUBEULATOR_PROFILE=1`. The notices pick it up from the link line with its licence text. Its command-line tools (the separate `profiling-tools` feature, which brings `capstone`, `ppqsort`, `zstd`) are host tools a shipped build does not select; see [Profiling](profiling.md#licence) |
+| vulkan-headers | 1.4.363.0 | Apache-2.0 OR MIT | no | header-only, a `profiling` feature dependency on Windows and Linux (Tracy's Vulkan context is compiled against it); nothing is linked, so nothing is distributed |
 | vcpkg-cmake, vcpkg-cmake-config, vcpkg-get-python-packages | - | - | no | install nothing outside `share/`; the generator skips ports with no `include/`, `lib/` or `bin/` content |
 
 ONNX Runtime and the ports only it pulled in (onnx, abseil, flatbuffers,
@@ -244,7 +246,7 @@ Linux plan is now the table above: no GTK, GLib, Pango or X11 ports.
 | macOS | The `.dmg` (Apple Silicon) is built by CI and by the release workflow (`macos-clang-release`), and Qt's macOS SBOMs are read into the snapshot; the licence and `THIRD-PARTY-NOTICES.txt` are at the root of the disk image. Not run on a Mac by this paper. Mac App Store adds Apple's terms (section 4). |
 | Linux | No GTK3 chain: `opencv4[gtk]` is not requested (above). Qt is installed from `jurplel/install-qt-action` in CI, and the DEB and RPM carry it: the app, Qt, its plugins and QML modules and OpenCV sit in a private directory (`/usr/lib/cubeulator`), and the packages declare only system libraries as dependencies (`SHLIBDEPS` and `AUTOREQPROV` are off; `packaging/linux/Packaging.cmake`), so Qt's source and notice duty is the packager's, not a distribution's [I][L]. The licence and notices are in `/usr/share/doc/cubeulator/`. Qt's Linux SBOMs have not been read, so the Linux notices over-include. |
 | Android | Qt is shared (`.so` inside the APK/AAB) so LGPL relinking is mechanically possible [I]. The camera backend is a stub today. |
-| iOS | The app does not build today. Qt for iOS is normally linked statically [I - **not stated** in the Qt iOS documentation pages I read; Qt's own tracker has an open request to allow dynamic builds, QTBUG-85974]. |
+| iOS | The app builds for an iPhone since 2026-10-21 (`docs/ios-signing.md`). Qt for iOS is normally linked statically [I - **not stated** in the Qt iOS documentation pages I read; Qt's own tracker has an open request to allow dynamic builds, QTBUG-85974]. |
 | Web (WebAssembly) | One `.wasm` module with Qt linked in statically and nothing deployed beside it (no installer and no CPack package; a release ships the site as `Cubeulator-<version>-web.zip`, assembled by `packaging/web/make-package.sh` with `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` beside it, and the script stops on an unresolved notice because no installer is there to refuse; the notices are also embedded in the module as a resource like every build's). From vcpkg it takes fmt and a smaller OpenCV: `vcpkg.json` asks for the `intrinsics` feature alone on `emscripten`, and `cmake/triplets/wasm32-emscripten-threads.cmake` builds only `core`, `imgproc`, `imgcodecs` and `videoio`, so none of the image-codec ports (libjpeg-turbo, libpng, tiff, libwebp, quirc, liblzma) is in it; zlib comes in as OpenCV's own dependency [V: `vcpkg.json`, port manifests]. It also carries the two Noto subsets (2.3) and, from Qt's WebAssembly kit, the DejaVu Fonts 2.37 face the browser build draws Latin, Hebrew and Arabic with (Bitstream-Vera licence [V: `QWasmIntegrationPlugin_Attribution_dejayvu` in the kit's `qtbase` SBOM]). That kit's SBOMs are in `qt-modules.json` (`web` is a verified platform), so the attribution is in the generated notices; see the known gaps in [section 6](#6-how-the-notices-are-produced). |
 
 ## 3. The Qt question
@@ -585,7 +587,7 @@ Maintaining it:
 | add a QML `import` of a new Qt module | add it to `qt.qmlImports`; the module may need to be added to `qt-modules.json` |
 | a test copies another Qt module's library beside the executables | add its component id to `qt.testOnlyModules` in `manifest.json`, with the test that copies it; the deployment scan then ignores the file. The attributions bundled in that module are not components either: they ship only if the module does. |
 | upgrade Qt | `python -I tools/licences/qt_sbom_manifest.py --sbom <platform>=<qt>/sbom --out third_party/notices/qt-modules.json`, review the diff, update `qt.expectedQtVersion` |
-| add the bundled fonts | add the files at the paths the planned manifest entries name (`src/app/qt/fonts/`; the web build's faces are in `src/app/platform/web/fonts/`); the entries start emitting; verify their copyright lines against the fonts |
+| add the bundled fonts | add the files at the paths the planned manifest entries name (`src/app/qt/fonts/`; the web build's faces are in `src/app/platform/web/fonts/`); the entries start emitting; verify their copyright lines against the fonts. Done for Archivo and IBM Plex Mono; the Noto Hebrew and Arabic files are the kit's |
 | add a platform (Linux, iOS) | run the Qt SBOM tool on that platform's Qt install (the browser build's kit, `wasm_multithread`, carries its SBOMs too, and `web` is verified since 2026-10-14) and add `--sbom <platform>=<dir>`; its components are over-included until then (the JSON says `qtPlatformVerified:false`). macOS: the kit's SBOMs are inside the `qtbase`, `qtdeclarative`, ... `.7z` archives under `sbom/`; extracting only that folder avoids aqtinstall's symlink step on Windows |
 
 Known gaps, so nobody mistakes them for done:
@@ -759,7 +761,7 @@ licence reference. This list exists so a reviewer knows what to look for.
 | FTL (FreeType, if elected) | credit line in the documentation: "Portions of this software are copyright (c) <year> The FreeType Project (www.freetype.org). All rights reserved." |
 | Unicode-3.0 | the copyright and permission notice with the data |
 | Zlib, BSL-1.0, 0BSD, CC0-1.0 | nothing beyond not misrepresenting authorship (BSL-1.0: no notice in object code) |
-| OFL-1.1 (fonts: the browser build's Noto Sans JP and SC subsets today; the kit's faces planned) | licence copy with the fonts; reserved font names |
+| OFL-1.1 (fonts: the browser build's Noto Sans JP and SC subsets today; Archivo and IBM Plex Mono on the other platforms; the kit's Noto Hebrew and Arabic planned) | licence copy with the fonts; reserved font names |
 
 ## 8. Things in the plan that were wrong or missing
 

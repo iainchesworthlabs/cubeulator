@@ -9,7 +9,7 @@ import Cubeulator
 QtObject {
     id: state
 
-    property string screen: "launch" // launch | permission | scan | solve | settings | history | complete | solution
+    property string screen: "launch" // launch | entry | colours | permission | scan | solve | settings | history | about | licences | complete | solution
 
     // Camera-access screens exist only for mobile platforms, where the OS
     // requires an explicit in-app permission prompt. Desktop platforms grant
@@ -30,6 +30,22 @@ QtObject {
     // DirectScan.start() to have a selectedDeviceId ready.
     Component.onCompleted: CameraController.refreshDevices()
 
+    // Where the platform hides the cameras until one has been opened (a
+    // browser: see PlatformFacts.cameraIdsWithheldUntilUse), the list read at
+    // startup only says "a rear camera and a front camera". Read it again once
+    // a camera is open, for the real list, which is what the scan screen's
+    // switch button steps through. The controller carries the selection over.
+    property bool cameraWasRunning: false
+    property var cameraListConnections: Connections {
+        target: DirectScan
+        function onRunningChanged() {
+            const running = DirectScan.running;
+            if (running && !state.cameraWasRunning && PlatformFacts.cameraIdsWithheldUntilUse)
+                CameraController.refreshDevices();
+            state.cameraWasRunning = running;
+        }
+    }
+
     // Whether the solve screen keeps the camera. It does, to see how the
     // cube is being held; the solve-screen demo (CUBE_SOLVE_DEMO) turns it
     // off, having no scan for the camera to be matched against.
@@ -37,6 +53,11 @@ QtObject {
 
     // Starts/stops the live capture to match the screen shown.
     onScreenChanged: {
+        // Looking over a scan ends with leaving the colours screen, however it is left.
+        if (screen !== "colours") {
+            coloursFromScan = false;
+            coloursBackToSolve = false;
+        }
         if (screen !== "scan") {
             scanComplete = false;
             completeBeat.stop();
@@ -50,6 +71,7 @@ QtObject {
             // A scan precedes whatever solve follows, so the camera has
             // something to be matched against again (resumeSolve turned it
             // off, having none).
+            // (Every size shows it; only a 3x3's turns are followed from it.)
             solveCamera = true;
             DirectScan.start(CameraController.selectedDeviceId);
         } else if (screen === "solve" && solveCamera) {
@@ -153,6 +175,36 @@ QtObject {
         screen = "launch";
     }
 
+    // About, and the notices under it (docs/design/screens/about.md, licences.md).
+    // About is entered from Settings and from the macOS menu; back goes to where
+    // it was opened from, wherever it was. Licences is a level under it.
+    property string aboutFrom: "settings"
+
+    // The screens it is safe to leave for About and come back to: not mid-scan
+    // or mid-solve, where leaving would throw the person's place away.
+    readonly property bool canOpenAbout: screen === "launch" || screen === "settings"
+        || screen === "history" || screen === "complete" || screen === "about" || screen === "licences"
+
+    function openAbout() {
+        if (!canOpenAbout)
+            return;
+        if (screen !== "about" && screen !== "licences")
+            aboutFrom = screen;
+        screen = "about";
+    }
+
+    function closeAbout() {
+        screen = aboutFrom;
+    }
+
+    function openLicences() {
+        screen = "licences";
+    }
+
+    function closeLicences() {
+        screen = "about";
+    }
+
     // Carries on the unfinished solve the history holds, from the turn it was
     // left at. The cube is solved again with the method it was started with
     // (which becomes the method from now on, as choosing it on the solve
@@ -175,13 +227,125 @@ QtObject {
         return true;
     }
 
-    function beginScan() {
+    // The size chosen on the entry screen, kept while the screens for it come and
+    // go: going back from the colours to the entry screen finds the size as it was.
+    property int entrySize: 3
+
+    // A cube the camera does not read: another size, or a cube typed in as the
+    // scramble that mixed it up. Entered from Home; back goes there.
+    function openEntry() {
+        screen = "entry";
+    }
+
+    function closeEntry() {
+        screen = "launch";
+    }
+
+    // The cube typed in a colour at a time, at the size chosen on the entry
+    // screen. Back goes to the entry screen.
+    function openColours(size) {
+        coloursFromScan = false;
+        ColourEntry.begin(size);
+        screen = "colours";
+    }
+
+    // Whether the colours screen is looking over what the camera read (and not a
+    // cube typed in from nothing): back from it goes to the camera again.
+    property bool coloursFromScan: false
+
+    // Looks over what the scan read, to put right what it misread: the cube it
+    // made, or the six sides that made none. The camera stops, as it does leaving
+    // the scan screen for any other. False, and nothing changes, when the scan has
+    // nothing to show yet.
+    function reviewScan() {
+        if (!ColourEntry.beginFromScan()) {
+            return false;
+        }
+        coloursFromScan = true;
+        screen = "colours";
+        return true;
+    }
+
+    // The same, from the solve screen, for a cube the camera read as a cube and read
+    // wrong. The solution is still there and untouched, so back from the colours is the
+    // solve screen as it was (from the scan screen it is a new scan), and only Scan
+    // again starts over. Solving the corrected colours is a new solve either way
+    // (solveColours).
+    function reviewScanFromSolve() {
+        if (!reviewScan()) {
+            return false;
+        }
+        // After the screen has changed, which clears it.
+        coloursBackToSolve = true;
+        return true;
+    }
+
+    // Whether back from the colours screen, looking over a scan, is the solve
+    // screen it was opened from (and not a new scan).
+    property bool coloursBackToSolve: false
+
+    function closeColours() {
+        if (coloursFromScan) {
+            var backToSolve = coloursBackToSolve;
+            coloursFromScan = false;
+            if (backToSolve) {
+                screen = "solve";
+            } else {
+                beginScanAtSize(ColourEntry.size);
+            }
+        } else {
+            screen = "entry";
+        }
+    }
+
+    // Solves the cube typed in, once it is a valid one, and shows the solve
+    // screen: there is no camera for it to be matched against.
+    function solveColours() {
+        var result = ColourEntry.solve();
+        if (result.ok) {
+            coloursFromScan = false;
+            solveCamera = false;
+            elapsedSeconds = 0;
+            screen = "solve";
+        }
+        return result;
+    }
+
+    // Solves the cube that `scramble` (cubing notation) makes of a solved cube
+    // of `size`, and shows the solve screen when it has started: there is no
+    // camera for it to be matched against, so the solve screen keeps it off. Says
+    // what is wrong with the scramble, if anything is, and then leaves the screen as
+    // it is (see SolveController.solveScramble for the answer).
+    function solveScramble(size, scramble) {
+        var result = SolveController.solveScramble(size, scramble);
+        if (result.ok) {
+            solveCamera = false;
+            elapsedSeconds = 0;
+            screen = "solve";
+        }
+        return result;
+    }
+
+    // `size` is the cube's, 3 unless a screen says (DirectScan.size; a developer's
+    // CUBE_SCAN_SIZE changes what "unless" is).
+    function beginScan(size) {
+        if (size === undefined) {
+            DirectScan.useDefaultSize();
+        } else {
+            DirectScan.size = size;
+        }
         if (cameraGranted || !isMobile) {
             elapsedSeconds = 0;
             screen = "scan";
         } else {
             screen = "permission";
         }
+    }
+
+    // A scan of a cube of `size` that is already known: a 3x3 is found as it always was
+    // (its size is still looked for), any other size is the one asked for.
+    function beginScanAtSize(size) {
+        beginScan(size === 3 ? undefined : size);
     }
 
     // Called once CameraPermission reports Granted while the permission
@@ -228,7 +392,19 @@ QtObject {
     // Part-way through a solve the cube and the solution no longer agree:
     // read the cube again as it now is and solve it from there. The same
     // solve as far as the clock is concerned, so the time keeps running.
+    //
+    // At the size of the cube being solved, chosen and not found: it is known, and
+    // finding it again from a cube that is half unsolved is a guess that need not
+    // be made (the scan screen's Auto is still there to ask for it). DirectScan.size
+    // may hold anything by now - the size of the scan before, or one found from a
+    // cube that has since been replaced - so it is set before the screen changes:
+    // the screen starting the camera reads it.
     function rescan() {
-        screen = "scan";
+        DirectScan.size = SolveController.size;
+        if (cameraGranted || !isMobile) {
+            screen = "scan";
+        } else {
+            screen = "permission";
+        }
     }
 }

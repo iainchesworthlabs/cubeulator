@@ -296,6 +296,14 @@ TEST_CASE("frames without a whole square-on side give no read", "[direct-scan]")
     SECTION("an empty room") {
         CHECK_FALSE(read_side(room({640, 360})).has_value());
     }
+    SECTION("an empty room at the sizes a camera gives") {
+        // Four blobs fix a homography exactly, so a room with four sticker-sized
+        // rectangles that happen to be spread like a face's corners fits a
+        // lattice with no error. What stops it is that they are not the size of
+        // its cells.
+        CHECK_FALSE(read_side(room({1280, 720})).has_value());
+        CHECK_FALSE(read_side(room({1920, 1080})).has_value());
+    }
     SECTION("no frame at all") {
         CHECK_FALSE(read_side(cv::Mat()).has_value());
     }
@@ -450,10 +458,11 @@ Drawing lamp_drawing() {
 // stays where it is, so every read after the first of a hold is steady.
 SideRead read_of(const Lab9& lab) {
     SideRead read;
-    read.lab = lab;
+    read.lab.assign(lab.begin(), lab.end());
     read.pitch = 40.0F;
     read.stickers_found = 9;
-    read.found.fill(true);
+    read.found.assign(9, true);
+    read.centres.resize(9);
     for (std::size_t i = 0; i < 9; ++i) {
         const std::size_t column = i % 3;
         const std::size_t row = i / 3;
@@ -613,7 +622,9 @@ TEST_CASE("a side keeps the quarter-turn it was shown in when its stickers are c
         hold_lab(scan, hand, red_centred(), 12);
         REQUIRE(scan.sides().size() == 2);
         // Reported the way it was last shown.
-        const Lab9 side = scan.sides().at(0).lab;
+        const std::vector<cv::Vec3f> shown_lab = scan.sides().at(0).lab;
+        Lab9 side{};
+        std::ranges::copy(shown_lab, side.begin());
         for (std::size_t i = 0; i < 9; ++i) {
             CHECK(lightness_of(side.at(i)) == Catch::Approx(lightness_of(shown.at(i))).margin(4.0));
         }

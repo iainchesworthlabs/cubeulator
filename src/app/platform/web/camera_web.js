@@ -18,11 +18,16 @@
 // outside it. State lives on `$CubeCamera` itself.
 mergeInto(LibraryManager.library, {
   $CubeCamera: {
-    // The vision reader works at 640 px wide (kWorkingWidth in
-    // vision/direct_scan.cpp) and scales anything larger down itself. Scaling
-    // here, where the browser has already decoded the frame to a canvas, means
-    // far fewer pixels cross into the heap and through getImageData().
-    MAX_FRAME_WIDTH: 640,
+    // The vision reader works at 640 px wide for a 3x3 (kWorkingWidth in
+    // vision/direct_scan.cpp) and at 960 for a 4x4 or 5x5, scaling anything
+    // larger down itself. Scaling here, where the browser has already decoded
+    // the frame to a canvas, means far fewer pixels cross into the heap and
+    // through getImageData() - but it must not go below what the reader asks
+    // for, or the size-aware working width is capped before the reader sees it.
+    // 960 is the widest any size the scan screen offers asks for; a 3x3 is
+    // reduced from 960 to 640 by the reader, which is the same thing a desktop
+    // camera already gives it.
+    MAX_FRAME_WIDTH: 960,
 
     // What the sensor is asked for. Larger than the reader needs on purpose:
     // the browser's downscale then averages real detail into each sticker
@@ -87,6 +92,27 @@ mergeInto(LibraryManager.library, {
       report(request, bytes.length);
     },
 
+    // The open camera's device id and facing ('environment', 'user', or '') as
+    // its track reports them, or null if none is open.
+    openCamera: function () {
+      var session = CubeCamera.current;
+      if (!session || !session.active || !session.track ||
+          typeof session.track.getSettings !== 'function') {
+        return null;
+      }
+      var settings = {};
+      try {
+        settings = session.track.getSettings() || {};
+      } catch (error) {
+        return null;
+      }
+      var facing = settings.facingMode;
+      return {
+        deviceId: typeof settings.deviceId === 'string' ? settings.deviceId : '',
+        facing: facing === 'environment' || facing === 'user' ? facing : '',
+      };
+    },
+
     classify: function (error) {
       switch (error && error.name) {
         case 'NotAllowedError':
@@ -108,11 +134,15 @@ mergeInto(LibraryManager.library, {
         width: { ideal: CubeCamera.IDEAL_WIDTH },
         height: { ideal: CubeCamera.IDEAL_HEIGHT },
       };
-      if (id === 'facing:environment') {
-        video.facingMode = { ideal: 'environment' };
-      } else if (id === 'facing:user') {
+      if (id === 'facing:user') {
         video.facingMode = { ideal: 'user' };
-      } else if (id !== '' && id !== 'default') {
+      } else if (id === '' || id === 'default' || id === 'facing:environment') {
+        // "A camera", and the one facing away if there is one: what a cube is
+        // scanned with. Asking for no facing at all gets a phone's front
+        // camera on some browsers (iOS Safari). `ideal`, so a laptop's one
+        // webcam, which faces nobody in particular, still opens.
+        video.facingMode = { ideal: 'environment' };
+      } else {
         video.deviceId = { exact: id };
       }
       return { audio: false, video: video };
@@ -525,9 +555,10 @@ mergeInto(LibraryManager.library, {
     },
   },
 
-  // Lists the video inputs without prompting: `deviceId<TAB>label` per line.
-  // Both fields are empty until the person has granted camera access at least
-  // once for this site; camera_web.cpp decides what to show then.
+  // Lists the video inputs without prompting: `deviceId<TAB>label<TAB>facing`
+  // per line. The first two fields are empty until the person has granted
+  // camera access at least once for this site, and the last is empty for every
+  // camera but the open one; devices_web.hpp decides what to show then.
   cube_web_camera_enumerate__deps: ['$CubeCamera'],
   cube_web_camera_enumerate__proxy: 'async',
   cube_web_camera_enumerate: function (request) {
@@ -540,9 +571,15 @@ mergeInto(LibraryManager.library, {
     }
     navigator.mediaDevices.enumerateDevices().then(function (devices) {
       var clean = function (value) { return String(value || '').replace(/[\t\r\n]+/g, ' '); };
+      var open = CubeCamera.openCamera();
       done(devices
         .filter(function (device) { return device.kind === 'videoinput'; })
-        .map(function (device) { return clean(device.deviceId) + '\t' + clean(device.label); }));
+        .map(function (device) {
+          // Which way the lens points is told only for the camera that is open:
+          // its track says so, where the label of a camera may not.
+          var facing = open && device.deviceId && device.deviceId === open.deviceId ? open.facing : '';
+          return clean(device.deviceId) + '\t' + clean(device.label) + '\t' + clean(facing);
+        }));
     }, function () { done([]); });
   },
 

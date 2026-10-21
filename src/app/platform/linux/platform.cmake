@@ -4,6 +4,9 @@
 set(CUBEULATOR_PLATFORM_DISPLAY_NAME "Linux")
 set(CUBEULATOR_PLATFORM_DESKTOP ON)
 # A native camera device, opened from the calling thread? (cmake/Platform.cmake)
+# Archivo and IBM Plex Mono are compiled in and registered at start-up
+# (src/app/CMakeLists.txt).
+set(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS ON)
 set(CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA ON)
 
 # No display is needed for the test binaries' items that are never shown.
@@ -34,12 +37,26 @@ set(CUBEULATOR_PLATFORM_NOTICES_DIR "share/doc/cubeulator")
 
 set(CUBEULATOR_PLATFORM_SOURCES
     platform/linux/camera_linux.cpp
+    platform/linux/graphics_probe_linux.cpp
     platform/linux/paths_linux.cpp
     platform/linux/platform_info_linux.cpp
     platform/posix/capture_thread_scope_posix.cpp
-    platform/posix/crash_handler_posix.cpp)
+    platform/posix/crash_handler_posix.cpp
+    platform/detail/vulkan_probe.cpp)
 
-set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "")
+# The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
+set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_none.cpp)
+
+# Qt renders with Vulkan here, so Tracy gets a Vulkan GPU context too
+# (needs the vulkan-headers vcpkg port, a "profiling" feature dependency).
+set(CUBEULATOR_PLATFORM_PROFILING_VULKAN ON)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
+
+# The vector kernels follow the architecture (cmake/Simd.cmake).
+set(CUBEULATOR_PLATFORM_SIMD auto)
+
+# dlopen, for the Vulkan probe (graphics_probe_linux.cpp).
+set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "${CMAKE_DL_LIBS}")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS "")
 

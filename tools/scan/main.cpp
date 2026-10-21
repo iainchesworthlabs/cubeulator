@@ -19,6 +19,12 @@
 //                                    verdicts came to (and cost) - the number
 //                                    to hold against the camera's 33 ms
 //
+// A session of a cube that is not a 3x3 says so in its manifest.json ("size", the
+// recorder writes it); replay, board, diagnose, funnel and cost then read it as that size
+// and score it against truth.txt of N x N letters a side, or, for a cube whose six flat
+// sides fit several cubes, against cube_n.txt (6 x N^2 letters in the cube's own facelet
+// order, which cube_tumble_sim writes). The other commands are a 3x3's.
+//
 // A session is a directory of rec_NNNNNN.jpg frames. Its truth, if known, is
 // truth.txt: six words of nine letters from WYROGB, one per side, each side
 // row-major as seen from outside in any orientation and any order. Six sides
@@ -28,6 +34,10 @@
 // out. The frame times come from index.csv when there is one.
 
 #include <cube/model/facelet.hpp>
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/geometry.hpp>
+#include <cube/nxn/outside_view.hpp>
+#include <cube/nxn/scan_assembly.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/hold.hpp>
 #include <cube/solver/notation.hpp>
@@ -37,6 +47,7 @@
 #include <cube/vision/corner_fit.hpp>
 #include <cube/vision/direct_scan.hpp>
 #include <cube/vision/held_cube.hpp>
+#include <cube/vision/prepared_frame.hpp>
 #include <cube/vision/sticker_colour.hpp>
 
 #include <opencv2/imgcodecs.hpp>
@@ -45,6 +56,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -217,6 +229,106 @@ using cube::solver::Face;
     return cube.has_value() ? std::optional<Cube>(*cube) : std::nullopt;
 }
 
+// The cube's size, as the recorder's manifest.json says it: 3 when it does not.
+[[nodiscard]] int session_size(const fs::path& session) {
+    std::ifstream in(session / "manifest.json");
+    const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    const std::size_t at = text.find("\"size\"");
+    if (at == std::string::npos) {
+        return 3;
+    }
+    const std::size_t colon = text.find(':', at);
+    if (colon == std::string::npos) {
+        return 3;
+    }
+    const int size = std::atoi(text.c_str() + colon + 1);
+    return size >= 2 && size <= 9 ? size : 3;
+}
+
+// The cube a session's truth.txt names when it is not a 3x3: six words of N^2 letters,
+// each side as seen from outside in any turn, put together as the scan puts sides
+// together, so that what the scan makes and what this makes are the same cube.
+[[nodiscard]] std::optional<cube::nxn::NCube> truth_n_of(const fs::path& session, int size) {
+    // A session may name the cube itself (cube_n.txt: 6 x N^2 letters in the cube's own
+    // facelet order), which a cube whose six flat sides fit several cubes needs; the sides
+    // alone do not say which.
+    if (std::ifstream whole(session / "cube_n.txt"); whole) {
+        std::string letters;
+        whole >> letters;
+        std::vector<Color> stickers;
+        for (const char letter : letters) {
+            const auto colour = colour_of(letter);
+            if (!colour.has_value()) {
+                return std::nullopt;
+            }
+            stickers.push_back(*colour == FacetColor::white    ? Color::White
+                               : *colour == FacetColor::yellow ? Color::Yellow
+                               : *colour == FacetColor::red    ? Color::Red
+                               : *colour == FacetColor::orange ? Color::Orange
+                               : *colour == FacetColor::green  ? Color::Green
+                                                               : Color::Blue);
+        }
+        auto cube = cube::nxn::NCube::from_facelets(size, stickers);
+        return cube.has_value() ? std::optional<cube::nxn::NCube>(*cube) : std::nullopt;
+    }
+    std::ifstream in(session / "truth.txt");
+    const auto cells = static_cast<std::size_t>(size) * static_cast<std::size_t>(size);
+    cube::nxn::ScannedSides sides;
+    for (auto& side : sides) {
+        std::string word;
+        if (!(in >> word) || word.size() != cells) {
+            return std::nullopt;
+        }
+        for (const char letter : word) {
+            const auto colour = colour_of(letter);
+            if (!colour.has_value()) {
+                return std::nullopt;
+            }
+            switch (*colour) {
+                case cube::model::FacetColor::white:
+                    side.push_back(Color::White);
+                    break;
+                case cube::model::FacetColor::yellow:
+                    side.push_back(Color::Yellow);
+                    break;
+                case cube::model::FacetColor::red:
+                    side.push_back(Color::Red);
+                    break;
+                case cube::model::FacetColor::orange:
+                    side.push_back(Color::Orange);
+                    break;
+                case cube::model::FacetColor::green:
+                    side.push_back(Color::Green);
+                    break;
+                case cube::model::FacetColor::blue:
+                    side.push_back(Color::Blue);
+                    break;
+                case cube::model::FacetColor::unknown:
+                    return std::nullopt;
+            }
+        }
+    }
+    auto cube = cube::nxn::assemble_scanned_sides(size, sides);
+    return cube.has_value() ? std::optional<cube::nxn::NCube>(*cube) : std::nullopt;
+}
+
+// Whether `made` is `truth` or the same cube held another way up: the scan puts a side where
+// its centres say it goes, and an even size has none to say.
+[[nodiscard]] bool same_cube_n(const cube::nxn::NCube& made, const cube::nxn::NCube& truth) {
+    if (made.size() != truth.size()) {
+        return false;
+    }
+    const cube::nxn::Geometry& geometry = cube::nxn::Geometry::of(truth.size());
+    for (std::size_t rotation = 0; rotation < geometry.rotations().size(); ++rotation) {
+        cube::nxn::NCube held = truth;
+        held.apply(geometry.rotation_permutation(rotation));
+        if (held == made) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // How long each frame of a session came after the one before, in milliseconds,
 // from the index the recorder wrote: zero where there is none (a session
 // without an index.csv, the first frame, a frame whose row was overwritten),
@@ -296,26 +408,33 @@ using cube::solver::Face;
 // Which gate of SideScan::add_corner a side of a corner read met.
 enum class SideGate : std::uint8_t { counted, not_whole, strip, moving };
 
-[[nodiscard]] SideGate gate_of(const cube::vision::ObliqueSide& side,
+[[nodiscard]] SideGate gate_of(const cube::vision::ObliqueSide& side, int size,
                                const std::vector<cv::Point2f>& previous_centres, float interval) {
-    if (std::count(side.found.begin(), side.found.end(), true) < cube::vision::kMinCornerFound) {
+    const auto n = static_cast<std::size_t>(size);
+    const auto least_found = static_cast<std::ptrdiff_t>(std::max<std::size_t>(
+        3, (static_cast<std::size_t>(cube::vision::kMinCornerFound) * n * n) / 9));
+    if (std::count(side.found.begin(), side.found.end(), true) < least_found) {
         return SideGate::not_whole;
     }
     const auto step = [&](std::size_t to) {
-        const cv::Point2f half = (side.centres[to] - side.centres[0]) * 0.5F;
+        const cv::Point2f half =
+            (side.centres.at(to) - side.centres.at(0)) / static_cast<float>(size - 1);
         return std::hypot(half.x, half.y);
     };
-    const float longer = std::max(step(2), step(6));
-    if (longer <= 0.0F || std::min(step(2), step(6)) < cube::vision::kMinCornerAspect * longer) {
+    const float along_columns = step(n - 1);
+    const float along_rows = step(n * (n - 1));
+    const float longer = std::max(along_columns, along_rows);
+    if (longer <= 0.0F ||
+        std::min(along_columns, along_rows) < cube::vision::kMinCornerAspect * longer) {
         return SideGate::strip;
     }
     const float reach =
         cube::vision::kSteadyFraction * cube::vision::interval_scale(interval) * side.pitch;
-    const bool steady = std::any_of(previous_centres.begin(), previous_centres.end(),
-                                    [&](const cv::Point2f& before) {
-                                        const cv::Point2f gap = side.centres[4] - before;
-                                        return std::hypot(gap.x, gap.y) < reach;
-                                    });
+    const bool steady = std::any_of(
+        previous_centres.begin(), previous_centres.end(), [&](const cv::Point2f& before) {
+            const cv::Point2f gap = side.centres.at((n / 2 * n) + (n / 2)) - before;
+            return std::hypot(gap.x, gap.y) < reach;
+        });
     return steady ? SideGate::counted : SideGate::moving;
 }
 
@@ -330,10 +449,11 @@ enum class SideGate : std::uint8_t { counted, not_whole, strip, moving };
 // frames became reads, and which gate the others met.
 int run_funnel(const fs::path& session, bool every_frame) {
     using cube::vision::CornerStage;
+    const int size = session_size(session);
     const std::vector<fs::path> frames = frames_of(session);
     const std::vector<float> intervals = frame_intervals(session, frames);
 
-    cube::vision::SideScan scan;
+    cube::vision::SideScan scan(size);
     std::vector<cube::vision::SideScan::Side> previous_sides;
     bool ambiguous = false;
 
@@ -354,8 +474,9 @@ int run_funnel(const fs::path& session, bool every_frame) {
 
     for (std::size_t i = 0; i < frames.size(); ++i) {
         const cv::Mat bgr = cv::imread(frames[i].string(), cv::IMREAD_COLOR);
-        const auto prepared = cube::vision::prepare_frame(bgr);
-        const auto read = prepared.has_value() ? cube::vision::read_side(*prepared) : std::nullopt;
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        const auto read =
+            prepared.has_value() ? cube::vision::read_side(*prepared, size) : std::nullopt;
         scan.add(read, intervals[i]);
 
         std::string what = "square-on";
@@ -367,18 +488,21 @@ int run_funnel(const fs::path& session, bool every_frame) {
             ++corner_frames;
             cube::vision::CornerExplained explained;
             if (prepared.has_value()) {
-                explained = cube::vision::read_corner_explained(*prepared);
+                explained = cube::vision::read_corner_explained(*prepared, size);
             }
             ++stages[explained.stage];
             what = std::string(stage_name(explained.stage));
+            what += fmt::format(" ({} blobs, {} windows)", explained.blobs, explained.windows);
             if (explained.read.has_value()) {
                 corner = std::move(explained.read);
                 (corner->sides.size() == 2 ? two_sided : three_sided) += 1;
                 std::vector<cv::Point2f> centres;
                 for (const cube::vision::ObliqueSide& side : corner->sides) {
-                    const SideGate gate = gate_of(side, previous_centres, intervals[i]);
+                    const SideGate gate = gate_of(side, size, previous_centres, intervals[i]);
                     ++gates[gate];
-                    centres.push_back(side.centres[4]);
+                    centres.push_back(side.centres.at(
+                        (static_cast<std::size_t>(size) / 2 * static_cast<std::size_t>(size)) +
+                        (static_cast<std::size_t>(size) / 2)));
                     what += fmt::format(" [{}]", gate == SideGate::counted     ? "counted"
                                                  : gate == SideGate::not_whole ? "too few found"
                                                  : gate == SideGate::strip     ? "strip"
@@ -468,6 +592,8 @@ struct Outcome {
     std::optional<cube::vision::SessionColours> colours;  // what each colour measured
     std::optional<std::size_t> read_at;                   // first frame at which the cube was known
     std::optional<Cube> cube;                             // the cube at that frame
+    int size = 3;                                         // of a cube that is not a 3x3: the size,
+    std::optional<cube::nxn::NCube> cube_n;               // and the cube instead of `cube`
     std::optional<cube::CubeError> failure;               // why the last frame had none
     // The corner the scan would ask to be shown, when it is ambiguous.
     std::optional<std::array<Color, 3>> settling_corner;
@@ -476,23 +602,35 @@ struct Outcome {
 
 [[nodiscard]] Outcome replay(const fs::path& session) {
     Outcome outcome;
-    cube::vision::SideScan scan;
+    outcome.size = session_size(session);
+    const int size = outcome.size;
+    cube::vision::SideScan scan(size);
     const std::vector<fs::path> frames = frames_of(session);
     const std::vector<float> intervals = frame_intervals(session, frames);
     for (std::size_t i = 0; i < frames.size(); ++i) {
         const cv::Mat bgr = cv::imread(frames[i].string(), cv::IMREAD_COLOR);
         // As the app reads a frame: prepared once, the second reader only when
         // the first found no side.
-        const auto prepared = cube::vision::prepare_frame(bgr);
-        const auto read = prepared.has_value() ? cube::vision::read_side(*prepared) : std::nullopt;
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        const auto read =
+            prepared.has_value() ? cube::vision::read_side(*prepared, size) : std::nullopt;
         outcome.reads += read.has_value() ? 1U : 0U;
         scan.add(read, intervals[i]);
-        if (!read.has_value()) {
+        if (!read.has_value() && size <= cube::vision::kMaxCornerSize) {
             scan.add_corner(
-                prepared.has_value() ? cube::vision::read_corner(*prepared) : std::nullopt,
+                prepared.has_value() ? cube::vision::read_corner(*prepared, size) : std::nullopt,
                 intervals[i]);
         }
-        if (const auto cube = scan.cube(); cube.has_value()) {
+        if (size != 3) {
+            if (const auto cube = scan.cube_n(); cube.has_value()) {
+                if (!outcome.cube_n.has_value()) {
+                    outcome.cube_n = *cube;
+                    outcome.read_at = outcome.frames;
+                } else if (!(*cube == *outcome.cube_n)) {
+                    ++outcome.changes_after;
+                }
+            }
+        } else if (const auto cube = scan.cube(); cube.has_value()) {
             if (!outcome.cube.has_value()) {
                 outcome.cube = *cube;
                 outcome.read_at = outcome.frames;
@@ -505,7 +643,7 @@ struct Outcome {
     outcome.captured = scan.sides();
     outcome.sides = outcome.captured.size();
     outcome.corner_reads = scan.corner_reads();
-    if (const auto whole = scan.scanned(); whole.has_value()) {
+    if (const auto whole = scan.scanned_n(); whole.has_value()) {
         outcome.colours = whole->colours;
     } else {
         outcome.failure = whole.error();
@@ -590,11 +728,182 @@ void explain(const Outcome& outcome) {
                                           fitting > 1 ? " (cube_scan ambiguity)" : ""));
 }
 
+// What the scan made of a session, side by side, at the session's size: how each side was
+// named (the letters, row by row, as the side was first seen), what the centres and the
+// clusters measured, and why the cube was or was not put together.
+// The size the app would find a session's cube to be (DirectScan::detectedSize): for each
+// frame, the largest size 2 to 5 at which a side is read, counted, so that what the
+// reader says of a real cube at each size can be seen. A frame that reads at no size says
+// nothing.
+int run_detect_size(const fs::path& session) {
+    const std::vector<fs::path> frames = frames_of(session);
+    std::map<int, std::size_t> largest;
+    std::size_t none = 0;
+    for (const fs::path& path : frames) {
+        const cv::Mat bgr = cv::imread(path.string(), cv::IMREAD_COLOR);
+        int found = 0;
+        for (int size = 2; size <= 5; ++size) {
+            const auto prepared = cube::vision::prepare_frame(bgr, size);
+            if (prepared.has_value() && cube::vision::read_side(*prepared, size).has_value()) {
+                found = size;
+            }
+        }
+        if (found == 0) {
+            ++none;
+        } else {
+            ++largest[found];
+        }
+    }
+    fmt::print("{}: {} frames, session size {}; read at no size {}", session.filename().string(),
+               frames.size(), session_size(session), none);
+    for (const auto& [size, count] : largest) {
+        fmt::print("; largest {}: {}", size, count);
+    }
+    fmt::print("\n");
+    return 0;
+}
+
+int run_diagnose(const fs::path& session) {
+    const int size = session_size(session);
+    cube::vision::SideScan scan(size);
+    const std::vector<fs::path> frames = frames_of(session);
+    const std::vector<float> intervals = frame_intervals(session, frames);
+    for (std::size_t i = 0; i < frames.size(); ++i) {
+        const cv::Mat bgr = cv::imread(frames[i].string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        const auto read =
+            prepared.has_value() ? cube::vision::read_side(*prepared, size) : std::nullopt;
+        scan.add(read, intervals[i]);
+        if (!read.has_value() && size <= cube::vision::kMaxCornerSize) {
+            scan.add_corner(
+                prepared.has_value() ? cube::vision::read_corner(*prepared, size) : std::nullopt,
+                intervals[i]);
+        }
+    }
+    const cube::vision::ScanDiagnosis diagnosis = scan.diagnose();
+    fmt::print("{}: a {}x{}x{}, {} frames, {} groups, {} captured\n", session.filename().string(),
+               size, size, size, frames.size(), diagnosis.groups, diagnosis.captured);
+    for (const auto& side : diagnosis.sides) {
+        const cv::Vec3f& centre = side.lab.at(side.lab.size() / 2);
+        fmt::print("  side seen {}th: {} reads; middle cell Lab {:5.1f} {:6.1f} {:6.1f}\n",
+                   side.first_seen, side.reads, centre[0], centre[1], centre[2]);
+    }
+    // How alike each pair of captured sides is, under the turn that lays them best: the number
+    // of cells further apart than the scan counts as the same colour (10 Lab), the mean and the
+    // largest plain Lab gap, and the mean of colour_distance (which counts lightness and
+    // chroma for a quarter). Two reads of one side lit differently show here as close pairs.
+    for (std::size_t a = 0; a < diagnosis.sides.size(); ++a) {
+        for (std::size_t b = a + 1; b < diagnosis.sides.size(); ++b) {
+            const auto& left = diagnosis.sides.at(a).lab;
+            const auto& right = diagnosis.sides.at(b).lab;
+            const auto cells = left.size();
+            std::size_t best_differing = cells + 1;
+            double best_mean = 0.0;
+            double best_max = 0.0;
+            double best_shaded = 0.0;
+            for (int roll = 0; roll < 4; ++roll) {
+                std::size_t differing = 0;
+                double total = 0.0;
+                double most = 0.0;
+                double shaded = 0.0;
+                for (std::size_t i = 0; i < cells; ++i) {
+                    const cv::Vec3f& other = right.at(cube::vision::rolled_cell(size, roll, i));
+                    const cv::Vec3f gap = left.at(i) - other;
+                    const double plain = std::sqrt(static_cast<double>(gap.dot(gap)));
+                    differing += plain > 10.0 ? 1U : 0U;
+                    total += plain;
+                    most = std::max(most, plain);
+                    shaded += static_cast<double>(cube::vision::colour_distance(left.at(i), other));
+                }
+                if (differing < best_differing) {
+                    best_differing = differing;
+                    best_mean = total / static_cast<double>(cells);
+                    best_max = most;
+                    best_shaded = shaded / static_cast<double>(cells);
+                }
+            }
+            if (best_differing * 2 <= cells) {
+                fmt::print(
+                    "  sides {} and {}: {} of {} cells differ; mean gap {:.1f}, largest {:.1f}; "
+                    "shaded mean {:.1f}\n                    ",
+                    a, b, best_differing, cells, best_mean, best_max, best_shaded);
+            }
+        }
+    }
+    if (diagnosis.white.has_value()) {
+        fmt::print("  white centre found: side {}, cast {:.1f}\n", diagnosis.white->side,
+                   diagnosis.white->cast);
+    }
+    if (!diagnosis.naming.has_value()) {
+        fmt::print("  colours not named: {}\n",
+                   diagnosis.result_n.has_value()
+                       ? "?"
+                       : std::string(to_string(diagnosis.result_n.error())));
+        return 1;
+    }
+    const auto n = static_cast<std::size_t>(size);
+    for (std::size_t side = 0; side < diagnosis.naming->faces.size(); ++side) {
+        fmt::print("  side {} named:\n", side);
+        for (std::size_t row = 0; row < n; ++row) {
+            std::string letters;
+            std::string sure;
+            for (std::size_t col = 0; col < n; ++col) {
+                const auto& facelet = diagnosis.naming->faces.at(side).at((row * n) + col);
+                letters += letter_of(facelet.color);
+                sure += fmt::format(" {:.2f}", static_cast<double>(facelet.confidence));
+            }
+            fmt::print("    {}  {}\n", letters, sure);
+        }
+    }
+    for (std::size_t c = 0; c < diagnosis.naming->clusters.size(); ++c) {
+        const auto& cluster = diagnosis.naming->clusters.at(c);
+        fmt::print("  cluster {} {}: mean Lab {:5.1f} {:6.1f} {:6.1f}  hue {:.0f} chroma {:.0f}\n",
+                   c, letter_of(cluster.name), cluster.mean[0], cluster.mean[1], cluster.mean[2],
+                   static_cast<double>(cluster.hue.hue_degrees),
+                   static_cast<double>(cluster.hue.chroma));
+    }
+    if (diagnosis.assembly.has_value()) {
+        std::string fits;
+        for (const std::size_t fit : diagnosis.assembly->corner_fits) {
+            fits += fmt::format(" {}", fit);
+        }
+        fmt::print("  assembly: {} candidate(s); {} corner reads kept; reads fitting each:{}\n",
+                   diagnosis.assembly->candidates, diagnosis.assembly->corner_reads, fits);
+    }
+    fmt::print("  result: {}\n", diagnosis.result_n.has_value()
+                                     ? "a cube"
+                                     : std::string(to_string(diagnosis.result_n.error())));
+    return diagnosis.result_n.has_value() ? 0 : 1;
+}
+
 int run_replay(const fs::path& session) {
     const Outcome outcome = replay(session);
     fmt::print("{}: frames {}  lattice reads {}  corner reads {}  sides {}\n",
                session.filename().string(), outcome.frames, outcome.reads, outcome.corner_reads,
                outcome.sides);
+    if (outcome.size != 3) {
+        // A cube of another size: its state and whether it is the truth. There is
+        // no 3x3 solution to print.
+        fmt::print("  a {0}x{0}x{0}\n", outcome.size);
+        if (!outcome.cube_n.has_value()) {
+            fmt::print("  no cube: {} of 6 sides captured{}\n", outcome.sides,
+                       outcome.failure.has_value()
+                           ? fmt::format(" ({})", to_string(*outcome.failure))
+                           : std::string());
+            return 1;
+        }
+        fmt::print("  cube known at frame {} ({} later frames disagreed)\n", *outcome.read_at,
+                   outcome.changes_after);
+        std::string state;
+        for (const Color colour : outcome.cube_n->facelets()) {
+            state += letter_of(colour);
+        }
+        fmt::print("  {}\n", state);
+        if (const auto truth = truth_n_of(session, outcome.size); truth.has_value()) {
+            fmt::print("  truth: {}\n", same_cube_n(*outcome.cube_n, *truth) ? "MATCH" : "WRONG");
+        }
+        return 0;
+    }
     if (!outcome.cube.has_value()) {
         fmt::print("  no cube: {} of 6 sides captured{}\n", outcome.sides,
                    outcome.failure.has_value() ? fmt::format(" ({})", to_string(*outcome.failure))
@@ -650,14 +959,26 @@ int run_board(const fs::path& root) {
                "read-at", "result");
     for (const fs::path& session : sessions) {
         const Outcome outcome = replay(session);
-        const auto truth = truth_of(session);
         std::string result = "incomplete";
-        if (outcome.cube.has_value()) {
-            result = !truth.has_value()        ? "read (no truth)"
-                     : *truth == *outcome.cube ? "EXACT"
-                                               : "WRONG";
+        bool has_truth = false;
+        if (outcome.size != 3) {
+            const auto truth = truth_n_of(session, outcome.size);
+            has_truth = truth.has_value();
+            if (outcome.cube_n.has_value()) {
+                result = !truth.has_value()                     ? "read (no truth)"
+                         : same_cube_n(*outcome.cube_n, *truth) ? "EXACT"
+                                                                : "WRONG";
+            }
+        } else {
+            const auto truth = truth_of(session);
+            has_truth = truth.has_value();
+            if (outcome.cube.has_value()) {
+                result = !truth.has_value()        ? "read (no truth)"
+                         : *truth == *outcome.cube ? "EXACT"
+                                                   : "WRONG";
+            }
         }
-        with_truth += truth.has_value() ? 1U : 0U;
+        with_truth += has_truth ? 1U : 0U;
         exact += result == "EXACT" ? 1U : 0U;
         wrong += result == "WRONG" ? 1U : 0U;
         fmt::print("{:44} {:>6} {:>6} {:>5} {:>8}  {}{}\n",
@@ -992,7 +1313,89 @@ int run_ambiguity(const fs::path& session) {
     return 0;
 }
 
+// run_holds for a cube that is not a 3x3: the same questions of the same kind of recording, a
+// side of N x N cells at a time (docs/nxn-camera-follow.md, "Measured").
+int run_holds_n(const fs::path& session, int size) {
+    const std::vector<fs::path> frames = frames_of(session);
+    cube::vision::SideScan scan(size);
+    std::vector<std::optional<cube::vision::SideRead>> reads;
+    for (const fs::path& frame : frames) {
+        const cv::Mat bgr = cv::imread(frame.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        reads.push_back(prepared.has_value() ? cube::vision::read_side(*prepared, size)
+                                             : std::nullopt);
+        scan.add(reads.back());
+        if (!reads.back().has_value() && size <= cube::vision::kMaxCornerSize) {
+            scan.add_corner(prepared.has_value() ? cube::vision::read_corner(*prepared, size)
+                                                 : std::nullopt);
+        }
+    }
+    const auto scanned = scan.scanned_n();
+    if (!scanned.has_value()) {
+        fmt::print("{}: no cube, so nothing to match against\n", session.filename().string());
+        return 1;
+    }
+    fmt::print("{}: a {}x{}x{}\n", session.filename().string(), size, size, size);
+
+    std::vector<float> fit;  // best distance, steady reads
+    std::vector<float>
+        clear_by;              // how much nearer the best is than the next different-looking hold
+    std::vector<float> found;  // share of the cells the reader found, steady reads
+    std::size_t steady = 0;
+    std::size_t matched = 0;
+    std::size_t undecided = 0;
+    std::optional<cv::Point2f> previous;
+    for (const auto& read : reads) {
+        if (!read.has_value()) {
+            previous.reset();
+            continue;
+        }
+        const cv::Point2f centre = read->centres.at(read->centres.size() / 2);
+        const cv::Point2f moved = previous.has_value() ? centre - *previous : cv::Point2f{};
+        const bool still =
+            previous.has_value() && std::hypot(moved.x, moved.y) < 0.12F * read->pitch;
+        previous = centre;
+        if (!still) {
+            continue;
+        }
+        ++steady;
+        const auto fits = cube::vision::fit_holds(*read, scanned->cube, scanned->colours);
+        const auto best_view = cube::nxn::camera_view(scanned->cube, fits[0].hold);
+        fit.push_back(fits[0].distance);
+        found.push_back(static_cast<float>(read->stickers_found) / static_cast<float>(size * size));
+        for (const cube::vision::HoldFit& other : fits) {
+            if (cube::nxn::camera_view(scanned->cube, other.hold) != best_view) {
+                clear_by.push_back(other.distance - fits[0].distance);
+                break;
+            }
+        }
+        const auto reading = cube::vision::read_hold(*read, scanned->cube, scanned->colours);
+        matched += reading.holds.empty() ? 0U : 1U;
+        undecided += reading.holds.size() > 1 ? 1U : 0U;
+    }
+    fmt::print("  steady reads {}  matched {}  of those undecided between look-alikes {}\n", steady,
+               matched, undecided);
+    if (steady == 0) {
+        return 0;
+    }
+    fmt::print("  cells found:                       median {:.2f}  10% {:.2f}  min {:.2f}\n",
+               percentile(found, 0.5), percentile(found, 0.1), percentile(found, 0.0));
+    fmt::print(
+        "  distance to the hold shown:        median {:.2f}  90% {:.2f}  99% {:.2f}  max "
+        "{:.2f}\n",
+        percentile(fit, 0.5), percentile(fit, 0.9), percentile(fit, 0.99), percentile(fit, 1.0));
+    fmt::print(
+        "  clear of the next different hold:  min {:.2f}  1% {:.2f}  10% {:.2f}  median "
+        "{:.2f}  (margin {:.2f})\n",
+        percentile(clear_by, 0.0), percentile(clear_by, 0.01), percentile(clear_by, 0.1),
+        percentile(clear_by, 0.5), static_cast<double>(cube::vision::hold_clear_distance(size)));
+    return 0;
+}
+
 int run_holds(const fs::path& session) {
+    if (const int size = session_size(session); size != 3) {
+        return run_holds_n(session, size);
+    }
     const std::vector<fs::path> frames = frames_of(session);
     cube::vision::SideScan scan;
     std::vector<std::optional<cube::vision::SideRead>> reads;
@@ -1140,6 +1543,7 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
         return std::chrono::duration<float, std::milli>(Clock::now() - from).count();
     };
 
+    const int size = session_size(session);
     const std::vector<fs::path> paths = frames_of(session);
     const std::vector<float> intervals = frame_intervals(session, paths);
     std::vector<cv::Mat> pictures;
@@ -1186,7 +1590,7 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
     std::size_t completed = 0;
 
     for (std::size_t run = 0; run < runs; ++run) {
-        cube::vision::SideScan scan;
+        cube::vision::SideScan scan(size);
         std::vector<cube::vision::SideScan::Side> previous_sides;
         bool ambiguous = false;
         bool done = false;
@@ -1194,11 +1598,11 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
         for (std::size_t i = 0; i < pictures.size() && !done; ++i) {
             const Clock::time_point began = Clock::now();
             Clock::time_point mark = began;
-            const auto prepared = cube::vision::prepare_frame(pictures[i]);
+            const auto prepared = cube::vision::prepare_frame(pictures[i], size);
             const float t_prepare = since(mark);
             mark = Clock::now();
             const auto read =
-                prepared.has_value() ? cube::vision::read_side(*prepared) : std::nullopt;
+                prepared.has_value() ? cube::vision::read_side(*prepared, size) : std::nullopt;
             const float t_side = since(mark);
             mark = Clock::now();
             scan.add(read, intervals[i]);
@@ -1207,7 +1611,8 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
             std::optional<cube::vision::CornerRead> corner;
             if (!read.has_value()) {
                 mark = Clock::now();
-                corner = prepared.has_value() ? cube::vision::read_corner(*prepared) : std::nullopt;
+                corner = prepared.has_value() ? cube::vision::read_corner(*prepared, size)
+                                              : std::nullopt;
                 t_corner = since(mark);
                 mark = Clock::now();
                 scan.add_corner(corner, intervals[i]);
@@ -1225,8 +1630,8 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
                 const cube::vision::ScanDiagnosis diagnosis = scan.diagnose();
                 t_verdict = since(mark);
                 ++judged;
-                ambiguous = !diagnosis.result.has_value() &&
-                            diagnosis.result.error() == cube::CubeError::ambiguous_scan;
+                ambiguous = !diagnosis.result_n.has_value() &&
+                            diagnosis.result_n.error() == cube::CubeError::ambiguous_scan;
                 std::string kind = "fewer than six sides";
                 if (diagnosis.assembly.has_value()) {
                     kind = fmt::format("{}, {} candidate(s), {} corner read(s)",
@@ -1238,7 +1643,7 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
                 entry.kind = kind;
                 entry.ms.push_back(t_verdict);
                 entry.assemblies += scan.assemblies() - assembled_before;
-                if (diagnosis.naming.has_value()) {
+                if (diagnosis.naming.has_value() && size == 3) {
                     std::array<std::uint8_t, 54> naming{};
                     for (std::size_t side = 0; side < 6; ++side) {
                         for (std::size_t cell = 0; cell < 9; ++cell) {
@@ -1255,7 +1660,7 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
                     entry.assemble_all_ms.push_back(since(mark));
                     (void)all;
                 }
-                done = diagnosis.result.has_value();
+                done = diagnosis.result_n.has_value();
                 completed += done ? 1U : 0U;
             }
             const float total = since(began);
@@ -1320,12 +1725,280 @@ int run_cost(const fs::path& session, std::size_t runs, bool every_frame) {
     return 0;
 }
 
+// The side reader's funnel: where each frame was lost between the camera and a
+// lattice, which is what `funnel` reports for the corner reader and what no
+// command reported for the side that most scans are made of.
+int run_read(const fs::path& session, bool verbose) {
+    const int size = session_size(session);
+    const std::vector<fs::path> frames = frames_of(session);
+    if (frames.empty()) {
+        fmt::print("{}: no frames\n", session.filename().string());
+        return 1;
+    }
+
+    using cube::vision::FrameLook;
+    using cube::vision::LatticeRefusal;
+    constexpr auto kLooks = static_cast<std::size_t>(FrameLook::count);
+    constexpr auto kRefusals = 6;
+
+    std::array<std::size_t, kLooks> by_look{};
+    std::array<std::size_t, kRefusals> by_refusal{};
+    std::vector<std::size_t> first_blobs;
+    std::vector<float> rms;
+    std::vector<float> ratios;
+    std::vector<float> cosines;
+    std::size_t read = 0;
+    std::size_t analysed = 0;
+    std::size_t blobs_needed = 0;
+    std::size_t oversized_total = 0;
+    std::size_t wrong_shape_total = 0;
+    int working_width = 0;
+
+    for (const fs::path& path : frames) {
+        const cv::Mat bgr = cv::imread(path.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        if (!prepared.has_value()) {
+            continue;
+        }
+        ++analysed;
+        working_width = prepared->working.cols;
+        cube::vision::SideAttempt attempt;
+        const auto got = cube::vision::read_side_explained(*prepared, size, attempt);
+        blobs_needed = attempt.blobs_needed;
+        oversized_total += attempt.oversized;
+        wrong_shape_total += attempt.wrong_shape;
+        first_blobs.push_back(attempt.blobs.at(static_cast<std::size_t>(FrameLook::first)));
+        if (got.has_value()) {
+            ++read;
+            by_look.at(static_cast<std::size_t>(attempt.look)) += 1;
+        } else {
+            by_refusal.at(static_cast<std::size_t>(attempt.refusal)) += 1;
+        }
+        if (attempt.refusal != LatticeRefusal::too_few_blobs &&
+            attempt.refusal != LatticeRefusal::no_lattice) {
+            rms.push_back(attempt.lattice_rms);
+            ratios.push_back(attempt.lattice_ratio);
+            cosines.push_back(attempt.lattice_cosine);
+        }
+        if (verbose) {
+            std::string looks;
+            std::string outlines;
+            for (std::size_t look = 0; look < kLooks; ++look) {
+                looks += fmt::format(" {}", attempt.blobs.at(look));
+                outlines += fmt::format(" {}", attempt.outlines.at(look));
+            }
+            fmt::print(
+                "  frame {}: blobs{} / {} needed; outlines{}; {}; rms {:.3f} ratio {:.2f} "
+                "cosine {:.2f}\n",
+                path.stem().string(), looks, attempt.blobs_needed, outlines,
+                got.has_value()
+                    ? fmt::format("read ({})", static_cast<int>(attempt.look))
+                    : fmt::format("refused ({})", cube::vision::to_string(attempt.refusal)),
+                static_cast<double>(attempt.lattice_rms),
+                static_cast<double>(attempt.lattice_ratio),
+                static_cast<double>(attempt.lattice_cosine));
+        }
+    }
+
+    const auto median_of = [](std::vector<float> values) {
+        if (values.empty()) {
+            return 0.0F;
+        }
+        const auto middle = values.begin() + static_cast<std::ptrdiff_t>(values.size() / 2);
+        std::nth_element(values.begin(), middle, values.end());
+        return *middle;
+    };
+    const auto median_count = [](std::vector<std::size_t> values) {
+        if (values.empty()) {
+            return std::size_t{0};
+        }
+        const auto middle = values.begin() + static_cast<std::ptrdiff_t>(values.size() / 2);
+        std::nth_element(values.begin(), middle, values.end());
+        return *middle;
+    };
+
+    fmt::print("{}: a {}x{}x{}, {} frames, {} analysed at {} px wide\n",
+               session.filename().string(), size, size, size, frames.size(), analysed,
+               working_width);
+    fmt::print(
+        "  read a side        {}  ({:.1f}%)\n", read,
+        analysed == 0 ? 0.0 : (100.0 * static_cast<double>(read) / static_cast<double>(analysed)));
+    fmt::print("  first look found   median {} sticker-sized blobs, {} needed for a lattice\n",
+               median_count(first_blobs), blobs_needed);
+    fmt::print("  outlines it could not use  merged/oversized {}, wrong shape {}\n",
+               oversized_total, wrong_shape_total);
+    if (read > 0) {
+        std::string looks;
+        for (std::size_t look = 0; look < kLooks; ++look) {
+            if (by_look.at(look) > 0) {
+                looks += fmt::format(" {}={}", static_cast<int>(look), by_look.at(look));
+            }
+        }
+        fmt::print("  reads by look     {}\n", looks);
+    }
+    if (analysed > read) {
+        std::string refused;
+        for (std::size_t refusal = 0; refusal < kRefusals; ++refusal) {
+            if (by_refusal.at(refusal) > 0) {
+                refused += fmt::format(
+                    " {}={}", cube::vision::to_string(static_cast<LatticeRefusal>(refusal)),
+                    by_refusal.at(refusal));
+            }
+        }
+        fmt::print("  frames refused    {}\n", refused);
+        if (!rms.empty()) {
+            fmt::print(
+                "  of those, a lattice was made: rms median {:.3f}, ratio {:.2f}, cosine "
+                "{:.2f}\n",
+                static_cast<double>(median_of(rms)), static_cast<double>(median_of(ratios)),
+                static_cast<double>(median_of(cosines)));
+        }
+    }
+    return read > 0 ? 0 : 1;
+}
+
+// A hash of everything a read hands on: where the stickers are, what colour they
+// came to, and what the attempt saw on the way. Two builds that print the same
+// digest for a session read the same sides in the same colours, which is the
+// check a change to how a look is computed has to pass; `-v` prints one line a
+// frame, to find the frame when they do not.
+[[nodiscard]] std::uint64_t fold(std::uint64_t hash, std::uint64_t value) {
+    constexpr std::uint64_t kPrime = 1099511628211ULL;
+    for (int byte = 0; byte < 8; ++byte) {
+        hash ^= (value >> (8 * byte)) & 0xFFU;
+        hash *= kPrime;
+    }
+    return hash;
+}
+
+[[nodiscard]] std::uint64_t fold(std::uint64_t hash, float value) {
+    return fold(hash, static_cast<std::uint64_t>(std::bit_cast<std::uint32_t>(value)));
+}
+
+int run_digest(const fs::path& session, bool every_frame) {
+    const int size = session_size(session);
+    std::uint64_t all = 14695981039346656037ULL;
+    std::size_t reads = 0;
+    std::size_t frames = 0;
+    for (const fs::path& path : frames_of(session)) {
+        const cv::Mat bgr = cv::imread(path.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        if (!prepared.has_value()) {
+            continue;
+        }
+        ++frames;
+        cube::vision::SideAttempt attempt;
+        const auto got = cube::vision::read_side_explained(*prepared, size, attempt);
+        std::uint64_t hash = 14695981039346656037ULL;
+        for (const std::size_t count : attempt.blobs) {
+            hash = fold(hash, static_cast<std::uint64_t>(count));
+        }
+        for (const std::size_t count : attempt.outlines) {
+            hash = fold(hash, static_cast<std::uint64_t>(count));
+        }
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.oversized));
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.wrong_shape));
+        hash = fold(hash, attempt.pitch_px);
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.look));
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.refusal));
+        hash = fold(hash, static_cast<std::uint64_t>(attempt.lattice_blobs));
+        hash = fold(hash, attempt.lattice_rms);
+        hash = fold(hash, attempt.lattice_ratio);
+        hash = fold(hash, attempt.lattice_cosine);
+        hash = fold(hash, static_cast<std::uint64_t>(got.has_value()));
+        if (got.has_value()) {
+            ++reads;
+            hash = fold(hash, got->pitch);
+            hash = fold(hash, static_cast<std::uint64_t>(got->stickers_found));
+            for (const cv::Point2f& centre : got->centres) {
+                hash = fold(fold(hash, centre.x), centre.y);
+            }
+            for (const cv::Vec3f& lab : got->lab) {
+                hash = fold(fold(fold(hash, lab(0)), lab(1)), lab(2));
+            }
+            for (const bool found : got->found) {
+                hash = fold(hash, static_cast<std::uint64_t>(found));
+            }
+        }
+        all = fold(all, hash);
+        if (every_frame) {
+            fmt::print("{} {:016x} {}\n", path.stem().string(), hash,
+                       got.has_value() ? static_cast<int>(attempt.look) : -1);
+        }
+    }
+    fmt::print("{} {} frames {} reads digest {:016x}\n", session.filename().string(), frames, reads,
+               all);
+    return 0;
+}
+
+// What the glare look costs, on the frames it is taken for: the whole of a read
+// of the frame, and the look's outlines alone, in ms a frame (the fastest of
+// `runs`, so that another process on the machine is not in the number).
+int run_glare_cost(const fs::path& session, int runs) {
+    const int size = session_size(session);
+    using Clock = std::chrono::steady_clock;
+    const auto ms = [](Clock::duration d) {
+        return std::chrono::duration<double, std::milli>(d).count();
+    };
+    std::size_t frames = 0;
+    std::size_t looked = 0;
+    std::size_t nothing_clipped = 0;
+    double read_ms = 0.0;
+    double look_ms = 0.0;
+    for (const fs::path& path : frames_of(session)) {
+        const cv::Mat bgr = cv::imread(path.string(), cv::IMREAD_COLOR);
+        const auto prepared = cube::vision::prepare_frame(bgr, size);
+        if (!prepared.has_value()) {
+            continue;
+        }
+        ++frames;
+        cube::vision::SideAttempt attempt;
+        double read_best = 1e9;
+        for (int run = 0; run < runs; ++run) {
+            const auto start = Clock::now();
+            (void)cube::vision::read_side_explained(*prepared, size, attempt);
+            read_best = std::min(read_best, ms(Clock::now() - start));
+        }
+        read_ms += read_best;
+        if (attempt.outlines.at(static_cast<std::size_t>(cube::vision::FrameLook::glare)) == 0 &&
+            attempt.blobs.at(static_cast<std::size_t>(cube::vision::FrameLook::glare)) == 0) {
+            continue;
+        }
+        ++looked;
+        double best = 1e9;
+        for (int run = 0; run < runs; ++run) {
+            const auto start = Clock::now();
+            const auto contours = cube::vision::contours_without_glare(*prepared, size);
+            best = std::min(best, ms(Clock::now() - start));
+            if (run == 0 && contours == prepared->contours) {
+                ++nothing_clipped;
+            }
+        }
+        look_ms += best;
+    }
+    fmt::print(
+        "{}: {} frames, the glare look taken on {} ({} with nothing to cut out); read_side {:.3f} "
+        "ms a frame, the look's "
+        "outlines {:.3f} ms a frame it was taken on ({:.3f} ms a frame of the session)\n",
+        session.filename().string(), frames, looked, nothing_clipped,
+        frames == 0 ? 0.0 : read_ms / static_cast<double>(frames),
+        looked == 0 ? 0.0 : look_ms / static_cast<double>(looked),
+        frames == 0 ? 0.0 : look_ms / static_cast<double>(frames));
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     const std::vector<std::string_view> args(argv + 1, argv + argc);
     if (args.size() == 2 && args[0] == "replay") {
         return run_replay(fs::path(args[1]));
+    }
+    if (args.size() == 2 && args[0] == "detect-size") {
+        return run_detect_size(fs::path(args[1]));
+    }
+    if (args.size() == 2 && args[0] == "diagnose") {
+        return run_diagnose(fs::path(args[1]));
     }
     if (args.size() == 2 && args[0] == "board") {
         return run_board(fs::path(args[1]));
@@ -1348,6 +2021,16 @@ int main(int argc, char** argv) {
     if ((args.size() == 2 || args.size() == 3) && args[0] == "funnel") {
         return run_funnel(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
     }
+    if ((args.size() == 2 || args.size() == 3) && args[0] == "digest") {
+        return run_digest(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
+    }
+    if ((args.size() == 2 || args.size() == 3) && args[0] == "glare-cost") {
+        return run_glare_cost(fs::path(args[1]),
+                              args.size() == 3 ? std::max(1, std::stoi(std::string(args[2]))) : 3);
+    }
+    if ((args.size() == 2 || args.size() == 3) && args[0] == "read") {
+        return run_read(fs::path(args[1]), args.size() == 3 && args[2] == "-v");
+    }
     if ((args.size() == 2 || args.size() == 3 || args.size() == 4) && args[0] == "cost") {
         std::size_t runs = 3;
         bool every_frame = false;
@@ -1361,10 +2044,12 @@ int main(int argc, char** argv) {
         return run_cost(fs::path(args[1]), runs, every_frame);
     }
     fmt::print(
-        "usage:\n  cube_scan replay <session-dir>\n  cube_scan board <root-dir>\n"
+        "usage:\n  cube_scan replay <session-dir>\n  cube_scan diagnose <session-dir>\n  cube_scan "
+        "board <root-dir>\n"
         "  cube_scan holds <session-dir>\n  cube_scan corners <session-dir> [max-distance]\n"
         "  cube_scan corner-colours <session-dir>\n  cube_scan ambiguity <session-dir>\n"
         "  cube_scan funnel <session-dir> [-v]\n"
+        "  cube_scan read <session-dir> [-v]\n"
         "  cube_scan cost <session-dir> [runs] [-v]\n");
     return 2;
 }

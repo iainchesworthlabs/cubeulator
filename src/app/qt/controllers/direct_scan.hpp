@@ -1,5 +1,6 @@
 #pragma once
 
+#include "controllers/cube_edit.hpp"
 #include "interfaces/camera.hpp"
 
 #include <cube/diagnostics/json.hpp>
@@ -117,9 +118,33 @@ class DirectScan : public QObject {
     // ambiguous or no corner would help.
     Q_PROPERTY(QStringList settlingCorner READ settlingCorner NOTIFY sidesChanged)
 
+    // The scan has something to look over by hand: it made a cube (which may still
+    // be wrong), or six sides came in and made none. The review screen starts from
+    // it (reviewReading).
+    Q_PROPERTY(bool reviewable READ reviewable NOTIFY sidesChanged)
+
     // The camera is being kept for the solve screen: sides are looked for in
     // every frame and reported (frameWatched), and none is added to the scan.
     Q_PROPERTY(bool watching READ watching NOTIFY runningChanged)
+
+    // The size of the cube being scanned: each side is size x size stickers, so
+    // there are size * size dots and cells to a chip. 3 unless it has been set. It
+    // is chosen, never read from the camera. A size from 2 to 9 is taken, and setting
+    // it starts the scan over. A scan whose six flat sides fit more than one cube (a 2x2's
+    // one time in four, a cube a few turns from solved at any size) is settled by corner
+    // views, two or three sides in one picture, up to size 7.
+    Q_PROPERTY(int size READ size WRITE setSize NOTIFY sizeChanged)
+    // Whether the size is being found from the cube in view (the default for a scan
+    // that is not given one): the largest size, 2 to 5, whose side the reader finds in
+    // the frames, which is the cube's, since a reader of N x N also finds a smaller grid
+    // inside a bigger side and never a bigger one. It decides on the first frames of a
+    // cube held up and stops looking once a side is captured. Setting `size` turns it
+    // off, so a person's choice stands; useAutoSize() turns it on again.
+    Q_PROPERTY(bool autoSize READ autoSize NOTIFY autoSizeChanged)
+    // The size a scan is of unless the screen says another: 3, or the one CUBE_SCAN_SIZE
+    // asks for (2 to 9), which is how a developer records and scans a cube that is not a
+    // 3x3 while the entry screen offers the camera only for a 3x3.
+    Q_PROPERTY(int defaultSize READ defaultSize CONSTANT)
 
 public:
     explicit DirectScan(QObject* parent = nullptr);
@@ -140,8 +165,18 @@ public:
     [[nodiscard]] int sidesRead() const noexcept { return static_cast<int>(sides_.size()); }
     [[nodiscard]] bool conflicted() const noexcept { return conflicted_; }
     [[nodiscard]] bool ambiguous() const noexcept { return ambiguous_; }
-    [[nodiscard]] bool complete() const noexcept { return scanned_.has_value(); }
+    [[nodiscard]] bool complete() const noexcept { return scanned_n_.has_value(); }
+    [[nodiscard]] int size() const noexcept { return size_; }
+    [[nodiscard]] int defaultSize() const noexcept { return default_size_; }
+    void setSize(int size);
+    [[nodiscard]] bool autoSize() const noexcept { return auto_size_; }
+    // Finds the size from the cube again, starting from a 3x3, and scans over.
+    Q_INVOKABLE void useAutoSize();
+    // What a scan begun without a size is: found from the cube, or the developer's
+    // CUBE_SCAN_SIZE when there is one.
+    Q_INVOKABLE void useDefaultSize();
     [[nodiscard]] QStringList settlingCorner() const { return settling_corner_; }
+    [[nodiscard]] bool reviewable() const noexcept { return scanned_n_.has_value() || conflicted_; }
     [[nodiscard]] bool watching() const noexcept { return watching_; }
     [[nodiscard]] QString recordingRoot() const { return recording_root_; }
 
@@ -154,15 +189,26 @@ public:
     // ever recorded: the solve screen's camera (watching) writes nothing.
     void setRecordingRoot(const QString& root);
 
-    // The cube, once scanCompleted has fired for the current scan.
+    // The cube, once scanCompleted has fired for the current scan: the 3x3 of a scan of
+    // size 3 (nothing for another size), and the cube of any size in cubeN().
     [[nodiscard]] std::optional<cube::solver::Cube> cube() const {
         return scanned_.transform([](const cube::vision::ScannedCube& s) { return s.cube; });
+    }
+    [[nodiscard]] std::optional<cube::nxn::NCube> cubeN() const {
+        return scanned_n_.transform([](const cube::vision::ScannedCubeN& s) { return s.cube; });
     }
     // What each colour measured in that scan; later frames from the same
     // camera session are matched against these.
     [[nodiscard]] std::optional<cube::vision::SessionColours> colours() const {
-        return scanned_.transform([](const cube::vision::ScannedCube& s) { return s.colours; });
+        return scanned_n_.transform([](const cube::vision::ScannedCubeN& s) { return s.colours; });
     }
+
+    // The scan as the review screen takes it (scan_reading.hpp): the cube, with the
+    // stickers the colour naming was not sure of marked, when the scan made one;
+    // otherwise the sides it named, each as the camera had it. Empty when the scan
+    // has nothing to show yet. Judges the scan afresh (SideScan::diagnose), so call
+    // it when the person asks, not every frame.
+    [[nodiscard]] std::optional<Reading> reviewReading() const;
 
     // The side in the frame just processed, if there was one square to the
     // camera. While watching this is every frame's read, held still or not.
@@ -205,10 +251,12 @@ public slots:
     void restart();
 
 signals:
+    void autoSizeChanged();
     void runningChanged();
     void frameUpdated();
     void sidesChanged();
     void recordingRootChanged();
+    void sizeChanged();
     // Six sides have been read and make exactly one valid cube: cube().
     void scanCompleted();
     // A frame has been looked at while watching: read() is its side, or
@@ -223,7 +271,7 @@ private:
     void openCamera(const QString& deviceId);
     // Evaluates the scan as scanned() does, and - the channel being on - writes
     // what the evaluation did, once for each distinct outcome.
-    [[nodiscard]] cube::Result<cube::vision::ScannedCube> evaluateScan(std::string_view trigger);
+    [[nodiscard]] cube::Result<cube::vision::ScannedCubeN> evaluateScan(std::string_view trigger);
     // One `camera` record: `event`, the device, the frame size, the lock.
     void noteCamera(std::string_view event) const;
     [[nodiscard]] bool diagnosing() const noexcept;
@@ -247,6 +295,19 @@ private:
     bool awaiting_lock_ = false;
     int frames_awaiting_lock_ = 0;
 
+    int size_ = 3;
+    int default_size_ = 3;
+    // Finding the size from the cube (autoSize): the largest size read in each of the
+    // last frames that read any, and whether a side has been captured, after which the
+    // size is not looked for.
+    bool auto_size_ = true;
+    bool size_locked_ = false;
+    std::vector<int> size_votes_;
+    // The size the frame shows, when it shows a cube: `read_here` is whether the reader
+    // found a side at size_. Nothing until enough frames agree.
+    [[nodiscard]] std::optional<int> detectedSize(const cv::Mat& bgr, bool read_here);
+    // Becomes a scan of `size` without a person having chosen it.
+    void adoptSize(int size);
     cube::vision::SideScan scan_;
     std::optional<cube::vision::SideRead> read_;
     bool reading_ = false;
@@ -255,6 +316,8 @@ private:
     bool conflicted_ = false;
     bool ambiguous_ = false;
     QStringList settling_corner_;
+    // The scan's cube, of any size; and for a size of 3 the same as a 3x3.
+    std::optional<cube::vision::ScannedCubeN> scanned_n_;
     std::optional<cube::vision::ScannedCube> scanned_;
     bool watching_ = false;
 

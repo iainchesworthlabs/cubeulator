@@ -173,14 +173,14 @@ TEST_CASE("a cube is scanned and solved, from launch to the last move", "[system
         // The solve screen keeps the camera, to see how the cube is held.
         CHECK(FakeCamera::instance().capturing());
 
-        // Previous is off at the start, Next move is on.
+        // Previous is off at the start, Next turn is on.
         QQuickItem* previous = app.find("solve.previous");
         QQuickItem* next = app.find("solve.next");
         REQUIRE(previous != nullptr);
         REQUIRE(next != nullptr);
         CHECK_FALSE(previous->property("enabled").toBool());
         CHECK(next->property("enabled").toBool());
-        CHECK(next->property("text").toString() == "Next move");
+        CHECK(next->property("text").toString() == "Next turn");
         app.settle();
 
         // The moves, a press each for the first and last few and for the first
@@ -267,6 +267,18 @@ TEST_CASE("the solve screen has a way out that reads the cube again", "[system][
     REQUIRE(app.wait_for([&]() { return scan.running() && !scan.watching(); }));
     CHECK(scan.sidesRead() == 0);
     CHECK(app.find_text("0 of 6 sides read") != nullptr);
+
+    // The cube being solved is a 3x3, so the scan is at 3, chosen. The size can still be
+    // changed here, or handed back to be found from the cube.
+    CHECK(scan.size() == 3);
+    CHECK_FALSE(scan.autoSize());
+    for (const int size : {2, 4, 5, 3}) {
+        app.click(QStringLiteral("scan.size.%1").arg(size));
+        REQUIRE(app.wait_for([&]() { return scan.size() == size; }));
+        CHECK_FALSE(scan.autoSize());
+    }
+    app.click("scan.size.auto");
+    REQUIRE(app.wait_for([&]() { return scan.autoSize(); }));
 }
 
 TEST_CASE("cancelling mid-scan returns to launch and lets go of the camera", "[system][scan]") {

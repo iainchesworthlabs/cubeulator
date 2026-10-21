@@ -1,6 +1,8 @@
 #pragma once
 
+#include "controllers/about_info.hpp"
 #include "controllers/camera_controller.hpp"
+#include "controllers/colour_entry.hpp"
 #include "controllers/diagnostics.hpp"
 #include "controllers/direct_scan.hpp"
 #include "controllers/held_cube.hpp"
@@ -43,6 +45,9 @@ struct AppControllers {
     CameraController camera;
     // The scan screen's controller.
     DirectScan directScan;
+    // What the About and Licences screens show: the name, the version, the
+    // publisher, and the third-party notices the build generated.
+    AboutInfo about;
     // What the platform says about itself; QML binds to it instead of
     // testing Qt.platform.os.
     PlatformFacts platform;
@@ -55,6 +60,10 @@ struct AppControllers {
     // steps through one, and puts the unfinished one back on request. Its file
     // is in the app's own data folder (SolveHistory::defaultFile).
     SolveHistory history{solve};
+    // A cube typed in colour by colour, of any size (the screen for a cube the
+    // camera does not read, and the screen where a misread scan is put right); it
+    // hands a valid one to the solve controller.
+    ColourEntry colours{solve, &directScan};
 
 private:
     // What both constructors do once the members are there.

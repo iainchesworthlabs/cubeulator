@@ -91,7 +91,8 @@ Written by the recorder when it starts.
 
 | Field | Meaning |
 | --- | --- |
-| `state` | The cube's true state as a 54-character face-major string in **U R F D L B** order, each face's nine stickers row-major, each character naming the face whose centre colour that sticker shows (so positions 4, 13, 22, 31, 40, 49 are always `U R F D L B`). Validated through `Cube::from_facelets` and solvability at record time; a string that cannot build a solvable cube refuses to record. `null` when not known. |
+| `state` | The cube's true state as a `6 * size^2`-character face-major string (54 for a 3x3) in **U R F D L B** order, each face's `size^2` stickers row-major, each character naming the face whose centre colour that sticker shows. On a 3x3 positions 4, 13, 22, 31, 40, 49 are always `U R F D L B`; on any other odd size the middle sticker of each face is, likewise, that face's letter (an even size has no middle sticker and no such rule). Validated at record time, by `Cube::from_facelets` and solvability for a 3x3 and by `cube::nxn::validate` ([the oracle](nxn-solver.md#is-this-a-cube)) for any other size; a string that cannot build a cube a person could hold refuses to record. `null` when not known. |
+| `size` | The cube's side length, 2 to 9. **Written only when it is not 3**, so a 3x3's manifest is the file it always was; a manifest without it is a 3x3. A `size` outside 2 to 9, or a `state` of another length than `6 * size^2`, refuses to record. |
 | `lighting` | Free text, e.g. `"warm tungsten front lamp"`. |
 | `motion_script` | Free text. The app writes `"direct scan"`. |
 | `camera` | Camera identifier. |
@@ -106,7 +107,7 @@ Consumers ignore unknown keys.
 not fail to write a frame, the index parses, passes are contiguous, `t_ms` does
 not decrease, every row that has not been overwritten has its frame (and
 `fullres/` file when that stream exists), the manifest's `state`, if it has one,
-still validates, and no recorder-side drops were flagged. The recorder's queue
+still validates for the manifest's `size`, and no recorder-side drops were flagged. The recorder's queue
 holds 256 frames (about 8.5 s at 30 Hz); a frame pushed to a full queue is
 dropped and counted, the count is written to `recording_stats.json` when the
 recorder stops, and `check_recording` fails a clip that has any.
@@ -138,6 +139,15 @@ Optional, for scoring with `cube_scan board`. Six words of nine letters from
 `WYROGB` (white, yellow, red, orange, green, blue), one per side, each side
 row-major as seen from outside the cube, in any orientation and any order.
 Nothing in the app writes it; it is typed from the cube in hand.
+
+For a cube that is not a 3x3 (the manifest says `size`), the words are `size^2`
+letters long, and `cube_scan replay` and `board` read the session as that size
+and score the cube against them (odd sizes: an even size has no middle sticker to
+put its sides together by). The other `cube_scan` commands are a 3x3's.
+`cube_scan_s0 --session <dir> <size> <seed>` writes a drawn cube as such a session. The app
+records one when it is started with `CUBE_SCAN_SIZE=5` (an odd size, 3 to 9) as well as
+`CUBE_SCAN_RECORD_DIR`: the scan from the launch screen is then of that size, and the manifest
+says so. The entry screen still offers the camera for a 3x3 only.
 
 ## `layout.txt`
 

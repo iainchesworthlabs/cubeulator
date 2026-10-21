@@ -16,6 +16,8 @@ add_library(cube_platform
     interfaces/crash_handler.hpp
     interfaces/paths.hpp
     interfaces/platform_info.hpp
+    platform/detail/camera_frame.hpp
+    platform/detail/camera_frame.cpp
     platform/detail/capture_thread_scope.hpp
     platform/detail/opencv_capture_loop.hpp
     platform/detail/opencv_capture_loop.cpp
@@ -46,12 +48,16 @@ target_link_libraries(cube_platform
 # ---------------------------------------------------------------------------
 # cube_app - the Qt6 Quick (QML) GUI shell, shared across every platform (see
 # docs/architecture.md). The ios-clang preset still sets
-# CUBEULATOR_BUILD_APP=OFF (Qt-for-iOS packaging isn't wired up yet); every
-# other preset, android-clang included, builds this block.
+# CUBEULATOR_BUILD_APP=OFF (the library-only leg, no Qt); every other preset,
+# android-clang and ios-device-release included, builds this block.
 # ---------------------------------------------------------------------------
 if(CUBEULATOR_BUILD_APP)
     find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Quick Qml Gui QuickControls2 Quick3D ShaderTools QmlCore)
     qt_standard_project_setup(REQUIRES 6.5)
+
+    # The module's QML files sit in qt/, below the module's own directory, so
+    # each directory that holds some needs a qmldir of its own (QTP0004).
+    qt_policy(SET QTP0004 NEW)
 
     # The Qt libraries the platform's own implementations need (Android's
     # camera uses QJniObject for the permission-settings deep link; see its
@@ -71,10 +77,16 @@ if(CUBEULATOR_BUILD_APP)
     # so the two are constructed and wired together in C++.
     # ---------------------------------------------------------------------
     add_library(cube_app_controllers STATIC
+        qt/controllers/about_info.hpp
+        qt/controllers/about_info.cpp
         qt/controllers/app_controllers.hpp
         qt/controllers/app_controllers.cpp
         qt/controllers/camera_controller.hpp
         qt/controllers/camera_controller.cpp
+        qt/controllers/colour_entry.hpp
+        qt/controllers/colour_entry.cpp
+        qt/controllers/cube_edit.hpp
+        qt/controllers/cube_edit.cpp
         qt/controllers/diagnostic_records.hpp
         qt/controllers/diagnostic_records.cpp
         qt/controllers/diagnostics.hpp
@@ -82,6 +94,8 @@ if(CUBEULATOR_BUILD_APP)
         qt/controllers/direct_scan.hpp
         qt/controllers/direct_scan.cpp
         qt/controllers/held_cube.hpp
+        qt/controllers/scan_reading.hpp
+        qt/controllers/scan_reading.cpp
         qt/controllers/held_cube.cpp
         qt/controllers/platform_facts.hpp
         qt/controllers/platform_facts.cpp
@@ -96,6 +110,11 @@ if(CUBEULATOR_BUILD_APP)
         qt/solve_controller.cpp)
 
     target_include_directories(cube_app_controllers PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/qt")
+
+    # The publisher the About screen names: one line, in cmake/AppIdentity.cmake.
+    include("${PROJECT_SOURCE_DIR}/cmake/AppIdentity.cmake")
+    target_compile_definitions(cube_app_controllers PRIVATE
+        "CUBEULATOR_PUBLISHER_NAME=\"${CUBEULATOR_PUBLISHER}\"")
 
     target_link_libraries(cube_app_controllers
         PUBLIC
@@ -129,6 +148,10 @@ if(CUBEULATOR_BUILD_APP)
     qt_add_qml_module(cube_app_qml
         URI Cubeulator
         VERSION 1.0
+        # Where the generated qmldir and qmltypes go. Qt expects the sources
+        # to sit in a directory called Cubeulator and defaults to this one
+        # directory up when they do not; qmllint then cannot find the module.
+        OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Cubeulator"
         STATIC
         QML_FILES
             qt/Main.qml
@@ -139,8 +162,11 @@ if(CUBEULATOR_BUILD_APP)
             qt/Icon.qml
             qt/CubeView.qml
             qt/Cube3DView.qml
+            qt/CubeNView.qml
             qt/StatsOverlay.qml
             qt/LaunchScreen.qml
+            qt/EntryScreen.qml
+            qt/ColoursScreen.qml
             qt/PermissionScreen.qml
             qt/DirectScanScreen.qml
             qt/SolveScreen.qml
@@ -148,6 +174,9 @@ if(CUBEULATOR_BUILD_APP)
             qt/SettingsScreen.qml
             qt/CompleteScreen.qml
             qt/HistoryScreen.qml
+            qt/AboutScreen.qml
+            qt/LicencesScreen.qml
+            qt/ListRow.qml
             qt/ConfirmDialog.qml
             qt/SolutionScreen.qml
             qt/TurnArrow.qml
@@ -156,9 +185,15 @@ if(CUBEULATOR_BUILD_APP)
             qt/CameraPermission.cpp
             qt/SystemTheme.hpp
             qt/SystemTheme.cpp
+            qt/CubeNModel.hpp
+            qt/CubeNModel.cpp
+            qt/CubeNGeometry.hpp
+            qt/CubeNGeometry.cpp
         RESOURCES
             qt/shaders/toon.frag
             qt/shaders/cel.frag
+            qt/shaders/toon_mesh.frag
+            qt/shaders/cel_mesh.frag
             qt/shaders/celshade_post.frag
             qt/lightprobe/sky.ktx)
 
@@ -170,7 +205,7 @@ if(CUBEULATOR_BUILD_APP)
     # for CameraPermission's own QML_ELEMENT registration (SolveController
     # moved to cube_app_controllers - see the comment there - and no longer
     # needs anything from this target).
-    target_link_libraries(cube_app_qml PRIVATE cube::platform Qt6::Gui Qt6::Qml)
+    target_link_libraries(cube_app_qml PRIVATE cube::lib cube::platform Qt6::Gui Qt6::Qml Qt6::Quick3D)
 
     # The generated cube_app_qml_qmltyperegistrations.cpp includes
     # CameraPermission's QML_ELEMENT header via "#include <CameraPermission.hpp>"
@@ -181,7 +216,24 @@ if(CUBEULATOR_BUILD_APP)
     target_include_directories(cube_app_qml PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/qt")
 
     qt_add_executable(cube_app
-        qt/main.cpp)
+        qt/main.cpp
+        qt/render_profiler.hpp
+        qt/render_profiler.cpp
+        qt/qsg_log_bridge.hpp
+        qt/qsg_log_bridge.cpp)
+
+    # How the render profiler finds the Vulkan objects Tracy's GPU context
+    # needs (QVulkanInstance and the loader's entry points): its own file,
+    # because it needs the Vulkan headers Qt's QVulkanInstance is built on, and
+    # only the platforms whose fragment sets CUBEULATOR_PLATFORM_PROFILING_VULKAN
+    # have them. The other platforms get the stub that finds nothing.
+    if(CUBEULATOR_ENABLE_TRACY AND CUBEULATOR_PLATFORM_PROFILING_VULKAN)
+        find_package(VulkanHeaders CONFIG REQUIRED)
+        target_sources(cube_app PRIVATE qt/render_profiler_vulkan.cpp)
+        target_link_libraries(cube_app PRIVATE Vulkan::Headers)
+    else()
+        target_sources(cube_app PRIVATE qt/render_profiler_vulkan_none.cpp)
+    endif()
 
     # Target properties the platform's packaging needs (Android's custom
     # manifest, for one): <property> <value> pairs from its fragment.
@@ -286,7 +338,7 @@ endif()
 # ---------------------------------------------------------------------------
 if(TARGET cube_app)
     include(ThirdPartyNotices)
-    cube_add_third_party_notices(cube_app)
+    cube_add_third_party_notices(cube_app cube_app_qml)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -300,6 +352,22 @@ if(CUBEULATOR_BUILD_APP)
     target_sources(cube_app_qml PRIVATE
         qt/kit/bundled_fonts.hpp
         qt/kit/bundled_fonts.cpp)
+
+    # The design's Latin faces (qt/fonts/: Archivo, IBM Plex Mono; their OFL
+    # texts sit beside them and the generated notices list them) where the
+    # platform says to. Without them Theme.qml names two families the machine
+    # does not have, Qt searches every font it has for them at the first text
+    # (about 350 ms) and sets the text in its default face instead.
+    if(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS)
+        file(GLOB _cube_latin_fonts CONFIGURE_DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/qt/fonts/*.ttf"
+            "${CMAKE_CURRENT_SOURCE_DIR}/qt/fonts/*.otf")
+        qt_add_resources(cube_app_qml "latin_fonts"
+            PREFIX "/fonts"
+            BASE "${CMAKE_CURRENT_SOURCE_DIR}/qt/fonts"
+            FILES ${_cube_latin_fonts})
+        unset(_cube_latin_fonts)
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------
@@ -349,6 +417,8 @@ if(CUBEULATOR_BUILD_APP)
         desktop/desktop_integration.hpp
         desktop/desktop_integration.cpp
         desktop/keep_awake.hpp
+        desktop/graphics_backend.hpp
+        desktop/graphics_backend.cpp
         desktop/keep_awake.cpp
         desktop/window_geometry.hpp
         desktop/window_geometry.cpp

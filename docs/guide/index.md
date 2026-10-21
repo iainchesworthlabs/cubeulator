@@ -12,7 +12,7 @@ solution, and shows you the turns one at a time on a 3D cube.
 
 ## What you need
 
-- **A 3x3 cube.** It reads best on a cube with dark (black) plastic between the
+- **A cube.** The camera reads a 3x3, and it reads best on a cube with dark (black) plastic between the
   stickers, which is most of them. A cube with white or light plastic, or no
   stickers at all, is not read yet.
 - **A camera.** A laptop's webcam or a USB one is enough; in a browser on a
@@ -32,7 +32,7 @@ solution, and shows you the turns one at a time on a 3D cube.
    camera, one after another, in any order and either way up. Each side fills a
    chip along the bottom of the screen. See [Scanning a cube](scan.md).
 3. **Follow the 3D cube.** The layer to turn nudges the way it has to go; make
-   that turn on your cube, and press *Next move* (or let the camera see it and
+   that turn on your cube, and press *Next turn* (or let the camera see it and
    it steps on by itself). See [Following the solution](solve.md).
 4. **Finish.** The screen says *Solved* with the number of turns and the time,
    and offers another scan, or a review of the whole solution. The solve is
@@ -45,6 +45,7 @@ solution, and shows you the turns one at a time on a 3D cube.
 | [Installing](install.md) | The package for each system, the first-run prompts, and uninstalling |
 | [Scanning a cube](scan.md) | How to hold the cube, what the screen is telling you, and what to do when it asks again |
 | [Following the solution](solve.md) | The solve screen, the three methods, and how the camera follows your turns |
+| [Another size of cube](other-sizes.md) | A 2x2, 4x4 or 5x5: type its scramble or its colours, and follow it |
 | [Past solves](history.md) | The list of cubes you have solved, and carrying on one you left |
 | [Settings and shortcuts](settings.md) | Camera, method, appearance, language, and the keyboard |
 | [Privacy](privacy.md) | What the camera picture is used for, and what is kept |
@@ -59,9 +60,11 @@ solution, and shows you the turns one at a time on a 3D cube.
       checked on recorded sessions of one cube in tungsten light and in backlit
       daylight, and on a webcam by hand. Other cameras, rooms and cubes are what
       the beta is for.
-    - **A sticker cannot be corrected by hand yet.** If one is read wrongly, the
-      scan will say the six sides do not make a cube, and you start the scan
-      again.
+    - **The camera is proven on a 3x3, much less on other sizes.** A 2x2 to a
+      5x5 can be scanned too, but so far only as drawings on a screen and a few
+      recordings, not many cubes in a hand; **Check the colours** puts right
+      what it misreads, and you can type a scramble or the colours in instead
+      ([Another size of cube](other-sizes.md)).
     - **Some of the wording is English whatever language you choose:** the scan
       screen's guidance and most of the words around the solution. See
       [Settings and shortcuts](settings.md#language).

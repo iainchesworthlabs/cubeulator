@@ -1,7 +1,8 @@
 name: Release
 
 # Builds the desktop packages (an installer for Windows, a disk image for macOS,
-# a .deb and an .rpm for Linux) and the web build's zip, signs and attests
+# a .deb and an .rpm for Linux), the iPhone app (an ad-hoc .ipa for the
+# maintainer's own devices) and the web build's zip, signs and attests
 # them, renders the release notes from CHANGELOG.md and, for a real release,
 # creates a DRAFT GitHub Release. How to cut one is docs/releasing.md.
 #
@@ -33,6 +34,13 @@ on:
         description: >-
           Dry run: build, sign with a throwaway key and render the notes, but
           create no tag and no release. Untick for a real release.
+        type: boolean
+        default: true
+      ios:
+        description: >-
+          Build the iPhone app too, signed ad hoc with the Apple signing secrets
+          (docs/ios-install.md). A tag push always builds it. Untick to
+          rehearse the rest without a Mac and without those secrets.
         type: boolean
         default: true
       unsigned:
@@ -75,6 +83,7 @@ jobs:
       from_unreleased: ${{ steps.check.outputs.from_unreleased }}
       publish: ${{ steps.mode.outputs.publish }}
       dry_run: ${{ steps.mode.outputs.dry_run }}
+      ios: ${{ steps.mode.outputs.ios }}
     steps:
       # The whole history, with the tags: whether a release commit sits on main
       # and whether the tag exists need it.
@@ -98,10 +107,12 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           DRY_RUN_INPUT: ${{ inputs.dry_run }}
+          IOS_INPUT: ${{ inputs.ios }}
         run: |
           publish=false
           dry_run=true
           pushed_tag=""
+          ios=true
           if [ "$EVENT" = "push" ]; then
             # A tag was pushed: the tag is the release.
             publish=true
@@ -111,12 +122,18 @@ jobs:
             publish=true
             dry_run=false
           fi
+          # A tag push builds iOS whatever was ticked: the release is not the
+          # place to leave a platform out by accident. Only a dispatch can.
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$IOS_INPUT" = "false" ]; then
+            ios=false
+          fi
           {
             echo "publish=$publish"
             echo "dry_run=$dry_run"
             echo "pushed_tag=$pushed_tag"
+            echo "ios=$ios"
           } >> "$GITHUB_OUTPUT"
-          echo "event=$EVENT publish=$publish dry_run=$dry_run tag=${pushed_tag:-<made at the end>}"
+          echo "event=$EVENT publish=$publish dry_run=$dry_run ios=$ios tag=${pushed_tag:-<made at the end>}"
 
       # The version is the one CMakeLists.txt declares; the tag, the changelog
       # section and the package names must all agree with it
@@ -235,7 +252,7 @@ jobs:
           triplet: ${{ matrix.triplet }}
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # v4.4.2
+        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -371,14 +388,14 @@ jobs:
       # build's own inventory of what it linked and deployed, which it refuses
       # to package without resolving (docs/licensing.md).
       - name: Keep the third-party inventory
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: notices-${{ matrix.artifact }}
           path: build/${{ matrix.preset }}/third_party_notices/third-party-notices.json
           if-no-files-found: error
 
       - name: Upload the package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-${{ matrix.artifact }}
           path: |
@@ -387,6 +404,36 @@ jobs:
             Cubeulator-*.deb
             Cubeulator-*.rpm
           if-no-files-found: error
+
+  # The iPhone app: the Qt app for iOS (arm64) built by Xcode on a hosted Mac,
+  # signed ad hoc with the maintainer's Apple Distribution certificate and an
+  # ad-hoc provisioning profile, packed as an .ipa with an over-the-air install
+  # manifest. The build, the signing and their checks are
+  # .github/workflows/ios-device.yml, which the maintainer also runs by hand;
+  # this calls it so that the package a release attaches is the one that is
+  # installed, not a test build. It installs only on devices registered in the
+  # profile (docs/ios-install.md). The secrets are named here, one by one, and
+  # not inherited. Holding Apple's signing material, it has no other permission.
+  ios:
+    name: Build the iOS app
+    needs: verify
+    if: ${{ github.event_name != 'pull_request' && needs.verify.outputs.ios == 'true' }}
+    permissions:
+      contents: read
+    # The `$/` self-repository form is not accepted for a reusable workflow
+    # (actionlint rejects it; GitHub documents only this path form here).
+    uses: ./.github/workflows/ios-device.yml # zizmor: ignore[self-repository]
+    with:
+      version: ${{ needs.verify.outputs.version }}
+      tag: ${{ needs.verify.outputs.tag }}
+      signed: true
+      save_cache: false
+    secrets:
+      IOS_DIST_CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
+      IOS_DIST_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_PROVISIONING_PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
 
   # The browser build: Qt and OpenCV for WebAssembly, as one directory of static
   # files, zipped with the licence, the notices and a note on hosting it
@@ -435,14 +482,14 @@ jobs:
 
       # What the package holds, for the SBOM (tools/release/make_sbom.py).
       - name: Keep the third-party inventory
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: notices-web
           path: build/web-emscripten-release/third_party_notices/third-party-notices.json
           if-no-files-found: error
 
       - name: Upload the package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-web
           path: dist-web/Cubeulator-*-web.zip
@@ -455,8 +502,10 @@ jobs:
   # repository.
   sign:
     name: Sign, attest and render the notes
-    needs: [verify, build, web]
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [verify, build, web, ios]
+    # The iOS job is skipped only when a dispatch asked for no iPhone build;
+    # one that ran and failed stops the release here like any other platform.
+    if: ${{ github.event_name != 'pull_request' && !cancelled() && needs.verify.result == 'success' && needs.build.result == 'success' && needs.web.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.ios.result) }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -466,6 +515,7 @@ jobs:
       VERSION: ${{ needs.verify.outputs.version }}
       TAG: ${{ needs.verify.outputs.tag }}
       REPO: ${{ github.repository }}
+      IOS: ${{ needs.verify.outputs.ios }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -473,7 +523,7 @@ jobs:
           persist-credentials: false
 
       - name: Download the packages
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: package-*
           merge-multiple: true
@@ -486,9 +536,16 @@ jobs:
           ls -l
           # Exactly one package per platform, named for this version, or
           # something is wrong.
-          for pattern in "Cubeulator-${VERSION}-windows-x64.exe" "Cubeulator-${VERSION}-macos-arm64.dmg" \
-                         "Cubeulator-${VERSION}-linux-x64.deb" "Cubeulator-${VERSION}-linux-x64.rpm" \
-                         "Cubeulator-${VERSION}-web.zip"; do
+          patterns=("Cubeulator-${VERSION}-windows-x64.exe" "Cubeulator-${VERSION}-macos-arm64.dmg"
+                    "Cubeulator-${VERSION}-linux-x64.deb" "Cubeulator-${VERSION}-linux-x64.rpm"
+                    "Cubeulator-${VERSION}-web.zip")
+          expected=5
+          if [ "$IOS" = "true" ]; then
+            # The iPhone app and the over-the-air manifest that names it.
+            patterns+=("Cubeulator-${VERSION}-ios.ipa" "Cubeulator-${VERSION}-ios-manifest.plist")
+            expected=7
+          fi
+          for pattern in "${patterns[@]}"; do
             n=$(find . -maxdepth 1 -name "$pattern" | wc -l)
             if [ "$n" -ne 1 ]; then
               echo "::error::expected one $pattern, found $n"
@@ -496,8 +553,8 @@ jobs:
             fi
           done
           n=$(find . -maxdepth 1 -type f | wc -l)
-          if [ "$n" -ne 5 ]; then
-            echo "::error::expected five packages, found $n files"
+          if [ "$n" -ne "$expected" ]; then
+            echo "::error::expected $expected files, found $n"
             exit 1
           fi
 
@@ -505,22 +562,30 @@ jobs:
       # under the same GPG signature as the packages are. It says what is
       # INSIDE them, per platform, from the build's own inventory
       # (tools/release/make_sbom.py), not what a scan of an installer sees.
+      # The CycloneDX file is the same bill of materials reshaped from the SPDX
+      # document, for the scanners that read that format; the two cannot
+      # disagree.
       - name: Download the third-party inventories
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: notices-*
           path: inventory
 
-      - name: Make the SBOM (SPDX)
+      - name: Make the SBOMs (SPDX and CycloneDX)
         shell: bash
         run: |
+          notices=(--notices windows=inventory/notices-windows-x64/third-party-notices.json
+                   --notices macos=inventory/notices-macos-arm64/third-party-notices.json
+                   --notices linux=inventory/notices-linux-x64/third-party-notices.json
+                   --notices web=inventory/notices-web/third-party-notices.json)
+          if [ "$IOS" = "true" ]; then
+            notices+=(--notices ios=inventory/notices-ios/third-party-notices.json)
+          fi
           python3 tools/release/make_sbom.py \
             --version "$VERSION" --tag "$TAG" --repo "$REPO" --files dist/files \
-            --notices windows=inventory/notices-windows-x64/third-party-notices.json \
-            --notices macos=inventory/notices-macos-arm64/third-party-notices.json \
-            --notices linux=inventory/notices-linux-x64/third-party-notices.json \
-            --notices web=inventory/notices-web/third-party-notices.json \
-            --output "dist/files/Cubeulator-${VERSION}.spdx.json"
+            "${notices[@]}" \
+            --output "dist/files/Cubeulator-${VERSION}.spdx.json" \
+            --cyclonedx-output "dist/files/Cubeulator-${VERSION}.cdx.json"
 
       # What a downloader checks against, whether or not the signing key exists.
       - name: Write SHA512SUMS
@@ -608,12 +673,16 @@ jobs:
             gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 --armor --detach-sign "$1" 3<<<"$passphrase"
           }
           cd dist/files
-          for f in SHA512SUMS Cubeulator-*.exe Cubeulator-*.dmg Cubeulator-*.deb Cubeulator-*.rpm Cubeulator-*.zip Cubeulator-*.spdx.json; do
+          # No iPhone files when a dispatch left the iPhone build out.
+          shopt -s nullglob
+          signed_files=(SHA512SUMS Cubeulator-*.exe Cubeulator-*.dmg Cubeulator-*.deb Cubeulator-*.rpm Cubeulator-*.zip
+                        Cubeulator-*.ipa Cubeulator-*-ios-manifest.plist Cubeulator-*.spdx.json Cubeulator-*.cdx.json)
+          for f in "${signed_files[@]}"; do
             sign "$f"
             gpg --verify "$f.asc" "$f"
           done
           echo "signed=true" >> "$GITHUB_OUTPUT"
-          echo "Signed SHA512SUMS, the SBOM and five packages with key $keyid."
+          echo "Signed ${#signed_files[@]} files (SHA512SUMS, both SBOMs, the packages) with key $keyid."
 
       # Keyless SLSA provenance: which repository, workflow and commit built
       # these bytes. The GPG signature says who vouches for them; the two are
@@ -626,6 +695,7 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
+            dist/files/*.ipa
             dist/files/*.zip
 
       - name: Attest the SBOM
@@ -636,8 +706,21 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
+            dist/files/*.ipa
             dist/files/*.zip
           sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.spdx.json
+
+      - name: Attest the CycloneDX SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/files/*.exe
+            dist/files/*.dmg
+            dist/files/*.deb
+            dist/files/*.rpm
+            dist/files/*.ipa
+            dist/files/*.zip
+          sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.cdx.json
 
       # The attestation is only worth the notes' sentence about it if it
       # verifies. A short retry: it can take a moment to be readable.
@@ -648,7 +731,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for f in dist/files/*.exe dist/files/*.dmg dist/files/*.deb dist/files/*.rpm dist/files/*.zip; do
+          for f in dist/files/*.exe dist/files/*.dmg dist/files/*.deb dist/files/*.rpm dist/files/*.ipa dist/files/*.zip; do
             ok=false
             for attempt in 1 2 3 4 5 6; do
               if gh attestation verify "$f" --repo "$REPO" > /dev/null 2>&1; then
@@ -663,6 +746,40 @@ jobs:
             fi
             echo "attested: $f"
           done
+
+      # What the SBOM attestations hold must be the SBOM files that are
+      # released: the document GitHub attests for a package, read back through
+      # `gh attestation verify --predicate-type`, is compared with the file, as
+      # JSON. Any package carries both; the .deb stands for them.
+      - name: Verify the SBOM attestations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          package="dist/files/Cubeulator-${VERSION}-linux-x64.deb"
+          check_sbom() {
+            local predicate="$1" file="$2" ok=false
+            for attempt in 1 2 3 4 5 6; do
+              if gh attestation verify "$package" --repo "$REPO" --predicate-type "$predicate" \
+                   --format json --jq '.[0].verificationResult.statement.predicate' > "$RUNNER_TEMP/attested.json"; then
+                ok=true
+                break
+              fi
+              sleep 10
+            done
+            if [ "$ok" != "true" ]; then
+              echo "::error::no verifiable $predicate attestation for $package"
+              exit 1
+            fi
+            if ! diff <(jq -S . "$RUNNER_TEMP/attested.json") <(jq -S . "$file") > /dev/null; then
+              echo "::error::the $predicate document attested for $package is not $file"
+              exit 1
+            fi
+            echo "attested and identical: $file"
+          }
+          check_sbom https://spdx.dev/Document/v2.3 "dist/files/Cubeulator-${VERSION}.spdx.json"
+          check_sbom https://cyclonedx.org/bom "dist/files/Cubeulator-${VERSION}.cdx.json"
 
       # The notes are the changelog's section laid out the way every release of
       # the family reads (tools/release/render_release_notes.py). What the
@@ -687,7 +804,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Keep the files and the notes
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-${{ needs.verify.outputs.version }}
           path: dist
@@ -720,7 +837,7 @@ jobs:
       contents: write
     steps:
       - name: Download the release files and notes
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-${{ needs.verify.outputs.version }}
           path: dist

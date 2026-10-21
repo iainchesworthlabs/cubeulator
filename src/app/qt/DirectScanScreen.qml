@@ -16,7 +16,9 @@ Item {
 
     readonly property var sides: DirectScan.sides
     readonly property var points: DirectScan.stickerPoints
-    readonly property bool cubeInView: points.length === 9
+    // The cube's size: a side is size x size stickers, nine for a 3x3.
+    readonly property int size: DirectScan.size
+    readonly property bool cubeInView: points.length === size * size
     // The cube is read. This screen stays up for a beat so the last side is
     // seen arriving and all six are seen confirmed; AppState moves on once
     // the solution is ready.
@@ -126,12 +128,13 @@ Item {
         // One dot per sticker: yellow when the side is seen, green while it
         // counts. Placed in frame pixels, as the container flips them.
         Repeater {
-            model: 9
+            model: root.size * root.size
             delegate: Rectangle {
                 objectName: "scan.dot"
                 readonly property var point: root.cubeInView ? root.points[index] : Qt.point(0, 0)
                 visible: root.cubeInView
-                width: 14; height: 14; radius: 7
+                // 14 for a 3x3, smaller for the smaller stickers of a bigger cube.
+                width: Math.round(Math.max(8, 42 / root.size)); height: width; radius: width / 2
                 x: root.frameLeft + point.x * root.frameScale - width / 2
                 y: root.frameTop + point.y * root.frameScale - height / 2
                 color: DirectScan.reading ? root.good : "#FFD21F"
@@ -201,6 +204,38 @@ Item {
         }
     }
 
+    // The size of the cube being scanned: found from the cube in view (Auto, the
+    // default) or chosen here, which stands until Auto is chosen again. A change
+    // starts the scan over.
+    Row {
+        objectName: "scan.sizes"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: chips.top
+        anchors.bottomMargin: Theme.space3
+        spacing: Theme.space2
+        visible: !root.complete && !root.cameraFailed
+
+        // The size is found from the cube until a size is chosen; this goes back to
+        // finding it.
+        AppButton {
+            objectName: "scan.size.auto"
+            height: 36
+            variant: DirectScan.autoSize ? "primary" : "secondary"
+            text: qsTrId("scan.size.auto")
+            onClicked: DirectScan.useAutoSize()
+        }
+        Repeater {
+            model: [2, 3, 4, 5]
+            AppButton {
+                objectName: "scan.size." + modelData
+                height: 36
+                variant: modelData === DirectScan.size ? "primary" : "secondary"
+                text: qsTrId("entry.size.option").arg(modelData)
+                onClicked: DirectScan.size = modelData
+            }
+        }
+    }
+
     // The sides read so far, in the order they were first shown, each as the
     // camera last saw it. Colours are the measured ones, not tidy swatches.
     Row {
@@ -256,13 +291,13 @@ Item {
 
                 Grid {
                     anchors.centerIn: parent
-                    columns: 3
-                    spacing: 2
+                    columns: root.size
+                    spacing: root.size > 5 ? 1 : 2
                     visible: chipFrame.filled
                     Repeater {
-                        model: 9
+                        model: root.size * root.size
                         delegate: Rectangle {
-                            width: (chips.chip - 16) / 3; height: width
+                            width: (chips.chip - 16 - (root.size - 3) * 2) / root.size; height: width
                             radius: 2
                             color: chipFrame.filled ? chipFrame.side.colors[index] : "transparent"
                         }
@@ -294,12 +329,37 @@ Item {
             variant: "secondary"; text: "Cancel"
             onClicked: AppState.goLaunch()
         }
+        // Six sides are in and they make no cube (or one the person doubts): look
+        // at what was read and put right what the camera misread.
+        AppButton {
+            objectName: "scan.checkColours"
+            height: 42
+            visible: DirectScan.reviewable && !root.cameraFailed
+            variant: DirectScan.conflicted ? "primary" : "secondary"
+            text: qsTrId("scan.checkColours")
+            onClicked: AppState.reviewScan()
+        }
         AppButton {
             height: 42
             visible: !root.complete && !root.cameraFailed
             variant: "secondary"; text: "Start over"
             enabled: DirectScan.sidesRead > 0
             onClicked: DirectScan.restart()
+        }
+        // Front and back, where the device has both and the person is holding
+        // it (PlatformFacts.cameraSwitchOnScanScreen). A different camera is a
+        // different picture of everything, so the scan begins again on it.
+        // Not while one is still opening: DirectScan keeps the first.
+        AppButton {
+            objectName: "scan.switchCamera"
+            height: 42
+            visible: PlatformFacts.cameraSwitchOnScanScreen && CameraController.devices.length > 1
+            enabled: !DirectScan.starting
+            variant: "secondary"; text: qsTrId("scan.more.switchCamera")
+            onClicked: {
+                CameraController.selectNextDevice();
+                DirectScan.start(CameraController.selectedDeviceId);
+            }
         }
         // In place of Start over when the camera would not start: the same
         // start the screen made on entry (AppState.onScreenChanged), so a

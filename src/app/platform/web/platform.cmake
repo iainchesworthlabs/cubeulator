@@ -16,6 +16,9 @@
 set(CUBEULATOR_PLATFORM_DISPLAY_NAME "Web")
 set(CUBEULATOR_PLATFORM_DESKTOP OFF)
 # A native camera device, opened from the calling thread? (cmake/Platform.cmake)
+# Not in the browser: it draws with the face Qt's kit bundles, and carries only
+# its two CJK subsets (below).
+set(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS OFF)
 set(CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA OFF)
 
 # The test suites that need no window - the unit, integration and performance
@@ -74,7 +77,21 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/web/paths_web.cpp
     platform/web/platform_info_web.cpp
     platform/posix/capture_thread_scope_posix.cpp
-    platform/posix/crash_handler_posix.cpp)
+    platform/posix/crash_handler_posix.cpp
+    platform/posix/graphics_probe_none.cpp)
+
+# The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
+set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_none.cpp)
+
+# No Vulkan backend for Tracy here (macOS and iOS render with Metal; Android and
+# the browser have not been exercised).
+set(CUBEULATOR_PLATFORM_PROFILING_VULKAN OFF)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
+
+# A browser's architecture is not one CMake can see, and the page requires
+# WebAssembly SIMD (docs/web.md): the 128-bit kernels are built with it
+# (-msimd128 in cube_platform_prepare_dependencies below).
+set(CUBEULATOR_PLATFORM_SIMD vector128)
 
 # camera_web.js is the page's half of the camera: an Emscripten JS library, so
 # camera_web.cpp calls its functions like any other and Emscripten proxies them
@@ -132,8 +149,12 @@ set(CUBEULATOR_PLATFORM_APP_PROPERTIES
 # -fexceptions likewise (the triplet says why): the compiler's default is to
 # compile `throw` to an abort and `catch` to nothing, and the same flag has to
 # be on the link line, which selects the C++ runtime that has them.
+#
+# -msimd128 so that the 128-bit kernels (cmake/Simd.cmake) compile to WebAssembly
+# SIMD rather than to OpenCV's scalar stand-in for it. The page needs the feature
+# already (docs/web.md), and Qt's kit and the vcpkg ports are built with it.
 function(cube_platform_prepare_dependencies)
-    add_compile_options(-pthread -fexceptions)
+    add_compile_options(-pthread -fexceptions -msimd128)
 endfunction()
 
 # What puts the app in a page: the page itself, the worker that makes the page

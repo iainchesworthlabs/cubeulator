@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "cubeulator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A camera-driven, on-device Rubik's Cube solver.",
   "homepage": "https://github.com/iainchesworthlabs/cubeulator",
   "license": "GPL-3.0-or-later",
-  "builtin-baseline": "5b698638c97b4610044a254347d571f823e56557",
+  "builtin-baseline": "02a476b3a4adaf6c4bdbb79b702458eae5f34b12",
   "dependencies": [
     "fmt",
     {
@@ -14,16 +14,25 @@
       "platform": "!emscripten",
       "features": [
         "calib3d",
-        { "name": "dshow", "platform": "windows & !uwp" },
+        {
+          "name": "dshow",
+          "platform": "windows & !uwp"
+        },
         "fs",
         "intrinsics",
         "jpeg",
-        { "name": "msmf", "platform": "windows & !uwp & !mingw" },
+        {
+          "name": "msmf",
+          "platform": "windows & !uwp & !mingw"
+        },
         "png",
         "quirc",
         "thread",
         "tiff",
-        { "name": "v4l", "platform": "linux" },
+        {
+          "name": "v4l",
+          "platform": "linux"
+        },
         "webp"
       ]
     },
@@ -45,17 +54,30 @@
       ]
     },
     "profiling": {
-      "description": "Tracy profiler instrumentation (CUBEULATOR_ENABLE_TRACY) - opt-in, selected by -DCUBEULATOR_ENABLE_TRACY=ON, so a normal build never pulls it in",
+      "description": "The Tracy profiler client (CUBEULATOR_ENABLE_TRACY, on by default on the desktop): built for manual lifetime and loopback-only listening by the overlay port in vcpkg-overlay-ports/tracy, dormant until cube::profile::Session starts it",
       "dependencies": [
         {
           "name": "tracy",
+          "version>=": "0.14.1",
           "default-features": false,
           "features": [
-            "on-demand"
+            "manual-lifetime",
+            "on-demand",
+            "only-localhost"
           ]
         },
         {
+          "name": "vulkan-headers",
+          "platform": "windows | linux"
+        }
+      ]
+    },
+    "profiling-tools": {
+      "description": "Tracy's command-line tools (tracy-capture, tracy-csvexport) built for the host - selected by -DCUBEULATOR_TRACY_TOOLS=ON, which the *-profiling presets set",
+      "dependencies": [
+        {
           "name": "tracy",
+          "version>=": "0.14.1",
           "host": true,
           "default-features": false,
           "features": [

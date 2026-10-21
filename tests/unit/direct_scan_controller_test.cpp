@@ -5,6 +5,9 @@
 #include "drawn_cube.hpp"
 #include "solve_controller.hpp"
 
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/outside_view.hpp>
+#include <cube/nxn/scan_assembly.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/notation.hpp>
 #include <cube/solver/solver.hpp>
@@ -13,6 +16,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QPointF>
 #include <QTemporaryDir>
 #include <QVariantMap>
@@ -21,6 +25,7 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 
 using cube::app::DirectScan;
 using cube::solver::Color;
@@ -429,4 +434,208 @@ TEST_CASE("an ambiguous cube asks for a corner by colour and showing it finishes
     // A new scan has asked for nothing yet.
     scan.restart();
     CHECK(scan.settlingCorner().isEmpty());
+}
+
+TEST_CASE("DirectScan scans a cube of another odd size: its dots, its sides and its cube",
+          "[qt][controllers][direct-scan][nxn]") {
+    DirectScan scan;
+    CHECK(scan.size() == 3);
+    CHECK(scan.defaultSize() == 3);
+    int size_changes = 0;
+    QObject::connect(&scan, &DirectScan::sizeChanged, [&size_changes]() { ++size_changes; });
+
+    // Only a size from 2 to 9 is taken.
+    scan.setSize(1);
+    scan.setSize(10);
+    scan.setSize(11);
+    scan.setSize(3);
+    CHECK(scan.size() == 3);
+    CHECK(size_changes == 0);
+
+    scan.setSize(5);
+    CHECK(scan.size() == 5);
+    CHECK(size_changes == 1);
+
+    const cube::nxn::NCube cube = cube::nxn::random_scramble({.size = 5, .seed = 21, .moves = 100});
+    int completed = 0;
+    QObject::connect(&scan, &DirectScan::scanCompleted, [&completed]() { ++completed; });
+
+    cube::test::Pose pose;
+    pose.pitch = 360.0F * 0.6F / 5.0F;
+    bool dotted = false;
+    for (const Face face : kAllFaces) {
+        const cv::Mat frame = draw_side(cube::nxn::outside_view(cube, face), pose);
+        hold(scan, frame, kFramesToCapture + 3);
+        // A dot on every one of the 25 stickers of the side in view.
+        dotted = dotted || scan.stickerPoints().size() == 25;
+        scan.processFrame(room({640, 360}));
+    }
+    CHECK(dotted);
+
+    REQUIRE(completed == 1);
+    CHECK(scan.complete());
+    CHECK(scan.sidesRead() == 6);
+    REQUIRE(scan.cubeN().has_value());
+    CHECK(scan.cubeN()->size() == 5);
+    // Not a 3x3: nothing for the 3x3's answer.
+    CHECK_FALSE(scan.cube().has_value());
+    for (const QVariant& side : scan.sides()) {
+        CHECK(side.toMap().value("colors").toList().size() == 25);
+    }
+    // The review is of the cube it made, at its size.
+    const auto reading = scan.reviewReading();
+    REQUIRE(reading.has_value());
+    CHECK(reading->size == 5);
+    CHECK(reading->stickers.size() == 150);
+
+    // Setting the size starts a scan over.
+    scan.setSize(3);
+    CHECK(size_changes == 2);
+    CHECK(scan.sidesRead() == 0);
+    CHECK_FALSE(scan.complete());
+}
+
+TEST_CASE("the size of the cube is found from the cube held up, and a chosen size stands",
+          "[qt][controllers][direct-scan][nxn]") {
+    for (const int size : {2, 3, 4, 5}) {
+        CAPTURE(size);
+        // A cube whose six flat sides make one cube (a 2x2's often make two).
+        std::optional<cube::nxn::NCube> unambiguous;
+        for (unsigned seed = 70; !unambiguous.has_value(); ++seed) {
+            const cube::nxn::NCube tried =
+                cube::nxn::random_scramble({.size = size, .seed = seed, .moves = 25 * size});
+            cube::nxn::ScannedSides sides;
+            for (std::size_t i = 0; i < 6; ++i) {
+                sides.at(i) = cube::nxn::outside_view(tried, kAllFaces.at(i));
+            }
+            if (cube::nxn::assemble_all_scanned_sides(size, sides, 8).size() == 1) {
+                unambiguous = tried;
+            }
+        }
+        const cube::nxn::NCube& cube = *unambiguous;
+        DirectScan scan;
+        CHECK(scan.autoSize());
+        CHECK(scan.size() == 3);
+        int completed = 0;
+        QObject::connect(&scan, &DirectScan::scanCompleted, [&completed]() { ++completed; });
+
+        // The first frames of the first side go to finding the size, so it is held longer.
+        cube::test::Pose pose;
+        pose.pitch = 180.0F / static_cast<float>(size);
+        for (const Face face : kAllFaces) {
+            hold(scan, draw_side(cube::nxn::outside_view(cube, face), pose), kFramesToCapture + 9);
+            scan.processFrame(room({640, 360}));
+        }
+        // Found from the first frames, not asked, and the scan is of that size.
+        CHECK(scan.size() == size);
+        CHECK(scan.autoSize());
+        REQUIRE(completed == 1);
+        REQUIRE(scan.cubeN().has_value());
+        CHECK(scan.cubeN()->size() == size);
+    }
+
+    // A size that is chosen stands whatever is held up, until Auto is chosen again.
+    const cube::nxn::NCube five = cube::nxn::random_scramble({.size = 5, .seed = 8, .moves = 100});
+    cube::test::Pose pose;
+    pose.pitch = 180.0F / 5.0F;
+    DirectScan scan;
+    scan.setSize(4);
+    CHECK_FALSE(scan.autoSize());
+    hold(scan, draw_side(cube::nxn::outside_view(five, Face::F), pose), 20);
+    CHECK(scan.size() == 4);
+    scan.useAutoSize();
+    CHECK(scan.autoSize());
+    CHECK(scan.size() == 3);
+    hold(scan, draw_side(cube::nxn::outside_view(five, Face::F), pose), 20);
+    CHECK(scan.size() == 5);
+
+    // A new scan with no size asked for is found again; the size of the last is not kept.
+    scan.setSize(2);
+    scan.useDefaultSize();
+    CHECK(scan.autoSize());
+    CHECK(scan.size() == 3);
+}
+
+TEST_CASE("a bigger cube whose flat sides fit several cubes is settled by corner views",
+          "[qt][controllers][direct-scan][nxn]") {
+    for (const int size : {2, 4, 5}) {
+        CAPTURE(size);
+        const auto found = cube::test::cube_whose_flat_sides_fit_several(size);
+        REQUIRE(found.has_value());
+        const cube::nxn::NCube& cube = *found;
+
+        DirectScan scan;
+        scan.setSize(size);
+        int completed = 0;
+        QObject::connect(&scan, &DirectScan::scanCompleted, [&completed]() { ++completed; });
+
+        cube::test::Pose pose;
+        pose.pitch = 180.0F / static_cast<float>(size);
+        for (const Face face : kAllFaces) {
+            hold(scan, draw_side(cube::nxn::outside_view(cube, face), pose), kFramesToCapture + 3);
+            scan.processFrame(room({640, 360}));
+        }
+        REQUIRE(scan.sidesRead() == 6);
+        // Six sides, none of them wrong, and a way of putting them together that is not
+        // the only one: the scan waits to be shown two sides at once.
+        REQUIRE(scan.ambiguous());
+        CHECK(completed == 0);
+        CHECK_FALSE(scan.cubeN().has_value());
+        CHECK(scan.settlingCorner().isEmpty());
+
+        cube::test::Corner3Pose corner;
+        corner.edge = 1.1F * (150.0F + (5.0F * static_cast<float>(size)));
+        for (const Face vertical : {Face::U, Face::D}) {
+            for (const Face depth : {Face::F, Face::B}) {
+                for (const Face side : {Face::L, Face::R}) {
+                    const cv::Mat frame = cube::test::draw_cube_corner3(
+                        cube, vertical, depth, side, corner, cube::test::Drawing{});
+                    if (!frame.empty() && completed == 0) {
+                        scan.processFrame(room({640, 360}));
+                        hold(scan, frame, kFramesToCapture + 4);
+                    }
+                }
+            }
+        }
+        REQUIRE(completed == 1);
+        REQUIRE(scan.cubeN().has_value());
+        CHECK(scan.cubeN()->size() == size);
+        CHECK_FALSE(scan.ambiguous());
+    }
+}
+
+TEST_CASE("a scan of a 5x5 is recorded at its size and replays to the same cube",
+          "[qt][controllers][direct-scan][nxn]") {
+    QTemporaryDir folder;
+    REQUIRE(folder.isValid());
+    const cube::nxn::NCube cube = cube::nxn::random_scramble({.size = 5, .seed = 33, .moves = 100});
+
+    DirectScan scan;
+    scan.setSize(5);
+    scan.setRecordingRoot(folder.path());
+    cube::test::Pose pose;
+    pose.pitch = 360.0F * 0.6F / 5.0F;
+    for (const Face face : kAllFaces) {
+        hold(scan, draw_side(cube::nxn::outside_view(cube, face), pose), kFramesToCapture + 3);
+        scan.processFrame(room({640, 360}));
+    }
+    REQUIRE(scan.complete());
+
+    const QStringList scans = QDir(folder.path()).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    REQUIRE(scans.size() == 1);
+    const QDir recorded(QDir(folder.path()).filePath(scans.front()));
+    QFile manifest(recorded.filePath("manifest.json"));
+    REQUIRE(manifest.open(QIODevice::ReadOnly));
+    // The manifest says what it is, so that cube_scan reads it as one.
+    CHECK(manifest.readAll().contains("\"size\""));
+
+    SideScan replay(5);
+    for (const QString& frame : recorded.entryList({"rec_*.jpg"}, QDir::Files, QDir::Name)) {
+        const cv::Mat bgr = cv::imread(recorded.filePath(frame).toStdString(), cv::IMREAD_COLOR);
+        REQUIRE_FALSE(bgr.empty());
+        replay.add(cube::vision::read_side(bgr, 5));
+    }
+    const auto read = replay.cube_n();
+    REQUIRE(read.has_value());
+    CHECK(*read == *scan.cubeN());
 }

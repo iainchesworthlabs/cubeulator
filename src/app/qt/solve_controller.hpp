@@ -7,18 +7,27 @@
 #include <QVariantMap>
 
 #include <cube/diagnostics/json.hpp>
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/stepped_plan.hpp>
 #include <cube/solver/solver.hpp>
-#include <cube/solver/stepped_solution.hpp>
 
+#include <cstdint>
 #include <optional>
+#include <vector>
 
-// Bridges cube::solver's real solve - in whichever of its three methods is
-// chosen - into QML. Owns a SteppedSolution built from the cube the scan read
-// (solveCube). The solve
-// screen reads the exposed properties to draw the current stickers and the
-// move about to happen. Deliberately thin: all solving and stepping logic
-// lives in cube::solver, which is plain C++ and Catch2-tested independently
-// of Qt.
+// Bridges the real solve - in whichever of its three methods is chosen - into
+// QML. Owns a SteppedPlan built from the cube the scan read (solveCube). The
+// solve screen reads the exposed properties to draw the current stickers and
+// the move about to happen. Deliberately thin: all solving and stepping logic
+// lives in cube::nxn, which is plain C++ and Catch2-tested independently of
+// Qt.
+//
+// The cube and its moves are held as cube::nxn types, a 3x3 being an NCube of
+// size 3 (docs/nxn-app-plan.md, decision 1). The accessors that return a
+// cube::solver::Cube or Move - currentCube(), currentMove(), scannedCube(),
+// solutionStart() - are the 3x3 view of that, which is what HeldCube, the
+// history and the diagnostics are written in; they have a value only while the
+// cube is a 3x3.
 //
 // Constructed in C++ and registered via qmlRegisterSingletonInstance, like
 // the other controllers - not QML_ELEMENT/QML_SINGLETON, since the scan
@@ -59,9 +68,21 @@ private:
     // once the names are swapped for the palette's colours.
     Q_PROPERTY(QVariantMap stickers READ stickers NOTIFY stateChanged)
 
+    // The cube's side length: 3 for a 3x3, 2 to 9 for any other.
+    Q_PROPERTY(int size READ size NOTIFY stateChanged)
+
+    // The colour each side of the cube is meant to be, as the cube is held: side
+    // letter -> colour name. A side is named by the colour of its middle sticker,
+    // which never moves, on an odd size; on an even size it has none, and is named
+    // by the corners (cube::nxn::scheme_of). A 3x3's is what stickers[side][4] says.
+    Q_PROPERTY(QVariantMap sideColours READ sideColours NOTIFY stateChanged)
+
     // The whole solution, one entry per move: { face: side letter, turns:
-    // quarter turns clockwise seen from outside that side, notation }.
-    // Changes only when a solve lands, not as it is stepped through.
+    // quarter turns clockwise seen from outside that side, first, last:
+    // the depth of the nearest and the farthest layer the move turns, counted
+    // from that side (0 is its outer layer; a wide move has last > first),
+    // notation }. Changes only when a solve lands, not as it is stepped
+    // through.
     Q_PROPERTY(QVariantList moves READ moves NOTIFY solutionChanged)
 
     // The move about to be performed from the current state, structured
@@ -70,6 +91,11 @@ private:
     Q_PROPERTY(QString currentMoveNotation READ currentMoveNotation NOTIFY stateChanged)
     Q_PROPERTY(QString currentMoveFace READ currentMoveFace NOTIFY stateChanged)
     Q_PROPERTY(int currentMoveTurns READ currentMoveTurns NOTIFY stateChanged)
+    // The layers the move about to be performed turns: the depth of the
+    // nearest and the farthest, counted from currentMoveFace. Both 0 for an
+    // outer turn, which is every move of a 3x3.
+    Q_PROPERTY(int currentMoveFirst READ currentMoveFirst NOTIFY stateChanged)
+    Q_PROPERTY(int currentMoveLast READ currentMoveLast NOTIFY stateChanged)
 
     Q_PROPERTY(int moveIndex READ moveIndex NOTIFY stateChanged)
     // Notifying, not constant: the solve lands after the solve screen has
@@ -89,6 +115,14 @@ private:
     // The cube::solver::Stage value of the stage the next move belongs to (the
     // last stage's, once solved).
     Q_PROPERTY(int currentStageIndex READ currentStageIndex NOTIFY stateChanged)
+
+    // Where the stages of the 3x3 a big cube becomes begin: the move index
+    // after the parity, centres and edges. 0 for a 3x3 (its solution is the core
+    // alone) and totalMoves for a 2x2 (it has none).
+    Q_PROPERTY(int coreStartIndex READ coreStartIndex NOTIFY stateChanged)
+    // True when the solution has a reduction still to do that a person who can
+    // finish a 3x3 may skip: a cube of size 4 or more, not yet at its core.
+    Q_PROPERTY(bool canSkipToCore READ canSkipToCore NOTIFY stateChanged)
 
     // True from the moment a completed scan is accepted until its
     // background solve() (see solve_controller.cpp) delivers a result.
@@ -111,18 +145,24 @@ public:
     Q_INVOKABLE QVariantMap stickersAt(int turn) const;
     [[nodiscard]] QVariantList moves() const;
 
-    // The cube as it stands after the moves stepped through so far.
-    [[nodiscard]] const cube::solver::Cube& currentCube() const noexcept {
-        return stepped_.current_cube();
-    }
-    // The move expected next, or nothing once the cube is solved.
-    [[nodiscard]] std::optional<cube::solver::Move> currentMove() const noexcept {
-        return stepped_.at_end() ? std::nullopt : std::optional(stepped_.current_move());
-    }
+    // The solution being followed, for whoever needs the cube at any size.
+    [[nodiscard]] const cube::nxn::SteppedPlan& plan() const noexcept { return stepped_; }
+
+    // The cube as it stands after the moves stepped through so far, as a 3x3.
+    // A solved 3x3 while the cube is of another size.
+    [[nodiscard]] const cube::solver::Cube& currentCube() const noexcept { return cube3_; }
+    // The move expected next as a 3x3 move, or nothing once the cube is solved
+    // (or when it is not a 3x3).
+    [[nodiscard]] std::optional<cube::solver::Move> currentMove() const noexcept;
+
+    [[nodiscard]] int size() const;
+    [[nodiscard]] QVariantMap sideColours() const;
 
     [[nodiscard]] QString currentMoveNotation() const;
     [[nodiscard]] QString currentMoveFace() const;
     [[nodiscard]] int currentMoveTurns() const;
+    [[nodiscard]] int currentMoveFirst() const;
+    [[nodiscard]] int currentMoveLast() const;
 
     [[nodiscard]] int moveIndex() const;
     [[nodiscard]] int totalMoves() const;
@@ -131,6 +171,8 @@ public:
 
     [[nodiscard]] QVariantList stageRanges() const;
     [[nodiscard]] int currentStageIndex() const;
+    [[nodiscard]] int coreStartIndex() const;
+    [[nodiscard]] bool canSkipToCore() const;
 
     [[nodiscard]] bool isSolving() const;
 
@@ -149,24 +191,41 @@ public:
     // hold the screen asks for, a continuation keeps the hold it has seen.
     [[nodiscard]] bool solutionContinuesCube() const noexcept { return continuation_; }
 
+    // Starts solving the cube that `scramble` makes of a solved cube of `size`: the
+    // way into the app for a cube the camera does not read, from a scramble in
+    // cubing notation (R U' 2R F2, Rw, 3Rw2, 2-3R, x ...) such as a timer or a
+    // puzzle site gives. Returns { ok: true, moves, layerTurns } when the solve has
+    // started (isSolving is true until it lands), or { ok: false, error, offset,
+    // length } where `error` is one of "unsupportedSize", "empty", "unknownMove",
+    // "layerOutOfRange" (the token that failed starts at `offset` in the text and
+    // is `length` long) or "alreadySolved" (the turns leave the cube as it was).
+    // Nothing is started unless it is ok.
+    Q_INVOKABLE QVariantMap solveScramble(int size, const QString& scramble);
+
     // Starts solving a cube handed over already validated - the direct-scan
     // path. isSolving is true until the solution lands. Nothing is
     // announced beyond that: the caller decides when to show the solution,
     // so a finished scan can stay on screen while this runs.
     void solveCube(const cube::solver::Cube& cube);
+    // The same for a cube of any size.
+    void solveCube(const cube::nxn::NCube& cube);
 
     // The cube as the scan handed it over: what the solve being followed is a
     // solve OF. Set by solveCube(); a method change part-way does not move it
     // (solutionStart() is what moves). Empty until the first scan.
-    [[nodiscard]] const std::optional<cube::solver::Cube>& scannedCube() const noexcept {
+    [[nodiscard]] const std::optional<cube::nxn::NCube>& scannedNCube() const noexcept {
         return scanned_;
     }
     // The cube the solution in force - or the one in flight - starts from. The
     // scanned cube until the method is changed part-way, then the cube in hand
     // at that moment. The turn moveIndex() counts is a turn of THIS solution.
-    [[nodiscard]] const std::optional<cube::solver::Cube>& solutionStart() const noexcept {
+    [[nodiscard]] const std::optional<cube::nxn::NCube>& solutionStartNCube() const noexcept {
         return pending_;
     }
+    // Those two as 3x3s, which the history and HeldCube are written in: empty
+    // when there is no such cube, or it is of another size.
+    [[nodiscard]] std::optional<cube::solver::Cube> scannedCube() const;
+    [[nodiscard]] std::optional<cube::solver::Cube> solutionStart() const;
 
     // Picks a solve up where it was left: `from` is solved with `method` and,
     // when the solution lands, stepped on `turn` turns, so the screen opens on
@@ -176,10 +235,26 @@ public:
     // asks for.
     void resumeCube(const cube::solver::Cube& scanned, const cube::solver::Cube& from,
                     Method method, int turn);
+    // The same for a cube of any size.
+    void resumeCube(const cube::nxn::NCube& scanned, const cube::nxn::NCube& from, Method method,
+                    int turn);
+    // The same with the solution the solve had, kept: nothing is worked out, so
+    // the solution is the one that was followed whatever the solver would say
+    // today, and it is in place (solutionChanged has been emitted) when this
+    // returns. `kept` must be a solution of `from`.
+    void resumeCube(const cube::nxn::NCube& scanned, const cube::nxn::NCube& from, Method method,
+                    int turn, const cube::nxn::Solution& kept);
 
 public slots:
     void nextMove();
     void previousMove();
+    // Shows the cube after `index` moves of this solution, wherever it is now;
+    // an index out of range is the nearest end. For a person who knows where
+    // they are in a long solution (the 3x3's stages, a stage from the list).
+    void goToMove(int index);
+    // Jumps over the reduction to the move where the 3x3 stages begin, when
+    // there is one ahead; nothing otherwise.
+    void skipToCore();
 
 signals:
     void stateChanged();
@@ -195,24 +270,34 @@ private:
     // solved-cube placeholder is set directly, not through this path - see
     // the .cpp. `continuation`: this is the cube already being solved, handed
     // over to another method.
-    void beginSolve(const cube::solver::Cube& scrambled, bool continuation = false);
+    void beginSolve(const cube::nxn::NCube& scrambled, bool continuation = false);
     // Invoked on the UI thread once solveWatcher_'s background solve()
     // (kicked off from beginSolve()) finishes.
     void applySolveResult();
+    // Puts the plan just made in place and announces it: steps it on to
+    // resume_turn_, shows the cube, ends the solving state.
+    void land();
+    // Brings cube3_ to the cube the plan now shows.
+    void showCurrentCube();
 
-    cube::solver::SteppedSolution stepped_;
-    QFutureWatcher<cube::solver::SteppedSolution> solveWatcher_;
+    cube::nxn::SteppedPlan stepped_;
+    QFutureWatcher<cube::nxn::SteppedPlan> solveWatcher_;
+    // The cube on show as a 3x3 (currentCube()); a solved one for any other size.
+    cube::solver::Cube cube3_ = cube::solver::Cube::solved();
     bool isSolving_ = false;
     Method method_ = Beginner;
     // The cube the solve in flight, or the last one to land, was started
     // from; empty until the first. A method change with nothing scanned only
     // records the method.
-    std::optional<cube::solver::Cube> pending_;
+    std::optional<cube::nxn::NCube> pending_;
     // The cube the scan read, whatever the method has done since.
-    std::optional<cube::solver::Cube> scanned_;
+    std::optional<cube::nxn::NCube> scanned_;
     // Turns to step on when the solve in flight lands (resumeCube); 0 for any
     // other solve.
     int resume_turn_ = 0;
     bool solving_continuation_ = false;
     bool continuation_ = false;
+    // The Tracy execution section opened by beginSolve and closed when the
+    // solve lands (see CUBE_SECTION_ENTER in the .cpp).
+    std::uint32_t solve_section_ = 0;
 };

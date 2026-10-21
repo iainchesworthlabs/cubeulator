@@ -101,14 +101,16 @@ def _item(text: str) -> str:
     return "\n".join(["- " + first, *("  " + line.strip() for line in rest)])
 
 
-def merge(changelog_text: str, fragments: list[Fragment]) -> str:
-    """`[Unreleased]` with each fragment added to the end of its subsection."""
+def merge(changelog_text: str, fragments: list[Fragment], version: str = "Unreleased") -> str:
+    """The section for `version` (`[Unreleased]`, unless a release is named to
+    fold late fragments into a section already cut) with each fragment added to
+    the end of its subsection."""
     text = changelog.normalise(changelog_text)
     if not fragments:
         return text
-    unreleased = changelog.get(text, "Unreleased")
+    unreleased = changelog.get(text, version)
     if unreleased is None:
-        raise changelog.ChangelogError("CHANGELOG.md has no '## [Unreleased]' section")
+        raise changelog.ChangelogError(f"CHANGELOG.md has no '## [{version}]' section")
     body = changelog.split_body(unreleased.body)
 
     subsections = {title: content for title, content in body.subsections}
@@ -129,7 +131,8 @@ def merge(changelog_text: str, fragments: list[Fragment]) -> str:
 
     head = text[: unreleased.start]
     tail = text[unreleased.end :]
-    merged = f"{head}## [Unreleased]\n\n{new_body}\n"
+    heading = text[unreleased.start : text.index("\n", unreleased.start)]
+    merged = f"{head}{heading}\n\n{new_body}\n"
     if tail:
         merged += "\n" + tail
     return merged

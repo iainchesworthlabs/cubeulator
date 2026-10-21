@@ -22,6 +22,8 @@
 #include "drawn_cube.hpp"
 #include "qml_test_app.hpp"
 
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/outside_view.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/solver.hpp>
 #include <cube/vision/direct_scan.hpp>
@@ -30,6 +32,7 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QImage>
+#include <QMetaObject>
 #include <QPointF>
 #include <QQmlComponent>
 #include <QQuickItem>
@@ -193,6 +196,55 @@ TEST_CASE("an ambiguous scan has the screen name the corner to show", "[qml][dir
     CHECK(camera.settlingCorner().isEmpty());
 }
 
+TEST_CASE("six sides that make no cube can be looked over, put right, and come back from",
+          "[qml][direct-scan][review]") {
+    cube::app::DirectScan& camera = cube::test::app_controllers().directScan;
+    camera.setWatching(false);
+    camera.restart();
+    auto* state = cube::test::qml_engine().singletonInstance<QObject*>("Cubeulator", "AppState");
+    REQUIRE(state != nullptr);
+    state->setProperty("screen", QStringLiteral("scan"));
+
+    {
+        // Nothing read: nothing to look over.
+        Screen screen;
+        CHECK_FALSE(screen.one("scan.checkColours")->isVisible());
+    }
+
+    const auto patterned = cube::test::patterned_cube();
+    REQUIRE(patterned.has_value());
+    for (const Face face : cube::solver::kAllFaces) {
+        const cv::Mat frame =
+            draw_side(cube::test::outside_view(*patterned, face), cube::test::Pose{});
+        for (std::size_t i = 0; i < cube::vision::SideScan::kMinReads + 2; ++i) {
+            camera.processFrame(frame);
+        }
+        camera.processFrame(cube::test::room({640, 360}));
+    }
+    REQUIRE(camera.conflicted());
+
+    Screen screen;
+    QQuickItem* button = screen.one("scan.checkColours");
+    CHECK(button->isVisible());
+    // The scan has not made a cube, so this is the way on: it is the main button.
+    CHECK(button->property("variant").toString() == "primary");
+
+    REQUIRE(QMetaObject::invokeMethod(button, "clicked"));
+    CHECK(state->property("screen").toString() == "colours");
+    CHECK(state->property("coloursFromScan").toBool());
+    CHECK(cube::test::app_controllers().colours.fromScan());
+    CHECK(cube::test::app_controllers().colours.size() == 3);
+
+    // Back from there is a new scan.
+    REQUIRE(QMetaObject::invokeMethod(state, "closeColours"));
+    CHECK(state->property("screen").toString() == "scan");
+    CHECK_FALSE(state->property("coloursFromScan").toBool());
+
+    state->setProperty("screen", QStringLiteral("launch"));
+    camera.restart();
+    cube::test::app_controllers().colours.begin(3);
+}
+
 // Pictures of the scan screen, for looking at rather than for checking.
 //
 // Hidden and inert unless CUBE_GALLERY_DIR names a directory: it puts the real
@@ -253,4 +305,75 @@ TEST_CASE("scan screen gallery", "[.gallery][direct-scan]") {
 
     window.hide();
     camera.restart();
+}
+
+TEST_CASE("the scan screen offers 2 to 5 and scans the one chosen", "[qml][direct-scan][nxn]") {
+    cube::app::DirectScan& camera = cube::test::app_controllers().directScan;
+    camera.setWatching(false);
+    camera.setSize(3);
+    camera.useAutoSize();
+    camera.restart();
+
+    Screen screen;
+    for (const int size : {2, 4, 5, 3}) {
+        INFO("size " << size);
+        QQuickItem* button = screen.one(("scan.size." + std::to_string(size)).c_str());
+        // (Hidden when the camera would not start, which an earlier test may have left.)
+        REQUIRE(QMetaObject::invokeMethod(button, "clicked"));
+        CHECK(camera.size() == size);
+    }
+    CHECK(screen.all("scan.size.6").empty());
+
+    // Auto is on until a size is chosen, and a click on it gives the choice back.
+    CHECK_FALSE(camera.autoSize());
+    REQUIRE(QMetaObject::invokeMethod(screen.one("scan.size.auto"), "clicked"));
+    CHECK(camera.autoSize());
+    CHECK(camera.size() == 3);
+    REQUIRE(QMetaObject::invokeMethod(screen.one("scan.size.5"), "clicked"));
+    CHECK_FALSE(camera.autoSize());
+    CHECK(camera.size() == 5);
+
+    // The controller is shared: leave it as it is found.
+    camera.useAutoSize();
+}
+
+TEST_CASE("the scan screen of a 5x5 marks its 25 stickers and no more", "[qml][direct-scan][nxn]") {
+    cube::app::DirectScan& camera = cube::test::app_controllers().directScan;
+    camera.setWatching(false);
+    camera.restart();
+    camera.setSize(5);
+    REQUIRE(camera.size() == 5);
+
+    const cube::nxn::NCube cube = cube::nxn::random_scramble({.size = 5, .seed = 4, .moves = 80});
+    cube::test::Pose pose;
+    pose.pitch = 360.0F * 0.6F / 5.0F;
+    const cv::Mat frame = draw_side(cube::nxn::outside_view(cube, Face::F), pose);
+    for (std::size_t i = 0; i < cube::vision::SideScan::kMinReads; ++i) {
+        camera.processFrame(frame);
+    }
+    REQUIRE(camera.stickerPoints().size() == 25);
+
+    {
+        Screen screen;
+        const std::vector<QQuickItem*> dots = screen.all("scan.dot");
+        REQUIRE(dots.size() == 25);
+        // Every one is on its sticker, as the picture shows it (the camera in this
+        // process is a front one or not; the dot follows the same mirror as the picture).
+        for (const QQuickItem* dot : dots) {
+            CHECK(dot->isVisible());
+            // Smaller than a 3x3's 14, for the smaller stickers.
+            CHECK(dot->width() < 14.0);
+            CHECK(dot->width() >= 8.0);
+        }
+        // And the six chips are drawn from the sides read, 25 cells to a chip.
+        CHECK(screen.one("scan.chips")->childItems().size() > 0);
+    }
+
+    camera.setSize(3);
+    camera.restart();
+    {
+        Screen screen;
+        // A 3x3's dots are the 14 they always were, and one for each of nine.
+        CHECK(screen.all("scan.dot").size() == 9);
+    }
 }

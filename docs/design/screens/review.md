@@ -1,10 +1,13 @@
 # Review and hand entry
 
-> **Status in 0.1.0-beta.1:** Not built (recovery plan R3, still to do). There
-> is no screen to check or correct the colours or to enter a cube by hand:
-> Home has no **Enter colours by hand**, the menu's item for it is disabled,
-> and a scan that does not make a valid cube stays on the scan screen and
-> says so.
+> **Status:** The colours screen (the section "Entering the colours of a cube of
+> any size", below) is built for sizes 2 to 5 and is the screen this page's 3x3
+> sketch became: one side at a time, paint rather than pick, the count and the
+> cube check beside Solve. It also puts right a cube the camera misread (the
+> section "Putting a misread scan right"), reached from the scan screen once six
+> sides are in, and from the solve screen for a cube read as valid. Not built: the sketch's
+> `review.working` and `review.solve-failed` states (Solve goes straight to the
+> solve screen), the keyboard map below, and the unfolded overview.
 
 Lane: **scan** (`feature/direct-scan`; recovery plan R3). This is a
 proposal for the chrome and the states. Checking that colours make a cube,
@@ -176,6 +179,150 @@ set or changed here.
   from, or to the scan.
 
 With nothing changed, back and **Scan instead** leave at once.
+
+## Putting a misread scan right
+
+The same screen as "Entering the colours of a cube of any size" below, started from
+what the camera read instead of from nothing (`AppState.reviewScan`). It differs in
+five ways, and everything else is that screen:
+
+- **It starts full.** Every sticker the camera named is painted. If the six sides
+  made a cube the cube is shown as it is held; if they made none (a misread, or two
+  cubes that fit) the six sides are placed by their middles **as the camera had them**,
+  and the screen says so (`colours.notUpright`) because each may need turning.
+- **Sides are named by their middle colour** ("Red side") on a cube with a middle
+  sticker, and the sides round the grid likewise, as the sketch above asks: a person
+  holding the cube thinks of it that way. The order is yellow, green, orange, blue,
+  red, white. An even size has no middle and keeps top, front and so on.
+- **The camera's doubts are shown.** A sticker the colour naming placed with little
+  to spare over another colour carries a "?" drawn on it (a mark, so that it does not
+  depend on telling the colours apart), the note counts them, and the screen reader
+  reads it. Painting a sticker settles the doubt. The threshold (`kDoubtBelow`) is a
+  first guess, not measured against real misreads.
+- **Every change can be taken back.** *Undo*, *Redo* (also Ctrl+Z, Ctrl+Y), and
+  *Back to the scan*, which puts every sticker as the camera read it. A drag over
+  several stickers is one step. Leaving asks first only when something differs from
+  the scan (`review.discard.*`); *Scan instead* reads *Scan again* and, like Back,
+  starts a new scan.
+- **Two ways beside tapping a sticker.** *Turn this side* turns the side shown a
+  quarter turn clockwise as seen from outside, for a side that came the wrong way up.
+  *Describe this side* opens a box to type the whole side as letters in reading
+  order (W Y G B O R, `?` for a sticker you cannot tell; rows may be separated with
+  `/`, spaces or lines, and an N by N side is N x N letters), prefilled with the side as
+  it stands. The letters are fixed, like the letters of a move; the word for each colour
+  is in the help text, in the reader's language. A description of the wrong length or with
+  a letter that is no colour is refused, says which and where, and changes nothing.
+
+What the person is told does not change: counts, then whether the pieces fit
+together (`review.status.*`, `review.fault.*`), with the sticker of the piece at
+fault outlined. **A cube that cannot be one never reaches the solver**: *Solve* is
+on only for a valid cube. There is no "solve anyway".
+
+| part | component | string | objectName |
+|---|---|---|---|
+| Title | heading | `review.title.check` | `colours.title` |
+| Instruction | `small` | `review.intro.check` | `colours.intro` |
+| Sides could be the wrong way up | caution line | `review.notUpright` | `colours.notUpright` |
+| How many stickers the camera doubted | `small` | `review.doubt.note` | `colours.doubtNote` |
+| A doubted sticker | a "?" on the sticker; its name adds that the camera was unsure | `review.a11y.stickerUnsure` | `colours.doubt.<n>` |
+| Undo, Redo | buttons, ghost | `review.undo`, `review.redo` | `colours.undo`, `colours.redo` |
+| Back to the scan | button, ghost, only here | `review.revert` | `colours.revert` |
+| Turn this side | button, ghost | `review.turnSide` | `colours.turnSide` |
+| Describe this side | button, ghost, opens the box | `review.describe.open` | `colours.describe` |
+| The box | one line in the mono face, always left to right | `review.describe.help`, `review.describe.field` | `colours.describeText` |
+| Use these, Cancel | buttons | `review.describe.apply`, `common.cancel` | `colours.describeApply`, `colours.describeCancel` |
+| What is wrong with the description | `accent` line | `review.describe.tooFew`, `review.describe.tooMany`, `review.describe.unknownLetter` | `colours.describeError` |
+
+**From the solve screen.** A cube the camera read as valid and read wrong is only
+found out at the solve, so the solve screen has the same button (`solve.checkColours`,
+`scan.checkColours`, ghost) for a 3x3 that came from a scan: `AppState.solveCamera` and
+`DirectScan.complete`, so not for a typed cube, a scramble, a solve carried on from the
+history, a cube that has been corrected and solved (it is a typed cube from then on) or a
+scan since started over. It is a row of its own over the stepping buttons in both
+layouts, and *Out of step? Rescan* narrow moves up over it: beside that button it did not
+fit in every language. **Back from there is the solve screen**, as it was (the solution is
+untouched, the camera comes back on it); only *Scan again* starts a new scan. Leaving with
+changes asks first, as always. *Solve* on the corrected colours is a new solve from the
+first turn (`solveColours`); the solve it replaces stays in the history as unfinished.
+
+**Not built, and not verified.** Any size but 3x3 from a scan (the scan reads 3x3 only). The "?"
+threshold on real recordings. A cube that fits two ways is shown as six sides to
+compare, not as the two candidates (the sketch's "Two cubes that both fit").
+
+## A cube of another size
+
+Not part of the 3x3's journey, so it has no state of its own in
+`../journey.md`: the screen is reached from Home by **Another size of cube**
+(`home.other`), and it is how a cube that is not a 3x3 gets into the app
+until the camera reads one (`../../nxn-app-plan.md`, P2 and P3). One column,
+at most 640 wide, scrolling when the window is short:
+
+| part | component | string | objectName |
+|---|---|---|---|
+| Back | button, ghost, chevron | `common.back` | `entry.back` |
+| Title | heading | `entry.title` | `entry.title` |
+| Size | a row of buttons that wraps, the chosen one primary: 2×2, 3×3, 4×4, 5×5 | `entry.size.label`, `entry.size.option` | `entry.size.<n>` |
+| What the camera does at this size | one line under the sizes | `entry.size.camera`, `entry.size.noCamera` | `entry.size.note` |
+| The scramble | a multi-line box in the mono face, on `surface`, the border `accent` while it is wrong | `entry.scramble.label`, `entry.scramble.placeholder` | `entry.scramble` |
+| What a scramble looks like | one paragraph under the box, replaced by the fault while there is one | `entry.scramble.help` | `entry.scramble.help` |
+| What is wrong | the fault, in `accent`, and the move at fault selected in the box | `entry.error.unknownMove`, `entry.error.layer`, `entry.error.empty`, `entry.error.solved` | `entry.error` |
+| Solve | button, primary, block, trailing chevron. Control+Return in the box does the same | `entry.solve` | `entry.solve` |
+| Scan instead | button, secondary, block; only at 3×3 | `entry.scan` | `entry.scan` |
+| Enter the colours | button, secondary, block, trailing chevron. Opens the screen below at the size chosen | `common.enterByHand` | `entry.colours` |
+
+**The size is chosen, never read off the scramble or the camera.** Sizes 2 to 5
+are offered; 6 and 7 follow once the 3D cube has been seen on a phone.
+
+**A scramble is notation** (`../../nxn-solver.md`, "Notation"): R, U', F2,
+2R, Rw, 3Rw, 2-3R, and x, y, z for the whole cube. The letters are not translated
+and a language does not change what is typed. A fault names the move at
+fault, which is selected in the box so that it can be typed over; nothing is
+started until the scramble is whole. A scramble that leaves the cube as it
+was is refused, because there is nothing to solve.
+
+**Solving** goes to the solve screen with no camera, as the demo does.
+
+#### Entering the colours of a cube of any size
+
+The hand entry above, built for any size, and the way a cube that is not a
+3x3 is entered when there is no scramble to hand. It differs from the 3x3
+sketch in how a side is named and held, because an even size has no centre
+sticker to name it by and a 5x5 has 150 stickers to set:
+
+- **The cube is held any way up and its sides are named for where they are**:
+  the side facing up is the top, the side facing the person the front. No colour
+  is given beforehand, not even a centre. Whichever six colours are there are the
+  cube's, and the library says whether they can be a cube's (`review.status.*`,
+  `review.fault.*`).
+- **One side at a time, as it looks from outside**, with the sides against its
+  four edges named round the grid, so which way up the grid goes is read off the
+  screen and not guessed. Wide, the cube is drawn beside it and turned to show the
+  side being painted, with the unpainted stickers grey.
+- **Paint, do not pick**: choose a colour once, then tap or drag over the
+  stickers that have it. A seventh swatch takes a colour away. **Fill this side**
+  paints the whole side, which is how a solved side is entered in one touch.
+- **What is wrong is said and pointed at**: too many or too few of a colour; or
+  every colour N × N times and still not a cube, with what is wrong with it and the
+  sticker of the piece at fault outlined. Solve is on only for a cube that is one.
+- **Leaving with colours entered asks first** (`review.discard.*`); **Scan
+  instead** is there at 3×3.
+
+| part | component | string | objectName |
+|---|---|---|---|
+| Back | button, ghost, chevron | `common.back` | `colours.back` |
+| Title | heading | `review.title.enter` | `colours.title` |
+| Clear all | button, ghost, at the trailing end of the bar | `review.clearAll` | `colours.clearAll` |
+| The cube | wide only; the unpainted stickers grey | - | `colours.cube` |
+| Instruction | `small`, `inkSecondary` | `review.intro.enterN` | `colours.intro` |
+| Side picker | six buttons in the order top, front, right, back, left, bottom; a tick when the side is full | `side.top`, `side.front`, `side.right`, `side.back`, `side.left`, `side.bottom`, `review.sidePicker` | `colours.side.<letter>` |
+| Edge names | the side against each edge of the grid, small, round it | `side.*` | `colours.edge.top`, `.right`, `.bottom`, `.left` |
+| The side | N × N stickers on `cubeBody`, tapped or dragged over. Each is a button named by `review.a11y.sticker` | `review.a11y.sticker`, `colour.unset` | `colours.grid`, `colours.sticker.<n>` |
+| Palette | six swatches and one that takes a colour away | `colour.white`, `colour.yellow`, `colour.green`, `colour.blue`, `colour.orange`, `colour.red`, `review.palette` | `colours.colour.<n>` |
+| Fill this side | button, ghost | `review.fillSide` | `colours.fillSide` |
+| Status | a headline and, when there is one, what is wrong | `review.status.emptyN`, `review.status.partial`, `review.status.miscount`, `review.status.miscountOver`, `review.status.miscountUnder`, `review.status.countItem`, `review.status.impossible`, `review.status.impossibleBody`, `review.status.valid`, `review.fault.noScheme`, `review.fault.centreColours`, `review.fault.unknownPiece`, `review.fault.repeatedPiece`, `review.fault.twistedCorner`, `review.fault.flippedEdge`, `review.fault.swappedPieces` | `colours.status` |
+| Solve | button, primary, block; on only for a cube that is one | `review.solve` | `colours.solve` |
+| Scan instead | button, secondary; only at 3×3 | `entry.scan` | `colours.scan` |
+| Discard dialog | dialog | `review.discard.title`, `review.discard.body`, `review.discard.keep`, `review.discard.confirm` | `colours.discard` |
 
 ## Needs from the scan lane
 

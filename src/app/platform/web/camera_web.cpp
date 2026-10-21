@@ -1,4 +1,5 @@
 #include "interfaces/camera.hpp"
+#include "platform/web/devices_web.hpp"
 #include "platform/web/photometry_web.hpp"
 
 #include <emscripten.h>
@@ -7,7 +8,6 @@
 #include <opencv2/imgproc.hpp>
 
 #include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
@@ -15,7 +15,6 @@
 #include <mutex>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -67,10 +66,17 @@ namespace {
 constexpr std::chrono::seconds kEnumerateTimeout{15};
 constexpr std::chrono::seconds kStartTimeout{180};
 
-// One frame, RGBA, at the most the page ever delivers: 640 wide (the vision
-// reader's working width) by up to 1280 tall (a portrait phone). camera_web.js
-// scales anything taller to fit.
-constexpr std::size_t kFrameCapacity = 640U * 1280U * 4U;
+// One frame, RGBA, at the most the page ever delivers: 960 wide (the widest
+// working width the reader asks for, for a 4x4 or 5x5) by up to 1280 tall (a
+// portrait phone). camera_web.js scales anything larger to fit.
+//
+// It was 640, the 3x3's working width, which capped the page below what the
+// reader asks for at any size above 3: the size-aware working width could never
+// take effect in a browser. The cost of the change is the extra pixels a 3x3's
+// frame carries before the reader reduces it, and it is the browser's frame
+// budget (docs/investigations/2026-10-15-web-scan-frame-cost.md) that says
+// whether that is affordable - measured, not assumed.
+constexpr std::size_t kFrameCapacity = 960U * 1280U * 4U;
 
 // What camera_web.js answers a start with; mirrored there.
 enum class Answer : int { ok = 0, denied = 1, not_found = 2, unavailable = 3, failed = 4 };
@@ -87,13 +93,6 @@ CubeError to_error(Answer answer) noexcept {
     }
     return CubeError::camera_start_failed;
 }
-
-// Camera device ids the page cannot supply, because it has not been given
-// camera access yet (browsers hide the real ids and labels until then). They
-// are passed back to camera_web.js as written.
-constexpr std::string_view kDefaultId = "default";
-constexpr std::string_view kBackFacingId = "facing:environment";
-constexpr std::string_view kFrontFacingId = "facing:user";
 
 struct Session {
     std::mutex mutex;
@@ -137,91 +136,6 @@ Session& session() {
 // Asked of a thread that is about to wait for the page: see the file comment.
 bool can_wait_for_page() noexcept {
     return emscripten_is_main_runtime_thread() == 0;
-}
-
-struct RawCamera {
-    std::string id;
-    std::string label;
-};
-
-std::vector<RawCamera> parse_cameras(std::string_view text) {
-    std::vector<RawCamera> cameras;
-    while (!text.empty()) {
-        const std::size_t end = std::min(text.find('\n'), text.size());
-        const std::string_view line = text.substr(0, end);
-        const std::size_t tab = line.find('\t');
-        RawCamera camera;
-        camera.id = std::string(line.substr(0, tab));
-        if (tab != std::string_view::npos) {
-            camera.label = std::string(line.substr(tab + 1));
-        }
-        cameras.push_back(std::move(camera));
-        text.remove_prefix(std::min(end + 1, text.size()));
-    }
-    return cameras;
-}
-
-bool contains_word(const std::string& haystack, std::string_view word) {
-    std::string lower = haystack;
-    std::ranges::transform(lower, lower.begin(),
-                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return lower.find(word) != std::string::npos;
-}
-
-// What the labels the browser gives say about which way a lens points. Chrome
-// on a phone words them "camera2 0, facing back" and "camera2 1, facing front";
-// desktop webcams say nothing and stay unknown, which gets the selfie mirror
-// they want (see Facing in interfaces/camera.hpp).
-Facing facing_from_label(const std::string& label) {
-    if (contains_word(label, "back") || contains_word(label, "rear") ||
-        contains_word(label, "environment")) {
-        return Facing::rear;
-    }
-    if (contains_word(label, "front") || contains_word(label, "user") ||
-        contains_word(label, "face")) {
-        return Facing::front;
-    }
-    return Facing::unknown;
-}
-
-// The list the app shows. Until a person has allowed the camera for this site
-// the browser hides every id and label, so a device cannot be picked out by
-// name; what can be said then is how many there are, and - the one thing a
-// phone's two cameras differ in, and the one a cube is scanned with - which
-// way they point. The rear camera comes first so it is the one a first launch
-// selects: a phone's front camera looks at the person, not the cube.
-std::vector<DeviceInfo> device_list(const std::vector<RawCamera>& cameras) {
-    const bool identified =
-        std::ranges::any_of(cameras, [](const RawCamera& camera) { return !camera.id.empty(); });
-
-    std::vector<DeviceInfo> devices;
-    if (identified) {
-        int number = 0;
-        for (const RawCamera& camera : cameras) {
-            ++number;
-            devices.push_back(DeviceInfo{
-                .identifier = camera.id,
-                .display_name =
-                    camera.label.empty() ? "Camera " + std::to_string(number) : camera.label,
-                .facing = facing_from_label(camera.label),
-            });
-        }
-    } else if (cameras.size() >= 2) {
-        devices.push_back(DeviceInfo{.identifier = std::string(kBackFacingId),
-                                     .display_name = "Back camera",
-                                     .facing = Facing::rear});
-        devices.push_back(DeviceInfo{.identifier = std::string(kFrontFacingId),
-                                     .display_name = "Front camera",
-                                     .facing = Facing::front});
-    } else {
-        // One camera, or the browser would not even say how many. Either way
-        // asking for "a camera" is right: it opens the only one, and where
-        // there are several it prefers the one facing away.
-        devices.push_back(DeviceInfo{.identifier = std::string(kDefaultId),
-                                     .display_name = "Camera",
-                                     .facing = Facing::unknown});
-    }
-    return devices;
 }
 
 }  // namespace
@@ -360,9 +274,9 @@ Result<std::vector<DeviceInfo>> enumerate_devices() {
     if (!s.changed.wait_for(lock, kEnumerateTimeout, [&] { return s.devices_ready; })) {
         // The page did not answer: say so by returning what it would have
         // said with nothing to say, which still lets the app try a start.
-        return device_list({});
+        return web::device_list({});
     }
-    return device_list(parse_cameras(s.devices));
+    return web::device_list(web::parse_cameras(s.devices));
 }
 
 Result<void> start(const DeviceInfo& device) {

@@ -3,6 +3,7 @@
 #include <cube/diagnostics/json.hpp>
 #include <cube/error.hpp>
 #include <cube/model/facelet.hpp>
+#include <cube/nxn/cube.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/vision/color_resolution.hpp>
 #include <cube/vision/direct_scan.hpp>
@@ -45,8 +46,10 @@ namespace cube::diagnostics {
 //  "confidence": [9]}]} - the sides indexed as ScanDiagnosis::sides is.
 [[nodiscard]] Json to_json(const cube::vision::ColorResolution& resolution);
 // {"path", "candidates", "corner_reads", "corner_fits", "chosen",
-//  "settling_corner", "direct_error", "exchange", "error"}. `settling_corner`
-// is the three centre colours of the corner to show, or null.
+//  "settling_corner", "direct_error", "exchange", "scheme_fix", "error"}.
+// `settling_corner` is the three centre colours of the corner to show, or null.
+// `scheme_fix` is {"renamed": {colour: new colour, ...}, "cost",
+// "runner_up_cost"} for an even cube whose colours were renamed, or null.
 [[nodiscard]] Json to_json(const cube::vision::AssemblyTrace& trace);
 // The whole evaluation: {"groups", "captured", "corner_reads", "sides":
 // [{"first_seen", "reads", "roll", "in_view", "lab": [9 of [L, a, b]]}],
@@ -56,9 +59,12 @@ namespace cube::diagnostics {
 // {"ok": true, "state", "colours"} or {"ok": false, "error"}; `state` is the
 // 54-character string of docs/recording-format.md.
 [[nodiscard]] Json to_json(const Result<cube::vision::ScannedCube>& scanned);
+[[nodiscard]] Json to_json(const Result<cube::vision::ScannedCubeN>& scanned);
 
-// The 54-character state string of a cube (docs/recording-format.md).
+// The state string of a cube (docs/recording-format.md): 54 characters for a
+// 3x3, 6 * size^2 for the other sizes.
 [[nodiscard]] Json cube_json(const cube::solver::Cube& cube);
+[[nodiscard]] Json cube_json(const cube::nxn::NCube& cube);
 // A move in standard notation ("R", "U2", "F'"), or null for none.
 [[nodiscard]] Json move_json(const std::optional<cube::solver::Move>& move);
 // Moves as one string of standard notation, space-separated.

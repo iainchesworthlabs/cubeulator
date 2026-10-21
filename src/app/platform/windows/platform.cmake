@@ -4,6 +4,9 @@
 set(CUBEULATOR_PLATFORM_DISPLAY_NAME "Windows")
 set(CUBEULATOR_PLATFORM_DESKTOP ON)
 # A native camera device, opened from the calling thread? (cmake/Platform.cmake)
+# Archivo and IBM Plex Mono are compiled in and registered at start-up
+# (src/app/CMakeLists.txt).
+set(CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS ON)
 set(CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA ON)
 
 # Windows keeps its own platform plugin: it is the only one deployed beside
@@ -25,7 +28,10 @@ set(CUBEULATOR_PLATFORM_TEST_DISPLAY_HELP "")
 set(CUBEULATOR_PLATFORM_TEST_HIDE_WINDOW ON)
 set(CUBEULATOR_PLATFORM_TEST_LINK_OPTIONS "")
 
-set(CUBEULATOR_PLATFORM_QT_SEARCH_ROOTS "C:/Qt" "$ENV{USERPROFILE}/Qt")
+# C:/Repos/common/<dependency> is where the shared dependencies of the
+# checkouts on one machine live (Qt among them); C:/Qt is where
+# ci/install-qt.ps1 puts it.
+set(CUBEULATOR_PLATFORM_QT_SEARCH_ROOTS "C:/Qt" "C:/Repos/common/qt" "$ENV{USERPROFILE}/Qt")
 set(CUBEULATOR_PLATFORM_QT_ARCH_DIRS msvc2022_64 msvc2019_64 mingw_64)
 
 # The installer's root: the licence and the notices sit beside bin/.
@@ -35,8 +41,21 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/windows/camera_windows.cpp
     platform/windows/capture_thread_scope_windows.cpp
     platform/windows/crash_handler_windows.cpp
+    platform/windows/graphics_probe_windows.cpp
     platform/windows/paths_windows.cpp
-    platform/windows/platform_info_windows.cpp)
+    platform/windows/platform_info_windows.cpp
+    platform/detail/vulkan_probe.cpp)
+
+# The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
+set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/windows/tracy_gpu_d3d11_windows.cpp)
+
+# Qt renders with Vulkan here, so Tracy gets a Vulkan GPU context too
+# (needs the vulkan-headers vcpkg port, a "profiling" feature dependency).
+set(CUBEULATOR_PLATFORM_PROFILING_VULKAN ON)
+set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
+
+# The vector kernels follow the architecture (cmake/Simd.cmake).
+set(CUBEULATOR_PLATFORM_SIMD auto)
 
 # camera_windows.cpp enumerates via native DirectShow device enumeration
 # (ICreateDevEnum/IEnumMoniker) rather than OpenCvCaptureLoop's generic

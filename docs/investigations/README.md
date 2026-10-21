@@ -117,3 +117,19 @@ name.
   verdict freeze the page?](2026-10-15-web-scan-frame-cost.md) - not freeze: the
   dearest judgement is 12 to 25 ms there, and was repeated on most frames until
   the assembly guard; `cube_scan cost` and the browser ceiling hold it.
+
+- [2026-10-17: can the direct scan read a cube of N x N?](2026-10-17-nxn-scan-s0.md) -
+  yes, on drawn cubes: a 5x5 and a 7x7 read at the 3x3's sticker size, 4,240 scans and no
+  wrong cube; no recording of one exists, so not yet on a real one. `cube_scan_s0` repeats it.
+
+- [2026-10-17: can a cube of N x N be settled by two sides at once?](2026-10-17-nxn-corner-reader.md) -
+  on drawn tumbles yes to 5x5 (31 of 32 cubes four turns from solved, none wrong) and half of
+  6x6; on real cubes not measured, the recorded sessions hold hardly a corner view.
+
+- [2026-10-18: what do the real 2x2, 4x4 and 5x5 scan sessions say about the
+  reader?](2026-10-18-nxn-real-scan-sessions.md) - a 2x2 cannot join a side to
+  itself when one of its four stickers is off, so it averages 12.9 groups for a
+  six-sided cube and captures the same side twice; above a 3x3 most losses happen
+  before the lattice, where reflections bridge stickers into one blob. The
+  recordings are all downscaled to 640, so tune above a 3x3 only at the reader's
+  width, and label them first: none has a truth to score against.

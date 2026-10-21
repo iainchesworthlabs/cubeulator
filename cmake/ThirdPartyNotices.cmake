@@ -46,7 +46,7 @@ function(_cube_notices_common_args out app_target)
         list(APPEND port_dirs "${d}")
     endforeach()
     list(APPEND port_dirs
-        "${PROJECT_SOURCE_DIR}/deps/vcpkg/ports")
+        "${CUBEULATOR_VCPKG_ROOT_DIR}/ports")
 
     set(qt_prefix "")
     if(DEFINED Qt6_DIR)
@@ -74,7 +74,15 @@ function(_cube_notices_common_args out app_target)
     set(${out} "${args}" PARENT_SCOPE)
 endfunction()
 
+# `resource_target` is the target the generated files are embedded in as
+# :/licences/* (default: the app itself). The app passes cube_app_qml, which the
+# test programs link whole as the app does, so that the screens that list the
+# notices find them there as well.
 function(cube_add_third_party_notices app_target)
+    set(resource_target "${app_target}")
+    if(ARGC GREATER 1)
+        set(resource_target "${ARGV1}")
+    endif()
     set(out_dir "${PROJECT_BINARY_DIR}/third_party_notices")
     set(json "${out_dir}/third-party-notices.json")
     set(txt "${out_dir}/THIRD-PARTY-NOTICES.txt")
@@ -111,11 +119,11 @@ function(cube_add_third_party_notices app_target)
         COMMENT "Generating third-party notices"
         VERBATIM)
 
-    qt_add_resources(${app_target} "cube_third_party_notices"
+    qt_add_resources(${resource_target} "cube_third_party_notices"
         PREFIX "/licences"
         BASE "${out_dir}"
         FILES "${json}" "${txt}")
-    add_dependencies(${app_target} cube_third_party_notices)
+    add_dependencies(${resource_target} cube_third_party_notices)
 
     # Desktop packages: the notices and the licence ride in every one. The
     # check comes first so a refused install leaves nothing behind.

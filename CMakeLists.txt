@@ -2,36 +2,16 @@
 cmake_minimum_required(VERSION 3.28...4.4)
 
 # ---------------------------------------------------------------------------
-# Vendored vcpkg (git submodule at deps/vcpkg).
+# vcpkg (pinned by the git submodule at deps/vcpkg).
 #
-# The dependency provider is pinned by the submodule so builds are fully
-# reproducible without a machine-wide vcpkg or a VCPKG_ROOT env var. The
-# CMakePresets point CMAKE_TOOLCHAIN_FILE at deps/vcpkg/scripts/buildsystems.
-# If the submodule was not checked out, initialise it here so a fresh clone
-# configures without extra steps.
+# The submodule pins the dependency provider so builds are reproducible
+# without a machine-wide vcpkg or a VCPKG_ROOT env var. Which checkout of that
+# commit a configure uses - the submodule's own, or one shared between your
+# checkouts through ICL_VCPKG_STORE - is decided in cmake/VcpkgRoot.cmake,
+# which sets CMAKE_TOOLCHAIN_FILE. The presets deliberately do not.
 # ---------------------------------------------------------------------------
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/vcpkg/scripts/buildsystems/vcpkg.cmake")
-    find_package(Git QUIET)
-    if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-        message(STATUS "Initialising vendored vcpkg submodule (deps/vcpkg)")
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" submodule update --init --depth 1 -- deps/vcpkg
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            RESULT_VARIABLE CUBEULATOR_SUBMODULE_RESULT)
-        if(NOT CUBEULATOR_SUBMODULE_RESULT EQUAL 0)
-            message(FATAL_ERROR
-                "Failed to initialise the vcpkg submodule. Run:\n"
-                "  git submodule update --init --depth 1 deps/vcpkg")
-        endif()
-    endif()
-endif()
-
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/vcpkg/scripts/buildsystems/vcpkg.cmake")
-    message(FATAL_ERROR
-        "Vendored vcpkg not found at deps/vcpkg.\n"
-        "Clone with submodules (git clone --recurse-submodules ...) or run:\n"
-        "  git submodule update --init --depth 1 deps/vcpkg")
-endif()
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/VcpkgRoot.cmake")
+cubeulator_resolve_vcpkg("${CMAKE_CURRENT_SOURCE_DIR}")
 
 # ---------------------------------------------------------------------------
 # Select vcpkg manifest features BEFORE project() (the vcpkg toolchain reads
@@ -42,14 +22,41 @@ if(NOT DEFINED CUBEULATOR_BUILD_TESTS OR CUBEULATOR_BUILD_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
 
-# Tracy is opt-in: the one switch (declared in cmake/Tracy.cmake) both makes
-# the profiler client resolvable and turns the instrumentation macros real.
+# Tracy is built into the desktop applications (Windows, Linux, macOS) and
+# dormant in them: the one switch CUBEULATOR_ENABLE_TRACY (declared in
+# cmake/Tracy.cmake) both makes the profiler client resolvable and turns the
+# instrumentation macros real, and cube::profile::Session decides at run time
+# whether the client is started (docs/profiling.md). The default has to be
+# settled here, before project(), because it selects a vcpkg manifest feature -
+# and the platform is not known until Platform.cmake, after project(), so which
+# platforms have no Tracy is the presets' say, not this file's: the web,
+# Android and iOS presets set CUBEULATOR_ENABLE_TRACY=OFF (the browser has the
+# in-process recorder instead). It defaults off for a coverage build, whose
+# timings are not about the program; configure Windows on ARM (the port does
+# not support it) with -DCUBEULATOR_ENABLE_TRACY=OFF.
+if(NOT DEFINED CUBEULATOR_ENABLE_TRACY)
+    if(CUBEULATOR_ENABLE_PROFILE_RECORDER OR CUBEULATOR_ENABLE_COVERAGE)
+        set(_cubeulator_tracy_default OFF)
+    else()
+        set(_cubeulator_tracy_default ON)
+    endif()
+    set(CUBEULATOR_ENABLE_TRACY ${_cubeulator_tracy_default} CACHE BOOL
+        "Build the Tracy profiler client into the application (started at run time, see docs/profiling.md)")
+endif()
+option(CUBEULATOR_TRACY_TOOLS
+    "Also build Tracy's command-line tools (tracy-capture, tracy-csvexport) for the host" OFF)
 if(CUBEULATOR_ENABLE_TRACY)
     list(APPEND VCPKG_MANIFEST_FEATURES "profiling")
+    if(CUBEULATOR_TRACY_TOOLS)
+        list(APPEND VCPKG_MANIFEST_FEATURES "profiling-tools")
+    endif()
+    # The tracy port is an overlay (vcpkg-overlay-ports/tracy): the registry's has no
+    # feature for manual lifetime or loopback-only listening.
+    list(APPEND VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg-overlay-ports")
 endif()
 
 project(Cubeulator
-    VERSION 0.1.0
+    VERSION 0.2.0
     DESCRIPTION "A camera-driven, on-device Rubik's Cube solver"
     HOMEPAGE_URL "https://github.com/iainchesworthlabs/cubeulator"
     LANGUAGES CXX)
@@ -94,6 +101,10 @@ include(Sanitizers)
 include(Coverage)
 include(Tracy)
 include(ProfileRecorder)
+include(Simd)
+
+# Which variants/simd-<name> cube::lib is built with (cmake/Simd.cmake).
+cube_resolve_simd(CUBEULATOR_SIMD_RESOLVED)
 include(MobileDependencies)
 
 cube_configure_mobile_dependencies()
@@ -133,4 +144,5 @@ message(STATUS "Cubeulator ${CUBEULATOR_VERSION_FULL}")
 message(STATUS "  Build app   : ${CUBEULATOR_BUILD_APP}")
 message(STATUS "  Build tests : ${CUBEULATOR_BUILD_TESTS}")
 message(STATUS "  Tracy       : ${CUBEULATOR_ENABLE_TRACY}")
+message(STATUS "  SIMD kernels: ${CUBEULATOR_SIMD_RESOLVED}")
 message(STATUS "  Recorder    : ${CUBEULATOR_ENABLE_PROFILE_RECORDER}")

@@ -13,6 +13,8 @@ The checks, each with the reason it exists:
   * the tag is `v` + that version, exactly, label included: the packages are
     named for it, so a tag that disagrees would publish v0.1.0 holding
     Cubeulator-0.1.0-beta.1-* (or the reverse);
+  * vcpkg.json's own `"version"` is the project version (M.M.P), so that the
+    manifest does not say 0.1.0 inside a 0.2.0 release;
   * CHANGELOG.md has a dated `## [version]` section that is the newest one, with
     a summary, bold lead-ins and (pre-release) the closing caveat: the release
     notes are rendered from it and nothing else.
@@ -62,6 +64,16 @@ def check(root: Path, tag: str | None = None, dry_run: bool = False) -> Result:
     except changelog.ChangelogError as exc:
         result.problems.append(f"CMakeLists.txt: {exc}")
         return result
+
+    manifest = root / "vcpkg.json"
+    if manifest.exists():
+        declared = prepare_release.manifest_version(manifest.read_text(encoding="utf-8"))
+        core = prepare_release.project_version(cmake)
+        if declared != core:
+            result.problems.append(
+                f'vcpkg.json says "version": "{declared}" but CMakeLists.txt says {core}. '
+                "Run tools/release/prepare_release.py for the version you mean."
+            )
 
     result.version = version
     result.tag = f"v{version}"

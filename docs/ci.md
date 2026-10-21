@@ -4,12 +4,13 @@
 
 | Workflow | Purpose | Blocking? | In the merge queue? |
 | --- | --- | --- | --- |
-| `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Not yet |
+| `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Yes, the required legs only |
 | `release.yml` | Builds the desktop packages (an installer for Windows, a disk image for macOS, a `.deb` and an `.rpm` for Linux) and the web build's zip on a version tag, signs and attests them, and attaches them to a **draft** GitHub Release with notes rendered from `CHANGELOG.md` ([Cutting a release](releasing.md)). Run by hand it is a dry run unless `dry_run` is unticked. A PR that changes it, `packaging/check-package.sh` or `tools/release/` runs only the release tools' self-test | N/A (tags and manual runs) | No |
 | `changelog-check.yml` | On a PR into `develop`: does a change a person using the app can see carry a `changelog.d/` fragment (or the `no-changelog` label), and is every fragment it adds well formed | No (advisory) | No |
+| `nightly.yml` | Every evening (UTC), against the tip of `develop`: the whole of `ci.yml` with every leg including `perf` and `web-perf`, read job by job; the library under ASan + UBSan and under TSan; the Qt app under ASan + UBSan; clang-tidy over `src/app`. Opens one `nightly` issue when something that gates is red, closes it when a night is green ([Nightly](#nightly)) | No (an issue, never a check) | No |
 | `spike-sweep.yml` | Mondays: a `spike/*` branch whose tip is 30 days old is tagged `archive/spike-<name>` and deleted ([Investigations](investigations/README.md)). Run by hand it is a dry run unless `dry_run` is unticked | N/A (schedule and manual runs) | No |
-| `release-check.yml` | On a PR into `main`, two jobs: `Release readiness` (is this a release the Release workflow will accept, and what would its notes say, in the job summary) and `Commit is green` (is the PR's head green on every workflow the README has a badge for: CI, CodeQL, OSV-Scanner, Zizmor; red while CI is still running) | No (advisory) | No |
-| `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Not yet |
+| `release-check.yml` | On a PR into `main`, two jobs: `Release readiness` (is this a release the Release workflow will accept, and what would its notes say, in the job summary) and `Commit is green` (is the PR's head green on every workflow the README has a badge for: CI, CodeQL, OSV-Scanner, Zizmor; waits up to three hours for ones still running, fails at once on a red one) | No (advisory) | No |
+| `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Yes |
 | `branch-name-check.yml` | Enforces gitflow branch naming | Yes | Yes (skipped, a pass) |
 | `dependency-review.yml` | Fails on a moderate+ vulnerability newly introduced in a PR | Yes | Yes |
 | `osv-scanner.yml` | Scans `vcpkg.json` against the OSV database | No (visible only) | No |
@@ -24,10 +25,40 @@ See [Branch protection and the merge queue](branch-protection.md) for which
 checks are required on `develop` and `main`, how the queue is configured, and
 the `merge_group` rule a workflow has to follow to be part of it.
 
+### Documentation-only changes
+
+A pull request (or merge-queue entry) whose every changed file is documentation
+builds and tests nothing. `plan` runs `.github/actions/changed-code`, which
+diffs the merge commit against its first parent (a queue entry against its
+`base_sha`) and outputs `code=false` when each changed file is under `docs/`
+(except `docs/design/`, which the icon rasterising, the packaging and the
+translation tests read), `changelog.d/`, `.github/ISSUE_TEMPLATE/`, is
+`mkdocs.yml`, a root-level `*.md` or `LICENSE*`. Anything else, an empty or
+failed diff, and every event that is not a pull request or queue entry (a
+push, a manual run, a schedule), is `code=true`.
+
+What `code=false` does, and why it is built this way:
+
+- **The required checks still report.** A job skipped by `if:` reports under
+  the raw text of its `name:` expression, not under the name it would have had,
+  so a required check skipped that way is never reported and the pull request
+  waits for it for ever (`workflow-level paths:` filters have the same
+  fault). So `clang-tidy`, the three build legs, `Coverage (Linux, GCC)` and
+  CodeQL's `Analyze (C++)` are not skipped: they run, say "Nothing to build or
+  test (documentation only)" and skip every other step, and finish in seconds
+  as successes. The build legs are given an Ubuntu runner for it, not a macOS
+  or Windows one.
+- **The rest skips whole.** Android, iOS, Web, Web tests and the Linux system
+  tests are not required, so they are skipped by `if:`. If one is ever made a
+  required check it needs the same treatment as the legs above first.
+- **Still runs on documentation:** `clang-format`, `platform-isolation`,
+  `Changelog fragment`, `Docs build (strict)`, `Validate gitflow branch name`,
+  `Scan dependency diff`, Zizmor and OSV-Scanner.
+
 ### Running some legs by hand
 
-A push or pull request always runs every leg of `ci.yml` (a queue entry would
-too, once the workflow carries `merge_group`; it does not yet). A manual
+A push or pull request always runs every leg of `ci.yml` (a queue entry runs
+only the legs `develop` requires). A manual
 dispatch can name just the ones it needs, which matters because the whole
 matrix is hours of hosted runners and the pool is shared:
 
@@ -45,7 +76,7 @@ the run rather than running nothing. `platform-isolation` is the no-`#ifdef` che
 build legs.
 `system` is the Linux job that runs the system tests under Xvfb (see
 [testing.md](testing.md#system-tests)); on Windows and macOS the same suite
-runs as a non-blocking step of their build legs.
+runs as a step of their build legs, which fails the leg.
 `web-test` is the browser's tests ([testing.md](testing.md#browser-tests)): it
 builds the `web-emscripten-diagnostics` app and the `web-emscripten-tests`
 binaries from one vcpkg tree, runs the unit, integration and performance cases
@@ -124,6 +155,62 @@ gh variable delete CONTROL_RUNNER_JSON                                          
   actionlint does not parse `$/` yet (as of 1.7.12,
   [rhysd/actionlint#711](https://github.com/rhysd/actionlint/issues/711));
   nothing in this repository runs it.
+
+## Nightly
+
+`nightly.yml` runs what is too heavy or too unstable for every pull request,
+once a day, against `develop`. It reports; it blocks nothing: no ruleset names
+a check from it, and it has no `merge_group` trigger.
+
+| Job | What it runs | Counts as |
+| --- | --- | --- |
+| `full-ci` | Dispatches `ci.yml` on `develop` with every leg (`legs=` all of them, plus `perf` and `web-perf`, which `all` leaves out) and waits for it. The report reads the run **job by job**, because a run is "success" when a `continue-on-error` job or step failed (only Web performance is left that way; Android, iOS, Web, Web tests and the Windows and macOS system tests were until 2026-10-21, and two real faults sat red behind that for days). A "success" job that carries a failure annotation is listed as a hidden failure. | gating, except the two wall-time legs (`perf`, `web-perf`); a "success" job that carries a failure annotation is listed as a hidden failure |
+| `sanitizers` | `cube::lib` and `cube::platform` (no Qt, no app) in two builds: the debug preset's own ASan + UBSan at `-O1`, and Release flags with `-fsanitize=thread` (without the `slow` corpora, which are single-threaded). No other leg runs a sanitizer build: `clang-tidy` builds one and never runs it, and the coverage leg turns them off. | gating |
+| `sanitizers-app` | The same ASan + UBSan debug build with the Qt app: the controller and QML tests, then the system tests under Xvfb. Leak detection is off here (Mesa and fontconfig leak by design). | informational |
+| `clang-tidy-app` | clang-tidy over `src/app`, which the `clang-tidy` leg of `ci.yml` cannot see (it configures with the app off). It does not fail: it counts distinct findings by check in the run summary and uploads the log, so a baseline and a no-new-findings ratchet can be set from real numbers. | informational |
+| `report` | A table in the run summary, and one issue labelled `nightly`: opened (or commented on) when a gating job is red, commented on and closed when a night is green. | - |
+
+*Informational* means shown, never the reason an issue is opened. Promote a job
+to gating by editing the `kind` table in `ci/nightly-report.sh` once it has been
+green for a while.
+
+Running it by hand:
+
+```sh
+gh workflow run nightly.yml                                  # everything, on develop
+gh workflow run nightly.yml -f jobs=sanitizers               # one job (comma-separated)
+gh workflow run nightly.yml -f jobs=sanitizers -f ref=feature/x
+```
+
+A pull request that changes `nightly.yml` or `ci/nightly-*.sh` runs `sanitizers`,
+`sanitizers-app` and `clang-tidy-app` on itself (not `full-ci`, which would run
+all of CI a second time, nor `report`, which needs a token that can write
+issues): the only way to see the workflow work before it is on `main`.
+
+Things worth knowing:
+
+- **A scheduled run starts from `main`.** GitHub reads the schedule from the
+  default branch and checks that branch out; every checkout here names `ref:
+  develop`, but the file itself has to be on `main` before the first night. Until
+  the next release (or a hotfix PR to `main` that carries just this file, as
+  `cache-hygiene.yml` once did) neither the schedule nor `gh workflow run` can
+  find it; the scripts it runs are read from `develop`, so only the workflow
+  file has to travel. The local actions (`$/.github/actions/...`) resolve at
+  the workflow's own commit, so they come from `main` too.
+- **Its cache is `main`'s.** A scheduled run's `ref` is `main`, so its own vcpkg
+  cache reads and writes are `main`'s (see [Where an entry can be read
+  from](#where-an-entry-can-be-read-from)), not `develop`'s; the dispatched CI
+  run is on `develop`, and uses `develop`'s. The first night after a dependency
+  change is a cold one for the `sanitizers`, `sanitizers-app` and
+  `clang-tidy-app` jobs. They share the `x64-linux` triplet cache with the other
+  Linux legs, so they add no cache family of their own.
+- **Pool use.** `full-ci` is a waiting job plus the up-to-twelve jobs of the
+  dispatched run, so the nightly's other jobs `need` it: the peak is about 14
+  of the 20 hosted jobs for the first hour and a half and 3 after. It starts at
+  20:41 UTC, hours before the weekly scans (03:17-03:50 Monday).
+- **Timeouts and shape.** 6 h for `full-ci` (the dispatched run's own slowest
+  leg is the macOS build), 4-5 h for the sanitizer jobs, one matrix entry at
+  a time.
 
 ## The vcpkg binary cache
 
@@ -287,7 +374,7 @@ are bumped by hand are listed under [Dependabot](#pins-dependabot-cannot-see).
 | Android | NDK r28c (28.2.13676358), JDK 21, platform 36, build-tools 36.0.0 | r30 exists. r28c is newer than the r27c Qt 6.12 names and builds its libraries with: Qt recommends matching it but does not rule a newer NDK out, so this is outside Qt's tested configuration on purpose (r27c is the fallback). r28c's libc++ has `std::expected::transform`/`and_then`, `std::format`/`std::print`, `ranges::contains`/`fold_left` and `mdspan`, which r26b lacks; it still lacks float `from_chars`, `views::enumerate` and `flat_map`. |
 | CMake | 4.4.2, exact (`lukka/get-cmake`'s catalog; the project's policies go to 4.4) | Yes: Kitware has 4.4.4, which the pinned action cannot install until it is bumped (see [What CI pins](#what-ci-pins)). |
 | mkdocs / mkdocs-material | 1.6.x / 9.7.x, exact (`docs/requirements.txt`) | mkdocs 2.0 is still only a development release and mkdocs-material has no series newer than 9, so the pins stay on those lines. |
-| vcpkg libraries | OpenCV 4.x, fmt, Catch2 (the `tests` feature), Tracy (the opt-in `profiling` feature) | Upstream is ahead (OpenCV 5.0) but vcpkg's registry has no newer major, so it cannot move without a port of our own. A newer baseline only brings minors. |
+| vcpkg libraries | OpenCV 4.x, fmt, Catch2 (the `tests` feature), Tracy (the `profiling` feature, on by default on the desktop, built from the overlay port in `vcpkg-overlay-ports/tracy`) | Upstream is ahead (OpenCV 5.0) but vcpkg's registry has no newer major, so it cannot move without a port of our own. A newer baseline only brings minors. |
 | iOS deployment target | 18.0 (`CMakePresets.json`) | No - 18 is Qt 6.12's minimum iOS (it was 16.3 for Qt 6.8), built with Xcode 16's iOS 18 SDK. iOS CI is build-only and does not build Qt, so this is the project's own floor, not something Qt exercises there. |
 
 ## What CI pins
@@ -300,7 +387,7 @@ change is a reviewed diff (the exceptions are listed under the table):
 | Every GitHub Action, and the composite actions in `.github/actions` | A full commit SHA, with the version in a trailing comment | Dependabot, weekly, grouped, with a **7-day cooldown**: a release is not proposed until it has been out a week. It reads only the directories `dependabot.yml` names (`.github/workflows` and `.github/actions/web-build`), so the `actions/cache` pin in `.github/actions/vcpkg-cache` is bumped by hand |
 | CMake and Ninja (`lukka/get-cmake`) | `cmakeVersion` / `ninjaVersion`, exact, and one the pinned action's catalog lists: a CMake newer than the action (4.4.4 against `get-cmake` 4.4.2, in October 2026) fails with "Cannot match ... in the catalog" until the action is bumped. The exception is the web build (`.github/actions/web-build`), which asks for `latest` | By hand, with the actions |
 | NSIS (`choco install nsis`) | `--version`, exact | By hand |
-| `gcovr` | `==`, exact | By hand |
+| `gcovr` | `ci/requirements-coverage.txt`, exact **with hashes** (`pip install --require-hashes`), dependencies included | Dependabot (`pip`, `/ci`), weekly |
 | zizmor | `ci/requirements-zizmor.txt`, exact | Dependabot (`pip`, `/ci`), weekly |
 | mkdocs and its theme | `docs/requirements.txt`, exact (their own dependencies still float) | By hand |
 | Qt (`install-qt-action`) | `6.12.0`, the LTS line (see Toolchain versions above) | By hand, deliberately: moving Qt moves the app's platform, and its minimum macOS and Windows with it |
@@ -328,8 +415,8 @@ separate prebuilt install (`jurplel/install-qt-action` in CI,
 `MAX_PATH` reasons.
 
 Mobile (arm64-ios/arm64-android) vcpkg builds of opencv4 are
-new and not yet proven out in CI (the `android-build`/`ios-build` jobs stay
-`continue-on-error: true` until they are) — see
+new; they have been green on 39 of the last 40 runs, so the `android-build`/
+`ios-build` jobs have no `continue-on-error` since 2026-10-21 — see
 [Dependency strategy](dependency-strategy.md) for the evidence and the
 fallback plan if it doesn't work out.
 

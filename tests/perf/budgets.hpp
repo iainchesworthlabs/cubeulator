@@ -117,6 +117,48 @@ inline constexpr MethodBudget kAdvanced = {
 };
 
 // ---------------------------------------------------------------------------
+// The N x N solver, counted in moves and cycles
+// ---------------------------------------------------------------------------
+
+// A cube of any size from 2 is solved by reduction (docs/nxn-solver.md), and
+// what that costs is its length: every move of a solution is a table lookup, so
+// the moves made are the work done, and the cycle library a size builds on first
+// use (the 3-cycles its searches choose from) is what that setup costs and
+// holds. Both are counted, not timed, so they are exact on every machine and
+// held a quarter above what they measure. The wall time of the same work, on a
+// desktop, in WebAssembly and on a phone, is docs/performance.md, "Cubes of any
+// size".
+//
+// The corpus is nxn_scramble(size, 1) .. nxn_scramble(size, kNxnSeeds): 60 + 10
+// N random layer turns. Every size the library solves, the 2x2 through the 9x9.
+inline constexpr unsigned kNxnSeeds = 6;
+
+struct SizeBudget {
+    int size;
+    // The most moves in one solve, and the corpus mean.
+    std::uint64_t max_moves;
+    double mean_moves;
+    // The 3-cycles the size's library holds (0 below 4x4, which needs none).
+    std::uint64_t cycles;
+};
+// Measured (worst solve / mean over the six): 2x2 9 / 8.5, 3x3 21 / 19.7, 4x4
+// 145 / 129.8, 5x5 187 / 172.0, 6x6 347 / 335.3, 7x7 434 / 412.8, 8x8 643 / 616.5,
+// 9x9 759 / 737.0. A library holds 4,048 cycles for each orbit of centres and of
+// wings the size has - every 3-cycle of the 24 pieces of an orbit - so that is
+// a structural number, held exactly: 4x4 two orbits (one of each), 5x5 three,
+// 6x6 six, 7x7 eight, 8x8 twelve, 9x9 fifteen.
+inline constexpr std::array<SizeBudget, 8> kNxnSizes = {{
+    {.size = 2, .max_moves = 12, .mean_moves = 11.0, .cycles = 0},
+    {.size = 3, .max_moves = 27, .mean_moves = 25.0, .cycles = 0},
+    {.size = 4, .max_moves = 182, .mean_moves = 163.0, .cycles = 8'096},
+    {.size = 5, .max_moves = 235, .mean_moves = 215.0, .cycles = 12'144},
+    {.size = 6, .max_moves = 435, .mean_moves = 420.0, .cycles = 24'288},
+    {.size = 7, .max_moves = 545, .mean_moves = 516.0, .cycles = 32'384},
+    {.size = 8, .max_moves = 805, .mean_moves = 771.0, .cycles = 48'576},
+    {.size = 9, .max_moves = 950, .mean_moves = 922.0, .cycles = 60'720},
+}};
+
+// ---------------------------------------------------------------------------
 // The reader, counted in cv::Mat pixel buffers
 // ---------------------------------------------------------------------------
 
@@ -124,17 +166,22 @@ inline constexpr MethodBudget kAdvanced = {
 // the two larger sizes a camera gives. The reader reduces a wide frame to its
 // working width before it does anything else, so its buffers do not depend on
 // the camera: that is the contract in direct_scan.hpp, and it is what these
-// hold. Measured: 101 to 115 buffers, 1.92 MB (2.8 working-width frames) at
-// every size; a frame with no cube in it 36 to 54 buffers, 1.85 MB - except
-// the 1080p room, 113 buffers and 2.32 MB. That one has seven sticker-sized
-// outlines in it and no side, which is what earns a second look (outlines
-// taken against a narrower block, read_side in direct_scan.cpp): the
-// threshold, the contours and the shape filter again, and a second lattice
-// search through what they found.
-inline constexpr std::uint64_t kReadBuffers = 145;
+// hold. Measured: 133 to 152 buffers, 1.30 MB at every size (1.99 before
+// prepare_frame kept its threshold for the glare look, 2.22 with it, and 1.30
+// once the brightest channel stopped being split into three planes); a frame with no
+// cube in it 133 to 165 buffers, 4.4 MB - except the 1080p room, 307 buffers and
+// 6.0 MB. A room with sticker-sized outlines in it and no side earns every look
+// the reader has after the first (outlines against a narrower block, against the
+// size the first look measured, and from the frame's chroma, then the face's own
+// four corners, read_side in direct_scan.cpp): each is a threshold, a trace and
+// a lattice search. Before the pitch and chroma looks it was 36 to 54 buffers,
+// 1.85 MB, and the 1080p room 113 and 2.32 MB. The chroma is made in one pass
+// and divided in place (prepared_frame.cpp), which took the 640 room from
+// 5.8 MB to 4.4 MB; what is left is the traces.
+inline constexpr std::uint64_t kReadBuffers = 190;
 inline constexpr std::uint64_t kReadBytes = 2'400'000;
-inline constexpr std::uint64_t kEmptyReadBuffers = 140;
-inline constexpr std::uint64_t kEmptyReadBytes = 2'900'000;
+inline constexpr std::uint64_t kEmptyReadBuffers = 385;
+inline constexpr std::uint64_t kEmptyReadBytes = 7'600'000;
 // Bytes a read of the larger sizes may allocate, as a multiple of what the
 // working-width read did: they pay for the one reduction, and nothing else.
 // Measured 1.00.
@@ -154,12 +201,12 @@ inline constexpr std::uint64_t kEmptyCornerBytes = 2'320'000;
 // terms: a side just past the gate that it finds nothing in (nine blobs for it
 // to weigh, so the frame also goes to the second look, where it is made again),
 // and a side at the edge of the gate that it finds. It allocates a matrix or
-// two for each distinct lattice it weighs. Measured: 205 buffers, 2.32 MB for
-// the side past the gate (the two looks without it, 175), and 119, 1.97 MB for
-// the side it finds (113, 1.99 MB for a side held square; 177 without it,
-// where the second look reads nothing).
-inline constexpr std::uint64_t kThroughFitMissBuffers = 260;
-inline constexpr std::uint64_t kThroughFitMissBytes = 2'900'000;
+// two for each distinct lattice it weighs. Measured: 639 buffers, 6.06 MB for
+// the side past the gate (205 and 2.32 MB before the looks after the second,
+// which weigh its blobs again), and 121, 1.97 MB for the side it
+// finds (113, 1.99 MB for a side held square).
+inline constexpr std::uint64_t kThroughFitMissBuffers = 800;
+inline constexpr std::uint64_t kThroughFitMissBytes = 7'600'000;
 inline constexpr std::uint64_t kThroughFitReadBuffers = 150;
 inline constexpr std::uint64_t kThroughFitReadBytes = 2'460'000;
 // SideScan::add() works on nine Lab triples and a few vectors, not pictures:
@@ -237,6 +284,15 @@ inline constexpr TimeBudget kAdvancedSolveTime = {30.0};
 inline constexpr TimeBudget kReadTime360 = {2.0};
 inline constexpr TimeBudget kReadTime1080 = {4.0};
 inline constexpr TimeBudget kEmptyReadTime360 = {2.0};
+// The glare look's outlines of a 640 x 360 working frame with a highlight in it:
+// 0.09 now that it starts from the first look's threshold and the brightness
+// already blurred, 0.26 to 0.28 when only its channels were walked by row
+// pointers, 0.51 to 0.52 when they were read a pixel at a time through Mat::at
+// (2.2 ms against this machine's 4.4 ms of calibration). The budget is under
+// both of the older figures. And the same look of a frame with nothing clipped
+// in it, which hands back the first look's outlines: 0.03.
+inline constexpr TimeBudget kGlareLookTime360 = {0.25};
+inline constexpr TimeBudget kClearGlareLookTime360 = {0.1};
 // 0.08 to 0.10 each: a hundred reads fed to SideScan::add, and one scanned().
 inline constexpr TimeBudget kScanAddTime = {1.0};
 inline constexpr TimeBudget kScannedTime = {1.0};
@@ -245,6 +301,14 @@ inline constexpr TimeBudget kScannedTime = {1.0};
 inline constexpr TimeBudget kCornerReadTime360 = {3.0};
 inline constexpr TimeBudget kCornerReadTime1080 = {8.0};
 inline constexpr TimeBudget kEmptyCornerReadTime360 = {2.0};
+
+// An N x N solve, with the size's one-off setup (cycles, centre search) already
+// built, against the light calibration: 10.4 (5x5, a solve of about 45 ms), 15.6
+// (7x7, about 65 ms) and 39.8 (9x9, about 170 ms). The setup is not timed: it can
+// be made once per process, and docs/performance.md has it.
+inline constexpr TimeBudget kNxnSolveTime5 = {40.0};
+inline constexpr TimeBudget kNxnSolveTime7 = {60.0};
+inline constexpr TimeBudget kNxnSolveTime9 = {150.0};
 
 // How many timed runs each takes, after one that is thrown away.
 inline constexpr int kSolveRuns = 5;

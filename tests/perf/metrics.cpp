@@ -4,6 +4,10 @@
 #include "measure.hpp"
 #include "scenes.hpp"
 
+#include <cube/nxn/commutator.hpp>
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/cube3.hpp>
+#include <cube/nxn/strategy.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/solver.hpp>
 #include <cube/vision/corner_view.hpp>
@@ -483,6 +487,58 @@ void add_judgement(std::vector<Metric>& out, const std::string& base, const Judg
 
 }  // namespace
 
+namespace {
+
+// The N x N corpus: 60 + 10 N random layer turns, from seeds 1 and up.
+[[nodiscard]] nxn::NCube nxn_scramble(int size, unsigned seed) {
+    return nxn::random_scramble({.size = size, .seed = seed, .moves = 60 + (10 * size)});
+}
+
+// The 3-cycles a size's library holds, over every orbit of centres and wings.
+[[nodiscard]] std::uint64_t cycles_of(int size) {
+    if (size < 4) {
+        return 0;
+    }
+    const nxn::Geometry& geometry = nxn::Geometry::of(size);
+    const nxn::CycleLibrary& library = nxn::CycleLibrary::of(size);
+    std::uint64_t cycles = 0;
+    for (std::size_t k = 0; k < geometry.centre_orbits().size(); ++k) {
+        cycles += library.centres(k).size();
+    }
+    for (std::size_t k = 0; k < geometry.wing_orbits().size(); ++k) {
+        cycles += library.wings(k).size();
+    }
+    return cycles;
+}
+
+}  // namespace
+
+std::vector<Metric> nxn_metrics() {
+    std::vector<Metric> out;
+    unsigned unsolved = 0;
+    for (const b::SizeBudget& limit : b::kNxnSizes) {
+        Track moves;
+        for (unsigned seed = 1; seed <= b::kNxnSeeds; ++seed) {
+            const auto solution = nxn::solve(nxn_scramble(limit.size, seed));
+            if (!solution.has_value()) {
+                ++unsolved;
+                continue;
+            }
+            moves.add({.seed = seed, .value = static_cast<double>(solution->move_count())});
+        }
+        add_max_and_mean(out, std::format("nxn.{0}x{0}.moves", limit.size), moves,
+                         {.max = number(limit.max_moves), .mean = limit.mean_moves}, "moves");
+        out.push_back({
+            .name = std::format("nxn.{0}x{0}.library.cycles", limit.size),
+            .measured = number(cycles_of(limit.size)),
+            .budget = number(limit.cycles),
+            .unit = "3-cycles",
+        });
+    }
+    out.push_back(must_be_zero("nxn.unsolved", unsolved, "solves"));
+    return out;
+}
+
 std::vector<Metric> judgement_metrics() {
     std::vector<Metric> out;
 
@@ -543,6 +599,13 @@ namespace {
     return [&frame] -> std::uint64_t { return vision::read_side(frame).has_value() ? 1U : 0U; };
 }
 
+// The outlines of the glare look, which the reader takes on a frame with an
+// outline too big to be a sticker in it: the channels of the working frame, a
+// threshold and a trace, 3.3 ms of a scan frame's 8.5 once.
+[[nodiscard]] auto tracing_without_glare(const vision::PreparedFrame& frame) {
+    return [&frame] -> std::uint64_t { return vision::contours_without_glare(frame).size(); };
+}
+
 [[nodiscard]] auto reading_corner(const cv::Mat& frame) {
     return [&frame] -> std::uint64_t { return vision::read_corner(frame).has_value() ? 1U : 0U; };
 }
@@ -575,6 +638,32 @@ std::vector<Metric> solve_timing_metrics() {
     return out;
 }
 
+std::vector<Metric> nxn_timing_metrics() {
+    std::vector<Metric> out;
+    // One seed, the same for each size; the size's setup is built first, the
+    // way the app builds it while a person scans or enters a cube.
+    constexpr unsigned kSeed = 1;
+    const std::array<std::pair<int, b::TimeBudget>, 3> sizes = {
+        {
+            {5, b::kNxnSolveTime5},
+            {7, b::kNxnSolveTime7},
+            {9, b::kNxnSolveTime9},
+        },
+    };
+    solver::prepare(SolveMethod::Advanced);
+    for (const auto& [size, limit] : sizes) {
+        nxn::prepare(size, SolveMethod::Advanced);
+        const nxn::NCube cube = nxn_scramble(size, kSeed);
+        const auto solving_it = [&cube] -> std::uint64_t {
+            const auto solution = nxn::solve(cube);
+            return solution.has_value() ? solution->move_count() : 0U;
+        };
+        out.push_back(timed(std::format("timing.nxn_solve.{0}x{0}", size),
+                            time_against_calibration(solving_it, b::kSolveRuns), limit, kSeed));
+    }
+    return out;
+}
+
 std::vector<Metric> read_timing_metrics() {
     const SingleThreadedOpenCv one_thread;
     std::vector<Metric> out;
@@ -590,6 +679,20 @@ std::vector<Metric> read_timing_metrics() {
     out.push_back(timed("timing.read_side.640x360_empty",
                         time_against_calibration(reading_side(nothing360), b::kFastRuns),
                         b::kEmptyReadTime360, kNoSeed));
+
+    // The glare look's outlines: of a frame with a highlight in it, which are
+    // traced afresh, and of one with nothing clipped, which are the frame's own.
+    const std::optional<vision::PreparedFrame> glared =
+        vision::prepare_frame(glared_side_frame(kSceneSizes.front()));
+    const std::optional<vision::PreparedFrame> clear = vision::prepare_frame(frame360);
+    if (glared.has_value() && clear.has_value()) {
+        out.push_back(timed("timing.glare_look.640x360",
+                            time_against_calibration(tracing_without_glare(*glared), b::kFastRuns),
+                            b::kGlareLookTime360, kNoSeed));
+        out.push_back(timed("timing.glare_look.640x360_nothing_clipped",
+                            time_against_calibration(tracing_without_glare(*clear), b::kFastRuns),
+                            b::kClearGlareLookTime360, kNoSeed));
+    }
 
     const cv::Mat corner360 = corner_frame(test::scramble(1), kSceneSizes.front());
     const cv::Mat corner1080 = corner_frame(test::scramble(1), kSceneSizes.back());

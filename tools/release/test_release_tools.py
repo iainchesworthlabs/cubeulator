@@ -178,7 +178,10 @@ class Render(unittest.TestCase):
         "Cubeulator-0.2.0-beta.1-macos-arm64.dmg",
         "Cubeulator-0.2.0-beta.1-linux-x64.deb",
         "Cubeulator-0.2.0-beta.1-linux-x64.rpm",
+        "Cubeulator-0.2.0-beta.1-ios.ipa",
         "Cubeulator-0.2.0-beta.1-web.zip",
+        "Cubeulator-0.2.0-beta.1.spdx.json",
+        "Cubeulator-0.2.0-beta.1.cdx.json",
         "SHA512SUMS",
     ]
 
@@ -189,7 +192,7 @@ class Render(unittest.TestCase):
             repo="owner/repo",
             names=self.NAMES,
             install_template=(
-                "## Installing\n\nRun `@WINDOWS@`; `@MACOS@`; `@DEB@`; `@RPM@`; host `@WEB@`.\n"
+                "## Installing\n\nRun `@WINDOWS@`; `@MACOS@`; `@DEB@`; `@RPM@`; `@IOS@`; host `@WEB@`.\n"
             ),
         )
         base.update(kw)
@@ -231,9 +234,13 @@ class Render(unittest.TestCase):
     def test_the_table_lists_real_files_and_only_what_was_done(self):
         out = self.render(signed=True, attested=True, sbom=True)
         self.assertIn("| Windows 10 and later, 64-bit | `Cubeulator-0.2.0-beta.1-windows-x64.exe` |", out)
-        self.assertIn("build-provenance attestations, an SPDX SBOM and GPG signatures", out)
+        self.assertIn("build-provenance attestations, SPDX and CycloneDX SBOMs and GPG signatures", out)
         self.assertIn("`gh attestation verify <file> --repo owner/repo`", out)
+        self.assertIn("/docs/SECURITY.md#verifying-build-authenticity)", out)
+        self.assertIn("| SBOM (SPDX 2.3, CycloneDX 1.6) | `Cubeulator-0.2.0-beta.1.spdx.json` · `Cubeulator-0.2.0-beta.1.cdx.json` |", out)
+        self.assertNotIn("SBOM (SPDX 2.3", self.render(attested=True))
         bare = self.render()
+        self.assertNotIn("SECURITY.md", bare)
         self.assertIn("Self-contained and SHA-512-summed:", bare)
         self.assertNotIn("gh attestation", bare)
         self.assertNotIn(".asc", bare)
@@ -242,6 +249,27 @@ class Render(unittest.TestCase):
         out = self.render()
         self.assertIn("`Cubeulator-0.2.0-beta.1-linux-x64.deb`", out)
         self.assertIn("host `Cubeulator-0.2.0-beta.1-web.zip`", out)
+
+    def test_the_iphone_package_has_its_own_row_and_install_name(self):
+        out = self.render(attested=True)
+        self.assertIn("| iPhone (ad hoc: installs only on devices registered to the maintainer) | `Cubeulator-0.2.0-beta.1-ios.ipa` |", out)
+        self.assertIn("`Cubeulator-0.2.0-beta.1-ios.ipa`;", out)
+        preview = notes.render(
+            GOOD, version="0.2.0-beta.1", tag="v0.2.0-beta.1", repo="owner/repo",
+            install_template="phone `@IOS@`",
+        )
+        self.assertIn("phone `Cubeulator-0.2.0-beta.1-ios.ipa`", preview)
+
+    def test_the_install_page_link_names_this_releases_tag(self):
+        preview = notes.render(
+            GOOD, version="0.2.0-beta.1", tag="v0.2.0-beta.1", repo="owner/repo",
+            install_template="[install](https://example.test/install-ios.html?tag=@TAG@)",
+        )
+        self.assertIn("install-ios.html?tag=v0.2.0-beta.1)", preview)
+        self.assertNotIn("@TAG@", preview)
+        # the repository's own template carries it, in the iPhone paragraph
+        template = (Path(__file__).resolve().parent / "install-notes.md").read_text(encoding="utf-8")
+        self.assertIn("install-ios.html?tag=@TAG@", template)
 
     def test_the_web_package_has_its_own_row(self):
         out = self.render(attested=True)
@@ -319,10 +347,41 @@ class Prepare(unittest.TestCase):
         cmake = (root / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertEqual(prepare_release.full_version(cmake), "0.1.0")
 
+    MANIFEST = textwrap.dedent(
+        """\
+        {
+          "name": "cubeulator",
+          "version": "0.1.0",
+          "dependencies": [
+            { "name": "tracy", "version>=": "0.14.1" }
+          ]
+        }
+        """
+    )
+
+    def test_the_manifest_version_follows_and_a_dependency_constraint_does_not(self):
+        root = self.tree(UNRELEASED)
+        (root / "vcpkg.json").write_text(self.MANIFEST, encoding="utf-8", newline="")
+        rc = prepare_release.main(["0.3.0-rc.1", "--root", str(root), "--date", "2026-12-01"])
+        self.assertEqual(rc, 0)
+        manifest = json.loads((root / "vcpkg.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["version"], "0.3.0")
+        self.assertEqual(manifest["dependencies"][0]["version>="], "0.14.1")
+
+    def test_check_leaves_the_manifest_alone(self):
+        root = self.tree(UNRELEASED)
+        (root / "vcpkg.json").write_text(self.MANIFEST, encoding="utf-8", newline="")
+        prepare_release.main(["0.3.0-rc.1", "--root", str(root), "--check"])
+        self.assertEqual((root / "vcpkg.json").read_text(encoding="utf-8"), self.MANIFEST)
+
     def test_the_repository_is_in_a_state_the_tools_can_work_with(self):
         cmake = (prepare_release.ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertIsNotNone(prepare_release.project_version(cmake))
         self.assertIsNotNone(prepare_release.project_prerelease(cmake))
+        manifest = (prepare_release.ROOT / "vcpkg.json").read_text(encoding="utf-8")
+        self.assertEqual(
+            prepare_release.manifest_version(manifest), prepare_release.project_version(cmake)
+        )
         log = (prepare_release.ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertEqual(changelog.validate(log), [])
 
@@ -348,6 +407,7 @@ class Sbom(unittest.TestCase):
         "macos": "Cubeulator-0.1.0-beta.1-macos-arm64.dmg",
         "deb": "Cubeulator-0.1.0-beta.1-linux-x64.deb",
         "rpm": "Cubeulator-0.1.0-beta.1-linux-x64.rpm",
+        "ios": "Cubeulator-0.1.0-beta.1-ios.ipa",
         "web": "Cubeulator-0.1.0-beta.1-web.zip",
     }
 
@@ -369,7 +429,7 @@ class Sbom(unittest.TestCase):
             files=files if files is not None else self.files(),
             notices=notices
             if notices is not None
-            else {p: self.INVENTORY for p in ("windows", "macos", "linux", "web")},
+            else {p: self.INVENTORY for p in ("windows", "macos", "linux", "ios", "web")},
             created=make_sbom.datetime(2026, 10, 14, tzinfo=make_sbom.timezone.utc),
         )
 
@@ -384,9 +444,60 @@ class Sbom(unittest.TestCase):
         for pid in ids:
             self.assertRegex(pid, r"^SPDXRef-[A-Za-z0-9.\-]+$")
 
+    def cdx(self):
+        return make_sbom.to_cyclonedx(self.make(), version="0.1.0-beta.1", repo="owner/repo")
+
+    def test_the_cyclonedx_bom_holds_together_and_says_what_the_spdx_one_does(self):
+        spdx, bom = self.make(), self.cdx()
+        self.assertEqual((bom["bomFormat"], bom["specVersion"]), ("CycloneDX", "1.6"))
+        refs = [c["bom-ref"] for c in bom["components"]]
+        self.assertEqual(len(refs), len(set(refs)))
+        # one component per SPDX package, the same ones
+        self.assertEqual(refs, [p["SPDXID"] for p in spdx["packages"]])
+        known = set(refs) | {bom["metadata"]["component"]["bom-ref"]}
+        for dep in bom["dependencies"]:
+            self.assertIn(dep["ref"], known)
+            for held in dep["dependsOn"]:
+                self.assertIn(held, known)
+        # the root depends on the five files, each file on its platform's components
+        root = next(d for d in bom["dependencies"] if d["ref"] == bom["metadata"]["component"]["bom-ref"])
+        self.assertEqual(root["dependsOn"], spdx["documentDescribes"])
+        for rel in spdx["relationships"]:
+            held = next(d for d in bom["dependencies"] if d["ref"] == rel["spdxElementId"])
+            self.assertIn(rel["relatedSpdxElement"], held["dependsOn"])
+
+    def test_cyclonedx_files_carry_their_hashes_and_components_their_licences(self):
+        bom = self.cdx()
+        deb = next(c for c in bom["components"] if c["name"].endswith(".deb"))
+        self.assertEqual(deb["type"], "file")
+        self.assertEqual({h["alg"] for h in deb["hashes"]}, {"SHA-256", "SHA-512"})
+        self.assertIn("/releases/download/v0.1.0-beta.1/", deb["externalReferences"][0]["url"])
+        opencv = next(c for c in bom["components"] if c["name"] == "opencv4")
+        self.assertEqual((opencv["version"], opencv["licenses"]), ("4.12.0#5", [{"expression": "Apache-2.0"}]))
+        # the option an SPDX reference names is a name, not an identifier CycloneDX resolves
+        qt = next(c for c in bom["components"] if c["name"] == "Qt Base")
+        self.assertEqual(qt["licenses"], [{"expression": "GPL-3.0-only"}])
+        font = next(c for c in bom["components"] if c["name"] == "A font")
+        self.assertEqual(font["type"], "data")
+        self.assertNotIn("licenses", font)  # NOASSERTION is left unsaid
+
+    def test_the_cyclonedx_serial_number_follows_the_content(self):
+        a, b = self.cdx(), self.cdx()
+        self.assertEqual(a["serialNumber"], b["serialNumber"])
+        self.assertRegex(a["serialNumber"], r"^urn:uuid:[0-9a-f-]{36}$")
+
+    def test_the_cyclonedx_bom_validates_against_the_schema_when_the_library_is_there(self):
+        try:
+            from cyclonedx.schema import OutputFormat, SchemaVersion
+            from cyclonedx.validation import make_schemabased_validator
+        except ImportError:
+            self.skipTest("cyclonedx-python-lib[validation] is not installed")
+        validator = make_schemabased_validator(OutputFormat.JSON, SchemaVersion.V1_6)
+        self.assertIsNone(validator.validate_str(json.dumps(self.cdx())))
+
     def test_each_file_is_described_and_holds_its_platforms_components(self):
         doc = self.make()
-        self.assertEqual(len(doc["documentDescribes"]), 5)
+        self.assertEqual(len(doc["documentDescribes"]), 6)
         for file_pkg in (p for p in doc["packages"] if "packageFileName" in p):
             held = [r for r in doc["relationships"] if r["spdxElementId"] == file_pkg["SPDXID"]]
             self.assertEqual(len(held), 3, file_pkg["name"])
@@ -442,7 +553,7 @@ class Sbom(unittest.TestCase):
             [r["relatedSpdxElement"] for r in held],
         )
         with self.assertRaises(make_sbom.SbomError):
-            self.make(notices={p: self.INVENTORY for p in ("windows", "macos", "linux")})
+            self.make(notices={p: self.INVENTORY for p in ("windows", "macos", "linux", "ios")})
 
     def test_files_that_are_not_packages_are_left_out(self):
         files = self.files("windows")
@@ -534,6 +645,26 @@ class Fragments(unittest.TestCase):
         self.assertIn("## [0.3.0-beta.1] - 2026-12-01", log)
         self.assertIn("- **Fixed it.** It was broken.", log)
         self.assertEqual(list((root / "changelog.d").glob("*.fixed.md")), [])
+
+    def test_a_fragment_that_arrives_after_the_cut_is_folded_into_the_section(self):
+        root = self.tree(GOOD)
+        self.write(root, "late.fixed.md", "**Late fix.** It arrived after the cut.")
+        # the release refuses the leftover ...
+        self.assertTrue(check_release.check(root).problems)
+        # ... and --fold puts it in the newest section, after what was there
+        self.assertEqual(prepare_release.main(["0.2.0-beta.1", "--fold", "--root", str(root)]), 0)
+        log = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("- **The solver no longer stalls.** It finishes in seconds.\n- **Late fix.** It arrived after the cut.", log)
+        self.assertIn("## [0.2.0-beta.1] - 2026-11-02", log)  # the heading keeps its date
+        self.assertEqual(list((root / "changelog.d").glob("*.fixed.md")), [])
+        self.assertEqual(changelog.validate(log, "0.2.0-beta.1"), [])
+        self.assertEqual(prepare_release.main(["0.2.0-beta.1", "--fold", "--root", str(root)]), 0)  # nothing left
+
+    def test_fold_refuses_a_section_that_is_not_the_newest(self):
+        root = self.tree(GOOD)
+        self.write(root, "late.fixed.md", "**Late fix.** It arrived after the cut.")
+        self.assertEqual(prepare_release.main(["0.1.0", "--fold", "--root", str(root)]), 1)
+        self.assertTrue((root / "changelog.d" / "late.fixed.md").exists())
 
     def test_check_keeps_the_fragments(self):
         root = self.tree()
@@ -695,6 +826,15 @@ class Check(unittest.TestCase):
         bad = UNRELEASED.replace("- **Something.** It does a thing.", "- It does a thing.")
         dry = check_release.check(self.tree(bad), dry_run=True)
         self.assertTrue(any("bold lead-in" in p for p in dry.problems))
+
+    def test_a_manifest_that_names_another_version_is_refused(self):
+        root = self.tree(GOOD)
+        manifest = root / "vcpkg.json"
+        manifest.write_text(Prepare.MANIFEST, encoding="utf-8", newline="")  # says 0.1.0
+        result = check_release.check(root, tag="v0.2.0-beta.1")
+        self.assertTrue(any("vcpkg.json says" in p for p in result.problems), result.problems)
+        manifest.write_text(Prepare.MANIFEST.replace("0.1.0", "0.2.0"), encoding="utf-8", newline="")
+        self.assertEqual(check_release.check(root, tag="v0.2.0-beta.1").problems, [])
 
     def test_the_label_is_required_to_exist(self):
         root = self.tree(GOOD, cmake='project(Cubeulator\n    VERSION 0.2.0\n    LANGUAGES CXX)\n')
@@ -892,6 +1032,70 @@ class Health(unittest.TestCase):
         self.assertIn("| `ci.yml` | ❌ |", text)
         self.assertIn("| `codeql.yml` | ✅ |", text)
         self.assertIn("**Not green:**", text)
+
+    @staticmethod
+    def report(*states, checks_red=()):
+        rows = [check_health.Row(f"w{i}.yml", state, "", "") for i, state in enumerate(states)]
+        return check_health.Report("o/r", "a" * 40, "subject", rows, checks_red=list(checks_red))
+
+    def waiting(self, reports, wait_minutes=30, interval=60):
+        """assess_waiting over a made-up sequence of reports and a clock that
+        moves `interval` seconds per sleep; returns (final report, polls)."""
+        queue = list(reports)
+        clock = [0.0]
+        said: list[str] = []
+
+        def once():
+            return queue.pop(0) if len(queue) > 1 else queue[0]
+
+        def sleep(seconds):
+            clock[0] += seconds
+
+        final = check_health.assess_waiting(
+            once,
+            wait_minutes=wait_minutes,
+            interval=interval,
+            sleep=sleep,
+            now=lambda: clock[0],
+            say=said.append,
+        )
+        return final, said
+
+    def test_a_workflow_that_has_not_finished_is_waited_for_not_failed(self):
+        final, said = self.waiting(
+            [self.report("running", "green"), self.report("running", "green"), self.report("green", "green")]
+        )
+        self.assertTrue(final.ok, final.problems())
+        self.assertEqual(len(said), 2)
+
+    def test_a_failure_ends_the_wait_at_once(self):
+        final, said = self.waiting([self.report("running", "red"), self.report("green", "green")])
+        self.assertFalse(final.ok)
+        self.assertEqual(said, [])
+
+    def test_a_red_check_run_ends_the_wait_too(self):
+        final, said = self.waiting([self.report("running", checks_red=["Build (Windows) (failure)"])])
+        self.assertFalse(final.ok)
+        self.assertEqual(said, [])
+
+    def test_the_wait_has_an_end_and_says_how_long_it_was(self):
+        final, said = self.waiting([self.report("running", "green")], wait_minutes=5, interval=60)
+        self.assertFalse(final.ok)
+        self.assertEqual(final.gave_up_after, 5)
+        self.assertIn("had still not finished", final.problems()[0])
+        self.assertIn("after 5 minutes", final.problems()[0])
+        self.assertGreaterEqual(len(said), 4)
+
+    def test_without_a_wait_unfinished_is_judged_at_once(self):
+        final, said = self.waiting([self.report("running", "green")], wait_minutes=0)
+        self.assertFalse(final.ok)
+        self.assertEqual(said, [])
+        self.assertIn("has not finished", final.problems()[0])
+
+    def test_a_workflow_with_no_run_yet_is_waited_for_too(self):
+        final, said = self.waiting([self.report("none", "green"), self.report("green", "green")])
+        self.assertTrue(final.ok, final.problems())
+        self.assertEqual(len(said), 1)
 
     def test_scorecard_without_a_result_says_why_the_badge_is_red(self):
         ok, text = check_health.scorecard("o/r", lambda url: (404, ""))

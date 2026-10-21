@@ -1,15 +1,16 @@
 # N x N in the app plan
 
-> **Status in 0.1.0-beta.1:** This is the plan, not a description of the app.
-> What exists is the solver library: `cube::nxn` solves a cube of any size from
-> 2x2 to 9x9 ([nxn-solver.md](nxn-solver.md)), and the app solves its 3x3
-> through it with nothing a person can see changed (`cube::nxn::solve_3x3`).
-> Nothing else in the app knows a cube can be another size: the screens, the
-> controllers, the history, the 3D view and the camera pipeline are all a 3x3.
+> **Status:** 0.1.0-beta.1 solved a 3x3 and nothing else. On `develop` now the
+> app follows a cube of 2 to 5 (more, in the library) from a typed scramble or
+> hand-entered colours, draws it, reviews it and keeps it in History
+> ([Progress](#progress)); the camera in the app still reads only a 3x3. The
+> library reads, names and assembles any odd size from drawn cubes
+> ([Gate S0](#gate-s0), offline half passed); no real cube but a 3x3 has been read.
+> The rest of the page is the plan as accepted.
 
-Written 2026-10-15. Status: **decisions accepted 2026-10-15; no phase
-started.** This is the basis for 0.2.0-beta.1 and begins once 0.1.0-beta.1 is
-out ([Release shape](#release-shape)).
+Written 2026-10-15. Status: **decisions accepted 2026-10-15; P0 done and P1
+built 2026-10-16 to 17** ([Progress](#progress)). This is the basis for 0.2.0-beta.1 and
+began once 0.1.0-beta.1 was out ([Release shape](#release-shape)).
 
 This is the app half of the N x N work. The library half is done and described
 in [nxn-solver.md](nxn-solver.md); the camera half is described in
@@ -48,7 +49,7 @@ Read from `develop` at the merge of pull request 148.
 | 3D view | 26 cubies by construction (the file says so), `cubieSize` 34, a face's stickers read only if `side.length === 9`, layers addressed as -1/0/+1 | `src/app/qt/Cube3DView.qml` |
 | Controller state | `stickers` is a map of six 9-colour arrays | `src/app/qt/solve_controller.cpp` |
 | History | `kFormatVersion = 1`; a 54-letter cube; at most `kMostTurns = 400` turns; the moves are re-derived by solving the stored cube | `src/app/qt/controllers/solve_history_store.{hpp,cpp}` |
-| Reading a side | lattice fit, blob and colour constants, the corner reader and the steadiness gate are tuned on 3x3 recordings and hard-code 3 and 9 | `src/lib/src/vision/direct_scan.cpp`, `color_resolution.cpp`, `corner_view.cpp` |
+| Reading a side | lattice fit, blob and colour constants, the corner reader (since made N x N to 6x6: [investigation](investigations/2026-10-17-nxn-corner-reader.md)) and the steadiness gate are tuned on 3x3 recordings and hard-code 3 and 9 | `src/lib/src/vision/direct_scan.cpp`, `color_resolution.cpp`, `corner_view.cpp` |
 | Assembling a cube | tries all 4^6 = 4096 per-side rolls and asks "is this a solvable 3x3" of each; the answer is the one that survives | `src/lib/src/solver/scan_assembly.cpp` |
 | Is this an N x N a real cube? | **No oracle.** `NCube` has `is_solved()` and `is_reduced()`; nothing says a facelet array is a cube that turns can produce. The 3x3 has `Cube::is_solvable` and the assembler leans on it | `cube/nxn/cube.hpp` |
 | Review and hand entry | not built (R3 of the recovery plan), for 3x3 either; a 3x3 design exists | [recovery-plan.md](recovery-plan.md), [design/screens/review.md](design/screens/review.md) |
@@ -161,6 +162,20 @@ The prototype is the first thing built after the foundations, because decision
 view is now, on a phone-class GPU and in the browser, before any screen is
 rebuilt on it.
 
+**Result (2026-10-16, [tools/cube3d_prototype](https://github.com/iainchesworthlabs/cubeulator/blob/main/tools/cube3d_prototype/README.md)).**
+Built and measured against the same view scaled up the way `Cube3DView.qml` would
+scale (one model per cubie and per sticker, a material bound to each). The lift
+renderer draws a cube of any size as three scene objects: on the development
+machine it costs 0.2 ms of scene-graph work a frame at every size from 3x3 to
+9x9, and in a browser (Edge, ANGLE D3D11, the same GPU) 0.4 ms and a steady 60
+fps at 9x9, with 0.1 to 0.2 ms to lift a layer and set it down. The naive view is
+9.8 ms a frame in the browser at 5x5, 30.6 at 7x7 (31 fps) and 47.8 at 9x9 (20
+fps). So the renderer is not what limits the size, and decision 4 stands: sizes 6
+and 7 clear the 3D gate, and 8 and 9 would on this evidence. **A phone has not run
+it**: the Android APK is built and `android_matrix.py` is the one command that
+measures it (needs a device); until it has, decision 3's phone half is an
+estimate (about 1 to 2 ms a frame, GPU not included).
+
 ### Screens and flow
 
 - **Size.** A choice before scanning or entry. It is chosen, never inferred
@@ -239,6 +254,24 @@ The gate decides P2 and P3: pass for 5x5 and 7x7 means P2 is built; a size
 that does not pass is not offered a camera, and its screen says "enter this
 one by hand".
 
+**Result (2026-10-17, items 1 and 2; [the investigation](investigations/2026-10-17-nxn-scan-s0.md)).**
+Offline, on drawn cubes in daylight and a warm lamp's light, the reader reads a 5x5 and
+a 7x7 as it reads a 3x3 at the same sticker size: 100.00% of stickers where a side is read
+at all (99.91% at the edge), every sticker of every complete scan named right, and no wrong
+cube put together in 4,240 scans (the 3x3's replay of the real recordings is unchanged, line
+for line). The line is a sticker's size, not the cube's: stickers of 13 px (22 px in lamplight)
+in a 640-wide frame, which a 5x5 holds at 22% (39%) of the frame's height and a 7x7 at 31%
+(54%): **a 5x5 is read at about a 3x3's distance in daylight and closer by a lamp, a 7x7 must
+be held about 1.4 to 2.4 times closer** (a wider working frame, which a bigger cube now asks
+for, moves it to 25% and 30% where the camera gives 1280). What it cannot say: **item 3 -
+real recordings - is not done**, so nothing is known of a real 5x5's gaps, glare, plastic or
+hands; the oracle cannot see two centre stickers swapped, so a bigger cube's scan is as right as
+its naming (the review screen is the check); and a small sticker makes the steadiness gate
+a smaller shake in pixels (at +-4 px a 7x7 counts one frame in nine). **Even sizes (P3) are done
+offline as well**: named from their corners and put together by trying where each side goes; a
+4x4 and a 6x6 read and assemble as the odd sizes do, and a 2x2's six flat sides make more than
+one cube one time in five, which only the review can settle.
+
 ## Phases
 
 | phase | scope | exit gate |
@@ -248,6 +281,56 @@ one by hand".
 | **P2 Scan odd sizes (5, 7)** | gate S0, then constants, colour resolution at N^2 per colour, assembly with the oracle, the steadiness gate in pitch units, N^2 dots on the scan screen, flats-only corner handling | at least 99% sticker accuracy on the corpus; false-accept rate measured; no regression on 3x3 |
 | **P3 Scan even sizes (2, 4, 6)** | corner-seeded clustering, scheme inference, white reference without a centre, 2x2 first | its own gate; may conclude that the review screen confirms the side colours |
 | **P4 Release** | budgets in CI; docs and the 25 guide screenshots; privacy wording ("54 colours" is no longer true); store text; accessibility (layer words, wide moves announced) | the beta checklist in [releasing.md](releasing.md) |
+
+### Progress
+
+Each slice is one pull request to `develop`, library first, with the screens on
+top. Updated as slices land.
+
+| slice | phase | state |
+|---|---|---|
+| Validity oracle `cube::nxn::validate` | P0 | merged (#164) |
+| WCA notation: print and parse, round trip over every move of every size | P0 | merged (#165) |
+| Stepped plan over `NCube`/`LayerMove`; stage descriptors | P0 | merged (#166) |
+| The solve controller holds `NCube` and a stepped plan | P0 | merged (#167) |
+| History format v2 | P0 | merged (#168) |
+| Budgets and measured timings | P0 | merged (#169); **desktop and wasm measured, a phone not** (see below) |
+| 3D layer-lift prototype, measured at 5x5, 7x7, 9x9 | P0 | merged (#170) |
+| `size` in recordings and diagnostics | P0 | merged (#171) |
+| N-generic test helpers | P0 | merged (#172) |
+| The controller says size, layers of a move, the 3x3 stage's start | P1 | merged (#173) |
+| The 3D view for any size (`CubeNView`, `cube::nxn::build_mesh`) | P1 | merged (#174) |
+| The solve screen for any size: layer words, stage list, skip to the 3x3 | P1 | merged (#175) |
+| Home's *Another size of cube*; size 2 to 5; scramble entry; demo size | P1 | merged (#176) |
+| Typing a cube in a colour at a time, with the validity oracle | P1 | merged (#177) |
+| Review and History for any size; the kept solution carries its stages | P1 | merged (#178) |
+| Translation drafts for the new strings in eight languages | P1 | open (#179) |
+| Layout checks hold the new screens in the pseudo-locale and the RTL drafts | P1 | open (#180) |
+| User guide page and pictures | P1 | not started |
+| Assembling six scanned sides of any odd size (`cube::nxn::assemble_scanned_sides`, on the oracle) | P2 | merged (#190) |
+| The reader, the scan and the naming for any size; gate S0 offline (`cube_scan_s0`) | S0, P2 | merged (#191); **drawn cubes only** |
+| The scan screen and controller for any odd size: `DirectScan.size`, N^2 dots and chips, the review at its size; recorded at its size; `CUBE_SCAN_SIZE`; **not offered on the entry screen** | P2 | merged (#192) |
+| Even sizes: colours named from the corners, sides put on the cube by trying (`resolve_colors`, `assemble_scanned_sides`), `DirectScan` takes 2 to 9 | P3 | merged (#193); **drawn cubes only** |
+| Real recordings of a 5x5 (`CUBE_SCAN_SIZE=5 CUBE_SCAN_RECORD_DIR=...`) and a 4x4, then offering the camera for 5 (and 4) on the entry screen (with its words) | S0, P2, P3 | not started; needs a 5x5 and a 4x4 in the hand |
+
+**What P1 found.** Wide moves are rare: grouping adjacent layers turned together
+saves under 1% of the moves (2,634 to 2,618 at 4x4, 8,297 to 8,264 at 7x7), so a
+person following a 5x5 is helped by being told *which layer* ("2R", "layer 2
+from the right"), which the screens do, more than by shorter lists. The 3D view
+costs three scene objects at any size, 0.2 ms of scene-graph work a frame
+natively and 0.4 ms in a browser at 3x3 and at 9x9. Hand entry names a side by
+where it is on the cube, not by a centre colour, which an even size does not
+have; that is where the plan's "any way up" bent. Sizes 6 and 7 are built and
+tested in the library and the view but are not offered in the UI yet (decision 3
+waits on a phone measurement). The 3x3's own screens, pictures and tests are
+unchanged and pass as they were.
+
+**Open against the P1 gate.** The gate asks for a 5x5 demo solved end to end on
+a phone-class device inside the time budget. Desktop and the browser build are
+covered by tests (the system walk, the Playwright spec `sizes.spec.mjs`); the
+phone timing was not run (it needs a phone and was waived on 2026-10-17), so a
+phone's cost for `solve()` at 5x5 is unknown. `SteppedSolution` is not deleted
+yet: it is still the reference the 3x3 stepped-plan tests are held against.
 
 P0 and P1 are the milestone. A person can solve and learn any size from 2 to 5
 (then 7) from a hand-entered or demo cube; scanning arrives size by size.

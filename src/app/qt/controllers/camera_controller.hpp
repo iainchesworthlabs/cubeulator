@@ -7,6 +7,9 @@
 #include <QString>
 #include <QVariantList>
 
+#include <functional>
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace cube::app {
@@ -38,7 +41,13 @@ class CameraController : public QObject {
     Q_PROPERTY(bool previewMirrored READ previewMirrored NOTIFY selectedDeviceIdChanged)
 
 public:
+    // How the cameras are listed: the platform's enumerate_devices() in the app.
+    using Enumerator = std::function<Result<std::vector<platform::camera::DeviceInfo>>()>;
+
     explicit CameraController(QObject* parent = nullptr);
+    // For a test, which has no cameras of its own to list. `ids_withheld_until_use`
+    // is PlatformInfo::camera_ids_withheld_until_use.
+    CameraController(Enumerator enumerate, bool ids_withheld_until_use, QObject* parent = nullptr);
 
     [[nodiscard]] QVariantList devices() const;
     [[nodiscard]] bool busy() const;
@@ -55,6 +64,11 @@ public:
 public slots:
     void refreshDevices();
     void selectDevice(const QString& deviceId);
+    // Selects the next camera in the list, going back to the first after the
+    // last. The scan screen's "switch camera" button; a no-op with fewer than
+    // two cameras. Does not restart a capture - the caller starts the scan
+    // again with the new selection, as DirectScan::start takes the id.
+    void selectNextDevice();
 
 signals:
     void devicesChanged();
@@ -66,6 +80,11 @@ private slots:
     void handleEnumerationFinished();
 
 private:
+    // The facing recorded for `deviceId` in the list last read, if it is there.
+    [[nodiscard]] std::optional<platform::camera::Facing> facingOf(
+        const std::string& deviceId) const;
+
+private:
     QVariantList devices_;
     // Keeps the platform-level enumeration result (facing included) beside
     // the QML-facing QVariantList so previewMirrored() can resolve the
@@ -73,6 +92,10 @@ private:
     std::vector<platform::camera::DeviceInfo> deviceInfos_;
     QString selectedDeviceId_;
     QString lastError_;
+    // See PlatformInfo::camera_ids_withheld_until_use: a selection the list no
+    // longer holds is then a placeholder that has become a device.
+    bool ids_withheld_until_use_ = false;
+    Enumerator enumerate_;
     QFutureWatcher<Result<std::vector<platform::camera::DeviceInfo>>> watcher_;
 };
 

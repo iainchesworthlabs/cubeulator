@@ -42,7 +42,7 @@ ship before you publish details: the advisory is where that is agreed.
 ## Supported versions
 
 Cubeulator is pre-1.0 and every release so far is a pre-release
-(`0.1.0-beta.N`). Only the newest release is supported: a fix lands on
+(`0.x.0-beta.N`). Only the newest release is supported: a fix lands on
 `develop` and ships in the next tagged release, and an older beta is not
 patched.
 
@@ -78,7 +78,7 @@ does not verify.
 ### GPG signature (the maintainer's key)
 
 Each release also holds `SHA512SUMS`, its detached signature `SHA512SUMS.asc`,
-a signature beside every package and the SBOM, and the public key
+a signature beside every package and each SBOM, and the public key
 `cubeulator-signing-key.asc`:
 
 ```sh
@@ -109,3 +109,35 @@ expected: the fingerprint above is what to compare.
 
 The two answer different questions. Provenance ties the bytes to *this
 repository and build*; the signature ties them to *the maintainer's key*.
+
+### The SBOMs
+
+`Cubeulator-<version>.spdx.json` is an [SPDX](https://spdx.dev/) 2.3 software bill
+of materials: for each package, every component that ships inside it, with its
+version and licence, from the build's own third-party inventory.
+`Cubeulator-<version>.cdx.json` is the same bill of materials as
+[CycloneDX](https://cyclonedx.org/) 1.6, for tools that read that format. Each is
+checked the way a package is, two ways (shown for the SPDX file):
+
+```sh
+# the same GPG signature, and a line of SHA512SUMS
+gpg --verify Cubeulator-<version>.spdx.json.asc Cubeulator-<version>.spdx.json
+
+# the SBOM GitHub holds for a package, signed through Sigstore: prints the
+# SPDX document it attests, which must match the file you downloaded
+gh attestation verify Cubeulator-<version>-linux-x64.deb \
+    --repo iainchesworthlabs/cubeulator \
+    --predicate-type https://spdx.dev/Document/v2.3 \
+    --format json --jq '.[].verificationResult.statement.predicate' > attested.spdx.json
+```
+
+Compare `attested.spdx.json` with the downloaded file as JSON (`jq -S . file`
+on both, then `diff`): they are the same document. The attestation is made for
+each package; any of the five will do. For the CycloneDX file, use
+`Cubeulator-<version>.cdx.json` and `--predicate-type https://cyclonedx.org/bom`.
+The release workflow makes this same comparison for both before it creates the
+release.
+
+To check without network access to GitHub's attestation store, download the
+bundle once (`gh attestation download <file> --repo iainchesworthlabs/cubeulator`)
+and pass it back with `--bundle <file>.jsonl`.

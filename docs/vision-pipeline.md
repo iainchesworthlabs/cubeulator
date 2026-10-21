@@ -95,6 +95,23 @@ not span three rows and three columns, or no cube all return nothing.
    blob beside it that is not part of it, is read there, at the cost of a few
    dozen microseconds on a frame that has no side
    ([the investigation](investigations/2026-10-15-square-on-dead-band.md)).
+
+   The square grid had two ways of losing a side it had already found, both in
+   how its cells were read. The grid's origin was the first blob in the
+   neighbour set - whichever one the frame's order happened to put first, not
+   one known to be on the side - so a stray within the seed's reach moved the
+   grid's phase and, since a blob counts as on the grid only within 0.3 of a
+   cell, put every real sticker a third of a cell out and lost the side. It is
+   the seed now, which is always a sticker on the side (`snap_to_grid`). And the
+   snapped cells had to span exactly N by N with no cell used twice, so a single
+   stray landing within a third of a cell of a place just outside the side made
+   the span N+1 and dropped the seed. The best N-by-N window on the grid is now
+   weighed as well (`windows_over_cells`); the exact-span candidate is weighed
+   first and wins a tie, so a side that read before is read exactly as it was,
+   and the window only supplies one the exact span refused. The ambiguity the
+   exact span was guarding against - an N-by-N window of a bigger grid does not
+   say which row the side starts on - is real, which is why the two are weighed
+   against each other rather than one replacing the other.
 3. **Colour.** Each of the nine places is sampled from a square patch 0.6 of
    a sticker spacing across, in float CIELAB, by `sticker_lab`
    (`cube/vision/sticker_colour.hpp`, shared with `read_corner`). The colour is
@@ -108,6 +125,100 @@ not span three rows and three columns, or no cube all return nothing.
    with no cluster of a quarter of its pixels falls back to the median.
 
 Nothing in the reader names a colour. It returns measured Lab.
+
+### The looks after the square grid
+
+The three steps above are the reader's first look, and a frame it reads is read
+exactly as it was. A frame it does not read is looked at again, and each further
+look is paid for only when the frame shows a reason to take it (`FrameLook`,
+`prepared_frame.hpp`; the sequence is `read_side_explained`, `direct_scan.cpp`):
+
+- **Narrow block**, as before: a dark sticker beside a bright one is clipped by
+  the wide block's mean. A lattice only this look finds must sit on plastic
+  darker than its darkest sticker.
+- **Pitch block** (`contours_at_pitch`). The block is a fraction of the *frame*,
+  scaled by 3/N, not a fraction of a *sticker*. That is right only when the cube
+  fills the share of the frame it was tuned for: a 5x5 held at arm's length has
+  a block two stickers wide and washes out. Once the first look has found any
+  sticker, its median side is the pitch the frame actually shows, and the block
+  is taken at about two of those.
+- **Glare** (`contours_without_glare`). A highlight across the plastic between
+  two stickers joins them into one outline that is too big to be a sticker and is
+  dropped, and on a 4x4 or 5x5 enough are lost that the count falls under what a
+  lattice needs before one is looked for. Pixels that are clipped and nearly
+  colourless are taken out of the bright region before it is traced, and the
+  look runs only on a frame whose first look found such an outline.
+- **Chroma** (`chroma_contours`). Brightness cannot separate a white sticker from
+  a pale wall, or a dark blue one from a shadow. A second binary taken from
+  colourfulness relative to brightness can, for the five colours that are
+  strongly coloured.
+- **The face's own corners** - see below.
+
+Two changes are in every look, and they are about what a contour is allowed to be
+rather than which pixels are bright. A contour bigger than the largest sticker is
+**cut** on the sticker size the rest of the frame shows, and each cell of the cut
+is a blob (`BlobRules::split_oversized`): that is the merged-outline case above,
+recovered rather than dropped, and no more than four cells are taken from one
+contour so a lit wall is still dropped. And a contour that is the right size but
+fills its rectangle less well - a finger or a shadow across one edge - is kept
+rather than discarded (`BlobRules::min_fill`).
+
+`cube_scan read <session>` is the funnel for all of this: per session it prints
+how many frames read a side, the median sticker count against what a lattice
+needs, which look read each frame, and, for the frames that made no side, the
+number of merged outlines and which of the square-on gate's tests refused the
+best lattice. `-v` prints it per frame. Without it every threshold change is
+guesswork: it is the side reader's counterpart of `cube_scan funnel`.
+
+**The extra looks are for a cube of three or more.** Measured on the 43 recorded
+2x2 sessions, switching them on read 15% more frames and moved ten verdicts -
+two from no cube to a cube, three from a cube to none, five only in how many
+sides were captured. A 2x2 side is four stickers, so a read of it is not enough
+evidence for the side-joining rule to absorb more reads: they become more sides,
+and `SideScan::sides()` keeps the six with the most reads rather than the six that
+assemble. Until that is fixed a 2x2 reads with the two looks it always had, and
+the size-generic changes below are what it gets. Across all 65 recorded sessions
+the branch now reads 0.4% more 2x2 frames, 2.9% more 4x4 and 3.8% more 5x5, with
+every session's verdict unchanged.
+
+### A side seen at an angle: the face's own corners
+
+Nothing above can read a side that is not close to square to the camera, and that
+is a statement about how the cube is held, not about whether it is readable. The
+affine grid is accepted only when its two steps are near-equal and
+near-perpendicular, and it is a parallel projection: a 4x4 or 5x5 held close to a
+wide-angle camera has its pitch change across the face, and the far cells drift
+off their stickers.
+
+`fit_quad_lattice` (`quad_fit.hpp`) takes the other way round. The four extreme
+stickers along the diagonals give the face's corners; the unit square mapped onto
+them is a homography; the N x N cells are read off that homography, so the pose is
+solved rather than assumed. It is refined through the blobs that sat on the grid
+(a homography fitted from cell to pixel, which compensates for a corner found a
+cell out), and it needs only half the cells to hold a sticker, because it places
+the rest. It runs last, so it can add a read and cannot change one the grid
+already made, and its gate is the fit rather than the pose: how many cells held a
+sticker, and how far the blobs sit from them (`kMaxQuadRms`, in cell pitches),
+and then whether the blobs are the size of the cells they sit on
+(`blobs_fill_the_cells`): a homography has eight degrees of freedom, so four
+blobs always fit it exactly, and the top and bottom rows of a side with its
+middle row covered fit a 3x3 lattice to the pixel. What tells either from a face
+is that its blobs fill 1.4 cells, or a twentieth of one. Before that check the
+quad look read 7.7% more 4x4 and 5.6% more 5x5 recorded frames, and most of what
+it added was lattices laid through the room's clutter (about two thirds of the 4x4 reads): the blobs it matched filled
+2% to 7% of their cells, and a cluttered room at 1080p read as a side.
+
+What it needs, and what it does not do yet. The face's four **corner stickers**
+must be among the blobs: they are what the quad is found from, and a face missing
+one presents its ring of inner cells to the diagonal search instead, which is a
+quad turned 45 degrees and reads nothing. A side with a sticker covered anywhere
+but a corner is read, with that cell placed by the homography and marked not
+found - the unit tests hold both. And a cell's colour is still taken from a square
+patch about its centre, as the affine path takes it, where the correct patch under
+perspective is a quadrilateral. That error is small for the angles a hand holds a
+cube at and grows towards the frame's edge, which is where a 5x5's outer stickers
+sit; warping each face once and sampling in the rectified image is the next step
+if the recordings show it.
 
 ## Sides: `SideScan`
 
@@ -376,6 +487,22 @@ the flat reads lack.
    corner at a time settles the recorded patterned cube (twenty cubes from six
    sides) in at most three views, in the tests.
 
+### A bigger cube's corner views
+
+`read_corner(frame, size)` and `fit_corner_each(read, ncubes, colours)` read and fit two or
+three sides of N x N, 2 to 6 (`kMaxCornerSize`; 7 costs more than 20 ms a frame), by the rules
+above with these differences. A grid laid from a blob and two neighbours is placed a ring at a
+time, each refit by least squares, for a side of four or more (a 3x3's is placed in one go as
+it was); there are hundreds of windows rather than two dozen, so only the partitions that can
+make a corner are weighed; a side is matched to a face of a candidate by its N x N colours
+alone (an even size has no centre), and the shared edge's pairing is checked on the faces' own
+positions. `SideScan::add_corner` takes a corner view of the scan's size, and `assemble_n` chooses
+among the candidates by the same votes (`choose_by_corners`). The corner to show is not named for
+a bigger cube (`settling_corner` is a 3x3's): the screen asks for two sides at once. Drawn and
+tumbled, 15 of 16 4x4s and 16 of 16 5x5s a few turns from solved were settled, none wrongly;
+nothing is measured on a real cube held corner-on
+([the investigation](investigations/2026-10-17-nxn-corner-reader.md)).
+
 A cube tumbled in front of the camera, which no recording is, is what
 `cube_tumble_sim` draws, and `cube_scan funnel` replays: a cube turned about
 the vertical and then the horizontal shows two sides between every two
@@ -526,6 +653,89 @@ the scan while watching.
   drift in a sticker can exceed the red/orange gap. The review screen is the
   planned backstop.
 
+## A cube of another size
+
+The reader, the scan and the colour naming are written for a cube of N x N x N,
+N from 2 to 9, and are a 3x3 when no size is said (`read_side(frame, size)`,
+`SideScan(size)`, `prepare_frame(frame, size)`). The size is **chosen, never
+inferred**: nothing here looks at a lattice and says "this is a 5x5". How far it
+is validated is in [the S0 investigation](investigations/2026-10-17-nxn-scan-s0.md);
+in short, every size from 2 to 9 is read, named and assembled end to end on drawn
+cubes, and nothing but a 3x3 has been read on a real cube.
+
+- **A side is N^2 cells**, numbered row * N + column, row-major from the sticker
+  nearest the image's top-left (`vision/side_grid.hpp`). `SideRead`,
+  `CapturedFace`, `ReadSet` and `SideScan::Side` hold them in vectors and a
+  read says its size. A quarter-turn of a side is `rolled_cell(size, roll, cell)`;
+  at 3 it is the four tables the 3x3 had.
+- **Constants are stated in stickers**, so that the 3x3 is the case they were
+  measured on and another size is the same thing in a different unit
+  (`Tuning` in `direct_scan.cpp`): the blob area limits scale by (3/N)^2 for a
+  cube spanning the same part of the frame; a seed reaches (N-1)/2 times the
+  3x3's 3.4 sticker sides; two thirds of the stickers make a lattice (six of nine)
+  and eight ninths of them make one placed through its own fit; the cells a fit
+  places reach twice the side's span; a hand may leave unlike the side as many
+  stickers as the lattice may lose, and one more; and the steadiness gate is
+  0.12 of a sticker spacing, which for a small sticker is a smaller shake.
+- **Placing the lattice.** A 3x3 is laid on a square grid at the stickers' own
+  spacing, and placed through its own fit only if that leaves no side square-on,
+  as it always was. A bigger side reaches further from any seed, and a spacing a
+  few per cent out has put the far cells off their places: the grid drops
+  stickers from the outside in and a lattice that lost a row made up its span from
+  strays and read one row from where it was. So a bigger side is placed through its
+  own fit from the start (the grid is still a candidate in it).
+- **The frame** is worked at 640 pixels wide for a 3x3, 960 for 4 and 5 and 1280
+  above, when the camera gives so many, and the adaptive threshold's block scales
+  by 3/N. A frame no wider is read as it is, so on a platform whose capture is
+  capped at 640 (the browser's) a bigger cube gets the 3x3's pixels.
+- **Naming** (`resolve_colors`) takes six sides of any size. At an odd size the middle
+  sticker of each seeds its cluster and stays there; at an even size, which has none, the
+  24 corner stickers (a side's four corner cells are the same four however it is turned; four
+  of each colour) are clustered first, in groups of four, from the farthest-first picks of
+  each of them in turn, the best of the 24 starts kept, and the six means seed the rest. In both
+  exactly N^2 stickers go to each cluster. The distance from every sticker to every cluster mean is worked out once
+  for each pass of the assignment and not each time it is asked for (the descent by
+  swaps looks at every pair of stickers: 43,000 pairs at a 7x7, 1,400 at a 3x3). There is no
+  white to read off a middle at an even size, so the light is not corrected for it
+  (`find_white_reference` says none), and no pair of centres whose names could be traded.
+- **Assembly** is `cube::solver::assemble_scanned_faces` for a 3x3, as it was, and
+  `cube::nxn::assemble_scanned_sides` for any other size. At an odd size: the same 4^6
+  quarter-turns of six sides pinned by their middles, pruned by the pieces (no edge, wing or corner
+  shows two colours of one axis pair), and asked of `cube::nxn::validate` at the end. At an even
+  size there is no middle to pin a side by, so the first side is laid on the top and the other
+  five on any free face in any of four turns (5! x 4^5 = 122,880 at most), a branch stopping where a
+  corner or wing shows a colour twice, and `validate` reads the colour scheme off the corners at the
+  end; a 2x2's six flat sides make more than one cube one time in four (none of 85 4x4s and 6x6s). There is
+  corner reader above a 6x6 and none that names a corner to show: a scan whose flat sides make
+  more than one cube is `ambiguous_scan` until corner views settle it, and asks for "two sides at
+  once" (see below). `SideScan::scanned_n()` / `cube_n()` give the cube of any size (an `NCube`);
+  `scanned()` / `cube()` are the 3x3's.
+- **An even size's colour scheme is checked for its handedness** (`assemble_n`,
+  `repaired_scheme`). Reading the scheme off the corners means `validate` accepts a cube
+  whatever its colours are called, so a naming with two colours traded makes a complete, valid
+  cube - the mirror image of the one in the hand. Red and orange are the pair: on the real 4x4
+  sessions of 2026-10-17 their clusters were 24 Lab from trading in the distance matching
+  early in the evening and 2 by the last, the hue test never applied (the white and the yellow
+  read orange under the lamp, and the dark blue is no colour at all), and replayed with a
+  little less green two of three sessions named every red sticker orange. A real cube's
+  scheme has a handedness that no turning undoes, and exchanging two names reverses it, so a
+  naming whose cubes wear no standard scheme (`cube::nxn::standard_renamings`) is renamed by
+  the one of the 24 renamings that make one which the measured colours fit best (plain Lab to
+  the palette; they differ in at least four colours, so the pair that was confused is the
+  cheap one: on the drawn evening lamp the chosen renaming is 35 Lab cheaper than the next
+  best, where the red-or-orange call it replaces was within 1). The trace says so
+  (`scheme_fix`, with the cost of the choice and of the next best), the cube's colours (`ScannedCubeN::colours`) are renamed with it so the camera
+  follows the right colours, and candidates that wear no standard scheme under the new names
+  are dropped. A naming that already makes a standard scheme is left alone, and an odd size
+  never reaches this: its centres pin the names, and a wrong one is repaired by trading
+  them. A cube whose scheme really is a mirror image of the usual one (an old Japanese-scheme
+  cube) would be renamed to the usual one; the solver already takes the usual scheme to be
+  that of every physical cube (`canonical_color`).
+- **What the oracle cannot see.** Two stickers of one ring of centres that were swapped by
+  a misnaming give a cube nothing can tell from the right one (centres have no identity),
+  and of two wing stickers a few per cent do: see the investigation. A scan of a bigger
+  cube is as right as its naming, and the review screen is the check.
+
 ## Seeing what the app is reading, live
 
 A scan that misnames a colour, a cube that will not assemble: the running app
@@ -548,6 +758,12 @@ and `scanned()` are those with the rest dropped, so the diagnostic and the live
 path cannot disagree.
 
 ## Scoring and replay
+
+`cube_scan_s0` (`tools/scan/s0.cpp`) is the same reader on drawn cubes of any size,
+swept by sticker spacing, light, shake and noise; see [the S0
+investigation](investigations/2026-10-17-nxn-scan-s0.md). A recorded session of a cube
+that is not a 3x3 is replayed by `cube_scan replay` and `board` at the size its manifest
+says ([recording format](recording-format.md#truthtxt)).
 
 `cube_scan` (`tools/scan`) replays recorded sessions through the same reader:
 

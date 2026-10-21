@@ -74,6 +74,15 @@
 #                                      which a test program cannot call from
 #                                      its thread and has no capture backend to
 #                                      ask about; the browser's is tests/web's.
+#   CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS
+#                                      ON where the app carries the design's
+#                                      Latin faces (src/app/qt/fonts/:
+#                                      Archivo and IBM Plex Mono) and
+#                                      registers them at start-up, because
+#                                      a machine cannot be assumed to have
+#                                      them. OFF in the browser, which
+#                                      draws with the face Qt's kit bundles
+#                                      and would carry them in the module.
 #   CUBEULATOR_PLATFORM_QT_SEARCH_ROOTS, CUBEULATOR_PLATFORM_QT_ARCH_DIRS
 #                                      Where cmake/FindQt6.cmake looks for an
 #                                      aqtinstall-style Qt when none is on
@@ -86,6 +95,42 @@
 #                                      Unused on phones.
 #
 # Build inputs (paths are relative to src/app):
+#   CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES
+#                                      The Direct3D 11 backend of
+#                                      cube::profiling::GpuContext, compiled
+#                                      into cube::lib (not cube_platform: the
+#                                      unit tests reach it) when Tracy is on:
+#                                      platform/windows/tracy_gpu_d3d11_windows.cpp
+#                                      where Windows supplies Direct3D,
+#                                      platform/posix/tracy_gpu_direct3d_none.cpp
+#                                      everywhere else.
+#   CUBEULATOR_PLATFORM_PROFILING_VULKAN
+#                                      ON when the platform's Qt can render
+#                                      with Vulkan and the Tracy Vulkan backend
+#                                      is to be built (src/lib/src/profile/
+#                                      tracy_gpu_vulkan.cpp, with the Vulkan
+#                                      headers; the app's
+#                                      qt/render_profiler_vulkan.cpp finds the
+#                                      handles). OFF compiles the *_none.cpp
+#                                      stubs of the same two.
+#   CUBEULATOR_PLATFORM_PROFILING_OPENGL
+#                                      ON where Tracy's OpenGL backend
+#                                      (src/lib/src/profile/tracy_gpu.cpp) is
+#                                      to be built; OFF compiles
+#                                      tracy_gpu_opengl_none.cpp. Not on Apple,
+#                                      where Tracy's OpenGL header refuses to
+#                                      compile (its timestamps are unreliable
+#                                      there).
+#   CUBEULATOR_PLATFORM_SIMD           Which 128-bit vector kernels cube::lib
+#                                      is built with (cmake/Simd.cmake): "auto"
+#                                      works it out from the target's
+#                                      architecture (x86-64 has SSE2, arm64
+#                                      NEON), "vector128" says the platform's
+#                                      compile flags give a vector unit the
+#                                      architecture check cannot see (the
+#                                      browser, with -msimd128, which the page
+#                                      already requires). Every platform but
+#                                      the browser says "auto".
 #   CUBEULATOR_PLATFORM_SOURCES        Compiled into cube_platform: one
 #                                      implementation of every interfaces/
 #                                      header (and of the detail/ seams).

@@ -6,6 +6,17 @@ Rectangle {
     color: Theme.paper
     readonly property bool wide: width >= Theme.wideBreakpoint
 
+    // The cube is made once the menu has been drawn, not before: the first
+    // frame of a 3D view is the longest the GUI thread is held at start-up
+    // (docs/performance.md, "Screens"), and the person waits for the buttons,
+    // not for the cube.
+    property bool menuDrawn: false
+    Connections {
+        target: root.Window.window
+        enabled: !root.menuDrawn
+        function onFrameSwapped() { root.menuDrawn = true; }
+    }
+
     // ---- narrow (phone) ----
     Column {
         visible: !root.wide
@@ -25,15 +36,21 @@ Rectangle {
         Item {
             width: parent.width
             height: root.height - 360
-            Cube3DView {
-                width: 190; height: 190
+            // Only the layout that is on show has a cube: the other was built
+            // and never drawn, and a cube costs more to make than the rest of
+            // the screen put together.
+            Loader {
+                active: root.menuDrawn && !root.wide
                 anchors.centerIn: parent
-                shaderStyle: SettingsState.shaderStyleIndex
-                autoRotate: SettingsState.cubeAutoRotate
-                autoRotateSpeed: SettingsState.rotateSpeedValue
-                showStats: SettingsState.statsForNerds && !root.wide
-                LayoutMirroring.enabled: false
-                LayoutMirroring.childrenInherit: true
+                sourceComponent: Cube3DView {
+                    width: 190; height: 190
+                    shaderStyle: SettingsState.shaderStyleIndex
+                    autoRotate: SettingsState.cubeAutoRotate
+                    autoRotateSpeed: SettingsState.rotateSpeedValue
+                    showStats: SettingsState.statsForNerds && !root.wide
+                    LayoutMirroring.enabled: false
+                    LayoutMirroring.childrenInherit: true
+                }
             }
         }
 
@@ -46,6 +63,12 @@ Rectangle {
                 variant: "primary"; block: true
                 objectName: "launch.startScan"; text: qsTrId("home.scan"); trailingIcon: "chevron-right"
                 onClicked: AppState.beginScan()
+            }
+            AppButton {
+                width: parent.width; height: 44
+                variant: "secondary"; block: true
+                objectName: "launch.other"; text: qsTrId("home.other"); trailingIcon: "chevron-right"
+                onClicked: AppState.openEntry()
             }
             AppButton {
                 width: parent.width; height: 44
@@ -92,6 +115,7 @@ Rectangle {
             readonly property real pad: Theme.space8 + Theme.space2
 
             Text {
+                id: appName
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.margins: leftPane.pad
@@ -108,7 +132,16 @@ Rectangle {
                 anchors.right: parent.right
                 anchors.leftMargin: leftPane.pad
                 anchors.rightMargin: leftPane.pad
+                // Centred, as long as it has room to be: a longer translation (or a wider
+                // face) makes it taller than the pane's middle has room for, and a column
+                // that grows evenly up and down then sets its last row of buttons over the
+                // footer's. It is moved off the middle only as far as keeps it between the
+                // product name and the footer.
                 anchors.verticalCenter: parent.verticalCenter
+                readonly property real centred: leftPane.height / 2 - height / 2
+                anchors.verticalCenterOffset:
+                    Math.max(appName.y + appName.height + Theme.space2,
+                             Math.min(centred, footer.y - Theme.space2 - height)) - centred
                 spacing: Theme.space3
                 Text {
                     text: qsTrId("app.tagline")
@@ -131,7 +164,8 @@ Rectangle {
                     width: 340
                     wrapMode: Text.WordWrap
                 }
-                Row {
+                Flow {
+                    width: parent.width
                     spacing: Theme.space3
                     topPadding: Theme.space3
                     AppButton {
@@ -139,11 +173,13 @@ Rectangle {
                         objectName: "launch.startScan"; text: qsTrId("home.scan"); trailingIcon: "chevron-right"
                         onClicked: AppState.beginScan()
                     }
+                    AppButton { objectName: "launch.other"; height: 46; variant: "secondary"; text: qsTrId("home.other"); onClicked: AppState.openEntry() }
                     AppButton { objectName: "launch.solveHistory"; height: 46; variant: "secondary"; text: qsTrId("home.history"); onClicked: AppState.openHistory() }
                 }
             }
 
             Row {
+                id: footer
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: leftPane.pad
@@ -160,15 +196,18 @@ Rectangle {
 
             Rectangle { anchors.left: parent.left; width: 2; height: parent.height; color: Theme.divider }
 
-            Cube3DView {
-                width: 320; height: 320
+            Loader {
+                active: root.menuDrawn && root.wide
                 anchors.centerIn: parent
-                shaderStyle: SettingsState.shaderStyleIndex
-                autoRotate: SettingsState.cubeAutoRotate
-                autoRotateSpeed: SettingsState.rotateSpeedValue
-                showStats: SettingsState.statsForNerds && root.wide
-                LayoutMirroring.enabled: false
-                LayoutMirroring.childrenInherit: true
+                sourceComponent: Cube3DView {
+                    width: 320; height: 320
+                    shaderStyle: SettingsState.shaderStyleIndex
+                    autoRotate: SettingsState.cubeAutoRotate
+                    autoRotateSpeed: SettingsState.rotateSpeedValue
+                    showStats: SettingsState.statsForNerds && root.wide
+                    LayoutMirroring.enabled: false
+                    LayoutMirroring.childrenInherit: true
+                }
             }
         }
     }

@@ -45,7 +45,6 @@ namespace {
         }
     }
     FAIL("not a side: " << side.toStdString());
-    return Face::U;
 }
 
 [[nodiscard]] QString colour_name(Color colour) {

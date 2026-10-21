@@ -17,7 +17,7 @@ that it was left part-way (*Unfinished · turn 3 of 96*).
 
 - **The newest unfinished solve** carries on from the turn it reached. The
   camera is off then, because nothing was scanned in this session to match it
-  against, so step with **Next move** and **Previous**; if the cube and the
+  against, so step with **Next turn** and **Previous**; if the cube and the
   solution part company, scan again.
 - **Any other row**, a finished solve or an unfinished one that you have
   since scanned past, opens its solution, to look back over it. See
@@ -45,10 +45,13 @@ off stops new solves being added; it does not delete what is there (that is
 
 ## What is kept
 
-For each solve: when it started, the cube as scanned (its 54 colours), the turn
-you reached, the number of turns and the time taken. **Never a picture.** The
-solution itself is not stored; it is worked out again from the cube, which
-gives the same answer. The newest 100 are kept.
+For each solve: when it started, the cube as scanned (its colours: 54 for a
+3x3, six times the size squared for another size), the turn you reached, the
+number of turns and the time taken. **Never a picture.** A 3x3's solution is
+not stored; it is worked out again from the cube, which gives the same
+answer. A bigger cube's is stored, so a solve you carry on later is the very
+one you were following, even if a newer version of Cubeulator would now find a
+shorter way. The newest 100 are kept.
 
 It is a file on your device (`solve-history.json`, in the app's data folder:
 [Privacy](privacy.md#what-is-kept) says where), and nothing is sent anywhere.

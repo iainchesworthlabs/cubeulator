@@ -60,9 +60,11 @@ Rectangle {
         return Qt.locale(Qt.uiLanguage).toString(new Date(entry.started), Locale.ShortFormat);
     }
     function summaryOf(entry) {
-        return entry.finished
+        var summary = entry.finished
             ? qsTrId("history.item.done", entry.turns).arg(AppState.durationLabel(entry.seconds))
             : qsTrId("history.item.unfinished").arg(digits(entry.turn)).arg(digits(entry.turns));
+        // A 3x3 is the cube nothing needs to be said of.
+        return entry.size === 3 ? summary : qsTrId("history.item.size").arg(digits(entry.size)).arg(summary);
     }
 
     // Hands are on the keys, or on a phone's back gesture: back leaves, and
@@ -74,21 +76,23 @@ Rectangle {
 
     // ---- parts ----------------------------------------------------------------
 
-    // Nine stickers of the scanned cube's front side: a way to recognise a
-    // scramble at a glance, not information, so it is not read out. The cube is
-    // the object in the hand, and does not mirror with the layout.
+    // The stickers of the scanned cube's front side - nine for a 3x3, N x N for a
+    // cube of size N, in the same 44 pixels: a way to recognise a scramble at a
+    // glance, not information, so it is not read out. The cube is the object in
+    // the hand, and does not mirror with the layout.
     component SideChip: Grid {
         property var colours: []
+        readonly property int stickersAcross: colours.length > 0 ? Math.round(Math.sqrt(colours.length)) : 3
         width: 44; height: 44
-        columns: 3
+        columns: stickersAcross
         spacing: 1
         LayoutMirroring.enabled: false
         LayoutMirroring.childrenInherit: true
         Accessible.ignored: true
         Repeater {
-            model: 9
+            model: parent.stickersAcross * parent.stickersAcross
             Rectangle {
-                width: 14; height: 14
+                width: (44 - (parent.stickersAcross - 1)) / parent.stickersAcross; height: width
                 color: root.colorHex(index < parent.colours.length ? parent.colours[index] : "")
                 // White on the light theme's paper would be a hole.
                 border.width: 1
@@ -133,41 +137,66 @@ Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
 
         // Top bar: back, the title, and Clear history at the trailing end when
-        // there is anything to clear.
+        // there is anything to clear. The title wraps onto as many lines as it
+        // needs and the bar grows to hold them (as the entry screen's does). When the
+        // title in one line and the button do not both fit beside Back - "Historique"
+        // and "Effacer l'historique" on a phone - the button takes a line of its
+        // own under them, at the same end, instead of cutting the title off.
         Item {
             id: bar
             width: parent.width
-            height: 64
+            height: barTop.height + (clearBelow ? clearButton.height + Theme.space3 : 0)
 
-            AppButton {
-                id: back
-                objectName: "history.back"
-                anchors.left: parent.left; anchors.leftMargin: Theme.space3
-                anchors.verticalCenter: parent.verticalCenter
-                variant: "ghost"; leadingIcon: "chevron-left"
-                text: qsTrId("common.back")
-                onClicked: root.goBack()
+            readonly property bool clearBelow: clearButton.visible && !clearBeside
+            readonly property bool clearBeside: back.width + titleSize.advanceWidth + clearButton.implicitWidth
+                + Theme.space3 * 3 + Theme.space2 <= width
+
+            // The title as it is set on one line.
+            TextMetrics {
+                id: titleSize
+                font: titleText.font
+                text: titleText.text
             }
-            Text {
-                objectName: "history.title"
-                anchors.left: back.right; anchors.leftMargin: Theme.space2
-                anchors.right: clearButton.visible ? clearButton.left : parent.right
-                anchors.rightMargin: Theme.space3
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTrId("history.title")
-                elide: Text.ElideRight
-                font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 22
-                color: Theme.ink
-                Accessible.role: Accessible.Heading
-                Accessible.name: text
+
+            Item {
+                id: barTop
+                width: parent.width
+                height: Math.max(64, titleText.implicitHeight + 2 * Theme.space3)
+
+                AppButton {
+                    id: back
+                    objectName: "history.back"
+                    anchors.left: parent.left; anchors.leftMargin: Theme.space3
+                    anchors.verticalCenter: parent.verticalCenter
+                    variant: "ghost"; leadingIcon: "chevron-left"
+                    text: qsTrId("common.back")
+                    onClicked: root.goBack()
+                }
+                Text {
+                    id: titleText
+                    objectName: "history.title"
+                    anchors.left: back.right; anchors.leftMargin: Theme.space2
+                    anchors.right: parent.right
+                    // Short of the button when it is beside the title.
+                    anchors.rightMargin: Theme.space3
+                        + (bar.clearBeside && clearButton.visible ? clearButton.width + Theme.space3 : 0)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: qsTrId("history.title")
+                    wrapMode: Text.Wrap
+                    font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 22
+                    color: Theme.ink
+                    Accessible.role: Accessible.Heading
+                    Accessible.name: text
+                }
             }
             AppButton {
                 id: clearButton
                 objectName: "history.clear"
                 visible: root.hasEntries
                 anchors.right: parent.right; anchors.rightMargin: Theme.space3
-                anchors.verticalCenter: parent.verticalCenter
+                y: bar.clearBeside ? (barTop.height - height) / 2 : barTop.height
                 variant: "ghost"
+                maxWidth: bar.width - Theme.space3 * 2
                 text: qsTrId("history.clear")
                 onClicked: root.confirmingClear = true
             }
@@ -214,7 +243,8 @@ Rectangle {
                     required property int index
 
                     width: ListView.view.width
-                    height: 64
+                    // 64, and taller for a date and summary that need more lines.
+                    height: Math.max(64, rowText.implicitHeight + Theme.space3 * 2)
                     objectName: "history.row" + (index + 1)
 
                     readonly property string dateText: root.dateOf(modelData)
@@ -247,13 +277,18 @@ Rectangle {
                         onClicked: row.open()
                     }
 
-                    SideChip {
+                    // The chip does not mirror (the cube is the object in the
+                    // hand), and that includes its own anchors: it sits unanchored
+                    // in a slot that does, and the text is anchored to the slot.
+                    Item {
                         id: chip
                         anchors.left: parent.left; anchors.leftMargin: Theme.space4
                         anchors.verticalCenter: parent.verticalCenter
-                        colours: row.modelData.stickers
+                        width: 44; height: 44
+                        SideChip { colours: row.modelData.stickers }
                     }
                     Column {
+                        id: rowText
                         anchors.left: chip.right; anchors.leftMargin: Theme.space3
                         anchors.right: chevron.left
                         anchors.rightMargin: Theme.space2
@@ -262,7 +297,7 @@ Rectangle {
                         Text {
                             width: parent.width
                             text: row.dateText
-                            elide: Text.ElideRight
+                            wrapMode: Text.Wrap
                             font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 15
                             color: Theme.ink
                             Accessible.ignored: true
@@ -270,7 +305,7 @@ Rectangle {
                         Text {
                             width: parent.width
                             text: row.summaryText
-                            elide: Text.ElideRight
+                            wrapMode: Text.Wrap
                             font.family: Theme.fontHeading; font.pixelSize: 12
                             color: Theme.inkMuted(0.6)
                             Accessible.ignored: true

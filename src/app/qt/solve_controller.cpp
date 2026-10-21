@@ -7,21 +7,25 @@
 
 #include <cube/diagnostics/describe.hpp>
 #include <cube/error.hpp>
+#include <cube/nxn/cube.hpp>
 #include <cube/nxn/cube3.hpp>
+#include <cube/nxn/notation.hpp>
+#include <cube/nxn/outside_view.hpp>
 #include <cube/profiling.hpp>
-#include <cube/solver/notation.hpp>
-#include <cube/solver/outside_view.hpp>
 #include <cube/solver/solver.hpp>
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <span>
 
-using cube::nxn::solve_3x3;
+using cube::nxn::NCube;
+using cube::nxn::solve_held;
+using cube::nxn::SteppedPlan;
+using cube::nxn::WideMove;
 using cube::solver::Cube;
 using cube::solver::Face;
 using cube::solver::SolveMethod;
-using cube::solver::SteppedSolution;
 
 namespace {
 
@@ -52,19 +56,35 @@ QVariantList face_colors(const Cube& cube, Face face) {
     return colors;
 }
 
-// Every sticker of `cube`: side letter -> nine colour names, each side as
-// seen from outside it.
-QVariantMap stickers_of(const Cube& cube) {
+// Every sticker of `cube`: side letter -> N x N colour names (nine, for a 3x3),
+// each side as seen from outside it.
+QVariantMap stickers_of(const NCube& cube) {
     QVariantMap sides;
     for (const Face face : cube::solver::kAllFaces) {
         QVariantList colors;
-        colors.reserve(9);
-        for (const cube::solver::Color color : cube::solver::outside_view(cube, face)) {
+        colors.reserve(static_cast<qsizetype>(cube.size()) * cube.size());
+        for (const cube::solver::Color color : cube::nxn::outside_view(cube, face)) {
             colors.append(colour_name(color));
         }
         sides.insert(face_letter(face), colors);
     }
     return sides;
+}
+
+// The 3x3 a cube is, if it is one.
+std::optional<Cube> as_cube3(const std::optional<NCube>& cube) {
+    if (!cube.has_value() || cube->size() != 3) {
+        return std::nullopt;
+    }
+    if (const auto held = cube->to_cube3_as_held(); held.has_value()) {
+        return *held;
+    }
+    return std::nullopt;
+}
+
+// A move of a 3x3 plan as a 3x3 move. A 3x3 plan is turns of the outer layers.
+cube::solver::Move move3_of(const WideMove& move) {
+    return cube::solver::Move{.face = move.face, .turns = move.turns};
 }
 
 SolveMethod to_solver_method(SolveController::Method method) {
@@ -87,35 +107,118 @@ SolveMethod to_solver_method(SolveController::Method method) {
 // QtConcurrent::run rather than the UI thread, so even those seconds never
 // affect app responsiveness.
 
+// How the moves of a solution are shown. A 3x3 and a 2x2 are shown as the
+// library has them, which is what they always were; a bigger cube's adjacent
+// layers turned the same way are one move, as a person would say it ("Rw") -
+// the layer turns are what the history keeps (docs/nxn-app-plan.md, "Notation").
+cube::nxn::Display display_for(int size) {
+    return size >= 4 ? cube::nxn::Display::Wide : cube::nxn::Display::Layers;
+}
+
 // Runs on a QtConcurrent worker thread, not the UI thread - see beginSolve().
-SteppedSolution solve_stepped(Cube scrambled, SolveMethod method) {
+SteppedPlan solve_stepped(const NCube& scrambled, SolveMethod method) {
     CUBE_ZONE_SCOPED_N("app.solve_stepped");
-    const auto solution = solve_3x3(scrambled, method);
+    const auto solution = solve_held(scrambled, method);
     if (solution.has_value()) {
-        return SteppedSolution::from(scrambled, *solution);
+        return SteppedPlan::from(scrambled, *solution, display_for(scrambled.size()));
     }
     // Should not happen for a physically valid cube (every real cube
-    // solves) - fall back to an already-solved, zero-move stepped solution
-    // so the UI has something consistent to show rather than crashing.
-    return SteppedSolution::from(Cube::solved(), cube::solver::Solution{});
+    // solves) - fall back to an already-solved, zero-move plan so the UI has
+    // something consistent to show rather than crashing.
+    return SteppedPlan::from(*NCube::solved(scrambled.size()), cube::nxn::Solution{});
 }
 
 }  // namespace
 
 SolveController::SolveController(QObject* parent) : QObject(parent) {
     // Safe placeholder so topColors()/etc. never read an empty stepped_
-    // before the first real scan completes.
-    stepped_ = SteppedSolution::from(Cube::solved(), cube::solver::Solution{});
-    connect(&solveWatcher_, &QFutureWatcher<SteppedSolution>::finished, this,
+    // before the first real scan completes: a plan of the solved 3x3.
+    stepped_ = SteppedPlan{};
+    showCurrentCube();
+    connect(&solveWatcher_, &QFutureWatcher<SteppedPlan>::finished, this,
             &SolveController::applySolveResult);
 }
 
+QVariantMap SolveController::solveScramble(int size, const QString& scramble) {
+    const auto refused = [&scramble](const char* error, std::size_t offset = 0,
+                                     std::size_t length = 0) {
+        QVariantMap out;
+        out.insert(QStringLiteral("ok"), false);
+        out.insert(QStringLiteral("error"), QString::fromLatin1(error));
+        // Offsets are in the text as typed, which is what a field can point at.
+        out.insert(QStringLiteral("offset"), static_cast<qulonglong>(offset));
+        out.insert(QStringLiteral("length"), static_cast<qulonglong>(length));
+        out.insert(QStringLiteral("token"),
+                   scramble.mid(static_cast<qsizetype>(offset), static_cast<qsizetype>(length)));
+        return out;
+    };
+    auto solved = NCube::solved(size);
+    if (!solved.has_value()) {
+        return refused("unsupportedSize");
+    }
+    // Notation is ASCII, so one byte is one character of the text as typed (a letter
+    // that is not Latin-1 becomes a question mark, which is no move either) and the
+    // offsets of a fault are offsets in the text.
+    const std::string text = scramble.toLatin1().toStdString();
+    const auto moves = cube::nxn::parse(text, size);
+    if (!moves.has_value()) {
+        using Kind = cube::nxn::ParseFault::Kind;
+        const char* error = moves.error().kind == Kind::LayerOutOfRange   ? "layerOutOfRange"
+                            : moves.error().kind == Kind::UnsupportedSize ? "unsupportedSize"
+                                                                          : "unknownMove";
+        return refused(error, moves.error().offset, moves.error().length);
+    }
+    if (moves->empty()) {
+        return refused("empty");
+    }
+    const std::vector<cube::nxn::LayerMove> turns = cube::nxn::layers_of(*moves);
+    NCube cube = *solved;
+    cube.apply(turns);
+    if (cube.is_solved()) {
+        return refused("alreadySolved");
+    }
+    solveCube(cube);
+    QVariantMap out;
+    out.insert(QStringLiteral("ok"), true);
+    out.insert(QStringLiteral("moves"), static_cast<int>(moves->size()));
+    out.insert(QStringLiteral("layerTurns"), static_cast<int>(turns.size()));
+    return out;
+}
+
 void SolveController::solveCube(const Cube& cube) {
+    solveCube(NCube::from_cube3(cube));
+}
+
+void SolveController::solveCube(const NCube& cube) {
     scanned_ = cube;
     beginSolve(cube);
 }
 
+std::optional<Cube> SolveController::scannedCube() const {
+    return as_cube3(scanned_);
+}
+
+std::optional<Cube> SolveController::solutionStart() const {
+    return as_cube3(pending_);
+}
+
+std::optional<cube::solver::Move> SolveController::currentMove() const noexcept {
+    if (stepped_.size() != 3 || stepped_.at_end()) {
+        return std::nullopt;
+    }
+    return move3_of(stepped_.current_move());
+}
+
+void SolveController::showCurrentCube() {
+    const auto held = stepped_.current_cube().to_cube3_as_held();
+    cube3_ = held.has_value() ? *held : Cube::solved();
+}
+
 void SolveController::resumeCube(const Cube& scanned, const Cube& from, Method method, int turn) {
+    resumeCube(NCube::from_cube3(scanned), NCube::from_cube3(from), method, turn);
+}
+
+void SolveController::resumeCube(const NCube& scanned, const NCube& from, Method method, int turn) {
     scanned_ = scanned;
     if (method != method_) {
         // Recorded, not acted on through setMethod(): the cube to solve is
@@ -125,6 +228,22 @@ void SolveController::resumeCube(const Cube& scanned, const Cube& from, Method m
     }
     beginSolve(from);
     resume_turn_ = std::max(0, turn);
+}
+
+void SolveController::resumeCube(const NCube& scanned, const NCube& from, Method method, int turn,
+                                 const cube::nxn::Solution& kept) {
+    scanned_ = scanned;
+    if (method != method_) {
+        method_ = method;
+        emit methodChanged();
+    }
+    // Nothing to work out. A solve still in flight is let go: it lands on nothing
+    // (applySolveResult).
+    pending_ = from;
+    solving_continuation_ = false;
+    stepped_ = SteppedPlan::from(from, kept, display_for(from.size()));
+    resume_turn_ = std::max(0, turn);
+    land();
 }
 
 void SolveController::setMethod(Method method) {
@@ -142,7 +261,7 @@ void SolveController::setMethod(Method method) {
     // Carry on from the cube as it stands. A solve still in flight is
     // replaced - its cube is the one to solve - rather than waited for: the
     // QFutureWatcher drops the old future's result when it is given a new one.
-    const Cube from = isSolving_ ? *pending_ : stepped_.current_cube();
+    const NCube from = isSolving_ ? *pending_ : stepped_.current_cube();
     // It continues a solution only if one had landed for this cube. A scan
     // whose solve is still being worked out has none, and what it replaces is
     // still "a new cube to solve" (HeldCube starts that from the stated hold).
@@ -150,7 +269,7 @@ void SolveController::setMethod(Method method) {
     beginSolve(from, continuation);
 }
 
-void SolveController::beginSolve(const Cube& scrambled, bool continuation) {
+void SolveController::beginSolve(const NCube& scrambled, bool continuation) {
     // A scan can't complete while a solve is in flight (the scan screen isn't
     // reachable again until this solve's result has been applied - see
     // AppState.qml), but a method change can: it replaces the solve.
@@ -159,6 +278,9 @@ void SolveController::beginSolve(const Cube& scrambled, bool continuation) {
     resume_turn_ = 0;
     isSolving_ = true;
     CUBE_MESSAGE("solve.started");
+    // The "solve" section: the GUI can filter a capture to what one solve
+    // took, worker thread and all.
+    solve_section_ = CUBE_SECTION_ENTER("solve");
     emit stateChanged();
     solveWatcher_.setFuture(
         QtConcurrent::run(&solve_stepped, scrambled, to_solver_method(method_)));
@@ -166,27 +288,46 @@ void SolveController::beginSolve(const Cube& scrambled, bool continuation) {
 
 void SolveController::applySolveResult() {
     CUBE_ZONE_SCOPED_N("app.solve.apply_result");
+    if (!isSolving_) {
+        // Replaced by a solution that was kept (resumeCube) while this was worked out.
+        return;
+    }
     CUBE_MESSAGE("solve.finished");
-    stepped_ = solveWatcher_.result();
+    CUBE_SECTION_LEAVE(solve_section_);
+    {
+        CUBE_ZONE_SCOPED_N("app.solve.take_result");
+        stepped_ = solveWatcher_.result();
+    }
+    land();
+}
+
+void SolveController::land() {
     // A solve picked up from the history lands on the turn it was left at.
     for (int i = 0; i < resume_turn_ && !stepped_.at_end(); ++i) {
         stepped_.next();
     }
+    showCurrentCube();
     resume_turn_ = 0;
     isSolving_ = false;
     continuation_ = solving_continuation_;
-    emit solutionChanged();
-    emit stateChanged();
+    {
+        CUBE_ZONE_SCOPED_N("app.solve.emit_solution");
+        emit solutionChanged();
+    }
+    {
+        CUBE_ZONE_SCOPED_N("app.solve.emit_state");
+        emit stateChanged();
+    }
 }
 
 QVariantList SolveController::topColors() const {
-    return face_colors(stepped_.current_cube(), Face::U);
+    return face_colors(cube3_, Face::U);
 }
 QVariantList SolveController::rightColors() const {
-    return face_colors(stepped_.current_cube(), Face::R);
+    return face_colors(cube3_, Face::R);
 }
 QVariantList SolveController::leftColors() const {
-    return face_colors(stepped_.current_cube(), Face::F);
+    return face_colors(cube3_, Face::F);
 }
 
 QVariantMap SolveController::stickers() const {
@@ -200,11 +341,17 @@ QVariantMap SolveController::stickersAt(int turn) const {
 QVariantList SolveController::moves() const {
     QVariantList moves;
     moves.reserve(stepped_.move_count());
-    for (const cube::solver::Move& move : stepped_.moves()) {
+    for (const WideMove& move : stepped_.moves()) {
         moves.append(QVariantMap{
             {QStringLiteral("face"), face_letter(move.face)},
             {QStringLiteral("turns"), move.turns},
-            {QStringLiteral("notation"), QString::fromStdString(cube::solver::to_string(move))}});
+            {QStringLiteral("first"), move.first},
+            {QStringLiteral("last"), move.last},
+            {
+                QStringLiteral("notation"),
+                QString::fromStdString(cube::nxn::to_string(move, stepped_.size())),
+            },
+        });
     }
     return moves;
 }
@@ -213,7 +360,7 @@ QString SolveController::currentMoveNotation() const {
     if (stepped_.at_end()) {
         return QString();
     }
-    return QString::fromStdString(cube::solver::to_string(stepped_.current_move()));
+    return QString::fromStdString(cube::nxn::to_string(stepped_.current_move(), stepped_.size()));
 }
 
 QString SolveController::currentMoveFace() const {
@@ -225,6 +372,30 @@ QString SolveController::currentMoveFace() const {
 
 int SolveController::currentMoveTurns() const {
     return stepped_.at_end() ? 0 : stepped_.current_move().turns;
+}
+
+int SolveController::currentMoveFirst() const {
+    return stepped_.at_end() ? 0 : stepped_.current_move().first;
+}
+
+int SolveController::currentMoveLast() const {
+    return stepped_.at_end() ? 0 : stepped_.current_move().last;
+}
+
+int SolveController::size() const {
+    return stepped_.size();
+}
+
+QVariantMap SolveController::sideColours() const {
+    const auto scheme = cube::nxn::scheme_of(stepped_.current_cube());
+    QVariantMap colours;
+    for (const Face face : cube::solver::kAllFaces) {
+        const cube::solver::Color colour = scheme.has_value()
+                                               ? scheme->at(static_cast<std::size_t>(face))
+                                               : cube::solver::canonical_color(face);
+        colours.insert(face_letter(face), colour_name(colour));
+    }
+    return colours;
 }
 
 int SolveController::moveIndex() const {
@@ -244,7 +415,7 @@ QVariantList SolveController::stageRanges() const {
     QVariantList ranges;
     for (const auto& range : stepped_.stage_ranges()) {
         QVariantMap entry;
-        entry[QStringLiteral("stageIndex")] = static_cast<int>(range.stage);
+        entry[QStringLiteral("stageIndex")] = static_cast<int>(range.id);
         entry[QStringLiteral("startIndex")] = range.start_index;
         entry[QStringLiteral("endIndex")] = range.end_index;
         ranges.append(entry);
@@ -254,11 +425,30 @@ QVariantList SolveController::stageRanges() const {
 
 int SolveController::currentStageIndex() const {
     if (stepped_.at_end()) {
-        return stepped_.stage_ranges().empty()
-                   ? 0
-                   : static_cast<int>(stepped_.stage_ranges().back().stage);
+        const auto& ranges = stepped_.stage_ranges();
+        if (ranges.empty()) {
+            return 0;
+        }
+        // A bigger cube's stages are listed without the ones with nothing to do, so
+        // the last is the last that did something. A 3x3's is the last, as it was.
+        if (stepped_.size() != 3) {
+            for (auto span = ranges.rbegin(); span != ranges.rend(); ++span) {
+                if (span->end_index > span->start_index) {
+                    return static_cast<int>(span->id);
+                }
+            }
+        }
+        return static_cast<int>(ranges.back().id);
     }
     return static_cast<int>(stepped_.current_stage());
+}
+
+int SolveController::coreStartIndex() const {
+    return stepped_.core_start();
+}
+
+bool SolveController::canSkipToCore() const {
+    return stepped_.size() >= 4 && stepped_.current_index() < stepped_.core_start();
 }
 
 bool SolveController::isSolving() const {
@@ -269,14 +459,19 @@ cube::diagnostics::Json SolveController::diagnosticState() const {
     using cube::diagnostics::Json;
     constexpr std::array<const char*, 3> kMethods = {"beginner", "intermediate", "advanced"};
     Json state = Json::object();
+    const int size = stepped_.size();
     state.set("method", kMethods.at(static_cast<std::size_t>(method_)));
+    state.set("size", size);
     state.set("is_solving", isSolving_);
     state.set("continuation", continuation_);
     state.set("move_index", stepped_.current_index());
     state.set("total_moves", stepped_.move_count());
     state.set("at_end", stepped_.at_end());
-    state.set("current_move", cube::diagnostics::move_json(currentMove()));
-    state.set("moves", cube::diagnostics::moves_json(stepped_.moves()));
+    state.set("current_move", stepped_.at_end()
+                                  ? Json()
+                                  : Json(cube::nxn::to_string(stepped_.current_move(), size)));
+    state.set("moves",
+              Json(cube::nxn::to_string(std::span<const WideMove>(stepped_.moves()), size)));
     state.set("cube", cube::diagnostics::cube_json(stepped_.current_cube()));
     state.set("solved", stepped_.current_cube().is_solved());
     state.set("started_from",
@@ -287,10 +482,27 @@ cube::diagnostics::Json SolveController::diagnosticState() const {
 
 void SolveController::nextMove() {
     stepped_.next();
+    showCurrentCube();
     emit stateChanged();
 }
 
 void SolveController::previousMove() {
     stepped_.previous();
+    showCurrentCube();
     emit stateChanged();
+}
+
+void SolveController::goToMove(int index) {
+    if (isSolving_ || index == stepped_.current_index()) {
+        return;
+    }
+    stepped_.seek(index);
+    showCurrentCube();
+    emit stateChanged();
+}
+
+void SolveController::skipToCore() {
+    if (canSkipToCore()) {
+        goToMove(stepped_.core_start());
+    }
 }

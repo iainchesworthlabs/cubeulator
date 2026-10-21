@@ -1,11 +1,11 @@
 # About
 
-> **Status in 0.1.0-beta.1:** A placeholder only. The desktop shell
-> (`DesktopShell.qml`) opens a small dialog with the name and the version and
-> a **Close** button, from the **About Cubeulator** row in Settings and from
-> the macOS Help menu. The screen below (icon, what and who, the build line
-> with **Copy**, Licences, Privacy, Source code, **Copy details**) is not
-> built, and there is no About at all on phones.
+> **Status:** Built in part (`AboutScreen.qml`), reached from the **About
+> Cubeulator** row in Settings and from the macOS Help menu (not over a scan
+> or a solve). It has the name, the version, the three paragraphs, the
+> **Licences** and **Source code** rows and the small print. Not built, because
+> what they lead to is not: the icon, the build line with **Copy**, Privacy and
+> **Copy details**. There is no About at all on phones.
 
 Lane: experience. New (E3b). When this was written the app had no about box.
 

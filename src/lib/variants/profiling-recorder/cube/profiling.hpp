@@ -34,8 +34,20 @@ inline constexpr bool enabled = true;
 // selected unnoticed.
 inline constexpr bool to_recorder = true;
 
+// The run-time switch's surface (see the profiling-tracy_enabled sibling): the
+// recorder is always recording, so it is always active, and there is nothing to
+// start.
+[[nodiscard]] constexpr bool active() noexcept {
+    return true;
+}
+[[nodiscard]] constexpr bool connected() noexcept {
+    return false;
+}
+inline void start() noexcept {}
+inline void stop() noexcept {}
+
 inline void app_info(std::string_view text) {
-    ::cube::profile::Recorder::global().set_app_info(text);
+    ::cube::profile::Recorder::global().add_app_info(text);
 }
 
 // Every value becomes a double: the recorder keeps one number type, and the
@@ -124,6 +136,72 @@ inline void scoped_zone_value(std::uint64_t number) noexcept {
     }
 }
 
+// The GPU (render-thread) surface, as no-ops: a browser page has no GPU
+// context to bracket, and the recorder keeps CPU events only. The
+// profiling-tracy_enabled sibling implements these; the declarations exist
+// so render-side call sites compile unchanged. See the sibling for the
+// contract.
+struct gl_gpu_functions {
+    void* gen_queries = nullptr;
+    void* get_queryiv = nullptr;
+    void* get_query_objectiv = nullptr;
+    void* get_query_objectui64v = nullptr;
+    void* get_integer64v = nullptr;
+    void* query_counter = nullptr;
+    void* get_error = nullptr;
+    void* get_integerv = nullptr;
+    void* get_string = nullptr;
+    void* get_stringi = nullptr;
+};
+
+struct vulkan_gpu_handles {
+    void* instance = nullptr;
+    void* physical_device = nullptr;
+    void* device = nullptr;
+    void* queue = nullptr;
+    std::uint32_t queue_family = 0;
+    void* get_instance_proc_addr = nullptr;
+    void* get_device_proc_addr = nullptr;
+};
+
+class GpuContext {
+public:
+    static GpuContext* create_opengl(const gl_gpu_functions& /*functions*/) noexcept {
+        return nullptr;
+    }
+    static GpuContext* create_vulkan(const vulkan_gpu_handles& /*handles*/) noexcept {
+        return nullptr;
+    }
+    static GpuContext* create_d3d11(void* /*device*/, void* /*device_context*/) noexcept {
+        return nullptr;
+    }
+    GpuContext() = default;
+    GpuContext(const GpuContext&) = delete;
+    GpuContext& operator=(const GpuContext&) = delete;
+    GpuContext(GpuContext&&) = delete;
+    GpuContext& operator=(GpuContext&&) = delete;
+    virtual ~GpuContext() = default;
+
+    [[nodiscard]] virtual bool valid() const noexcept { return false; }
+    virtual void begin_zone(const char* /*name*/, void* /*command_stream*/) noexcept {}
+    virtual void end_zone() noexcept {}
+    virtual void collect(void* /*command_stream*/) noexcept {}
+};
+
+class ZoneSpan {
+public:
+    void begin(const char* /*name*/) noexcept {}
+    void end() noexcept {}
+};
+
+// Execution sections have no recorder equivalent (the recorder's trace is a
+// flat zone/message/plot stream), so they are no-ops here as in the
+// disabled variant.
+inline std::uint32_t section_enter(const char* /*name*/) {
+    return 0;
+}
+inline void section_leave(std::uint32_t /*id*/) {}
+
 }  // namespace cube::profiling
 
 // NOLINTBEGIN(cppcoreguidelines-macro-usage)
@@ -160,11 +238,19 @@ inline void scoped_zone_value(std::uint64_t number) noexcept {
 
 // A message on the timeline (an instant event).
 #define CUBE_MESSAGE(text) ::cube::profile::Recorder::global().message(text)
+// The recorder keeps the pointer of a message, so text built at run time has
+// nowhere safe to live: it is dropped here (only the Tracy variant copies it).
+#define CUBE_MESSAGE_DYNAMIC(text)
 
 // Name the calling thread in the trace. Once per thread.
 #define CUBE_THREAD_NAME(name) ::cube::profile::Recorder::global().set_thread_name(name)
 
 // Free text in the trace's metadata (version, build).
 #define CUBE_APP_INFO(text) ::cube::profiling::app_info(text)
+
+// An execution section (Tracy 0.14); see the Tracy variant. No recorder
+// equivalent, so the pair runs as no-ops.
+#define CUBE_SECTION_ENTER(name) ::cube::profiling::section_enter(name)
+#define CUBE_SECTION_LEAVE(id) ::cube::profiling::section_leave(id)
 
 // NOLINTEND(cppcoreguidelines-macro-usage)

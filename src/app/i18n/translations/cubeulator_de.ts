@@ -470,6 +470,46 @@ In deinen Händen.</translation>
         <extracomment>What this stage does, in one sentence.</extracomment>
         <translation>Löse den Rest mit Drehungen der oberen und unteren Seite und Halbdrehungen der anderen vier Seiten.</translation>
     </message>
+    <message id="stage.parity.title">
+        <source>Set up</source>
+        <extracomment>Name of the first stage of a solve of a cube bigger than 3x3 when it needs one. Shown with a number, like the other stages. 'Parity' is the cuber's word; do not use it.</extracomment>
+        <translation>Vorarbeit</translation>
+    </message>
+    <message id="stage.parity.what">
+        <source>A few turns first, so that pairing up the pieces cannot leave two of them swapped, which only a big cube can do.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>Zuerst ein paar Drehungen, damit nach dem Verbinden der Teile nicht zwei davon vertauscht sind, was nur bei einem großen Würfel vorkommen kann.</translation>
+    </message>
+    <message id="stage.centres.title">
+        <source>Centres</source>
+        <extracomment>Name of a stage of a solve of a cube bigger than 3x3: gathering the middle stickers of each side.</extracomment>
+        <translation>Mitten</translation>
+    </message>
+    <message id="stage.centres.what">
+        <source>Gather the middle stickers of each side into one block of a single colour.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>Bringe die mittleren Aufkleber jeder Seite zu einem Block in einer einzigen Farbe zusammen.</translation>
+    </message>
+    <message id="stage.edges.title">
+        <source>Edges</source>
+        <extracomment>Name of a stage of a solve of a cube bigger than 3x3: pairing the edge pieces.</extracomment>
+        <translation>Kanten</translation>
+    </message>
+    <message id="stage.edges.what">
+        <source>Pair up the edge pieces into whole edges, so that the cube has twelve edges like a 3x3.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>Verbinde die Kantenteile zu ganzen Kanten, sodass der Würfel wie ein 3x3 zwölf Kanten hat.</translation>
+    </message>
+    <message id="stage.corners.title">
+        <source>Corners</source>
+        <extracomment>Name of the only stage of a solve of a 2x2.</extracomment>
+        <translation>Ecken</translation>
+    </message>
+    <message id="stage.corners.what">
+        <source>Put the eight corners where they belong. A 2x2 has nothing else.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>Setze die acht Ecken an ihren Platz. Ein 2x2 hat nichts anderes.</translation>
+    </message>
     <message id="home.lede">
         <source>Show your cube to the camera, then follow one turn at a time until it is solved.</source>
         <extracomment>One sentence under the headline on the home screen.</extracomment>
@@ -484,6 +524,76 @@ In deinen Händen.</translation>
         <source>History</source>
         <extracomment>Button. Opens the list of past solves.</extracomment>
         <translation>Verlauf</translation>
+    </message>
+    <message id="home.other">
+        <source>Another size of cube</source>
+        <extracomment>Button on Home. Opens the screen for a cube the camera does not read: a different size, or a cube typed in as the scramble that mixed it up.</extracomment>
+        <translation>Andere Würfelgröße</translation>
+    </message>
+    <message id="entry.title">
+        <source>Another cube</source>
+        <extracomment>Title of the screen reached from Home by "Another size of cube".</extracomment>
+        <translation>Anderer Würfel</translation>
+    </message>
+    <message id="entry.size.label">
+        <source>Size</source>
+        <extracomment>Small heading above the buttons that choose the size of the cube: 2×2, 3×3 and so on.</extracomment>
+        <translation>Größe</translation>
+    </message>
+    <message id="entry.size.option">
+        <source>%1×%1</source>
+        <extracomment>A size of cube on a button: the side length twice, as in 5×5. %1 is the number in the reader's own digits.</extracomment>
+        <translation>%1×%1</translation>
+    </message>
+    <message id="entry.size.camera">
+        <source>The camera reads this cube. Scan it, or type its scramble here.</source>
+        <extracomment>Under the size buttons: the camera reads every size offered.</extracomment>
+        <translation>Die Kamera kann diesen Würfel lesen. Scanne ihn oder gib hier seinen Scramble ein.</translation>
+    </message>
+    <message id="entry.scramble.label">
+        <source>Its scramble</source>
+        <extracomment>Small heading above the box where the scramble is typed. A scramble is the list of moves that mixed the cube up, as a timer or a puzzle site shows it.</extracomment>
+        <translation>Sein Scramble</translation>
+    </message>
+    <message id="entry.scramble.placeholder">
+        <source>Type or paste the moves, such as R U R' U' F2 2R Rw</source>
+        <extracomment>Grey text in the empty scramble box, showing what a scramble looks like. The moves are cubing notation and are not translated.</extracomment>
+        <translation>Gib die Drehungen ein oder füge sie ein, zum Beispiel R U R' U' F2 2R Rw</translation>
+    </message>
+    <message id="entry.scramble.help">
+        <source>Write the moves with a space between them. U' turns the other way and F2 is a half turn. 2R is the second layer in from R, and Rw turns two layers together.</source>
+        <extracomment>Under the scramble box. The letters and marks are notation and stay as they are.</extracomment>
+        <translation>Schreibe die Drehungen mit einem Leerzeichen dazwischen. U' dreht in die andere Richtung, und F2 ist eine Halbdrehung. 2R ist die zweite Ebene von R aus gezählt, und Rw dreht zwei Ebenen zusammen.</translation>
+    </message>
+    <message id="entry.solve">
+        <source>Solve it</source>
+        <extracomment>Main button of the screen for another size of cube. Works out the solution from the scramble.</extracomment>
+        <translation>Würfel lösen</translation>
+    </message>
+    <message id="entry.scan">
+        <source>Scan it instead</source>
+        <extracomment>Button shown when 3×3 is chosen. Goes to the camera.</extracomment>
+        <translation>Stattdessen scannen</translation>
+    </message>
+    <message id="entry.error.unknownMove">
+        <source>‘%1’ is not a move. Moves look like R, U', F2, 2R or Rw.</source>
+        <extracomment>Shown under the scramble box when a word in it is not a move. %1 is that word.</extracomment>
+        <translation>„%1“ ist keine Drehung. Drehungen sehen so aus: R, U', F2, 2R oder Rw.</translation>
+    </message>
+    <message id="entry.error.layer">
+        <source>‘%1’ turns a layer that a %2×%2 cube does not have.</source>
+        <extracomment>Shown when a move names a layer the chosen size does not have, such as 5R on a 4×4. %1 is that move, %2 the size in the reader's own digits.</extracomment>
+        <translation>„%1“ dreht eine Ebene, die ein %2×%2-Würfel nicht hat.</translation>
+    </message>
+    <message id="entry.error.empty">
+        <source>Type the scramble first.</source>
+        <extracomment>Shown when Solve it is pressed with nothing typed.</extracomment>
+        <translation>Gib zuerst den Scramble ein.</translation>
+    </message>
+    <message id="entry.error.solved">
+        <source>Those moves leave the cube as it was. Type a scramble that mixes it up.</source>
+        <extracomment>Shown when the scramble turns the cube back to solved, so there is nothing to solve.</extracomment>
+        <translation>Diese Drehungen lassen den Würfel, wie er war. Gib einen Scramble ein, der ihn durcheinanderbringt.</translation>
     </message>
     <message id="home.findingCamera">
         <source>Looking for a camera…</source>
@@ -740,6 +850,11 @@ In deinen Händen.</translation>
         <extracomment>Button. Forgets the sides read so far.</extracomment>
         <translation>Neu beginnen</translation>
     </message>
+    <message id="scan.size.auto">
+        <source>Auto</source>
+        <extracomment>Button on the scan screen beside the sizes of cube: the app finds the size of the cube from what the camera sees.</extracomment>
+        <translation>Auto</translation>
+    </message>
     <message id="scan.checkColours">
         <source>Check the colours</source>
         <extracomment>Button. Opens the screen where each sticker can be corrected.</extracomment>
@@ -913,6 +1028,11 @@ In deinen Händen.</translation>
         <extracomment>Instruction at the top when checking a scan.</extracomment>
         <translation>Vergleiche jede Seite mit deinem Würfel. Tippe auf eine Farbe und dann auf jeden Aufkleber, der nicht stimmt.</translation>
     </message>
+    <message id="review.intro.enterN">
+        <source>Hold your cube any way up. Call the side facing up the top and the side facing you the front. Pick a colour, then tap or drag over the stickers of that colour on the side shown. The sides named round it are the ones against its edges.</source>
+        <extracomment>Instruction at the top of entering a cube of any size by hand. Replaces review.intro.enter for a cube that has no centre sticker to name each side by.</extracomment>
+        <translation>Halte deinen Würfel beliebig herum. Die Seite, die nach oben zeigt, ist die obere, die Seite, die zu dir zeigt, die vordere. Wähle eine Farbe und tippe oder ziehe dann über die Aufkleber dieser Farbe auf der angezeigten Seite. Die rundherum benannten Seiten sind die, die an ihre Kanten grenzen.</translation>
+    </message>
     <message id="review.centre">
         <source>The centre never changes. It names the side.</source>
         <extracomment>Shown when the person taps a centre sticker, which cannot be edited.</extracomment>
@@ -932,6 +1052,56 @@ In deinen Händen.</translation>
         <source>48 stickers to fill in</source>
         <extracomment>Status line before anything is entered. A cube has 54 stickers; the six centres are already set.</extracomment>
         <translation>48 Aufkleber auszufüllen</translation>
+    </message>
+    <message id="review.status.emptyN">
+        <source>%1 stickers to fill in</source>
+        <extracomment>Status line before anything is entered, for a cube of any size. %1 is how many stickers the cube has, in the reader's own digits.</extracomment>
+        <translation>%1 Aufkleber auszufüllen</translation>
+    </message>
+    <message id="review.fault.noScheme">
+        <source>These colours cannot be the six sides of one cube.</source>
+        <extracomment>Says what is wrong with colours that fit in no cube: two colours that belong on opposite sides sit next to each other.</extracomment>
+        <translation>Diese Farben können nicht die sechs Seiten eines Würfels sein.</translation>
+    </message>
+    <message id="review.fault.centreColours">
+        <source>The middle stickers of a side do not hold each colour equally often.</source>
+        <extracomment>Says what is wrong when the middle stickers of one side's ring have the wrong mix of colours.</extracomment>
+        <translation>Die mittleren Aufkleber einer Seite enthalten nicht jede Farbe gleich oft.</translation>
+    </message>
+    <message id="review.fault.unknownPiece">
+        <source>A piece shows colours that no piece of a cube has.</source>
+        <extracomment>Says what is wrong when a corner or an edge has two colours that are never next to each other.</extracomment>
+        <translation>Ein Teil zeigt Farben, die kein Teil eines Würfels hat.</translation>
+    </message>
+    <message id="review.fault.repeatedPiece">
+        <source>Two pieces show the same colours, so another piece is missing.</source>
+        <extracomment>Says what is wrong when the same corner or edge is entered twice.</extracomment>
+        <translation>Zwei Teile zeigen dieselben Farben, also fehlt ein anderes Teil.</translation>
+    </message>
+    <message id="review.fault.twistedCorner">
+        <source>A corner looks turned in place.</source>
+        <extracomment>Says what is wrong when the corners are right but one is twisted.</extracomment>
+        <translation>Eine Ecke sieht an ihrem Platz verdreht aus.</translation>
+    </message>
+    <message id="review.fault.flippedEdge">
+        <source>An edge looks flipped.</source>
+        <extracomment>Says what is wrong when the edges are right but one has its two colours the wrong way round.</extracomment>
+        <translation>Ein Kantenteil sieht umgedreht aus.</translation>
+    </message>
+    <message id="review.fault.swappedPieces">
+        <source>Two pieces look swapped.</source>
+        <extracomment>Says what is wrong when two pieces are in each other's places.</extracomment>
+        <translation>Zwei Teile sehen vertauscht aus.</translation>
+    </message>
+    <message id="review.clearAll">
+        <source>Clear all</source>
+        <extracomment>Button at the top of the hand-entry screen. Unsets every sticker of every side.</extracomment>
+        <translation>Alles leeren</translation>
+    </message>
+    <message id="review.fillSide">
+        <source>Fill this side</source>
+        <extracomment>Button under the colours on the hand-entry screen. Paints every sticker of the side being edited with the colour chosen.</extracomment>
+        <translation>Diese Seite füllen</translation>
     </message>
     <message id="review.status.partial" numerus="yes">
         <source>%Ln stickers to go</source>
@@ -1039,6 +1209,79 @@ In deinen Händen.</translation>
             <numerusform>%1: noch %Ln Aufkleber</numerusform>
         </translation>
     </message>
+    <message id="review.notUpright">
+        <source>The camera could not tell which way up each side was held, so each is shown as it saw it. Compare every side with your cube, and turn any that is the wrong way round.</source>
+        <extracomment>Shown on the check screen when the camera named the colours of the sides but could not fit them together into a cube, so it does not know which way up each side was held. Each side is shown as the camera saw it and may need turning (review.turnSide).</extracomment>
+        <translation>Die Kamera konnte nicht erkennen, wie herum jede Seite gehalten wurde, deshalb wird jede so gezeigt, wie sie sie gesehen hat. Vergleiche jede Seite mit deinem Würfel und drehe jede, die falsch herum ist.</translation>
+    </message>
+    <message id="review.doubt.note" numerus="yes">
+        <source>The camera was not sure of %Ln stickers. They are marked with a ?.</source>
+        <extracomment>Shown on the check screen when the camera was unsure of some stickers. %n is how many. The mark is a question mark drawn on the sticker itself; keep the question mark as the plain Latin character.</extracomment>
+        <translation>
+            <numerusform>Die Kamera war sich bei %Ln Aufkleber nicht sicher. Er ist mit einem ? markiert.</numerusform>
+            <numerusform>Die Kamera war sich bei %Ln Aufklebern nicht sicher. Sie sind mit einem ? markiert.</numerusform>
+        </translation>
+    </message>
+    <message id="review.a11y.stickerUnsure">
+        <source>%1, row %2, column %3: %4. The camera was not sure of this one.</source>
+        <extracomment>Screen-reader name of a sticker the camera was unsure of. Like review.a11y.sticker, with the extra sentence. %1 is a colourSide string, %2 and %3 are 1 to 9, %4 a colour name or colour.unset.</extracomment>
+        <translation>%1, Zeile %2, Spalte %3: %4. Die Kamera war sich hier nicht sicher.</translation>
+    </message>
+    <message id="review.undo">
+        <source>Undo</source>
+        <extracomment>Button on the colours screen. Takes back the last change.</extracomment>
+        <translation>Rückgängig</translation>
+    </message>
+    <message id="review.redo">
+        <source>Redo</source>
+        <extracomment>Button on the colours screen. Puts back the change that Undo took back.</extracomment>
+        <translation>Wiederholen</translation>
+    </message>
+    <message id="review.revert">
+        <source>Back to the scan</source>
+        <extracomment>Button on the check screen. Puts every sticker back as the camera read it, taking back all the corrections made here. Undo can bring them back.</extracomment>
+        <translation>Zurück zum Scan</translation>
+    </message>
+    <message id="review.turnSide">
+        <source>Turn this side</source>
+        <extracomment>Button on the colours screen. Turns the side being edited a quarter turn clockwise, as seen from outside, in the picture only: for a side the camera read the wrong way up. It does not turn the cube.</extracomment>
+        <translation>Diese Seite drehen</translation>
+    </message>
+    <message id="review.describe.open">
+        <source>Describe this side</source>
+        <extracomment>Button on the colours screen. Opens a box to type the colours of the whole side as letters instead of tapping each sticker.</extracomment>
+        <translation>Diese Seite beschreiben</translation>
+    </message>
+    <message id="review.describe.help">
+        <source>Type the colours of this side (%1) as you see it on your cube, left to right, a row at a time: W white, Y yellow, G green, B blue, O orange, R red. Use ? for a sticker you cannot tell. Spaces and slashes are ignored.</source>
+        <extracomment>Instruction above the box where a side is described in letters. %1 is the side's name (colourSide.red, side.top and the like). The letters W Y G B O R are fixed, like the letters of a move, and are not translated; say in the language which colour each stands for, naming the colours as in colour.*.</extracomment>
+        <translation>Tippe die Farben dieser Seite (%1) so, wie du sie an deinem Würfel siehst, von links nach rechts, Reihe für Reihe: W Weiß, Y Gelb, G Grün, B Blau, O Orange, R Rot. Nimm ? für einen Aufkleber, den du nicht erkennst. Leerzeichen und Schrägstriche werden ignoriert.</translation>
+    </message>
+    <message id="review.describe.field">
+        <source>Colours of this side, as letters</source>
+        <extracomment>Screen-reader name of the box where a side is described in letters.</extracomment>
+        <translation>Farben dieser Seite als Buchstaben</translation>
+    </message>
+    <message id="review.describe.apply">
+        <source>Use these</source>
+        <extracomment>Button under the box where a side is described in letters. Paints the side with what was typed.</extracomment>
+        <translation>Übernehmen</translation>
+    </message>
+    <message id="review.describe.tooFew">
+        <source>That is only %1 of the %2 colours this side needs.</source>
+        <extracomment>Shown when the description of a side has too few colours. %1 is how many were typed and %2 how many stickers the side has, in the reader's own digits.</extracomment>
+        <translation>Das sind erst %1 von den %2 Farben, die diese Seite braucht.</translation>
+    </message>
+    <message id="review.describe.tooMany">
+        <source>That is %1 colours, but this side has only %2 stickers.</source>
+        <extracomment>Shown when the description of a side has too many colours. %1 is how many were typed and %2 how many stickers the side has, in the reader's own digits. %1 is always larger than %2.</extracomment>
+        <translation>Das sind %1 Farben, aber diese Seite hat nur %2 Aufkleber.</translation>
+    </message>
+    <message id="review.describe.unknownLetter">
+        <source>‘%1’ is not a colour. Use W, Y, G, B, O or R, or ? for a sticker you cannot tell.</source>
+        <extracomment>Shown when the description of a side has a letter that is no colour. %1 is that letter. The letters W Y G B O R are fixed and not translated.</extracomment>
+        <translation>„%1“ ist keine Farbe. Nimm W, Y, G, B, O oder R, oder ? für einen Aufkleber, den du nicht erkennst.</translation>
+    </message>
     <message id="solve.working">
         <source>Working out the solution…</source>
         <extracomment>Shown while the solution is computed.</extracomment>
@@ -1133,6 +1376,36 @@ In deinen Händen.</translation>
         <source>Back one</source>
         <extracomment>Button. Undoes the last turn on screen so the person can undo it on the cube.</extracomment>
         <translation>Eine zurück</translation>
+    </message>
+    <message id="solve.move.layer">
+        <source>%1 · layer %2 · %3</source>
+        <extracomment>The move in words for a layer inside a cube bigger than 3x3. %1 is the side, as 'Right side' or 'Top'; %2 is how far in the layer is counted from that side, starting at 1 for the outer layer; %3 is 'quarter turn' or 'half turn'. The dots are separators.</extracomment>
+        <translation>%1 · Ebene %2 · %3</translation>
+    </message>
+    <message id="solve.move.layers">
+        <source>%1 · layers %2 to %3 · %4</source>
+        <extracomment>The same for several layers turned together. %2 and %3 are the nearest and the farthest layer, counted from the side as above; %4 is 'quarter turn' or 'half turn'.</extracomment>
+        <translation>%1 · Ebenen %2 bis %3 · %4</translation>
+    </message>
+    <message id="solve.skipToCore">
+        <source>Skip to the 3x3 stage</source>
+        <extracomment>Button on the solve screen of a cube bigger than 3x3. Jumps over the stages that pair up its pieces.</extracomment>
+        <translation>Zur 3x3-Phase springen</translation>
+    </message>
+    <message id="solve.skipToCore.note">
+        <source>Use this once you have paired up the centres and edges yourself. The cube on screen jumps to the 3x3 it should now be.</source>
+        <extracomment>Explains the button above it, for someone who can already solve a 3x3.</extracomment>
+        <translation>Nutze das, sobald du die Mitten und Kanten selbst zusammengesetzt hast. Der Würfel auf dem Bildschirm springt zu dem 3x3, den du jetzt haben solltest.</translation>
+    </message>
+    <message id="solve.method.finishWith">
+        <source>Finish with</source>
+        <extracomment>Small label above the three method buttons when the cube is bigger than 3x3: the methods apply to the 3x3 the cube has become, so they are said to be how it is finished.</extracomment>
+        <translation>Abschließen mit</translation>
+    </message>
+    <message id="solve.camera.layerHidden">
+        <source>Matched. The camera cannot see this layer from here: press Next turn after this move.</source>
+        <extracomment>Shown beside the camera preview on the solve screen of a cube bigger than 3x3 when the layer to turn is one the side facing the camera does not show (a layer behind the front one, say): the camera cannot tell that it was turned, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
+        <translation>Erkannt. Die Kamera kann diese Ebene von hier aus nicht sehen: Drücke nach diesem Zug auf „Nächste Drehung“.</translation>
     </message>
     <message id="solve.finish">
         <source>Finish</source>
@@ -1405,6 +1678,16 @@ In deinen Händen.</translation>
             <numerusform>%Ln Drehungen</numerusform>
         </translation>
     </message>
+    <message id="solution.layer">
+        <source>layer %1</source>
+        <extracomment>A turn of a layer inside a cube bigger than 3x3, in a row of the list of turns, between the side and the direction ('Right side · layer 2 · upwards · quarter turn'). %1 is how far in the layer is, counted from the side, starting at 1 for the outer layer, in the reader's own digits.</extracomment>
+        <translation>Ebene %1</translation>
+    </message>
+    <message id="solution.layers">
+        <source>layers %1 to %2</source>
+        <extracomment>The same for several layers turned together. %1 and %2 are the nearest and the farthest layer, counted from the side as above.</extracomment>
+        <translation>Ebenen %1 bis %2</translation>
+    </message>
     <message id="solution.a11y.turn">
         <source>Turn %1. %2</source>
         <extracomment>Screen-reader name of one row in the list. %2 is a turn sentence.</extracomment>
@@ -1437,6 +1720,11 @@ In deinen Händen.</translation>
         <source>Unfinished · turn %1 of %2</source>
         <extracomment>One row, for a solve left part-way.</extracomment>
         <translation>Unfertig · Drehung %1 von %2</translation>
+    </message>
+    <message id="history.item.size">
+        <source>%1×%1 · %2</source>
+        <extracomment>Start of one row for a cube that is not a 3x3: its size, as in 5×5 (%1 is the side length twice, in the reader's own digits), then the rest of the row (history.item.done or history.item.unfinished) as %2.</extracomment>
+        <translation>%1×%1 · %2</translation>
     </message>
     <message id="history.delete">
         <source>Delete</source>

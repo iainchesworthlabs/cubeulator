@@ -25,7 +25,7 @@ computer's own camera light is the proof: if it is lit, Cubeulator is looking.
 
 Each camera frame is shrunk to 640 pixels across, analysed in memory for the
 colours of nine stickers, and then dropped. The next frame replaces it. The
-cube, as 54 colours, is held in memory for the solve and is gone when you scan
+cube, as its colours, is held in memory for the solve and is gone when you scan
 another cube or close the app.
 
 ## What is kept
@@ -40,7 +40,7 @@ On your device, in the system's settings store:
 that is on each system. Uninstalling Cubeulator does not remove it.
 
 And, in a file of its own in the app's data folder, the history of your
-solves: for each, when it started, the cube's 54 colours, the turn reached,
+solves: for each, when it started, the cube's colours, the turn reached,
 how many turns and how long. Never a picture. It is
 `%APPDATA%\Cubeulator\solve-history.json` on Windows,
 `~/Library/Application Support/Cubeulator/solve-history.json` on macOS and
@@ -89,7 +89,8 @@ scanning will then say *Camera unavailable*.
 ## Third-party code
 
 Cubeulator is built from open-source components, which are credited in the
-installed package and in [Licensing](../licensing.md). Each release file
+installed package, in the app (**Settings > About Cubeulator > Licences**) and
+in [Licensing](../licensing.md). Each release file
 carries a GPG signature and a build attestation, so you can
 [check](../SECURITY.md#verifying-build-authenticity) that a download is the one
 this project built.

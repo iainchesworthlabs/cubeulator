@@ -73,20 +73,76 @@ target_sources(cube_lib
         src/nxn/stages.cpp
         src/nxn/strategy.cpp
         src/nxn/two_by_two.cpp
+        src/nxn/mesh.cpp
+        src/nxn/notation.cpp
+        src/nxn/stepped_plan.cpp
+        src/nxn/outside_view.cpp
+        src/nxn/validate.cpp
+        src/nxn/scan_assembly.cpp
         src/vision/color_resolution.cpp
         src/vision/color_classification.cpp
         src/vision/recording_v2.cpp
         src/vision/prepared_frame.cpp
         src/vision/sticker_colour.cpp
         src/vision/direct_scan.cpp
+        src/vision/quad_fit.cpp
+        src/vision/corner_fit_n.cpp
         src/vision/corner_view.cpp
         src/vision/held_cube.cpp
         src/diagnostics/json.cpp
         src/diagnostics/describe.cpp
         src/diagnostics/record.cpp
         src/diagnostics/jsonl_file.cpp
+        src/graphics/backend_choice.cpp
+        src/profile/qsg_timing.cpp
         src/profile/recorder.cpp
+        src/profile/session.cpp
         src/i18n/i18n.cpp)
+
+# What a process with no profiling switch does (cube/profile/session.hpp) is a
+# build-configuration fact, so it reaches session.cpp as a compile definition
+# computed by CMake (cmake/Tracy.cmake) and not as an #ifdef on NDEBUG.
+set_source_files_properties(src/profile/session.cpp PROPERTIES
+    COMPILE_DEFINITIONS "CUBE_PROFILE_DEFAULT_ON=${CUBEULATOR_PROFILE_DEFAULT_ON}")
+
+# The Tracy GPU contexts (cube::profiling::GpuContext): built only when
+# Tracy is on, because the per-backend headers they include (<d3d11.h> on
+# Windows, Tracy's OpenGL and D3D11 bindings) are nobody else's business.
+# The disabled and recorder variants of cube/profiling.hpp declare the same
+# classes as no-ops, so nothing else notices. The Direct3D 11 backend is
+# platform code: the platform's fragment names it in
+# CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES (relative to src/app), and this
+# file asks no question about the OS. Each file gets its third-party-header
+# tokens as compile definitions: the GL tokens TracyOpenGL.hpp reads, and
+# NOMINMAX for the D3D11 file's <windows.h>.
+if(CUBEULATOR_ENABLE_TRACY)
+    if(CUBEULATOR_PLATFORM_PROFILING_OPENGL)
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu.cpp)
+        set_source_files_properties(src/profile/tracy_gpu.cpp PROPERTIES
+            COMPILE_DEFINITIONS
+                "GL_TIMESTAMP=0x8E28;GL_QUERY_COUNTER_BITS=0x8864;GL_QUERY_RESULT=0x8866;GL_QUERY_RESULT_AVAILABLE=0x8867;GL_NO_ERROR=0x0;GL_EXTENSIONS=0x1F03;GL_FALSE=0x0;GL_VERSION_3_0=1")
+    else()
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_opengl_none.cpp)
+    endif()
+    foreach(_gpu_source IN LISTS CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES)
+        set(_gpu_file "${PROJECT_SOURCE_DIR}/src/app/${_gpu_source}")
+        target_sources(cube_lib PRIVATE "${_gpu_file}")
+        set_source_files_properties("${_gpu_file}" PROPERTIES
+            COMPILE_DEFINITIONS "NOMINMAX")
+    endforeach()
+
+    # Vulkan is an API, not an operating system: the same file serves every
+    # platform that has it, and the platform's fragment says whether that is
+    # this one. Tracy resolves Vulkan's functions through two entry points the
+    # application hands over, so only the headers are needed, not the loader.
+    if(CUBEULATOR_PLATFORM_PROFILING_VULKAN)
+        find_package(VulkanHeaders CONFIG REQUIRED)
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_vulkan.cpp)
+        target_link_libraries(cube_lib PRIVATE Vulkan::Headers)
+    else()
+        target_sources(cube_lib PRIVATE src/profile/tracy_gpu_vulkan_none.cpp)
+    endif()
+endif()
 
 # Two files make the compiler build lookup tables from loops: the two-phase
 # solver's phase 1 move tables (two_phase_tables.cpp, about 85 thousand
@@ -135,6 +191,7 @@ target_include_directories(cube_lib
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>"
         "$<BUILD_INTERFACE:${CUBEULATOR_PROFILING_DIR}>"
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/variants/simd-${CUBEULATOR_SIMD_RESOLVED}>"
         "$<INSTALL_INTERFACE:include>")
 
 target_compile_features(cube_lib PUBLIC cxx_std_23)

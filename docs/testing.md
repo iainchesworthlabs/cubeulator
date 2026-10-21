@@ -275,8 +275,13 @@ The `system` label keeps it out of the plain `ctest` runs - the committed
 presets exclude it, and CI's build legs say `-LE system` as well: it needs
 somewhere to draw. CI runs it in its own Linux job (`System tests (Linux, Xvfb
 + software GL)`, the command above, on the Qt the app ships on), and the
-Windows and macOS build legs run `<preset>-system` as a step that reports but
-does not block.
+Windows and macOS build legs run `<preset>-system` as a step of their own,
+which fails the leg (since 2026-10-21; it reported without blocking while it
+was found out whether Qt Quick 3D renders on those runners, and two real
+faults hid behind that). Times on those runners, from the last forty runs:
+Windows' longest shard is about 160 s and macOS's is `system.walk.5of5` at
+about 640 s, against a 1200 s timeout per test (1.9x of headroom on macOS, 7x
+on Windows); the whole macOS step is about 28 minutes.
 
 ### How it works
 
@@ -307,12 +312,12 @@ does not block.
   with no test change, and what it does is for a case of its own.
 - **QML warnings are failures.** `diagnostics.cpp` collects what the app's own
   QML printed; the journey cases assert it is nothing.
-- **Two files are added from `tests/CMakeLists.txt`**, not listed in
+- **One file is added from `tests/CMakeLists.txt`**, not listed in
   `tests/system/CMakeLists.txt`: `tests/i18n/system/language_test.cpp` (the
   language switched live in the real window; see
-  [Translation tests](#translation-tests)) and, where the platform has a
-  desktop shell, `tests/system/desktop_shell_test.cpp` (the placeholder About).
-  They are in the walk like any other case.
+  [Translation tests](#translation-tests)). It is in the walk like any other
+  case. (The desktop shell's placeholder About had one too, until About became
+  a screen: `tests/system/licences_test.cpp`.)
 - **Nothing of a person's is read or written.** The settings store is a
   temporary directory (`QSettings::setPath`), and so is the app's data folder,
   where the history of solves is kept: `system_test_main.cpp` points
@@ -497,8 +502,10 @@ solve screens - narrow (390x844) and wide (900x640), light and dark:
 `scan-looking`, `scan-reading`, `scan-three-sides`, `scan-cube-read`,
 `solve-start`, `solve-middle`, `solve-end`, `complete`, and the solution
 reviewed from it: `solution-start`, `solution-middle`, `solution-end`; then the
-history: `history` (a finished solve and one left part-way) and `history-empty`.
-Names are
+history: `history` (a finished solve and one left part-way) and `history-empty`;
+then a cube of another size: `entry` (a 5x5's scramble typed in), `colours` (the top
+and front of a 4x4 painted), `solve-big-middle` (the 5x5 at a layer inside the
+cube) and `solution-big-middle` (its review). Names are
 `<screen>-<layout>-<theme>.png`. Frames are drawn; the launch cube's idle
 spin is switched off so pictures do not depend on timing. The test asserts
 each exists and is not a blank window; judging them is for a person.
@@ -511,7 +518,7 @@ tour's cluttered room. Refresh them when a screen the guide shows changes.
 
 It is two ctest entries of its own (`system.tour.narrow` and `.wide`, writing
 to `<build>/system-test-output/tour/<layout>`) because it is the slowest part
-by far - 68 grabs of a window that is being rendered in software on Linux CI
+by far - 84 grabs of a window that is being rendered in software on Linux CI
 - and a picture that cannot be taken should not hide what the walk found, nor
 spend the walk's time budget. Each layout is a half of the pictures and can
 run beside the other. The solution is stepped to its middle and its end
@@ -662,6 +669,7 @@ ctest --preset <preset> -L perf                  # the same, through ctest
 ctest --preset windows-msvc-perf                 # budgets *and* wall time (also linux-gcc-, macos-clang-)
 cube_perf_tests "[.perf-report]"                 # every metric beside its budget, and the corpus per seed
 cube_perf_tests "[.perf-report-timing]"          # just the wall-time metrics
+cube_perf_tests "[.perf-report-zone-cost]"       # what one profiling macro costs here (CUBEULATOR_PROFILE=1 for a started profiler; docs/profiling.md, "Idle cost")
 ```
 
 ### What is measured
@@ -684,11 +692,12 @@ same signatures, and the budgets held across it unchanged).
 | `beginner.solve`, `.search`, `.moves` | nodes per solve, the largest search of any stage, solution length | as above |
 | `intermediate.*` | the same, for CFOP (both-ends pair searches; the last layer is a table) | |
 | `advanced.*` | nodes of the two-phase search (about five million by design: it keeps improving for up to `kImprovementNodes` after the first solution) | `kHardNodeLimit` 60,000,000 |
+| `nxn.<N>x<N>.moves`, `.library.cycles` | the N x N solver, 2x2 to 9x9 (`cube::nxn`, [nxn-solver.md](nxn-solver.md)), over six scrambles of 60 + 10 N layer turns per size (`NCube::random_scramble`, which draws by remainder from the specified Mersenne twister and so is the same cube everywhere): `max` and `mean` moves in a solution, and the 3-cycles the size's library holds (4,048 for each orbit of centres and of wings, so exact). A move is a table lookup, so the moves made are the work done | |
 | `read.<w>x<h>.*` | `cv::Mat` buffers and bytes one `read_side()` allocates, at 640x360, 1280x720 and 1920x1080, with the side in view and with an empty room; and that a bigger frame costs no more than the working-width one (the documented contract: wide frames are reduced first) | |
 | `corner.<w>x<h>.*` | the same for `read_corner()`, which runs on every frame beside `read_side()`: two sides meeting at an edge at 640x360 and 1920x1080, and a room. About a thousand small buffers a frame, which is the number to look at first in a profile of the scan | |
 | `scan.add`, `scan.scanned` | pixel buffers fed through `SideScan::add` (none) and `scanned()` (the handful of single-colour conversions) | |
 | `judge.<scene>.*` | how many times a scan put its six sides together into a cube (`SideScan::assemblies()`) over a drawn scan judged after every read and a hundred times more once finished, as a held cube is, and over those hundred: none; and what the assemblies cost in the search's nodes (`.assembly.nodes`: 388, 776 and 7,720 where trying every combination is 5,460 an assembly). Scenes: sides that make one cube (the scan is over at the first judgement), several, and none (one edge flipped in place: the dearest, fifteen trades of two names as well) | 1, 2, 2; none again |
-| `timing.*` | the fastest run of a seed-0 beginner / intermediate / advanced solve, of a 640x360 and a 1920x1080 read, of 100 `SideScan::add`s and of one `scanned()`, and of `read_corner` at both sizes, each as a ratio to the calibration workload | |
+| `timing.*` | the fastest run of a seed-0 beginner / intermediate / advanced solve, of a 640x360 and a 1920x1080 read, of 100 `SideScan::add`s and of one `scanned()`, and of `read_corner` at both sizes, and of a 5x5, 7x7 and 9x9 solve with the size's setup built, each as a ratio to the calibration workload | |
 
 The node counts come from `cube/solver/search_work.hpp`, a thread-local tally
 the searches add to once as each ends (`piece_search` and its fallback
@@ -879,8 +888,13 @@ way on a busy shared machine:
   that still has a nameless zone is run again, four attempts in all
   (`--attempts`).
 
-CI does not run it and nothing depends on it: no CI leg builds Tracy, and the
-Tracy-on build's `system.walk` has been seen failing intermittently. The
+CI does not run it and nothing depends on it: the desktop legs now build the
+Tracy client (dormant, so the whole test suite runs with it inert), but none
+takes a capture, and a profiling-on build's `system.walk` has been seen failing
+intermittently. The client is dormant in `cube_perf_tests` too, until the
+environment says otherwise: the tool sets `CUBEULATOR_PROFILE=1`, which the
+binary's Catch listener (`tests/perf/profiler_listener.cpp`) reads the way the
+application's `main()` does. The
 captures are of the headless perf binary for that reason, not of the app. Its
 self-test (`perf_tracy_check_selftest`, on a canned export) is the only part
 that runs in `ctest`.

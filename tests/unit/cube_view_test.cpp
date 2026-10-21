@@ -23,6 +23,8 @@
 #include <QtQml/qqml.h>
 #include <QByteArray>
 #include <QColor>
+#include <QCoreApplication>
+#include <QEvent>
 #include <QFile>
 #include <QMetaObject>
 #include <QQmlComponent>
@@ -51,8 +53,11 @@ using cube::solver::kAllFaces;
 using cube::solver::Move;
 using cube::solver::Place;
 using cube::test::all_moves;
+using cube::test::directional_lights;
 using cube::test::dot;
 using cube::test::letter;
+using cube::test::Lights;
+using cube::test::models;
 using cube::test::Placement;
 using cube::test::Vec;
 using cube::test::wait_for;
@@ -167,28 +172,48 @@ private:
             cube::solver::random_scramble(13)};
 }
 
-struct Lights {
-    int declared = 0;
-    int on = 0;
-};
-
-// The directional lights a view has, and how many of them are switched on.
-[[nodiscard]] Lights directional_lights(const QObject* view) {
-    Lights lights;
-    for (const QObject* object : view->findChildren<QObject*>()) {
-        for (const QMetaObject* type = object->metaObject(); type != nullptr;
-             type = type->superClass()) {
-            if (qstrcmp(type->className(), "QQuick3DDirectionalLight") == 0) {
-                ++lights.declared;
-                lights.on += object->property("visible").toBool() ? 1 : 0;
-                break;
-            }
-        }
-    }
-    return lights;
-}
-
 }  // namespace
+
+TEST_CASE("the cube makes the models it draws and none it hides", "[qml][cube-view][perf]") {
+    // A sticker used to be four models, one for each look and one for the
+    // placeholder, of which one drew; the cube was 270 models and the screen
+    // paid for all of them in the time it took to arrive and in every frame's
+    // sync. Now a sticker is the one panel it draws, made when a look or the
+    // skeleton asks for it (docs/performance.md, "Screens"). This is the
+    // budget: a model that is declared and switched off is a regression.
+    constexpr int kBodies = 26;  // the centre one is never seen, so it is not made
+    constexpr int kStickers = 54;
+    constexpr int kOutlines = kBodies;  // the cel look's, made only for that look
+
+    View view;
+    const auto check = [&](int expected) {
+        // A panel that is let go of is deleted when the event loop next runs.
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        const Lights found = models(view.item());
+        CHECK(found.declared == expected);
+        CHECK(found.on == found.declared);
+    };
+
+    INFO("the first look");
+    check(kBodies + kStickers);
+
+    view.set("shaderStyle", 1);
+    INFO("the glow look");
+    check(kBodies + kStickers);
+
+    view.set("shaderStyle", 2);
+    INFO("the cel look, with its outline");
+    check(kBodies + kStickers + kOutlines);
+
+    view.set("shaderStyle", 0);
+    INFO("back to the first, and the outline is gone");
+    check(kBodies + kStickers);
+
+    // Nothing painted, in skeleton: a placeholder for each sticker, still one.
+    view.set("skeleton", true);
+    INFO("the skeleton");
+    check(kBodies + kStickers);
+}
 
 TEST_CASE("no more directional lights are on than Qt Quick 3D draws", "[qml][cube-view]") {
     // Qt Quick 3D draws four and leaves the rest out, logging "Too many

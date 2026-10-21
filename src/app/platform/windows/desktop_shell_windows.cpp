@@ -10,6 +10,11 @@
 // (packaging/windows/StampShortcut.ps1).
 #include "interfaces/desktop_shell.hpp"
 
+#include <QCoreApplication>
+#include <QProcess>
+#include <QString>
+#include <QStringList>
+
 #include <windows.h>
 // shobjidl.h requires windows.h first.
 #include <shobjidl.h>
@@ -60,6 +65,14 @@ std::string apply_process_identity(std::string_view app_user_model_id) {
                std::to_string(static_cast<long>(result));
     }
     return {};
+}
+
+bool start_again(std::span<const std::string> arguments) {
+    QStringList list;
+    for (const std::string& argument : arguments) {
+        list.append(QString::fromStdString(argument));
+    }
+    return QProcess::startDetached(QCoreApplication::applicationFilePath(), list);
 }
 
 Traits traits() noexcept {

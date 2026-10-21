@@ -470,6 +470,46 @@ In your hands.</source>
         <extracomment>What this stage does, in one sentence.</extracomment>
         <translation>只用顶面和底面的转动，以及其余四个面的半圈转动，完成剩下的部分。</translation>
     </message>
+    <message id="stage.parity.title">
+        <source>Set up</source>
+        <extracomment>Name of the first stage of a solve of a cube bigger than 3x3 when it needs one. Shown with a number, like the other stages. 'Parity' is the cuber's word; do not use it.</extracomment>
+        <translation>调整</translation>
+    </message>
+    <message id="stage.parity.what">
+        <source>A few turns first, so that pairing up the pieces cannot leave two of them swapped, which only a big cube can do.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>先转几步，这样配对块时就不会留下两个互换了位置的块；只有大魔方才会出现这种情况。</translation>
+    </message>
+    <message id="stage.centres.title">
+        <source>Centres</source>
+        <extracomment>Name of a stage of a solve of a cube bigger than 3x3: gathering the middle stickers of each side.</extracomment>
+        <translation>中心</translation>
+    </message>
+    <message id="stage.centres.what">
+        <source>Gather the middle stickers of each side into one block of a single colour.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>把每个面中间的贴纸聚成一整块同一颜色。</translation>
+    </message>
+    <message id="stage.edges.title">
+        <source>Edges</source>
+        <extracomment>Name of a stage of a solve of a cube bigger than 3x3: pairing the edge pieces.</extracomment>
+        <translation>棱块</translation>
+    </message>
+    <message id="stage.edges.what">
+        <source>Pair up the edge pieces into whole edges, so that the cube has twelve edges like a 3x3.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>把棱块配成完整的棱，让魔方像 3x3 一样有十二条棱。</translation>
+    </message>
+    <message id="stage.corners.title">
+        <source>Corners</source>
+        <extracomment>Name of the only stage of a solve of a 2x2.</extracomment>
+        <translation>角块</translation>
+    </message>
+    <message id="stage.corners.what">
+        <source>Put the eight corners where they belong. A 2x2 has nothing else.</source>
+        <extracomment>What this stage does, in one sentence.</extracomment>
+        <translation>把八个角块放到各自的位置。2x2 没有其他的块。</translation>
+    </message>
     <message id="home.lede">
         <source>Show your cube to the camera, then follow one turn at a time until it is solved.</source>
         <extracomment>One sentence under the headline on the home screen.</extracomment>
@@ -484,6 +524,76 @@ In your hands.</source>
         <source>History</source>
         <extracomment>Button. Opens the list of past solves.</extracomment>
         <translation>历史记录</translation>
+    </message>
+    <message id="home.other">
+        <source>Another size of cube</source>
+        <extracomment>Button on Home. Opens the screen for a cube the camera does not read: a different size, or a cube typed in as the scramble that mixed it up.</extracomment>
+        <translation>其他尺寸的魔方</translation>
+    </message>
+    <message id="entry.title">
+        <source>Another cube</source>
+        <extracomment>Title of the screen reached from Home by "Another size of cube".</extracomment>
+        <translation>其他魔方</translation>
+    </message>
+    <message id="entry.size.label">
+        <source>Size</source>
+        <extracomment>Small heading above the buttons that choose the size of the cube: 2×2, 3×3 and so on.</extracomment>
+        <translation>尺寸</translation>
+    </message>
+    <message id="entry.size.option">
+        <source>%1×%1</source>
+        <extracomment>A size of cube on a button: the side length twice, as in 5×5. %1 is the number in the reader's own digits.</extracomment>
+        <translation>%1×%1</translation>
+    </message>
+    <message id="entry.size.camera">
+        <source>The camera reads this cube. Scan it, or type its scramble here.</source>
+        <extracomment>Under the size buttons: the camera reads every size offered.</extracomment>
+        <translation>摄像头可以读取这个魔方。请扫描，或在这里输入它的打乱公式。</translation>
+    </message>
+    <message id="entry.scramble.label">
+        <source>Its scramble</source>
+        <extracomment>Small heading above the box where the scramble is typed. A scramble is the list of moves that mixed the cube up, as a timer or a puzzle site shows it.</extracomment>
+        <translation>打乱公式</translation>
+    </message>
+    <message id="entry.scramble.placeholder">
+        <source>Type or paste the moves, such as R U R' U' F2 2R Rw</source>
+        <extracomment>Grey text in the empty scramble box, showing what a scramble looks like. The moves are cubing notation and are not translated.</extracomment>
+        <translation>输入或粘贴转动，例如 R U R' U' F2 2R Rw</translation>
+    </message>
+    <message id="entry.scramble.help">
+        <source>Write the moves with a space between them. U' turns the other way and F2 is a half turn. 2R is the second layer in from R, and Rw turns two layers together.</source>
+        <extracomment>Under the scramble box. The letters and marks are notation and stay as they are.</extracomment>
+        <translation>各个转动之间用空格隔开。U' 表示反方向转动，F2 表示转半圈。2R 表示从 R 面数起的第二层，Rw 表示两层一起转。</translation>
+    </message>
+    <message id="entry.solve">
+        <source>Solve it</source>
+        <extracomment>Main button of the screen for another size of cube. Works out the solution from the scramble.</extracomment>
+        <translation>还原</translation>
+    </message>
+    <message id="entry.scan">
+        <source>Scan it instead</source>
+        <extracomment>Button shown when 3×3 is chosen. Goes to the camera.</extracomment>
+        <translation>改为扫描</translation>
+    </message>
+    <message id="entry.error.unknownMove">
+        <source>‘%1’ is not a move. Moves look like R, U', F2, 2R or Rw.</source>
+        <extracomment>Shown under the scramble box when a word in it is not a move. %1 is that word.</extracomment>
+        <translation>“%1”不是有效的转动。转动的写法如 R、U'、F2、2R 或 Rw。</translation>
+    </message>
+    <message id="entry.error.layer">
+        <source>‘%1’ turns a layer that a %2×%2 cube does not have.</source>
+        <extracomment>Shown when a move names a layer the chosen size does not have, such as 5R on a 4×4. %1 is that move, %2 the size in the reader's own digits.</extracomment>
+        <translation>“%1”要转动的层，%2×%2 的魔方上并不存在。</translation>
+    </message>
+    <message id="entry.error.empty">
+        <source>Type the scramble first.</source>
+        <extracomment>Shown when Solve it is pressed with nothing typed.</extracomment>
+        <translation>请先输入打乱公式。</translation>
+    </message>
+    <message id="entry.error.solved">
+        <source>Those moves leave the cube as it was. Type a scramble that mixes it up.</source>
+        <extracomment>Shown when the scramble turns the cube back to solved, so there is nothing to solve.</extracomment>
+        <translation>这些转动不会改变魔方。请输入一个会把魔方打乱的打乱公式。</translation>
     </message>
     <message id="home.findingCamera">
         <source>Looking for a camera…</source>
@@ -713,7 +823,7 @@ In your hands.</source>
     <message id="scan.guide.ambiguousCorner">
         <source>Turn the cube slowly to show the corner where %1, %2 and %3 meet.</source>
         <extracomment>Guidance when six sides are read and fit together in more than one way, and showing one particular corner (two or three sides in one view) would tell the cubes they make apart. %1, %2 and %3 are the colours of the centres of the three sides that meet there - colour.white and the like, in no particular order. Shown in place of scan.guide.ambiguous, which says only that two sides should show at once.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>请缓慢转动魔方，让 %1、%2 和 %3 交汇的那个角露出来。</translation>
     </message>
     <message id="scan.guide.complete">
         <source>All six sides make a valid cube. Working out the solution…</source>
@@ -739,6 +849,11 @@ In your hands.</source>
         <source>Start over</source>
         <extracomment>Button. Forgets the sides read so far.</extracomment>
         <translation>重新开始</translation>
+    </message>
+    <message id="scan.size.auto">
+        <source>Auto</source>
+        <extracomment>Button on the scan screen beside the sizes of cube: the app finds the size of the cube from what the camera sees.</extracomment>
+        <translation>自动</translation>
     </message>
     <message id="scan.checkColours">
         <source>Check the colours</source>
@@ -912,6 +1027,11 @@ In your hands.</source>
         <extracomment>Instruction at the top when checking a scan.</extracomment>
         <translation>把每个面与你的魔方对照。选一种颜色，再点按任何错误的贴纸。</translation>
     </message>
+    <message id="review.intro.enterN">
+        <source>Hold your cube any way up. Call the side facing up the top and the side facing you the front. Pick a colour, then tap or drag over the stickers of that colour on the side shown. The sides named round it are the ones against its edges.</source>
+        <extracomment>Instruction at the top of entering a cube of any size by hand. Replaces review.intro.enter for a cube that has no centre sticker to name each side by.</extracomment>
+        <translation>拿着魔方，朝向不限。朝上的面叫顶面，朝向你的面叫前面。先选一种颜色，再在显示的这个面上点按或拖过该颜色的贴纸。它周围标出名称的面，就是与它的边相邻的面。</translation>
+    </message>
     <message id="review.centre">
         <source>The centre never changes. It names the side.</source>
         <extracomment>Shown when the person taps a centre sticker, which cannot be edited.</extracomment>
@@ -931,6 +1051,56 @@ In your hands.</source>
         <source>48 stickers to fill in</source>
         <extracomment>Status line before anything is entered. A cube has 54 stickers; the six centres are already set.</extracomment>
         <translation>还有 48 个贴纸要填</translation>
+    </message>
+    <message id="review.status.emptyN">
+        <source>%1 stickers to fill in</source>
+        <extracomment>Status line before anything is entered, for a cube of any size. %1 is how many stickers the cube has, in the reader's own digits.</extracomment>
+        <translation>还有 %1 个贴纸要填</translation>
+    </message>
+    <message id="review.fault.noScheme">
+        <source>These colours cannot be the six sides of one cube.</source>
+        <extracomment>Says what is wrong with colours that fit in no cube: two colours that belong on opposite sides sit next to each other.</extracomment>
+        <translation>这些颜色不可能是同一个魔方的六个面。</translation>
+    </message>
+    <message id="review.fault.centreColours">
+        <source>The middle stickers of a side do not hold each colour equally often.</source>
+        <extracomment>Says what is wrong when the middle stickers of one side's ring have the wrong mix of colours.</extracomment>
+        <translation>某个面中间的贴纸里，各种颜色出现的次数不一样多。</translation>
+    </message>
+    <message id="review.fault.unknownPiece">
+        <source>A piece shows colours that no piece of a cube has.</source>
+        <extracomment>Says what is wrong when a corner or an edge has two colours that are never next to each other.</extracomment>
+        <translation>有一个块的颜色组合，在魔方上根本不存在。</translation>
+    </message>
+    <message id="review.fault.repeatedPiece">
+        <source>Two pieces show the same colours, so another piece is missing.</source>
+        <extracomment>Says what is wrong when the same corner or edge is entered twice.</extracomment>
+        <translation>有两个块的颜色相同，所以还缺少另一个块。</translation>
+    </message>
+    <message id="review.fault.twistedCorner">
+        <source>A corner looks turned in place.</source>
+        <extracomment>Says what is wrong when the corners are right but one is twisted.</extracomment>
+        <translation>有一个角块看起来是在原位上被扭转了。</translation>
+    </message>
+    <message id="review.fault.flippedEdge">
+        <source>An edge looks flipped.</source>
+        <extracomment>Says what is wrong when the edges are right but one has its two colours the wrong way round.</extracomment>
+        <translation>有一个棱块看起来是翻转了。</translation>
+    </message>
+    <message id="review.fault.swappedPieces">
+        <source>Two pieces look swapped.</source>
+        <extracomment>Says what is wrong when two pieces are in each other's places.</extracomment>
+        <translation>有两个块看起来互换了位置。</translation>
+    </message>
+    <message id="review.clearAll">
+        <source>Clear all</source>
+        <extracomment>Button at the top of the hand-entry screen. Unsets every sticker of every side.</extracomment>
+        <translation>全部清除</translation>
+    </message>
+    <message id="review.fillSide">
+        <source>Fill this side</source>
+        <extracomment>Button under the colours on the hand-entry screen. Paints every sticker of the side being edited with the colour chosen.</extracomment>
+        <translation>填满这个面</translation>
     </message>
     <message id="review.status.partial" numerus="yes">
         <source>%Ln stickers to go</source>
@@ -1036,6 +1206,78 @@ In your hands.</source>
             <numerusform>%1：还剩 %Ln 个贴纸</numerusform>
         </translation>
     </message>
+    <message id="review.notUpright">
+        <source>The camera could not tell which way up each side was held, so each is shown as it saw it. Compare every side with your cube, and turn any that is the wrong way round.</source>
+        <extracomment>Shown on the check screen when the camera named the colours of the sides but could not fit them together into a cube, so it does not know which way up each side was held. Each side is shown as the camera saw it and may need turning (review.turnSide).</extracomment>
+        <translation>相机无法判断每个面是以哪一端朝上拿着的，所以每个面都按相机看到的样子显示。请把每个面与你的魔方对照，把方向不对的面转过来。</translation>
+    </message>
+    <message id="review.doubt.note" numerus="yes">
+        <source>The camera was not sure of %Ln stickers. They are marked with a ?.</source>
+        <extracomment>Shown on the check screen when the camera was unsure of some stickers. %n is how many. The mark is a question mark drawn on the sticker itself; keep the question mark as the plain Latin character.</extracomment>
+        <translation>
+            <numerusform>相机对其中 %Ln 个贴纸没有把握，已用 ? 标出。</numerusform>
+        </translation>
+    </message>
+    <message id="review.a11y.stickerUnsure">
+        <source>%1, row %2, column %3: %4. The camera was not sure of this one.</source>
+        <extracomment>Screen-reader name of a sticker the camera was unsure of. Like review.a11y.sticker, with the extra sentence. %1 is a colourSide string, %2 and %3 are 1 to 9, %4 a colour name or colour.unset.</extracomment>
+        <translation>%1，第 %2 行，第 %3 列：%4。相机对这个贴纸没有把握。</translation>
+    </message>
+    <message id="review.undo">
+        <source>Undo</source>
+        <extracomment>Button on the colours screen. Takes back the last change.</extracomment>
+        <translation>撤销</translation>
+    </message>
+    <message id="review.redo">
+        <source>Redo</source>
+        <extracomment>Button on the colours screen. Puts back the change that Undo took back.</extracomment>
+        <translation>重做</translation>
+    </message>
+    <message id="review.revert">
+        <source>Back to the scan</source>
+        <extracomment>Button on the check screen. Puts every sticker back as the camera read it, taking back all the corrections made here. Undo can bring them back.</extracomment>
+        <translation>回到扫描结果</translation>
+    </message>
+    <message id="review.turnSide">
+        <source>Turn this side</source>
+        <extracomment>Button on the colours screen. Turns the side being edited a quarter turn clockwise, as seen from outside, in the picture only: for a side the camera read the wrong way up. It does not turn the cube.</extracomment>
+        <translation>转动这个面</translation>
+    </message>
+    <message id="review.describe.open">
+        <source>Describe this side</source>
+        <extracomment>Button on the colours screen. Opens a box to type the colours of the whole side as letters instead of tapping each sticker.</extracomment>
+        <translation>用字母描述这个面</translation>
+    </message>
+    <message id="review.describe.help">
+        <source>Type the colours of this side (%1) as you see it on your cube, left to right, a row at a time: W white, Y yellow, G green, B blue, O orange, R red. Use ? for a sticker you cannot tell. Spaces and slashes are ignored.</source>
+        <extracomment>Instruction above the box where a side is described in letters. %1 is the side's name (colourSide.red, side.top and the like). The letters W Y G B O R are fixed, like the letters of a move, and are not translated; say in the language which colour each stands for, naming the colours as in colour.*.</extracomment>
+        <translation>按你在魔方上看到的样子，从左到右、一行一行地输入这个面(%1)的颜色：W 白、Y 黄、G 绿、B 蓝、O 橙、R 红。看不清的贴纸用 ?。空格和斜杠会被忽略。</translation>
+    </message>
+    <message id="review.describe.field">
+        <source>Colours of this side, as letters</source>
+        <extracomment>Screen-reader name of the box where a side is described in letters.</extracomment>
+        <translation>这个面的颜色(字母)</translation>
+    </message>
+    <message id="review.describe.apply">
+        <source>Use these</source>
+        <extracomment>Button under the box where a side is described in letters. Paints the side with what was typed.</extracomment>
+        <translation>使用</translation>
+    </message>
+    <message id="review.describe.tooFew">
+        <source>That is only %1 of the %2 colours this side needs.</source>
+        <extracomment>Shown when the description of a side has too few colours. %1 is how many were typed and %2 how many stickers the side has, in the reader's own digits.</extracomment>
+        <translation>这个面需要 %2 种颜色，目前只有 %1 种。</translation>
+    </message>
+    <message id="review.describe.tooMany">
+        <source>That is %1 colours, but this side has only %2 stickers.</source>
+        <extracomment>Shown when the description of a side has too many colours. %1 is how many were typed and %2 how many stickers the side has, in the reader's own digits. %1 is always larger than %2.</extracomment>
+        <translation>共 %1 种颜色，但这个面只有 %2 个贴纸。</translation>
+    </message>
+    <message id="review.describe.unknownLetter">
+        <source>‘%1’ is not a colour. Use W, Y, G, B, O or R, or ? for a sticker you cannot tell.</source>
+        <extracomment>Shown when the description of a side has a letter that is no colour. %1 is that letter. The letters W Y G B O R are fixed and not translated.</extracomment>
+        <translation>“%1”不是颜色。请使用 W、Y、G、B、O 或 R，看不清的贴纸用 ?。</translation>
+    </message>
     <message id="solve.working">
         <source>Working out the solution…</source>
         <extracomment>Shown while the solution is computed.</extracomment>
@@ -1130,6 +1372,36 @@ In your hands.</source>
         <source>Back one</source>
         <extracomment>Button. Undoes the last turn on screen so the person can undo it on the cube.</extracomment>
         <translation>上一步</translation>
+    </message>
+    <message id="solve.move.layer">
+        <source>%1 · layer %2 · %3</source>
+        <extracomment>The move in words for a layer inside a cube bigger than 3x3. %1 is the side, as 'Right side' or 'Top'; %2 is how far in the layer is counted from that side, starting at 1 for the outer layer; %3 is 'quarter turn' or 'half turn'. The dots are separators.</extracomment>
+        <translation>%1 · 第 %2 层 · %3</translation>
+    </message>
+    <message id="solve.move.layers">
+        <source>%1 · layers %2 to %3 · %4</source>
+        <extracomment>The same for several layers turned together. %2 and %3 are the nearest and the farthest layer, counted from the side as above; %4 is 'quarter turn' or 'half turn'.</extracomment>
+        <translation>%1 · 第 %2 至 %3 层 · %4</translation>
+    </message>
+    <message id="solve.skipToCore">
+        <source>Skip to the 3x3 stage</source>
+        <extracomment>Button on the solve screen of a cube bigger than 3x3. Jumps over the stages that pair up its pieces.</extracomment>
+        <translation>跳到 3x3 阶段</translation>
+    </message>
+    <message id="solve.skipToCore.note">
+        <source>Use this once you have paired up the centres and edges yourself. The cube on screen jumps to the 3x3 it should now be.</source>
+        <extracomment>Explains the button above it, for someone who can already solve a 3x3.</extracomment>
+        <translation>当你已经自己把中心和棱块配好后再使用。屏幕上的魔方会跳到此时应有的 3x3 状态。</translation>
+    </message>
+    <message id="solve.method.finishWith">
+        <source>Finish with</source>
+        <extracomment>Small label above the three method buttons when the cube is bigger than 3x3: the methods apply to the 3x3 the cube has become, so they are said to be how it is finished.</extracomment>
+        <translation>收尾方式</translation>
+    </message>
+    <message id="solve.camera.layerHidden">
+        <source>Matched. The camera cannot see this layer from here: press Next turn after this move.</source>
+        <extracomment>Shown beside the camera preview on the solve screen of a cube bigger than 3x3 when the layer to turn is one the side facing the camera does not show (a layer behind the front one, say): the camera cannot tell that it was turned, so the person steps on with the button. 'Next turn' is the main button's text (solve.next).</extracomment>
+        <translation>已对上。从这个角度摄像头看不到这一层：做完这一步后请点“下一步”。</translation>
     </message>
     <message id="solve.finish">
         <source>Finish</source>
@@ -1400,6 +1672,16 @@ In your hands.</source>
             <numerusform>%Ln 步</numerusform>
         </translation>
     </message>
+    <message id="solution.layer">
+        <source>layer %1</source>
+        <extracomment>A turn of a layer inside a cube bigger than 3x3, in a row of the list of turns, between the side and the direction ('Right side · layer 2 · upwards · quarter turn'). %1 is how far in the layer is, counted from the side, starting at 1 for the outer layer, in the reader's own digits.</extracomment>
+        <translation>第 %1 层</translation>
+    </message>
+    <message id="solution.layers">
+        <source>layers %1 to %2</source>
+        <extracomment>The same for several layers turned together. %1 and %2 are the nearest and the farthest layer, counted from the side as above.</extracomment>
+        <translation>第 %1 至 %2 层</translation>
+    </message>
     <message id="solution.a11y.turn">
         <source>Turn %1. %2</source>
         <extracomment>Screen-reader name of one row in the list. %2 is a turn sentence.</extracomment>
@@ -1431,6 +1713,11 @@ In your hands.</source>
         <source>Unfinished · turn %1 of %2</source>
         <extracomment>One row, for a solve left part-way.</extracomment>
         <translation>未完成 · 第 %1 步，共 %2 步</translation>
+    </message>
+    <message id="history.item.size">
+        <source>%1×%1 · %2</source>
+        <extracomment>Start of one row for a cube that is not a 3x3: its size, as in 5×5 (%1 is the side length twice, in the reader's own digits), then the rest of the row (history.item.done or history.item.unfinished) as %2.</extracomment>
+        <translation>%1×%1 · %2</translation>
     </message>
     <message id="history.delete">
         <source>Delete</source>
@@ -1757,27 +2044,27 @@ In your hands.</source>
     <message id="settings.dev.diagnostics">
         <source>Write diagnostics to a file</source>
         <extracomment>Developer builds only. A switch in Settings. While it is on, the app writes what it reads and decides - colours, how they were named, how the cube was put together - to a file a developer can open while the app runs. Off at every start.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>将诊断信息写入文件</translation>
     </message>
     <message id="settings.dev.diagnosticsFrames">
         <source>Also keep camera frames</source>
         <extracomment>Developer builds only. A switch in Settings, under the diagnostics switch; it only takes effect while that one is on. The frames show whatever the camera sees, which can be a person.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>同时保留摄像头帧</translation>
     </message>
     <message id="settings.dev.diagnosticsSnapshot">
         <source>Snapshot now</source>
         <extracomment>Developer builds only. A button in Settings. Writes the scan and the solve as they stand, in one record, to the diagnostics file.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>立即生成快照</translation>
     </message>
     <message id="diagnostics.marker">
         <source>Writing diagnostics to %1</source>
         <extracomment>Developer builds only. A strip on every screen while the diagnostics file is being written, so that it is never silent. %1 is the file's path.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>正在将诊断信息写入 %1</translation>
     </message>
     <message id="diagnostics.markerFrames">
         <source>Writing diagnostics and camera frames to %1</source>
         <extracomment>Developer builds only. As diagnostics.marker, when camera frames are being kept as well. %1 is the folder the diagnostics are written to.</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>正在将诊断信息和摄像头帧写入 %1</translation>
     </message>
     <message id="about.title">
         <source>About Cubeulator</source>

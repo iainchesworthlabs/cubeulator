@@ -15,6 +15,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cube/nxn/cube.hpp>
+#include <cube/nxn/strategy.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/notation.hpp>
 #include <cube/solver/solver.hpp>
@@ -33,8 +35,13 @@
 #include <QUrl>
 #include <QVariant>
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <memory>
+#include <vector>
 
 using cube::solver::Color;
 using cube::solver::Cube;
@@ -96,8 +103,9 @@ public:
         settle();
     }
 
-    // Positioners lay their children out when a window polishes them; there
-    // is no window, so ask each, outermost first.
+    // Positioners lay their children out, and lists make the rows they show,
+    // when a window polishes them; there is no window, so ask each, outermost
+    // first.
     void settle() {
         QCoreApplication::processEvents();
         for (int pass = 0; pass < 3; ++pass) {
@@ -138,6 +146,17 @@ public:
                 QString::fromLatin1(item->metaObject()->className())
                     .startsWith(QLatin1String("AppButton")) &&
                 item->property("text").toString() == text) {
+                found = item;
+            }
+        });
+        return found;
+    }
+
+    // The first visible item called `name` (its objectName), or null.
+    [[nodiscard]] QQuickItem* item_named(const QString& name) const {
+        QQuickItem* found = nullptr;
+        visit(screen_.get(), [&](QQuickItem* item) {
+            if (found == nullptr && item->isVisible() && item->objectName() == name) {
                 found = item;
             }
         });
@@ -199,6 +218,118 @@ public:
         return bad;
     }
 
+    // The item of `name` (its objectName) below the screen.
+    [[nodiscard]] QQuickItem* find(const char* name) const {
+        return screen_->findChild<QQuickItem*>(QString::fromLatin1(name));
+    }
+
+    // The strings and buttons (and the items named in `boxes`, by objectName: the cube) that
+    // lie on top of each other, as drawn. A panel shorter than what it holds draws one thing
+    // over the next while every string in it still fits its own box, which no check of a
+    // single string can see. A string is measured by the text it holds and where its
+    // alignment puts it, not by the box it was given; a button and a named item by their
+    // boxes. A string in a button is the button's own (the button stands for it), and what a
+    // clipping parent cuts off (the part of a scrolled list that is out of view) is not
+    // drawn, so it is not counted.
+    [[nodiscard]] QStringList drawn_over_each_other(
+        std::initializer_list<const char*> boxes = {}) const {
+        struct Drawn {
+            const QQuickItem* item;
+            QRectF rect;
+            QString name;
+        };
+        std::vector<Drawn> drawn;
+        visit(screen_.get(), [&](QQuickItem* item) {
+            const bool is_text = item->inherits("QQuickText");
+            const bool is_button = QString::fromLatin1(item->metaObject()->className())
+                                       .startsWith(QLatin1String("AppButton"));
+            const bool is_named = std::any_of(boxes.begin(), boxes.end(), [&](const char* name) {
+                return item->objectName() == QLatin1String(name);
+            });
+            if (!item->isVisible() || !(is_text || is_button || is_named)) {
+                return;
+            }
+            double opacity = 1;
+            for (const QQuickItem* up = item; up != nullptr; up = up->parentItem()) {
+                opacity *= up->opacity();
+                // A button's label is the button's own: the button stands for it.
+                if (is_text && up != item &&
+                    QString::fromLatin1(up->metaObject()->className())
+                        .startsWith(QLatin1String("AppButton"))) {
+                    return;
+                }
+            }
+            if (opacity < 0.01) {
+                return;
+            }
+            QRectF box(0, 0, item->width(), item->height());
+            QString name = QStringLiteral("item ") + item->objectName();
+            if (is_button) {
+                name = QStringLiteral("button \"") + item->property("text").toString() +
+                       QStringLiteral("\"");
+            } else if (is_text) {
+                const QString shown = item->property("text").toString();
+                if (shown.isEmpty()) {
+                    return;
+                }
+                name = QStringLiteral("text \"") + shown.left(40) + QStringLiteral("\"");
+                const double w = item->property("contentWidth").toDouble();
+                const double h = item->property("contentHeight").toDouble();
+                const double left = item->property("leftPadding").toDouble();
+                const double top = item->property("topPadding").toDouble();
+                const double room_w =
+                    item->width() - left - item->property("rightPadding").toDouble();
+                const double room_h =
+                    item->height() - top - item->property("bottomPadding").toDouble();
+                // QQuickText::HAlignment and VAlignment are Qt::Alignment's values.
+                const int across = item->property("effectiveHorizontalAlignment").toInt();
+                const int down = item->property("verticalAlignment").toInt();
+                const double x = left + (across == Qt::AlignRight     ? room_w - w
+                                         : across == Qt::AlignHCenter ? (room_w - w) / 2
+                                                                      : 0);
+                const double y = top + (down == Qt::AlignBottom    ? room_h - h
+                                        : down == Qt::AlignVCenter ? (room_h - h) / 2
+                                                                   : 0);
+                box = QRectF(x, y, w, h);
+            }
+            QRectF shown_at = item->mapRectToItem(screen_.get(), box);
+            for (const QQuickItem* up = item->parentItem(); up != nullptr; up = up->parentItem()) {
+                if (up->clip()) {
+                    shown_at &=
+                        up->mapRectToItem(screen_.get(), QRectF(0, 0, up->width(), up->height()));
+                }
+            }
+            if (!shown_at.isEmpty()) {
+                drawn.push_back({item, shown_at, name});
+            }
+        });
+        // Whether `inner` is `outer` or something in it (a named box with strings in it).
+        const auto inside = [](const QQuickItem* inner, const QQuickItem* outer) {
+            for (const QQuickItem* up = inner; up != nullptr; up = up->parentItem()) {
+                if (up == outer) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QStringList bad;
+        for (std::size_t a = 0; a < drawn.size(); ++a) {
+            for (std::size_t b = a + 1; b < drawn.size(); ++b) {
+                if (inside(drawn[a].item, drawn[b].item) || inside(drawn[b].item, drawn[a].item)) {
+                    continue;
+                }
+                const QRectF both = drawn[a].rect.intersected(drawn[b].rect);
+                if (both.width() > 0.5 && both.height() > 0.5) {
+                    bad.append(QStringLiteral("%1 over %2 (%3 x %4)")
+                                   .arg(drawn[a].name, drawn[b].name)
+                                   .arg(both.width(), 0, 'f', 1)
+                                   .arg(both.height(), 0, 'f', 1));
+                }
+            }
+        }
+        return bad;
+    }
+
     // Whether LayoutMirroring is in force where `parent` is: a probe made as
     // a child sees the inherited state.
     [[nodiscard]] bool mirrored_under(QQuickItem* parent) const {
@@ -220,7 +351,7 @@ private:
         }
     }
     static void lay_out(QQuickItem* item) {
-        if (item->inherits("QQuickBasePositioner")) {
+        if (item->inherits("QQuickBasePositioner") || item->inherits("QQuickItemView")) {
             QMetaObject::invokeMethod(item, "forceLayout");
         }
         for (QQuickItem* child : item->childItems()) {
@@ -302,34 +433,152 @@ TEST_CASE("a screen that is up changes language without being made again",
 
 namespace {
 
-// Every converted screen, at both sizes, in `language`: no string cut off, run
-// off the window or out of its pane, and no label out of its button. The
-// pseudo-locale is the proxy for a real translation (40% longer than the
-// English); the same checks run on the real Japanese and Chinese below.
 // A solution in the controller, for the screen that lists one: its rows are
 // the longest strings it has. Made once; the controller keeps it.
 void have_a_solution() {
     SolveController& solve = t::controllers().solve;
-    if (solve.totalMoves() == 0) {
+    // Or one left by the 5x5 below, that a later language starts from.
+    if (solve.totalMoves() == 0 || solve.size() != 3) {
         solve.solveCube(cube::solver::random_scramble(21));
     }
     REQUIRE(wait_for([&]() { return !solve.isSolving(); }, 60'000));
     REQUIRE(solve.totalMoves() > 0);
 }
 
-void holds_the_layout_in(const char* language) {
-    have_a_solution();
+// A solution to a 5x5, for the words only a cube bigger than a 3x3 has: the
+// layers in a turn, the skip to the 3x3 and the label above the methods. Made
+// afresh each time: it replaces whatever the controller held.
+void have_a_big_solution() {
+    SolveController& solve = t::controllers().solve;
+    const QVariantMap started =
+        solve.solveScramble(5, QStringLiteral("R U R' U' F2 2R Rw 2U' 3Rw2 B L2 D' 2F'"));
+    REQUIRE(started.value(QStringLiteral("ok")).toBool());
+    REQUIRE(wait_for([&]() { return !solve.isSolving(); }, 60'000));
+    REQUIRE(solve.size() == 5);
+    REQUIRE(solve.totalMoves() > 0);
+}
+
+// The same, stepped on to a turn of several layers together: the move in words
+// then names a range of layers ("Right side · layers 1 to 3 · quarter turn"),
+// the longest it gets.
+void have_a_wide_solution() {
+    have_a_big_solution();
+    SolveController& solve = t::controllers().solve;
+    for (int step = 0;
+         step < solve.totalMoves() && solve.currentMoveFirst() == solve.currentMoveLast(); ++step) {
+        solve.nextMove();
+    }
+    INFO("move " << solve.moveIndex() << " of " << solve.totalMoves());
+    REQUIRE(solve.currentMoveFirst() != solve.currentMoveLast());
+    // Stepping is a solve begun, which the history keeps; the history screen
+    // is held empty here and with rows by have_a_history, each on its own.
+    t::controllers().history.clear();
+}
+
+// A history with two rows in it, for the screen that lists them: a 5x5 that was
+// finished, with the time it took, and above it - newest first - another left
+// part-way, whose "turn 12 of ..." is the longest summary a row has. Replaces
+// whatever was kept; cleared again by whoever is done with it.
+void have_a_history() {
+    SolveController& solve = t::controllers().solve;
+    auto& history = t::controllers().history;
+    history.clear();
+
+    have_a_big_solution();
+    solve.nextMove();
+    REQUIRE(history.count() == 1);
+    // The complete screen's clock: more minutes than a first solve has.
+    history.setElapsedSeconds(7384);
+    history.finish();
+
+    have_a_big_solution();
+    for (int step = 0; step < 12 && solve.moveIndex() < solve.totalMoves(); ++step) {
+        solve.nextMove();
+    }
+    REQUIRE(history.count() == 2);
+    INFO("turn " << solve.moveIndex() << " of " << solve.totalMoves());
+    REQUIRE(solve.moveIndex() >= 12);
+}
+
+// What the camera read of a 3x3, for the screen where it is looked over: the sides
+// as the camera had them (it could not tell which way up each was held, which has
+// the colours screen say so), and a sticker it was unsure of on the front.
+void have_a_scan_to_check() {
+    const auto cube = cube::nxn::random_scramble({.size = 3, .seed = 6, .moves = 40});
+    cube::app::Reading reading;
+    reading.size = 3;
+    for (const auto colour : cube.facelets()) {
+        reading.stickers.push_back(static_cast<std::int8_t>(colour));
+    }
+    reading.doubtful.assign(reading.stickers.size(), 0);
+    reading.doubtful.at(static_cast<std::size_t>(cube::nxn::Face::F) * 9) = 1;
+    reading.upright = false;
+    t::controllers().colours.loadReading(reading);
+}
+
+// The colours screen with the box for describing a side open, and a description
+// the screen has refused: the longest the screen gets.
+void describing_wrongly(Screen& screen) {
+    screen.item()->setProperty("describing", true);
+    screen.settle();
+    QQuickItem* field = screen.item_named(QStringLiteral("colours.describeText"));
+    REQUIRE(field != nullptr);
+    field->setProperty("text", QStringLiteral("GGG/GXG/GGG"));
+    QQuickItem* box = screen.item_named(QStringLiteral("colours.describeBox"));
+    REQUIRE(box != nullptr);
+    REQUIRE(QMetaObject::invokeMethod(box, "apply"));
+    screen.settle();
+    // The complaint is on the screen, or the screen is not the longest it gets.
+    QQuickItem* error = screen.item_named(QStringLiteral("colours.describeError"));
+    REQUIRE(error != nullptr);
+    REQUIRE(error->isVisible());
+}
+
+// The solve screen of a 3x3 the camera read, which has the way to look its colours over
+// (the screen asks the scan; the layout checks have none, so say so): one more button
+// than the screen otherwise has.
+void from_a_scan(Screen& screen) {
+    screen.item()->setProperty("fromScan", true);
+    screen.settle();
+    const QQuickItem* check = screen.item_named(QStringLiteral("solve.checkColours"));
+    REQUIRE(check != nullptr);
+    REQUIRE(check->isVisible());
+}
+
+// Whether `item` stands at an angle on the screen: it, or something it is in
+// below the screen, is turned by other than half-turns.
+[[nodiscard]] bool is_turned(const QQuickItem* item, const QQuickItem* screen) {
+    double angle = 0;
+    for (const QQuickItem* up = item; up != nullptr && up != screen; up = up->parentItem()) {
+        angle += up->rotation();
+    }
+    return std::fmod(std::fabs(angle), 180.0) > 0.5;
+}
+
+// "Keep a history of solves" switched off for as long as this is in scope.
+struct KeepOff {
+    KeepOff() { t::controllers().history.setKeep(false); }
+    ~KeepOff() { t::controllers().history.setKeep(true); }
+    KeepOff(const KeepOff&) = delete;
+    KeepOff& operator=(const KeepOff&) = delete;
+};
+
+void holds_the_layout_of(const char* language, std::initializer_list<const char*> types,
+                         const std::function<void(Screen&)>& prepare = {}) {
     struct Size {
         int w;
         int h;
         const char* what;
     };
     const Size sizes[] = {{900, 640, "wide"}, {390, 780, "narrow"}};
-    for (const char* type : {"PermissionScreen", "CompleteScreen", "LaunchScreen", "SettingsScreen",
-                             "HistoryScreen", "SolutionScreen"}) {
+    for (const char* type : types) {
         for (const Size& size : sizes) {
             in_language(language);
             Screen screen(type, size.w, size.h);
+            if (prepare) {
+                prepare(screen);
+                screen.settle();
+            }
             INFO(language << ", " << type << ", " << size.what);
             int checked = 0;
             for (QQuickItem* text : screen.find_all("QQuickText")) {
@@ -354,15 +603,28 @@ void holds_the_layout_in(const char* language) {
                     CHECK(content_h <= text->height() + 0.5);
                 }
                 CHECK(content_w <= text->width() + 0.5);
-                // And it stays inside the window: nothing runs off an edge.
-                const QPointF at = text->mapToItem(screen.item(), QPointF(0, 0));
-                CHECK(at.x() >= -0.5);
-                CHECK(at.x() + content_w <= screen.item()->width() + 0.5);
+                // And it stays inside the window: nothing runs off an edge. The
+                // box is measured as it is drawn, through every turn on the
+                // way up: a name stood a quarter-turned is as tall as it is
+                // long, and not as wide.
+                const QRectF drawn =
+                    text->mapRectToItem(screen.item(), QRectF(0, 0, content_w, content_h));
+                CHECK(drawn.left() >= -0.5);
+                CHECK(drawn.right() <= screen.item()->width() + 0.5);
                 // And inside the pane it was put in: a string longer than its
                 // column does not cross into the next one.
                 if (const QQuickItem* parent = text->parentItem();
                     parent != nullptr && parent != screen.item() && parent->width() > 0) {
-                    CHECK(text->x() + content_w <= parent->width() + 0.5);
+                    const QRectF in_pane =
+                        text->mapRectToItem(parent, QRectF(0, 0, content_w, content_h));
+                    CHECK(in_pane.right() <= parent->width() + 0.5);
+                    // A turned string runs up its pane, not along it: it stays
+                    // inside on both axes.
+                    if (is_turned(text, screen.item())) {
+                        CHECK(in_pane.left() >= -0.5);
+                        CHECK(in_pane.top() >= -0.5);
+                        CHECK(in_pane.bottom() <= parent->height() + 0.5);
+                    }
                 }
             }
             // A screen that read no text proves nothing.
@@ -378,7 +640,99 @@ void holds_the_layout_in(const char* language) {
             for (const QString& pushed : screen.buttons_below_screen()) {
                 FAIL_CHECK("button below the window: " << str(pushed));
             }
+            // And nothing is drawn on top of anything else: a panel shorter than what
+            // it holds sets its last string over the next one's, and a pane placed with an
+            // x lies over the one beside it when the layout mirrors.
+            for (const QString& over : screen.drawn_over_each_other()) {
+                FAIL_CHECK("drawn over each other: " << str(over));
+            }
         }
+    }
+}
+
+// The Licences screen with the notice of one component open: the longest name
+// the list has, which is the heading that wraps the most.
+void reading_the_longest_name(Screen& screen) {
+    const QVariantList entries = screen.item()->property("entries").toList();
+    int longest = 1;
+    for (int i = 1; i < entries.size(); ++i) {
+        if (entries[i].toMap().value("name").toString().size() >
+            entries[longest].toMap().value("name").toString().size()) {
+            longest = i;
+        }
+    }
+    REQUIRE(QMetaObject::invokeMethod(screen.item(), "open", Q_ARG(QVariant, QVariant(longest))));
+}
+
+// The notices missing, for as long as this is in scope: the screen says so.
+struct NoticesMissing {
+    NoticesMissing() {
+        t::controllers().about.setNoticesPath(QStringLiteral("no-such-notices.json"));
+    }
+    ~NoticesMissing() {
+        t::controllers().about.setNoticesPath(cube::app::AboutInfo::defaultNoticesPath());
+    }
+    NoticesMissing(const NoticesMissing&) = delete;
+    NoticesMissing& operator=(const NoticesMissing&) = delete;
+};
+
+// Every converted screen, at both sizes, in `language`: no string cut off, run
+// off the window or out of its pane, and no label out of its button. The
+// pseudo-locale is the proxy for a real translation (40% longer than the
+// English); the same checks run on the real languages below.
+//
+// The screens of the N x N app are in: the entry screen and the colours screen,
+// and the solution and solve screens of a 5x5, where the layer words are, the
+// solve screen at its longest (a turn of several layers).
+//
+// The history screen is held with nothing in its list (above, in the first
+// pass), with two rows in it, one finished and one left part-way, and with
+// history switched off, with those rows and with none.
+void holds_the_layout_in(const char* language) {
+    have_a_solution();
+    holds_the_layout_of(language,
+                        {"PermissionScreen", "CompleteScreen", "LaunchScreen", "SettingsScreen",
+                         "HistoryScreen", "SolutionScreen", "EntryScreen", "ColoursScreen"});
+    have_a_big_solution();
+    holds_the_layout_of(language, {"SolutionScreen", "SolveScreen"});
+    have_a_wide_solution();
+    holds_the_layout_of(language, {"SolveScreen"});
+    // A 3x3 the camera read has the way to check its colours as well as the way out.
+    have_a_solution();
+    holds_the_layout_of(language, {"SolveScreen"}, from_a_scan);
+    // The colours screen looking over a scan: a note that the sides may be the wrong way
+    // up and one that the camera was unsure of a sticker, a "?" on the sticker, the
+    // sides called by their middles, the extra buttons; and with the box for
+    // describing a side open, with a description it has refused.
+    have_a_scan_to_check();
+    holds_the_layout_of(language, {"ColoursScreen"});
+    holds_the_layout_of(language, {"ColoursScreen"}, describing_wrongly);
+    t::controllers().colours.begin(3);
+    holds_the_layout_of(language, {"ColoursScreen"}, describing_wrongly);
+    have_a_history();
+    {
+        // The rows are on the screen: a screen that listed none would pass.
+        Screen screen("HistoryScreen", 900, 640);
+        REQUIRE(screen.item_named(QStringLiteral("history.row1")) != nullptr);
+        REQUIRE(screen.item_named(QStringLiteral("history.row2")) != nullptr);
+    }
+    holds_the_layout_of(language, {"HistoryScreen"});
+    {
+        // Switched off: with the rows still kept, a notice above the list; and
+        // with none, the notice is the whole screen.
+        const KeepOff off;
+        holds_the_layout_of(language, {"HistoryScreen"});
+        t::controllers().history.clear();
+        holds_the_layout_of(language, {"HistoryScreen"});
+    }
+    t::controllers().history.clear();
+    // About, and the notices under it: the list, a notice open (at the longest
+    // name), and the notices missing.
+    holds_the_layout_of(language, {"AboutScreen", "LicencesScreen"});
+    holds_the_layout_of(language, {"LicencesScreen"}, reading_the_longest_name);
+    {
+        const NoticesMissing missing;
+        holds_the_layout_of(language, {"LicencesScreen"});
     }
 }
 
@@ -419,6 +773,86 @@ TEST_CASE(
     // box measured for the English is the likeliest to be cut here.
     for (const char* language : {"de", "fr", "es"}) {
         holds_the_layout_in(language);
+    }
+}
+
+TEST_CASE("every converted screen holds English, the words the layout was made for",
+          "[i18n][screen][english]") {
+    // The checks were written against the translations; the English is held to them too, so
+    // that a layout that lies one string over another in English is not found only by a
+    // reader of a translation.
+    holds_the_layout_in("en");
+}
+
+// The panel under the cube on a phone's solve screen. A cube bigger than a 3x3 has more in
+// it than a 3x3 does (the label over the methods, and the way to skip to the 3x3 stage), and
+// when the stage's room for it was a number for a 3x3 the skip button sat over the stage's
+// name and what it asks, in English as much as in any other language. Held at the heights of
+// phones, short and tall, in English, the pseudo-locale and every real language, at the
+// longest words the screen has: nothing in the panel is drawn over anything else, nor is the
+// cube, and the cube is not made smaller than it can be followed at to make room.
+TEST_CASE("the solve screen holds its panel at the sizes of phones for a 3x3 and a 5x5",
+          "[i18n][screen][solve-panel]") {
+    struct Size {
+        int w;
+        int h;
+    };
+    constexpr Size phones[] = {{360, 640}, {390, 780}, {412, 915}};
+    constexpr double least_cube = 150;
+    // A 3x3, a 5x5, and a 5x5 at a turn of several layers, which has the longest words.
+    for (const int cube_kind : {0, 1, 2}) {
+        if (cube_kind == 0) {
+            have_a_solution();
+        } else if (cube_kind == 1) {
+            have_a_big_solution();
+        } else {
+            have_a_wide_solution();
+        }
+        // A 3x3 is also held as the camera read it, with the way to look its colours over.
+        for (const bool scanned : {false, true}) {
+            if (scanned && cube_kind != 0) {
+                continue;
+            }
+            for (const char* language :
+                 {"en", "xx", "he", "ar", "yi", "de", "fr", "es", "ja", "zh-CN"}) {
+                in_language(language);
+                for (const Size& size : phones) {
+                    Screen screen("SolveScreen", size.w, size.h);
+                    if (scanned) {
+                        from_a_scan(screen);
+                    }
+                    INFO(language << ", " << size.w << "x" << size.h << ", "
+                                  << (cube_kind == 0   ? (scanned ? "a 3x3 from a scan" : "a 3x3")
+                                      : cube_kind == 1 ? "a 5x5"
+                                                       : "a 5x5, a turn of several layers"));
+                    for (const QString& over : screen.drawn_over_each_other({"solve.cube"})) {
+                        FAIL_CHECK("drawn over each other: " << str(over));
+                    }
+                    const QQuickItem* cube = screen.find("solve.cube");
+                    REQUIRE(cube != nullptr);
+                    CHECK(cube->width() >= least_cube - 0.5);
+                    // The skip is there to be pressed: on the screen, whole. (A 3x3 has none.)
+                    const QQuickItem* skip = screen.find("solve.skip.button");
+                    REQUIRE(skip != nullptr);
+                    CHECK(skip->isVisible() == (cube_kind != 0));
+                    if (skip->isVisible()) {
+                        const QRectF at = skip->mapRectToItem(
+                            screen.item(), QRectF(0, 0, skip->width(), skip->height()));
+                        CHECK(at.bottom() <= size.h + 0.5);
+                    }
+                    // So is the way to look the colours over: on the screen, whole.
+                    if (scanned) {
+                        const QQuickItem* check = screen.find("solve.checkColours");
+                        REQUIRE(check != nullptr);
+                        const QRectF at = check->mapRectToItem(
+                            screen.item(), QRectF(0, 0, check->width(), check->height()));
+                        CHECK(at.bottom() <= size.h + 0.5);
+                        CHECK(at.left() >= -0.5);
+                        CHECK(at.right() <= size.w + 0.5);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -757,12 +1191,80 @@ TEST_CASE("a label is not wider than the box it is set in, in any of the nine sc
     }
 }
 
+// What About and Licences say, in the app's language: the name and the build's
+// version, the publisher, and a row for Cubeulator itself and each component, by
+// the name the build gave it. What is on show is what the build generated.
+TEST_CASE("About names the app, its version and its publisher; Licences lists what ships",
+          "[i18n][screen][about]") {
+    in_language("en");
+    {
+        const Screen about("AboutScreen", 900, 640);
+        const QStringList shown = about.texts();
+        const QString version =
+            qtTrId("about.version").arg(t::controllers().about.displayVersion());
+        CHECK(shown.contains(QStringLiteral("Cubeulator")));
+        CHECK(shown.contains(qtTrId("about.what")));
+        CHECK(about.item_named(QStringLiteral("about.version")) != nullptr);
+        CHECK(about.item_named(QStringLiteral("about.version"))->property("text").toString() ==
+              version);
+        CHECK(about.item_named(QStringLiteral("about.author"))->property("text").toString() ==
+              qtTrId("about.author").arg(t::controllers().about.publisher()));
+        CHECK(shown.contains(qtTrId("about.licences")));
+        CHECK(shown.contains(qtTrId("about.source")));
+        // The address is shown whole, so that it can be read and typed.
+        CHECK(shown.contains(t::controllers().about.sourceUrl()));
+    }
+    {
+        const Screen licences("LicencesScreen", 900, 640);
+        const QStringList shown = licences.texts();
+        CHECK(shown.contains(qtTrId("licences.title")));
+        CHECK(shown.contains(qtTrId("licences.intro")));
+        // Cubeulator's own row, by its translated name (it is the app's), and
+        // the first component by the name the build gave it.
+        CHECK(shown.contains(qtTrId("licences.own")));
+        const QVariantList components = t::controllers().about.components();
+        REQUIRE_FALSE(components.isEmpty());
+        CHECK(shown.contains(components.first().toMap().value("name").toString()));
+    }
+}
+
+// A notice is a legal text in the words its authors chose, never translated and
+// set left to right, in a right-to-left language as in any other; the heading and
+// the chrome around it are the app's and are mirrored.
+TEST_CASE("a notice stays left to right in a right-to-left language", "[i18n][screen][about]") {
+    for (const char* language : {"he", "ar", "yi"}) {
+        in_language(language);
+        INFO(language);
+        Screen licences("LicencesScreen", 900, 640);
+        REQUIRE(QMetaObject::invokeMethod(licences.item(), "open", Q_ARG(QVariant, QVariant(1))));
+        licences.settle();
+        QQuickItem* notice = licences.item_named(QStringLiteral("licences.text"));
+        REQUIRE(notice != nullptr);
+        CHECK(notice->property("effectiveHorizontalAlignment").toInt() ==
+              static_cast<int>(Qt::AlignLeft));
+        // The text is what the build generated, not a translation of it.
+        const QVariantList components = t::controllers().about.components();
+        CHECK(notice->property("text").toString() ==
+              components.at(0).toMap().value("text").toString());
+        // The back button is on the trailing side's opposite: at the right edge.
+        QQuickItem* back = licences.item_named(QStringLiteral("licences.back"));
+        REQUIRE(back != nullptr);
+        CHECK(back->mapToItem(licences.item(), QPointF(0, 0)).x() > licences.item()->width() / 2);
+    }
+    in_language("en");
+}
+
 // A picture of a screen in a language, for whoever reviews what the pseudo-locale
 // and a right-to-left language look like. Hidden: it writes files, and the
 // system tests' screenshot tour (tests/system) is the permanent one.
 //
 //   CUBE_I18N_SHOT_DIR=out CUBE_I18N_SHOT_SCREEN=LaunchScreen CUBE_I18N_SHOT_LANG=xx //
 //   cube_i18n_screen_tests "[.shots]"
+//
+// CUBE_I18N_SHOT_SIZE=390x780 sets the window, and CUBE_I18N_SHOT_CUBE=5 gives
+// the solution and solve screens a 5x5 to show (5wide: one that opens with a
+// turn of three layers; 3: a 3x3; history: the history screen two rows, a finished
+// 5x5 and one left part-way).
 //
 // One picture a process: a second grabWindow() with the 3D cube in the scene
 // crashed the solve lane's gallery test (docs/app-experience-plan.md, "Two
@@ -778,8 +1280,24 @@ TEST_CASE("a picture of a screen in a language", "[.shots]") {
     REQUIRE(size.size() == 2);
     REQUIRE(t::language().preview(lang));
     QCoreApplication::processEvents();
+    // The screens that show a solution do so for a 5x5 when asked (CUBE_I18N_SHOT_CUBE=5):
+    // that is where the layer words are.
+    if (qEnvironmentVariable("CUBE_I18N_SHOT_CUBE") == QLatin1String("3")) {
+        have_a_solution();
+    } else if (qEnvironmentVariable("CUBE_I18N_SHOT_CUBE") == QLatin1String("5")) {
+        have_a_big_solution();
+    } else if (qEnvironmentVariable("CUBE_I18N_SHOT_CUBE") == QLatin1String("5wide")) {
+        have_a_wide_solution();
+    } else if (qEnvironmentVariable("CUBE_I18N_SHOT_CUBE") == QLatin1String("history")) {
+        have_a_history();
+    }
 
     Screen screen(type, size.at(0).toInt(), size.at(1).toInt());
+    // The Licences screen with a notice open (CUBE_I18N_SHOT_OPEN=<row>).
+    if (const int row = qEnvironmentVariable("CUBE_I18N_SHOT_OPEN").toInt(); row > 0) {
+        REQUIRE(QMetaObject::invokeMethod(screen.item(), "open", Q_ARG(QVariant, QVariant(row))));
+        screen.settle();
+    }
     QQuickWindow window;
     screen.show_in(window);
     QCoreApplication::processEvents();

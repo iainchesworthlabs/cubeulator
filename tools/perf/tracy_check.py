@@ -242,6 +242,9 @@ def capture(
         env = dict(
             os.environ,
             CUBE_PERF_TIMING="1",
+            # The client is dormant until asked (manual lifetime): the test
+            # binary's listener starts it on this, as the application does.
+            CUBEULATOR_PROFILE="1",
             TRACY_PORT=str(port),
             CUBE_PERF_PROFILER_SETTLE_MS=str(settle_ms),
             CUBE_PERF_PROFILER_DRAIN_MS=str(drain_ms),
