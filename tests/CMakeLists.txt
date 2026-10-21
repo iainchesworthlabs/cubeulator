@@ -50,6 +50,7 @@ add_test(NAME platform_fragments_satisfy_contract
 add_executable(cube_unit_tests
     unit/error_test.cpp
     unit/version_test.cpp
+    unit/graphics_backend_choice_test.cpp
     unit/profiling_test.cpp
     unit/profile_recorder_test.cpp
     unit/color_resolution_test.cpp
@@ -533,6 +534,7 @@ endif()
 if(CUBEULATOR_BUILD_APP AND TARGET cube_app_desktop)
     add_executable(cube_desktop_tests
         qt_test_main.cpp
+        unit/graphics_backend_guard_test.cpp
         unit/keep_awake_test.cpp
         unit/window_geometry_test.cpp)
 

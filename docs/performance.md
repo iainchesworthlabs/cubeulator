@@ -444,7 +444,10 @@ What is in it.
   Direct3D 11 backend has nothing to save for. The app's default on Windows is
   Direct3D 11; Vulkan is the person's choice in the settings and was the one the
   real-application runs above used. Whether Vulkan should be the default is a
-  question of which drivers are in the field, not of this machine.
+  question of which drivers are in the field, not of this machine; the A/B
+  of the two on the real application (start-up, frames, memory, driver
+  coverage) and the fallback that makes the question safe to answer are in
+  [Graphics API](graphics-api.md).
 - **The render loop**: the platform default (threaded on Windows) against
   `QSG_RENDER_LOOP=basic`, eight alternated launches, settled 2.327 s and 2.335 s
   on a busy machine: no difference, so there is nothing to gain from changing
