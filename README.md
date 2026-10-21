@@ -71,7 +71,8 @@ commands to check each, and the key's fingerprint to check it against.
 
 A sticker the camera got wrong is put right on **Check the colours**, without
 scanning again. For a 2×2 up to a 5×5, choose **Another size of cube** on the
-start screen and type the scramble or the colours in; the camera reads a 3×3.
+start screen and scan it, or type the scramble or the colours in. The camera is proven on a 3×3 and
+much less on the other sizes.
 
 The [user guide](https://iainchesworthlabs.github.io/cubeulator/guide/) goes
 through each screen, and says what to do when a side will not read.

@@ -71,8 +71,8 @@ The solve screen is the one you know, with what a bigger cube needs:
   time, putting the cube down, and picking it up again later is what
   [History](history.md) is for: your place is kept.
 
-The camera does not follow your turns on this screen: the cube is the one you
-told it about. If your cube and the screen part company, press **Out of step?
+The camera follows your turns here as far as it can see them (see [what is not
+here yet](#what-is-not-here-yet)). If your cube and the screen part company, press **Out of step?
 Rescan**. It scans the cube again at this size, as it now is, and solves it
 from there; the clock keeps running.
 
@@ -97,7 +97,7 @@ cube beside it at the turn you select.
   a turn that changes almost nothing on that side: the screen says so, and you
   press **Next turn** after it. The 4x4 is read as well as a 3x3; a 5x5 and a
   2x2 are read less often, and then it is **Next turn** too.
-- **Sizes 2 to 5.** Bigger cubes are solved by the library but are not offered
+- **Sizes above 5.** Bigger cubes are solved by the library but are not offered
   on screen yet.
 - **The words.** The new screens are in English; other languages are drafts
   that no fluent reader has been through ([Settings](settings.md#language)).

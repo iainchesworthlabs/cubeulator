@@ -19,6 +19,7 @@
 #include <QThreadPool>
 
 #include <algorithm>
+#include <chrono>
 #include <memory>
 
 namespace {
@@ -112,6 +113,20 @@ int main(int argc, char* argv[]) {
         qInfo("Tracy profiler started (%s): connect a Tracy 0.14 profiler to 127.0.0.1:%s",
               profilingSwitchName(profiling.decision().source),
               qPrintable(qEnvironmentVariable("TRACY_PORT", QStringLiteral("8086"))));
+        if (profiling.decision().wait) {
+            // Tracy records from the moment a profiler connects, so the
+            // application holds here, before it builds anything, for one - and
+            // for no longer than this, so that a profiler that never comes
+            // costs a user half a minute and not their window.
+            constexpr std::chrono::seconds kProfilerWait{30};
+            qInfo(
+                "Waiting up to %lld s for a profiler to connect (--profile-wait, "
+                "CUBEULATOR_PROFILE=wait)",
+                static_cast<long long>(kProfilerWait.count()));
+            const bool connected = profiling.wait_for_profiler(kProfilerWait);
+            qInfo("%s",
+                  connected ? "A profiler connected" : "No profiler connected: starting anyway");
+        }
     }
 
     // Installed before anything else so a fault during startup is captured
