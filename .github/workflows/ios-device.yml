@@ -1,31 +1,69 @@
 name: iOS device build
 
-# The Qt app as an iPhone application (arm64), built by Xcode on a hosted Mac:
-# the build for the maintainer's own devices, not a store build
-# (docs/ios-install.md). Run by hand:
+# The Qt app as an iPhone application (arm64), built by Xcode on a hosted Mac: the
+# build for the maintainer's own registered devices, not a store build
+# (docs/ios-install.md, docs/ios-signing.md).
 #
-#   gh workflow run ios-device.yml --ref <branch> [-f release_tag=<tag>]
+# Three ways in:
+#   * release.yml calls it (workflow_call) for the package a release carries:
+#       with:    version (full, e.g. 0.2.0-beta.1), tag (e.g. v0.2.0-beta.1),
+#                signed (true), save_cache (false: a release only reads the cache)
+#       secrets: the five Apple ones, passed explicitly
+#       permissions: contents: read
+#     and takes the artifacts `package-ios` (Cubeulator-<version>-ios.ipa and
+#     Cubeulator-<version>-ios-manifest.plist, nothing else) and `notices-ios`
+#     (third-party-notices.json, the build's own inventory).
+#   * by hand: gh workflow run ios-device.yml --ref <branch>  (only once this file
+#     is on `main`: GitHub dispatches only workflows that are on the default branch)
+#   * a push to a feature/ios-* or bugfix/ios-* branch, which is how the work on the
+#     build is tried before that.
 #
-# With the five Apple secrets set (docs/ios-install.md) the app is signed with
-# the Apple Distribution certificate and an ad-hoc provisioning profile and
-# packed into an .ipa with an over-the-air install manifest.plist; with no
-# profile it is built unsigned, which proves the build and nothing else. A
-# profile without the certificate or the team is an error, so that a forgotten
-# secret is not a quietly unsigned build.
+# With all five Apple secrets the app is signed with the Apple Distribution
+# certificate and an ad-hoc provisioning profile and packed into an .ipa with an
+# over-the-air install manifest; a call that asks for `signed` and finds a secret
+# missing fails. A push or dispatch with no provisioning profile builds unsigned,
+# which proves the build and nothing else.
 #
 # The library leg of CI (ios-build) compiles only cube::lib, without Qt. This one
 # builds the whole app against Qt's static iOS kit, so it is where a missing
 # static plugin or an unresolved symbol shows up.
 
 on:
+  workflow_call:
+    inputs:
+      version:
+        description: "The full version (empty: read from CMakeLists.txt, which it must equal)."
+        type: string
+        default: ""
+      tag:
+        description: "The release tag the manifest's download address names (empty: v<version>)."
+        type: string
+        default: ""
+      signed:
+        description: "Require signing; a missing secret then fails the build."
+        type: boolean
+        default: true
+      save_cache:
+        description: "Save the vcpkg binary cache (a release only restores it)."
+        type: boolean
+        default: false
+    secrets:
+      IOS_DIST_CERTIFICATE_BASE64:
+        required: false
+      IOS_DIST_CERTIFICATE_PASSWORD:
+        required: false
+      IOS_PROVISIONING_PROFILE_BASE64:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      APPLE_PROVISIONING_PROFILE_NAME:
+        required: false
   workflow_dispatch:
     inputs:
-      release_tag:
+      tag:
         description: >-
-          The GitHub release the .ipa and manifest.plist will be uploaded to by
-          hand, which the manifest's download address names (default: v<version>; a
-          build started by a push names `ios-test`).
-          The workflow uploads nothing to it.
+          The release the manifest's download address names, when the files are
+          uploaded to one by hand (default: v<version>).
         type: string
         default: ""
   # GitHub can dispatch a workflow only from the default branch (main), which a
@@ -34,9 +72,12 @@ on:
   push:
     branches: ["feature/ios-**", "bugfix/ios-**"]
 
+# A literal group: in a called workflow ${{ github.workflow }} is the caller's, and a
+# group shared with the caller's own would make the two wait for each other. Only
+# this file's own push runs are superseded; a release's build is never cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ios-device-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.workflow == 'iOS device build' }}
 
 permissions:
   contents: read
@@ -67,6 +108,7 @@ jobs:
       - name: Decide whether to sign
         id: sign
         env:
+          SIGNED_INPUT: ${{ inputs.signed }}
           IOS_DIST_CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
           IOS_DIST_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
@@ -78,10 +120,13 @@ jobs:
           for name in IOS_DIST_CERTIFICATE_BASE64 IOS_DIST_CERTIFICATE_PASSWORD IOS_PROVISIONING_PROFILE_BASE64 APPLE_TEAM_ID APPLE_PROVISIONING_PROFILE_NAME; do
             if [ -n "${!name}" ]; then set_count=$((set_count + 1)); else missing="$missing $name"; fi
           done
-          if [ "$set_count" -eq 5 ]; then
+          if [ "$SIGNED_INPUT" = false ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Unsigned build::Asked not to sign."
+          elif [ "$set_count" -eq 5 ]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
             echo "All five Apple secrets are set: the build is signed."
-          elif [ -z "$IOS_PROVISIONING_PROFILE_BASE64" ] && [ -z "$APPLE_PROVISIONING_PROFILE_NAME" ]; then
+          elif [ "$SIGNED_INPUT" != true ] && [ -z "$IOS_PROVISIONING_PROFILE_BASE64" ] && [ -z "$APPLE_PROVISIONING_PROFILE_NAME" ]; then
             # The certificate can be set long before the profile exists (the
             # profile needs the device and the App ID): that is a build, not a fault.
             echo "signed=false" >> "$GITHUB_OUTPUT"
@@ -93,18 +138,26 @@ jobs:
 
       - name: Read the version
         id: version
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+          TAG_INPUT: ${{ inputs.tag }}
         run: |
           base="$(sed -nE 's/^[[:space:]]*VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
           label="$(sed -nE 's/^set\(CUBEULATOR_VERSION_PRERELEASE "([^"]*)"\).*/\1/p' CMakeLists.txt | head -n 1)"
           [ -n "$base" ] || { echo "::error::no project VERSION found in CMakeLists.txt"; exit 1; }
           full="$base${label:+-$label}"
+          if [ -n "$VERSION_INPUT" ] && [ "$VERSION_INPUT" != "$full" ]; then
+            echo "::error::asked for version $VERSION_INPUT but CMakeLists.txt declares $full"
+            exit 1
+          fi
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG_INPUT:-v$full}" >> "$GITHUB_OUTPUT"
           echo "version $full (the bundle's is $base)"
 
       - name: Restore vcpkg binaries
         id: vcpkg-cache
-        uses: ./.github/actions/vcpkg-cache/restore
+        uses: $/.github/actions/vcpkg-cache/restore
         with:
           triplet: arm64-ios
 
@@ -234,11 +287,36 @@ jobs:
       - name: Build
         run: cmake --build --preset ios-device-release
 
+      # What the third-party inventory made of the link line (docs/licensing.md): the
+      # components it found and what it could not place. The release's SBOM refuses a
+      # package whose inventory has anything unresolved.
+      - name: Show the third-party inventory
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          json=build/ios-device-release/third_party_notices/third-party-notices.json
+          [ -f "$json" ] || { echo "::warning::no $json"; exit 0; }
+          python3 - "$json" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1], encoding="utf-8"))
+          print("keys:", sorted(d))
+          print("unresolved:", len(d.get("unresolved", [])))
+          for u in d.get("unresolved", [])[:20]:
+              print("  -", str(u)[:200])
+          kinds = {}
+          for l in d.get("linked", []):
+              kinds[l.get("kind")] = kinds.get(l.get("kind"), 0) + 1
+          print("linked by kind:", kinds)
+          PY
+
       # Saved even when a later step fails: otherwise a red leg throws away every
       # package vcpkg had already built.
+      # Not in a release, which only restores it (the caller says so with save_cache;
+      # github.workflow is the caller's name in a called workflow, so this file's own
+      # runs are the ones that save).
       - name: Save vcpkg binaries
-        if: ${{ always() }}
-        uses: ./.github/actions/vcpkg-cache/save
+        if: ${{ always() && (inputs.save_cache == true || github.workflow == 'iOS device build') }}
+        uses: $/.github/actions/vcpkg-cache/save
         with:
           triplet: arm64-ios
           restored: ${{ steps.vcpkg-cache.outputs.listing }}
@@ -269,31 +347,38 @@ jobs:
           APP: ${{ steps.app.outputs.path }}
           FULL: ${{ steps.version.outputs.full }}
           BASE: ${{ steps.version.outputs.base }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          ipa="Cubeulator-$FULL-ios-adhoc.ipa"
-          # A push (no input) is a test build: its manifest names the release `ios-test`,
-          # which docs/ios-install.md has the maintainer make once and reuse.
-          if [ -n "$RELEASE_TAG" ]; then tag="$RELEASE_TAG"
-          elif [ "$GITHUB_EVENT_NAME" = push ]; then tag=ios-test
-          else tag="v$FULL"; fi
+          ipa="Cubeulator-$FULL-ios.ipa"
           rm -rf stage ios-dist && mkdir -p stage/Payload ios-dist
           ditto "$APP" stage/Payload/Cubeulator.app
           (cd stage && ditto -c -k --keepParent Payload "../ios-dist/$ipa")
           bash packaging/ios/verify_ipa.sh "ios-dist/$ipa" --version "$BASE" --signed
-          bash tools/release/make_ios_manifest.sh --out ios-dist/manifest.plist --ipa "$ipa" \
-            --repo "$GITHUB_REPOSITORY" --tag "$tag" --version "$BASE" --bundle-id "$BUNDLE_ID"
-          plutil -lint ios-dist/manifest.plist
+          # The release's own asset addresses: the manifest names the .ipa beside it.
+          bash tools/release/make_ios_manifest.sh --out "ios-dist/Cubeulator-$FULL-ios-manifest.plist" --ipa "$ipa" \
+            --repo "$GITHUB_REPOSITORY" --tag "$TAG" --version "$BASE" --bundle-id "$BUNDLE_ID"
+          plutil -lint "ios-dist/Cubeulator-$FULL-ios-manifest.plist"
           ls -l ios-dist
 
       - name: Upload the IPA and its manifest
         if: steps.sign.outputs.signed == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: cubeulator-ios-adhoc
+          name: package-ios
           path: ios-dist/*
           if-no-files-found: error
+          retention-days: 14
+
+      # The build's own inventory of what it contains (docs/licensing.md), which the
+      # release's SBOM is made from.
+      - name: Keep the third-party inventory
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: notices-ios
+          path: build/ios-device-release/third_party_notices/third-party-notices.json
+          if-no-files-found: warn
           retention-days: 14
 
       # Whatever happened above, the certificate and the profile do not stay on the
