@@ -8,9 +8,13 @@
 #include "kit/bundled_fonts.hpp"
 #include "qml_test_app.hpp"
 
+#include <QFile>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QObject>
 #include <QQmlEngine>
 #include <QString>
@@ -84,3 +88,54 @@ TEST_CASE("The families Theme.qml names are the ones the bundle carries", "[font
         CHECK(families.contains(theme().property("fontHeading").toString()));
     }
 }
+
+#ifdef CUBE_NOTICES_JSON
+// The notices the build generates are what cube_app embeds as
+// :/licences/third-party-notices.json for the screens that list them, and what
+// the desktop packages carry as THIRD-PARTY-NOTICES.txt. The OFL asks that a
+// font's licence and copyright line travel with it, so a font that is bundled
+// and not in them is a licence breach, and the build's own scan (the
+// third_party_notices_complete test) is held to the same by this one, from the
+// side of the fonts the app actually registers.
+TEST_CASE("Every bundled font is in the notices, with its licence text", "[fonts][licences]") {
+    QFile file(QStringLiteral(CUBE_NOTICES_JSON));
+    REQUIRE(file.open(QIODevice::ReadOnly));
+    const QJsonObject notices = QJsonDocument::fromJson(file.readAll()).object();
+    const QJsonArray components = notices.value(QStringLiteral("components")).toArray();
+    REQUIRE_FALSE(components.isEmpty());
+
+    const QStringList families = cube::app::kit::installBundledFonts();
+    REQUIRE_FALSE(families.isEmpty());
+
+    for (const QString& family : families) {
+        INFO("family: " << family.toStdString());
+        QJsonObject found;
+        for (const QJsonValue& value : components) {
+            const QJsonObject component = value.toObject();
+            // "Archivo (typeface)" is the notice for "Archivo", and for the
+            // legacy names its weights register under ("Archivo ExtraBold").
+            const QString name =
+                component.value(QStringLiteral("name")).toString().section(QStringLiteral(" ("), 0, 0);
+            if (component.value(QStringLiteral("kind")).toString() == QStringLiteral("font") &&
+                family.startsWith(name)) {
+                found = component;
+            }
+        }
+        REQUIRE_FALSE(found.isEmpty());
+
+        const QString copyright = found.value(QStringLiteral("copyright")).toString();
+        const QString text = found.value(QStringLiteral("text")).toString();
+        CHECK(found.value(QStringLiteral("license")).toString() == QStringLiteral("OFL-1.1"));
+        CHECK_FALSE(copyright.isEmpty());
+        // The notice is the copyright line and then the licence in full.
+        CHECK(text.contains(copyright));
+        CHECK(text.contains(QStringLiteral("SIL OPEN FONT LICENSE Version 1.1")));
+        CHECK(text.contains(QStringLiteral("DISCLAIMER")));
+    }
+
+    // No font the generator could not attribute.
+    for (const QJsonValue& value : notices.value(QStringLiteral("unresolved")).toArray()) {
+        CHECK_FALSE(value.toString().contains(QStringLiteral("Font file")));
+    }
+}
+#endif
