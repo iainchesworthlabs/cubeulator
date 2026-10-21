@@ -30,9 +30,11 @@ The switch is read once, at launch, by `main()` before anything else starts
 (`cube::profile::Session`, `cube/profile/session.hpp`). In order of priority:
 
 1. **The command line**: `--profile` starts the profiler, `--no-profile` does
-   not; if both appear the last wins.
+   not, `--profile-wait` starts it and [waits for a profiler](#capturing-the-start-up);
+   if several appear the last wins.
 2. **The environment**: `CUBEULATOR_PROFILE` = `1`, `true`, `on` or `yes`
-   starts it; `0`, `false`, `off` or `no` does not (case does not matter).
+   starts it; `wait` starts it and waits for a profiler; `0`, `false`, `off`
+   or `no` does not (case does not matter).
    Anything else, or empty, is ignored - a typo must not silently open (or
    close) a profiler.
 3. **The build's default**: on in a Debug build, off otherwise. It is the
@@ -52,6 +54,32 @@ it on and the port to connect to:
 ```
 Tracy profiler started (--profile): connect a Tracy 0.14 profiler to 127.0.0.1:8086
 ```
+
+### Capturing the start-up
+
+Tracy (on-demand) records nothing until a profiler connects, so a profiler
+attached by hand a second after launch has missed `app.i18n_install`,
+`app.load_qml` and the `startup` section - exactly what start-up work needs.
+`--profile-wait` (or `CUBEULATOR_PROFILE=wait`) makes `main()` stop **before it
+builds anything** and wait for a client:
+
+```sh
+tracy-capture -o startup.tracy -a 127.0.0.1 -f &       # or open the GUI and press Connect
+Cubeulator.exe --profile-wait
+```
+
+```
+Tracy profiler started (--profile): connect a Tracy 0.14 profiler to 127.0.0.1:8086
+Waiting up to 30 s for a profiler to connect (--profile-wait, CUBEULATOR_PROFILE=wait)
+A profiler connected
+```
+
+The wait is **30 seconds at most**: if nothing connects the log says
+`No profiler connected: starting anyway` and the application opens as normal, so
+the option can never leave a user with a window that does not appear. Start the
+capture first (it keeps retrying until the application is listening), or press
+Connect in the GUI within the half minute. Without a profiler to wait for (a
+build with Tracy compiled out, or `--no-profile`) the option does nothing.
 
 The profiler only starts at launch. Turning it on in a running process is not
 supported: Tracy's client is started once (and its thread names, which are

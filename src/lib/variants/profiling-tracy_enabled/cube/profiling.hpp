@@ -52,6 +52,13 @@ inline std::atomic<bool> running{false};
     return detail::running.load(std::memory_order_relaxed);
 }
 
+// True once a profiler has connected to the running client. Tracy records
+// nothing before that (on-demand mode), so a caller that wants its start-up
+// in the trace waits for this.
+[[nodiscard]] inline bool connected() noexcept {
+    return active() && tracy::GetProfiler().IsConnected();
+}
+
 // Starts the Tracy client: its worker thread, the loopback listener and the
 // discovery broadcast. Call once, before the threads that should be profiled
 // start (a thread names itself with CUBE_THREAD_NAME as it begins). Idempotent
