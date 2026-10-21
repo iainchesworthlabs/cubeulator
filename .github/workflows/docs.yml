@@ -108,20 +108,22 @@ jobs:
 
       # The iPhone test build (docs/ios-install.md): the .ipa and manifest.plist of
       # the workflow run named by the repository variable IOS_TEST_RUN_ID, in a
-      # folder named by IOS_TEST_PATH (32 or more random hex digits) that nothing
-      # links to; the artifact brings its own page that makes the install link. A Pages deployment
+      # folder named by the secret IOS_TEST_PATH (32 or more random hex digits; a secret
+      # so that the public logs mask it) that nothing links to; the artifact brings its own page that makes the install link. A Pages deployment
       # replaces the whole site, so every publish, this workflow's own included,
-      # carries the files for as long as the two variables are set; unsetting
+      # carries the files for as long as the variable is set; unsetting
       # IOS_TEST_RUN_ID and publishing again takes them down, and so does the
       # run's artifact expiring (14 days). Nothing is committed to the repository.
       - name: Add the iPhone test build
-        if: ${{ vars.IOS_TEST_RUN_ID != '' && vars.IOS_TEST_PATH != '' }}
+        if: ${{ vars.IOS_TEST_RUN_ID != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ vars.IOS_TEST_RUN_ID }}
-          TEST_PATH: ${{ vars.IOS_TEST_PATH }}
+          TEST_PATH: ${{ secrets.IOS_TEST_PATH }}
         run: |
           set -euo pipefail
+          if [ -z "$TEST_PATH" ]; then echo "::warning::IOS_TEST_RUN_ID is set but the secret IOS_TEST_PATH is not (or is not passed to this workflow); the site is published without the iPhone test build."; exit 0; fi
+          echo "::add-mask::$TEST_PATH"
           [[ "$TEST_PATH" =~ ^[0-9a-f]{32,}$ ]] || { echo "::error::IOS_TEST_PATH must be 32 or more hex digits"; exit 1; }
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::IOS_TEST_RUN_ID must be a run id"; exit 1; }
           mkdir -p "site/$TEST_PATH"

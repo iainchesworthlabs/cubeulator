@@ -138,10 +138,12 @@ instead, from a folder that nothing links to.
 1. The workflow signs the build and uploads the artifact `cubeulator-ios-adhoc`: the
    `.ipa`, a `manifest.plist` that names the folder, and an `index.html` with an
    **Install** button that makes the link.
-2. Two repository variables name what the site carries: `IOS_TEST_PATH` (the random
-   folder) and `IOS_TEST_RUN_ID` (the run whose artifact to publish). While both are
-   set, **every** publish of the site, the release's own included, carries the folder,
-   because a Pages deployment replaces the whole site and would otherwise wipe it.
+2. Two settings name what the site carries: the repository **secret** `IOS_TEST_PATH`
+   (the random folder; a secret so that the public workflow logs show it as `***`) and
+   the repository variable `IOS_TEST_RUN_ID` (the run whose artifact to publish). While
+   they are set, **every** publish of the site, the release's own included, carries the
+   folder, because a Pages deployment replaces the whole site and would otherwise wipe
+   it.
 3. `.github/workflows/ios-test-site.yml` publishes the site: the documentation and the
    web app **as they are on `main`** (so the released site is not replaced by unreleased
    pages) plus the folder. It runs when `.github/ios-test-site.trigger` is changed on a

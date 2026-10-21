@@ -270,7 +270,9 @@ jobs:
           FULL: ${{ steps.version.outputs.full }}
           BASE: ${{ steps.version.outputs.base }}
           RELEASE_TAG: ${{ inputs.release_tag }}
-          TEST_PATH: ${{ vars.IOS_TEST_PATH }}
+          # A secret, not a variable: the logs of a public repository are public,
+          # and a secret's value is masked in them.
+          TEST_PATH: ${{ secrets.IOS_TEST_PATH }}
         run: |
           set -euo pipefail
           ipa="Cubeulator-$FULL-ios-adhoc.ipa"
