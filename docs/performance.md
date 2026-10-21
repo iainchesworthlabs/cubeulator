@@ -469,10 +469,30 @@ What is in it.
   average). Where it goes: `read_side_glare_look` 3.5 ms (almost all of it
   `contours_without_glare`, 3.3), `read_side` 2.9 over two calls, `prepare_frame`
   1.1 over two, the pitch look 1.0, the second look 0.9. The glare look runs on
-  every frame of a scene with no glare in it; skipping it when the first read
-  has found nothing to be fooled by would take the largest piece out, and it is
-  the vision lane's to decide, with its corpus. The preview's `QImage` copy
-  (`app.frame_image.request`) is 0.065 ms: the video upload is not a cost.
+  every frame that has an outline too big to be a sticker in it, glare or not.
+  The preview's `QImage` copy (`app.frame_image.request`) is 0.065 ms: the video
+  upload is not a cost.
+  - **Where the glare look's 3.3 ms went** (`cube_scan glare-cost`, 640 x 360
+    working frame, fastest of three runs): **2.4 ms was `channels_of`**, the loop
+    that takes the brightest and darkest channel of every pixel, which read each
+    one through `Mat::at<Vec3b>` and wrote two planes through `Mat::at<uchar>`.
+    The same arithmetic by row pointers is 0.35 ms (OpenCV's `split` and `max` /
+    `min` is 0.3 and allocates five planes; `v_load_deinterleave` is 0.04 and is
+    not used, to keep the reader free of per-platform intrinsics). The rest is
+    the box-filter threshold (0.5), the trace (0.5 to 1), the blur (0.08), the
+    mask and the open (0.1 each). `chroma_contours`, the chroma look, shared the
+    loop and gains the same. The look's outlines, per frame it is taken on: 2.77
+    to 1.51 ms on a 3x3 session, 3.75 to 1.71 on a 4x4 (960 px wide), 4.96 to 1.70 on
+    a 5x5; `timing.glare_look.640x360` 0.52 to 0.27 of the calibration workload.
+    235 recorded sessions (98,440 frames, 52,614 reads, 216 of them by this look)
+    give the same digest before and after, `cube_scan digest`: every blob count
+    and outline count per look, the lattice's residuals, and each read's centres,
+    pitch, found flags and Lab colours, bit for bit.
+  - One thing the look does that reads as an oversight and is kept, because a
+    read depends on it: `contours_without_glare` blurs the brightness in place
+    and then judges "clipped" (252 and up) on the *blurred* value, and
+    "colourless" on the unblurred chroma. A highlight has to fill its 5 x 5
+    neighbourhood to be taken out.
 - **Idle.** Home spins its cube when the setting is on, as designed, and draws
   every frame for it (46 a second, 0.5 to 1 ms of render-thread time each); the
   solve screens nudge the layer to move, which is the same; History, Entry,
