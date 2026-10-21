@@ -181,12 +181,13 @@ cube::vision::SessionColours colours_after_correction(
     if (as_read.size() != as_corrected.size()) {
         return measured;
     }
-    // For each colour now, how many of its stickers the scan named each colour.
+    // For each colour now, how many of its stickers the scan named each colour. Taken as
+    // unsigned, so that a sticker not painted (kUnpainted, -1) is 255 and no colour.
     std::array<std::array<int, kColours>, kColours> named{};
     for (std::size_t i = 0; i < as_corrected.size(); ++i) {
-        const auto now = static_cast<std::size_t>(as_corrected.at(i));
-        const auto then = static_cast<std::size_t>(as_read.at(i));
-        if (as_corrected.at(i) >= 0 && now < kColours && as_read.at(i) >= 0 && then < kColours) {
+        const auto now = static_cast<std::size_t>(static_cast<unsigned char>(as_corrected.at(i)));
+        const auto then = static_cast<std::size_t>(static_cast<unsigned char>(as_read.at(i)));
+        if (now < kColours && then < kColours) {
             ++named.at(now).at(then);
         }
     }
