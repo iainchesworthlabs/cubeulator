@@ -762,8 +762,9 @@ namespace {
 
 using Renaming = std::array<Color, 6>;
 
-constexpr Renaming kKeepNames = {Color::White, Color::Yellow, Color::Green,
-                                 Color::Blue,  Color::Orange, Color::Red};
+constexpr Renaming kKeepNames = {
+    Color::White, Color::Yellow, Color::Green, Color::Blue, Color::Orange, Color::Red,
+};
 
 // The same cube with the names of two colours exchanged: a mirror image of the cube, which no
 // turn of it and no way of holding it undoes.
@@ -824,9 +825,12 @@ TEST_CASE("a cube with two colour names exchanged is valid, and wears no standar
     for (const int size : kSizes) {
         INFO("size " << size);
         const Facelets real = scrambled(size, 11U, 30);
-        for (const auto& [a, b] :
-             {std::pair{Color::Red, Color::Orange}, std::pair{Color::Green, Color::Blue},
-              std::pair{Color::White, Color::Yellow}, std::pair{Color::Red, Color::Green}}) {
+        for (const auto& [a, b] : {
+                 std::pair{Color::Red, Color::Orange},
+                 std::pair{Color::Green, Color::Blue},
+                 std::pair{Color::White, Color::Yellow},
+                 std::pair{Color::Red, Color::Green},
+             }) {
             const Facelets traded = with_names_exchanged(real, a, b);
             const auto cube = NCube::from_facelets(size, traded);
             REQUIRE(cube.has_value());
