@@ -15,9 +15,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QString>
+#include <QStyleHints>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -37,6 +39,26 @@ using cube::systest::Layout;
 [[nodiscard]] QString focused(App& app) {
     QQuickItem* item = app.window().activeFocusItem();
     return item == nullptr ? QString() : item->objectName();
+}
+
+// Puts the keyboard on the control called `name`: with Tab where the platform
+// lets Tab reach every control, and by asking for the focus where it does not.
+// macOS reaches only text fields with Tab unless the person has switched on
+// Full Keyboard Access in System Settings (Qt's tabFocusBehavior), and the app
+// follows that rather than override it.
+void reach_with_the_keyboard(App& app, const QString& name) {
+    if (QGuiApplication::styleHints()->tabFocusBehavior() == Qt::TabFocusAllControls) {
+        for (int i = 0; i < 6 && focused(app) != name; ++i) {
+            app.key(Qt::Key_Tab);
+            app.pump(30);
+        }
+    } else {
+        QQuickItem* item = app.find(name);
+        REQUIRE(item != nullptr);
+        item->forceActiveFocus(Qt::TabFocusReason);
+        app.pump(30);
+    }
+    REQUIRE(focused(app) == name);
 }
 
 // To About, from Settings, the way a person gets there on Windows and Linux.
@@ -156,21 +178,13 @@ TEST_CASE("About and Licences are reached and left with the keyboard",
     open_about(app);
 
     // Tab reaches the Licences row; Return presses it.
-    for (int i = 0; i < 6 && focused(app) != QStringLiteral("about.licences"); ++i) {
-        app.key(Qt::Key_Tab);
-        app.pump(30);
-    }
-    REQUIRE(focused(app) == QStringLiteral("about.licences"));
+    reach_with_the_keyboard(app, QStringLiteral("about.licences"));
     app.key(Qt::Key_Return);
     REQUIRE(app.wait_for([&]() { return app.screen() == "licences"; }));
     app.settle();
 
     // Down moves from row to row (the first is Cubeulator's own); Return opens.
-    for (int i = 0; i < 6 && focused(app) != QStringLiteral("licences.own"); ++i) {
-        app.key(Qt::Key_Tab);
-        app.pump(30);
-    }
-    REQUIRE(focused(app) == QStringLiteral("licences.own"));
+    reach_with_the_keyboard(app, QStringLiteral("licences.own"));
     app.key(Qt::Key_Down);
     app.pump(30);
     CHECK(focused(app) == QStringLiteral("licences.row1"));
