@@ -56,7 +56,7 @@ if(CUBEULATOR_ENABLE_TRACY)
 endif()
 
 project(Cubeulator
-    VERSION 0.1.0
+    VERSION 0.2.0
     DESCRIPTION "A camera-driven, on-device Rubik's Cube solver"
     HOMEPAGE_URL "https://github.com/iainchesworthlabs/cubeulator"
     LANGUAGES CXX)

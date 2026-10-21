@@ -1,1 +1,0 @@
-**A profile of the solve screen's arrival says where the time goes.** Three more zones inside the application of a finished solve (taking the result, announcing the solution, announcing the state) show that most of the 24 to 29 ms the interface is held when a solve lands is the screen being made, not the solver. See [Performance](docs/performance.md).

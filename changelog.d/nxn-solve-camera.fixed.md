@@ -1,1 +1,0 @@
-**A bigger cube is on camera again while you solve it.** The small picture of you solving, with a dot on each sticker the camera finds, had gone from the solve screen of a 2x2, 4x4, 5x5 or 6x6 (only a 3x3 kept it). It is back at every size, mirrored like the scan screen. A 2x2 no longer shows a choice of three methods that made no difference.
