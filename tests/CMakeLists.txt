@@ -46,6 +46,15 @@ add_test(NAME platform_fragments_satisfy_contract
     COMMAND "${CMAKE_COMMAND}" "-DREPO_ROOT=${PROJECT_SOURCE_DIR}"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/platform/check_fragments.cmake")
 
+# Which vcpkg checkout a configure uses (cmake/VcpkgRoot.cmake): the shared
+# store, a root you name, a toolchain you pass, and what is said when the
+# submodule path is a dead link. Script mode against a fake upstream repository;
+# no network, and the real deps/vcpkg is not touched.
+add_test(NAME vcpkg_root_selection
+    COMMAND "${CMAKE_COMMAND}" "-DREPO_ROOT=${PROJECT_SOURCE_DIR}"
+        "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/vcpkg_root_selection"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/platform/check_vcpkg_root.cmake")
+
 # --- Unit tests: fast, isolated, one behaviour each -----------------------
 add_executable(cube_unit_tests
     unit/error_test.cpp

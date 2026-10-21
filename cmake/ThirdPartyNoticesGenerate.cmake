@@ -185,6 +185,13 @@ else()
             cn_unresolved("Target ${CUBE_NOTICES_TARGET} not found in the file API codemodel")
         else()
             file(READ "${_reply_dir}/${_target_file}" _target_json)
+            # Xcode gives a library next to the target relative to the target's own
+            # build directory (../../vcpkg_installed/... from src/app); the other
+            # generators give it relative to the build root.
+            cn_json_get(_target_build_rel "${_target_json}" paths build)
+            if(_target_build_rel AND NOT _target_build_rel STREQUAL ".")
+                set(_target_build_dir "${CUBE_NOTICES_BINARY_DIR}/${_target_build_rel}")
+            endif()
             string(JSON _nfrag ERROR_VARIABLE _err LENGTH "${_target_json}" link commandFragments)
             if(NOT _err AND _nfrag GREATER 0)
                 math(EXPR _lastfrag "${_nfrag} - 1")
@@ -504,8 +511,16 @@ foreach(tok IN LISTS _link_tokens)
         continue()
     endif()
     if(NOT tok MATCHES "^([A-Za-z]:)?/")
-        # the file API gives in-tree libraries relative to the build directory
-        set(tok "${CUBE_NOTICES_BINARY_DIR}/${tok}")
+        # the file API gives in-tree libraries relative to the build directory (or,
+        # for a path that climbs out of it, the target's build directory)
+        if(tok MATCHES "^\\.\\./" AND _target_build_dir)
+            set(tok "${_target_build_dir}/${tok}")
+        else()
+            set(tok "${CUBE_NOTICES_BINARY_DIR}/${tok}")
+        endif()
+    endif()
+    if(tok MATCHES "/\\.\\./")
+        get_filename_component(tok "${tok}" ABSOLUTE)
     endif()
 
     string(TOLOWER "${tok}" _lt)
