@@ -12,6 +12,10 @@ name: iOS device build
 
 on:
   workflow_dispatch:
+  # Iteration only, removed before this merges: GitHub cannot dispatch a workflow
+  # that is not yet on the default branch, so a push to the work branch runs it.
+  push:
+    branches: [feature/ios-device-build]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
