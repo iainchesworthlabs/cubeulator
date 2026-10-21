@@ -260,6 +260,17 @@ class Render(unittest.TestCase):
         )
         self.assertIn("phone `Cubeulator-0.2.0-beta.1-ios.ipa`", preview)
 
+    def test_the_install_page_link_names_this_releases_tag(self):
+        preview = notes.render(
+            GOOD, version="0.2.0-beta.1", tag="v0.2.0-beta.1", repo="owner/repo",
+            install_template="[install](https://example.test/install-ios.html?tag=@TAG@)",
+        )
+        self.assertIn("install-ios.html?tag=v0.2.0-beta.1)", preview)
+        self.assertNotIn("@TAG@", preview)
+        # the repository's own template carries it, in the iPhone paragraph
+        template = (Path(__file__).resolve().parent / "install-notes.md").read_text(encoding="utf-8")
+        self.assertIn("install-ios.html?tag=@TAG@", template)
+
     def test_the_web_package_has_its_own_row(self):
         out = self.render(attested=True)
         self.assertIn("| Web: any current browser (static files to host) | `Cubeulator-0.2.0-beta.1-web.zip` |", out)
