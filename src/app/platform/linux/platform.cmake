@@ -52,6 +52,9 @@ set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_
 set(CUBEULATOR_PLATFORM_PROFILING_VULKAN ON)
 set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
 
+# The vector kernels follow the architecture (cmake/Simd.cmake).
+set(CUBEULATOR_PLATFORM_SIMD auto)
+
 # dlopen, for the Vulkan probe (graphics_probe_linux.cpp).
 set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "${CMAKE_DL_LIBS}")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")

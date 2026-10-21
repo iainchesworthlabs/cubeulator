@@ -1,11 +1,11 @@
 #include <cube/vision/prepared_frame.hpp>
 
 #include <cube/profiling.hpp>
+#include <cube/vision/detail/channel_kernels.hpp>
 
 #include <opencv2/imgproc.hpp>
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <utility>
 
@@ -102,29 +102,12 @@ struct Channels {
 };
 
 [[nodiscard]] Channels channels_of(const cv::Mat& working) {
-    // One pass, two images: splitting into three planes and taking the extremes
-    // of them allocated eight pixel buffers per look for what two hold. Walked
-    // by row pointers: Mat::at<> in the loop below this replaced was 2.4 ms of a
-    // 640 x 360 frame, and this is 0.35 (docs/performance.md).
+    // One pass, two images (cube/vision/detail/channel_kernels.hpp, the vector
+    // form on a target that has one): splitting into three planes and taking
+    // the extremes of them allocated eight pixel buffers per look for what two
+    // hold.
     Channels channels;
-    channels.value.create(working.size(), CV_8UC1);
-    channels.chroma.create(working.size(), CV_8UC1);
-    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic,modernize-min-max-use-initializer-list):
-    // a per-pixel loop over image rows, which is the whole of its cost. The nested
-    // max and min are not the initializer-list form on purpose: MSVC does not
-    // flatten that, and the loop was 0.35 ms with them and 1.5 with it.
-    for (int row = 0; row < working.rows; ++row) {
-        const auto* bgr = working.ptr<uchar>(row);
-        auto* value = channels.value.ptr<uchar>(row);
-        auto* chroma = channels.chroma.ptr<uchar>(row);
-        for (int column = 0; column < working.cols; ++column, bgr += 3) {
-            const uchar highest = std::max(std::max(bgr[0], bgr[1]), bgr[2]);
-            const uchar lowest = std::min(std::min(bgr[0], bgr[1]), bgr[2]);
-            value[column] = highest;
-            chroma[column] = static_cast<uchar>(highest - lowest);
-        }
-    }
-    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic,modernize-min-max-use-initializer-list)
+    detail::extremes_of_channels(working, channels.value, channels.chroma);
     return channels;
 }
 
@@ -144,6 +127,7 @@ constexpr int kGlareChroma = 12;
 // frame itself). `brightness` is the brightest channel of `working`, blurred as
 // prepare_frame blurs it; the mask is dilated by a pixel so the rim of a
 // highlight goes with its middle.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): the blurred brightness, then the frame.
 [[nodiscard]] cv::Mat glare_mask(const cv::Mat& brightness, const cv::Mat& working) {
     cv::Mat mask = cv::Mat::zeros(working.size(), CV_8UC1);
     bool any = false;
@@ -204,9 +188,7 @@ std::optional<PreparedFrame> prepare_frame(const cv::Mat& bgr, int size) {
 
     // Value (the brightest channel) is used so a saturated blue or red
     // sticker still stands clear of black plastic.
-    std::array<cv::Mat, 3> channels;
-    cv::split(working, channels.data());
-    prepared.brightness = cv::max(cv::max(channels.at(0), channels.at(1)), channels.at(2));
+    detail::max_of_channels(working, prepared.brightness);
     cv::GaussianBlur(prepared.brightness, prepared.brightness, cv::Size(5, 5), 0.0);
 
     prepared.block = block_pixels(prepared.brightness.rows, prepared.brightness.cols,

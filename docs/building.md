@@ -179,6 +179,17 @@ worker that adds the two headers and reloads the page once.
   Exclusive with `CUBEULATOR_ENABLE_TRACY`. The `web-emscripten-diagnostics`
   and `web-emscripten-tests` presets turn it on. See
   [Profiling](profiling.md#in-the-browser).
+- `CUBEULATOR_SIMD` (default `auto`) — which implementation of the reader's
+  per-pixel channel kernels is built (`cmake/Simd.cmake`): `vector128`, the
+  OpenCV universal intrinsics at 128 bits (SSE2 on x86-64, NEON on arm64,
+  simd128 in a browser), or `generic`, the scalar loops. `auto` picks
+  `vector128` on x86-64 and arm64 and in the browser, `generic` on anything
+  else. It is a choice of directory (`src/lib/variants/simd-<name>`), not an
+  `#ifdef`. The 128-bit units are part of those architectures, so a
+  `vector128` build needs no CPU probe; at run time it still answers to
+  `cv::setUseOptimized(false)`, OpenCV's own switch, which sends it down the
+  scalar loops. The configure summary prints the one chosen. `generic` is what
+  to build when two machines disagree on a read.
 - `CUBEULATOR_WEB_TEST_DRIVER` (default `OFF`, web only) — links the read-only
   driver (`window.cubeulatorDriver`) that `tests/web` reads the app through.
   The `web-emscripten-diagnostics` preset turns it on; the published build has

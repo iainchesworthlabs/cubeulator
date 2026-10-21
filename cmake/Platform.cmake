@@ -121,6 +121,16 @@
 #                                      where Tracy's OpenGL header refuses to
 #                                      compile (its timestamps are unreliable
 #                                      there).
+#   CUBEULATOR_PLATFORM_SIMD           Which 128-bit vector kernels cube::lib
+#                                      is built with (cmake/Simd.cmake): "auto"
+#                                      works it out from the target's
+#                                      architecture (x86-64 has SSE2, arm64
+#                                      NEON), "vector128" says the platform's
+#                                      compile flags give a vector unit the
+#                                      architecture check cannot see (the
+#                                      browser, with -msimd128, which the page
+#                                      already requires). Every platform but
+#                                      the browser says "auto".
 #   CUBEULATOR_PLATFORM_SOURCES        Compiled into cube_platform: one
 #                                      implementation of every interfaces/
 #                                      header (and of the detail/ seams).
