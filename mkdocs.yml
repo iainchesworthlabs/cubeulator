@@ -68,6 +68,7 @@ nav:
       - Testing & coverage: testing.md
       - Profiling: profiling.md
       - Performance: performance.md
+      - Graphics API: graphics-api.md
       - Translations: i18n.md
       - Contributing: CONTRIBUTING.md
       - Code of conduct: CODE_OF_CONDUCT.md

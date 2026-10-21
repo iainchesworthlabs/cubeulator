@@ -13,7 +13,9 @@
 //
 // and then, with nothing asking for a frame, how many frames the screen draws by
 // itself in a second (`idle`): a static screen should draw none, a cube turning
-// by itself draws every frame, and which is which is the point.
+// by itself draws every frame, and which is which is the point. `ceiling` is the
+// opposite: the frames in a second when every swap asks for the next, which is
+// one over what a frame of that screen costs on this renderer.
 //
 // Not part of the walk: it does nothing unless CUBE_SCREEN_COST is set.
 //
@@ -104,11 +106,24 @@ void measure(const Case& c, int repetitions, App::Scene3D scene) {
         app.pump(1000);
         QObject::disconnect(idle_connection);
 
+        // And the most it can draw: every swap asks for the next frame, with
+        // vsync off (the harness's), so the count is one over the cost of a
+        // frame - what the screen costs on this renderer, CPU and GPU together.
+        std::size_t ceiling = 0;
+        const auto ceiling_connection =
+            QObject::connect(&app.window(), &QQuickWindow::frameSwapped, [&]() {
+                ++ceiling;
+                app.window().update();
+            });
+        app.window().update();
+        app.pump(1000);
+        QObject::disconnect(ceiling_connection);
+
         std::printf(
             "screen-cost: api=%s screen=%s rep=%d call=%.0fms first=%.0fms tenth=%.0fms "
-            "worst_gap=%.0fms idle=%zu/s done=%d\n",
+            "worst_gap=%.0fms idle=%zu/s ceiling=%zu/s done=%d\n",
             qPrintable(app.graphics_api()), c.name, rep, call * 1000.0, first * 1000.0,
-            tenth * 1000.0, worst_gap * 1000.0, idle, done ? 1 : 0);
+            tenth * 1000.0, worst_gap * 1000.0, idle, ceiling, done ? 1 : 0);
         std::fflush(stdout);
         CHECK(done);
     }

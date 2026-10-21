@@ -1,0 +1,1 @@
+**Leaving the solve screen part-way through a step no longer raises a QML error.** The 3D cube scheduled the repositioning of its guide on a call that could run after the screen had gone, which logged a `TypeError` about `stopNudge` and, in the tests, failed the macOS system walk in most runs. The cube now owns the timer that does it, so it stops with the cube.

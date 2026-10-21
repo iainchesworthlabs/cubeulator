@@ -7,6 +7,8 @@ PlatformInfo current() {
         .is_mobile = true,
         .graphics_backends = {{.key = "vulkan", .label = "Vulkan"},
                               {.key = "opengl", .label = "GLES"}},
+        .automatic_graphics_backends = {},
+        .software_graphics_api = {},
         .japanese_faces = {"Noto Sans CJK JP", "Noto Sans JP", "Source Han Sans JP"},
         .chinese_faces =
             {
