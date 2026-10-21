@@ -65,6 +65,7 @@ nav:
   - Build and contribute:
       - Getting started: getting-started.md
       - Building & packaging: building.md
+      - Installing on an iPhone: ios-install.md
       - Testing & coverage: testing.md
       - Profiling: profiling.md
       - Performance: performance.md
