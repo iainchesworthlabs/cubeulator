@@ -1,0 +1,33 @@
+name: Docs after release
+
+# The documentation site carries the iPhone install page, which installs the
+# newest published release's build (tools/release/publish_ios_manifest.sh, run
+# by docs.yml). A release is published by a click, after the release PR's push to
+# main has already built the site, so without this the page would offer the
+# previous release until the next unrelated docs change.
+#
+# docs.yml is run again on main, not from here: the `github-pages` environment
+# deploys from `main` only, and a run started by a release belongs to the tag.
+# A workflow run by the repository token can start another with workflow_dispatch.
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  republish:
+    name: Publish the site again
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # to dispatch docs.yml
+    steps:
+      - name: Run the documentation workflow on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          echo "$TAG was published: publishing the site again so that the install page offers it."
+          gh workflow run docs.yml --repo "$REPO" --ref main

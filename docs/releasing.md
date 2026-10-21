@@ -292,7 +292,9 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    platform fails, fix it and tag again, or re-run the failed jobs.
 7. **Review the draft** under Releases: the notes, the five packages, the
    checksums and signatures. Edit the notes if you want to.
-8. **Publish it.**
+8. **Publish it.** Publishing starts `docs-after-release.yml`, which runs the
+   documentation workflow again on `main` so that the site's iPhone install
+   page offers this release ([below](#the-iphone-install-page)).
 9. **Back-merge**: a PR from a `support/back-merge-<version>` branch cut from
    `main`, into `develop`, so `develop` has the release.
 10. **Look at the front page.** The README's badges on `main` show the runs the
@@ -404,6 +406,31 @@ workflow.
 
 Keys expire: put the expiry in a calendar. The dry run is the check that the key
 is still good before a release needs it.
+
+## The iPhone install page
+
+The documentation site has an install page for the iPhone build. An ad-hoc app
+is installed from a Safari link that names a manifest, and iOS will not follow
+a redirect to the manifest, which a release asset's address is. So `docs.yml`
+copies the **newest published release's** `Cubeulator-<version>-ios-manifest.plist`
+to a fixed address of the site, `/ios/manifest.plist`
+(`tools/release/publish_ios_manifest.sh`), with `/ios/latest.txt` naming the tag.
+The manifest names the `.ipa` by its release-asset URL, which is where the app
+is downloaded from; nothing is committed to the repository.
+
+Ordering, and why there is a second workflow: the release PR's push to `main`
+builds the site *before* the release is published, so at that moment the newest
+release is still the previous one. Publishing the draft fires
+`docs-after-release.yml`, which dispatches `docs.yml` on `main` (a run started
+by the `release` event itself would belong to the tag, and the `github-pages`
+environment deploys from `main` only). Until the publish click, the install page
+offers the previous release; a draft is never offered (`--exclude-drafts`). A
+release with no iPhone manifest (0.1.0-beta.1) publishes nothing and the page
+says there is no build.
+
+Check it after publishing: `curl -s https://iainchesworthlabs.github.io/cubeulator/ios/latest.txt`
+prints the tag. A dry run cannot exercise the publish, so the script is covered
+by the release tools' self-test with a stand-in `gh`.
 
 ## Verifying a download
 

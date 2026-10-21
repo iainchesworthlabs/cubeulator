@@ -9,6 +9,7 @@ wrong is not a tag.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -687,6 +688,94 @@ def _bash() -> str | None:
         if candidate.exists():
             return str(candidate)
     return shutil.which("bash")
+
+
+@unittest.skipUnless(_bash() and shutil.which("python3"), "needs bash and python3")
+class PublishIosManifest(unittest.TestCase):
+    """tools/release/publish_ios_manifest.sh, with a gh that answers from the test."""
+
+    SCRIPT = Path(__file__).resolve().parent / "publish_ios_manifest.sh"
+    GH = textwrap.dedent(
+        """        #!/usr/bin/env bash
+        case "$1 $2" in
+          "release list") printf '%s' "$FAKE_TAG" ;;
+          "release download")
+            while [ $# -gt 0 ]; do [ "$1" = --dir ] && dir="$2"; shift; done
+            if [ -n "${FAKE_MANIFEST:-}" ]; then
+              cp "$FAKE_MANIFEST" "$dir/Cubeulator-0.2.0-beta.1-ios-manifest.plist"
+            else
+              echo "no assets match" >&2; exit 1
+            fi ;;
+          *) echo "unexpected gh $*" >&2; exit 9 ;;
+        esac
+        """
+    )
+    MANIFEST = textwrap.dedent(
+        """        <?xml version="1.0" encoding="UTF-8"?>
+        <plist version="1.0"><dict><key>items</key><array><dict>
+        <key>assets</key><array><dict><key>kind</key><string>software-package</string>
+        <key>url</key><string>URL</string></dict></array>
+        <key>metadata</key><dict><key>kind</key><string>software</string></dict>
+        </dict></array></dict></plist>
+        """
+    )
+
+    def run_script(self, tag: str, manifest_url: str | None):
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "bin").mkdir()
+        gh = root / "bin" / "gh"
+        gh.write_text(self.GH, encoding="utf-8", newline="\n")
+        gh.chmod(0o755)
+        env = dict(os.environ, PATH=f"{(root / 'bin').as_posix()}{os.pathsep}{os.environ['PATH']}", FAKE_TAG=tag)
+        if manifest_url is not None:
+            plist = root / "m.plist"
+            plist.write_text(self.MANIFEST.replace("URL", manifest_url), encoding="utf-8", newline="\n")
+            env["FAKE_MANIFEST"] = plist.as_posix()
+        out = root / "site" / "ios"
+        proc = subprocess.run(
+            [_bash(), self.SCRIPT.as_posix(), "--repo", "owner/repo", "--out", out.as_posix()],
+            capture_output=True, text=True, env=env,
+        )
+        return proc, out
+
+    def test_the_newest_releases_manifest_is_published_with_its_tag(self):
+        tag = "v0.2.0-beta.1"
+        proc, out = self.run_script(tag, f"https://github.com/owner/repo/releases/download/{tag}/Cubeulator-0.2.0-beta.1-ios.ipa")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((out / "manifest.plist").exists())
+        self.assertEqual((out / "latest.txt").read_text(encoding="utf-8").strip(), tag)
+
+    def test_no_release_and_no_manifest_are_not_errors_and_publish_nothing(self):
+        for tag, url in (("", None), ("v0.1.0-beta.1", None)):
+            proc, out = self.run_script(tag, url)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertFalse(out.exists(), tag)
+
+    def test_a_manifest_that_is_not_this_releases_stops_the_build(self):
+        proc, out = self.run_script(
+            "v0.2.0-beta.1", "https://github.com/owner/repo/releases/download/v0.1.0-beta.1/Cubeulator-0.1.0-beta.1-ios.ipa"
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertFalse(out.exists())
+
+    def test_the_tools_own_manifest_passes_its_check(self):
+        # What make_ios_manifest.sh writes (if the iOS work is here) names the
+        # release asset in the shape this script expects.
+        maker = Path(__file__).resolve().parent / "make_ios_manifest.sh"
+        if not maker.exists():
+            self.skipTest("make_ios_manifest.sh is not in this tree")
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmp.cleanup)
+        manifest = Path(tmp.name) / "m.plist"
+        subprocess.run(
+            [_bash(), maker.as_posix(), "--out", manifest.as_posix(), "--ipa", "Cubeulator-0.2.0-beta.1-ios.ipa",
+             "--repo", "owner/repo", "--tag", "v0.2.0-beta.1", "--version", "0.2.0"],
+            check=True, capture_output=True,
+        )
+        text = manifest.read_text(encoding="utf-8")
+        self.assertIn("/releases/download/v0.2.0-beta.1/Cubeulator-0.2.0-beta.1-ios.ipa", text)
 
 
 @unittest.skipUnless(_bash() and shutil.which("git"), "needs bash and git")

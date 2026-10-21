@@ -79,6 +79,19 @@ jobs:
       - name: Build site
         run: mkdocs build --strict
 
+      # The iPhone app is installed from a link that names a manifest, and iOS
+      # will not follow a redirect to it, which a release asset's address is. So
+      # the site serves the newest published release's manifest from a fixed
+      # address (/ios/manifest.plist); the install page points there. The .ipa
+      # stays a release asset. Nothing is committed. A release that is published
+      # after this build has its manifest picked up by docs-after-release.yml,
+      # which runs this workflow again.
+      - name: Put the newest release's iPhone install manifest on the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: tools/release/publish_ios_manifest.sh --repo "$REPO" --out site/ios
+
       # The app goes under /app/ of the site, which is where docs/web.md links.
       # It is static files; GitHub Pages serves .wasm as application/wasm. The
       # app cannot get the response headers threads need from Pages, so it
