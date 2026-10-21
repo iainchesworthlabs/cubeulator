@@ -1,1 +1,0 @@
-**The iPhone build scans with the camera.** It opens the back camera first, with a button for the front one, keeps the picture upright as the phone turns, holds the exposure and white balance steady during a scan, and asks for the camera in the language of the phone. It has not yet run on a phone, so expect rough edges.

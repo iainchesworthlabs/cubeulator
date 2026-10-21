@@ -1,1 +1,0 @@
-**A build for an iPhone.** Cubeulator can now be built as an iPhone app (arm64) and installed on iPhones registered with the maintainer, outside the App Store. It is a limited build, new and not yet tried on many phones. See [Installing on an iPhone](docs/ios-install.md).
