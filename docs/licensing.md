@@ -150,10 +150,10 @@ Windows-only; `forkfd` is Android-only; the Cocoa plugin, the Darwin
 permission plugins and `qeventdispatcher_cf` are macOS-only; and Qt GUI
 depends on QtDBus on macOS but not on Windows [V]. Edges that exist on only
 some platforms are kept per platform (`platformDepends`) so a macOS-only
-dependency is not applied to Windows. **Linux and iOS have not been read**,
-so on those platforms the snapshot over-includes rather than guesses (the
+dependency is not applied to Windows. **Linux has not been read**,
+so on that platform the snapshot over-includes rather than guesses (the
 WebAssembly kit has been read: `web` is in `verifiedPlatforms` since
-2026-10-14; see the known gaps in
+2026-10-14, and the iOS kit's SBOMs since 2026-10-21; see the known gaps in
 [section 6](#6-how-the-notices-are-produced));
 `tools/licences/qt_sbom_manifest.py` re-derives it from any Qt install's
 `sbom/` directory, and maps each library file name (`libqcocoa.a`,
@@ -246,7 +246,7 @@ Linux plan is now the table above: no GTK, GLib, Pango or X11 ports.
 | macOS | The `.dmg` (Apple Silicon) is built by CI and by the release workflow (`macos-clang-release`), and Qt's macOS SBOMs are read into the snapshot; the licence and `THIRD-PARTY-NOTICES.txt` are at the root of the disk image. Not run on a Mac by this paper. Mac App Store adds Apple's terms (section 4). |
 | Linux | No GTK3 chain: `opencv4[gtk]` is not requested (above). Qt is installed from `jurplel/install-qt-action` in CI, and the DEB and RPM carry it: the app, Qt, its plugins and QML modules and OpenCV sit in a private directory (`/usr/lib/cubeulator`), and the packages declare only system libraries as dependencies (`SHLIBDEPS` and `AUTOREQPROV` are off; `packaging/linux/Packaging.cmake`), so Qt's source and notice duty is the packager's, not a distribution's [I][L]. The licence and notices are in `/usr/share/doc/cubeulator/`. Qt's Linux SBOMs have not been read, so the Linux notices over-include. |
 | Android | Qt is shared (`.so` inside the APK/AAB) so LGPL relinking is mechanically possible [I]. The camera backend is a stub today. |
-| iOS | The app does not build today. Qt for iOS is normally linked statically [I - **not stated** in the Qt iOS documentation pages I read; Qt's own tracker has an open request to allow dynamic builds, QTBUG-85974]. |
+| iOS | The app builds for an iPhone since 2026-10-21 (`docs/ios-signing.md`). Qt for iOS is normally linked statically [I - **not stated** in the Qt iOS documentation pages I read; Qt's own tracker has an open request to allow dynamic builds, QTBUG-85974]. |
 | Web (WebAssembly) | One `.wasm` module with Qt linked in statically and nothing deployed beside it (no installer and no CPack package; a release ships the site as `Cubeulator-<version>-web.zip`, assembled by `packaging/web/make-package.sh` with `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` beside it, and the script stops on an unresolved notice because no installer is there to refuse; the notices are also embedded in the module as a resource like every build's). From vcpkg it takes fmt and a smaller OpenCV: `vcpkg.json` asks for the `intrinsics` feature alone on `emscripten`, and `cmake/triplets/wasm32-emscripten-threads.cmake` builds only `core`, `imgproc`, `imgcodecs` and `videoio`, so none of the image-codec ports (libjpeg-turbo, libpng, tiff, libwebp, quirc, liblzma) is in it; zlib comes in as OpenCV's own dependency [V: `vcpkg.json`, port manifests]. It also carries the two Noto subsets (2.3) and, from Qt's WebAssembly kit, the DejaVu Fonts 2.37 face the browser build draws Latin, Hebrew and Arabic with (Bitstream-Vera licence [V: `QWasmIntegrationPlugin_Attribution_dejayvu` in the kit's `qtbase` SBOM]). That kit's SBOMs are in `qt-modules.json` (`web` is a verified platform), so the attribution is in the generated notices; see the known gaps in [section 6](#6-how-the-notices-are-produced). |
 
 ## 3. The Qt question
