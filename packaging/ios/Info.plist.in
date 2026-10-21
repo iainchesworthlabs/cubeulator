@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Info.plist for Cubeulator.app on an iPhone. Configured by
+  packaging/ios/ConfigureApp.cmake (@VARIABLES@); Xcode then adds the keys that
+  come from the SDK and the target (DTPlatformName, MinimumOSVersion,
+  UIDeviceFamily, the compiled icon).
+
+  NSCameraUsageDescription is the string `permission.system.camera` from
+  docs/design/strings.json, as for the macOS bundle. Without the key iOS ends
+  the program the moment it asks for the camera.
+
+  CFBundleShortVersionString is the plain X.Y.Z (iOS accepts no label), and
+  CFBundleVersion is the build number: the workflow passes its run number, so
+  that two builds of one version differ.
+-->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>@CUBEULATOR_BUNDLE_EXECUTABLE@</string>
+    <key>CFBundleIdentifier</key>
+    <string>@CUBEULATOR_BUNDLE_ID@</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>@CUBEULATOR_BUNDLE_NAME@</string>
+    <key>CFBundleDisplayName</key>
+    <string>@CUBEULATOR_BUNDLE_NAME@</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@CUBEULATOR_BUNDLE_SHORT_VERSION@</string>
+    <key>CFBundleVersion</key>
+    <string>@CUBEULATOR_BUNDLE_BUILD@</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+    <key>NSCameraUsageDescription</key>
+    <string>@CUBEULATOR_CAMERA_USAGE_DESCRIPTION@</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>@CUBEULATOR_COPYRIGHT@</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
+    <!-- A launch screen in the property list: without one iOS runs the program
+         in a legacy 320 x 480 window and scales it up. The colour is the
+         paper colour of the light and dark themes (the LaunchBackground set in
+         the asset catalogue), so the first frame is not a white flash in the
+         dark theme. -->
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>LaunchBackground</string>
+    </dict>
+
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIStatusBarHidden</key>
+    <false/>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <true/>
+</dict>
+</plist>

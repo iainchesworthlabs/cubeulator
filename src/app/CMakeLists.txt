@@ -46,8 +46,8 @@ target_link_libraries(cube_platform
 # ---------------------------------------------------------------------------
 # cube_app - the Qt6 Quick (QML) GUI shell, shared across every platform (see
 # docs/architecture.md). The ios-clang preset still sets
-# CUBEULATOR_BUILD_APP=OFF (Qt-for-iOS packaging isn't wired up yet); every
-# other preset, android-clang included, builds this block.
+# CUBEULATOR_BUILD_APP=OFF (the library-only leg, no Qt); every other preset,
+# android-clang and ios-device-release included, builds this block.
 # ---------------------------------------------------------------------------
 if(CUBEULATOR_BUILD_APP)
     find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Quick Qml Gui QuickControls2 Quick3D ShaderTools QmlCore)
