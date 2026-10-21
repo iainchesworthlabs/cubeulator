@@ -5,6 +5,7 @@
 #include <cube/nxn/scan_assembly.hpp>
 #include <cube/profiling.hpp>
 #include <cube/solver/scan_assembly.hpp>
+#include <cube/vision/color_classification.hpp>
 #include <cube/vision/color_resolution.hpp>
 #include <cube/vision/corner_fit.hpp>
 #include <cube/vision/quad_fit.hpp>
@@ -1529,6 +1530,165 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
     return sides;
 }
 
+// What each colour is renamed to: the colour that colour number c becomes, by solver::Color's
+// number.
+using Renaming = std::array<solver::Color, 6>;
+
+[[nodiscard]] nxn::NCube renamed(const nxn::NCube& cube, const Renaming& to) {
+    std::vector<solver::Color> stickers(cube.facelets().begin(), cube.facelets().end());
+    for (solver::Color& sticker : stickers) {
+        sticker = to.at(static_cast<std::size_t>(sticker));
+    }
+    // A renaming gives six colours six different names, so each is still on N^2 stickers and
+    // this cannot fail; the cube as it was is the answer that never matters.
+    Result<nxn::NCube> made = nxn::NCube::from_facelets(cube.size(), stickers);
+    if (made.has_value()) {
+        return std::move(*made);
+    }
+    return cube;
+}
+
+[[nodiscard]] SessionColours renamed(const SessionColours& colours, const Renaming& to) {
+    SessionColours out{};
+    for (std::size_t colour = 0; colour < colours.size(); ++colour) {
+        out.at(static_cast<std::size_t>(to.at(colour))) = colours.at(colour);
+    }
+    return out;
+}
+
+[[nodiscard]] bool keeps_names(const Renaming& to) {
+    for (std::size_t colour = 0; colour < to.size(); ++colour) {
+        if (static_cast<std::size_t>(to.at(colour)) != colour) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The palette's six colours, by solver::Color's number.
+[[nodiscard]] SessionColours palette_colours() {
+    SessionColours reference{};
+    const ColorPalette palette = default_palette();
+    for (const PaletteEntry& entry : palette.entries) {
+        if (const auto colour = solver_colour(entry.color); colour.has_value()) {
+            reference.at(static_cast<std::size_t>(*colour)) = entry.lab;
+        }
+    }
+    return reference;
+}
+
+// How far the six colours as the scan measured them sit from the palette's, were they named as
+// `to` names them. Plain Lab: it is asked to tell one renaming from another, and renamings that
+// make a standard scheme differ in at least four colours, which no light moves by as much as
+// the colours themselves are apart.
+[[nodiscard]] float palette_cost(const SessionColours& colours, const SessionColours& palette,
+                                 const Renaming& to) {
+    float cost = 0.0F;
+    for (std::size_t colour = 0; colour < colours.size(); ++colour) {
+        cost += lab_gap(colours.at(colour), palette.at(static_cast<std::size_t>(to.at(colour))));
+    }
+    return cost;
+}
+
+// The cubes of an even size, renamed so that they wear a standard cube's scheme, when they
+// wear none as the colours were named.
+//
+// An even cube has no centres, so nothing pins a colour name to a side, and the cube is read
+// whatever the names are (nxn::validate takes the scheme from the corners as they are). A
+// naming with red and orange traded - two colours whose clusters sit a few Lab units apart in
+// a lamp's light, with the hue test unable to help when the white and yellow read orange
+// beside them - therefore makes a cube, and a complete scan, with every red sticker orange. But
+// a real cube's scheme has a handedness that exchanging two names reverses (see
+// nxn::standard_renamings), and the sides cannot be made into a cube of the right handedness
+// by any amount of turning. So a naming whose cubes wear no standard scheme is renamed by
+// the one of the 24 renamings that does make one which the stickers' measured colours support
+// best. Every one of them differs from any other in four colours or more, so it is the pair the
+// light brought together - red and orange - that is traded, and not a pair a cast could not
+// confuse.
+//
+// Nothing is done where a candidate already wears a standard scheme: that naming is one a
+// cube can have.
+struct SchemeRepair {
+    SchemeFix fix;
+    // The cubes that wear a standard scheme under the fix, renamed by it.
+    std::vector<nxn::NCube> candidates;
+};
+
+[[nodiscard]] std::optional<SchemeRepair> repaired_scheme(const std::vector<nxn::NCube>& candidates,
+                                                          const SessionColours& colours) {
+    std::vector<std::vector<Renaming>> options;
+    options.reserve(candidates.size());
+    for (const nxn::NCube& candidate : candidates) {
+        options.push_back(nxn::standard_renamings(candidate));
+        if (std::ranges::any_of(options.back(), keeps_names)) {
+            return std::nullopt;
+        }
+    }
+
+    // Every renaming that makes some candidate standard...
+    std::vector<Renaming> possible;
+    for (const std::vector<Renaming>& each : options) {
+        for (const Renaming& renaming : each) {
+            if (std::ranges::find(possible, renaming) == possible.end()) {
+                possible.push_back(renaming);
+            }
+        }
+    }
+    if (possible.empty()) {
+        return std::nullopt;
+    }
+    // ...and the one the measured colours fit best.
+    const SessionColours palette = palette_colours();
+    constexpr float kNoCost = std::numeric_limits<float>::max();
+    std::size_t best = 0;
+    float best_cost = kNoCost;
+    float runner_up_cost = kNoCost;
+    for (std::size_t i = 0; i < possible.size(); ++i) {
+        const float cost = palette_cost(colours, palette, possible.at(i));
+        if (cost < best_cost) {
+            runner_up_cost = best_cost;
+            best_cost = cost;
+            best = i;
+        } else if (cost < runner_up_cost) {
+            runner_up_cost = cost;
+        }
+    }
+
+    if (runner_up_cost == kNoCost) {
+        runner_up_cost = best_cost;
+    }
+    SchemeRepair repair;
+    repair.fix = SchemeFix{
+        .renamed_to = possible.at(best),
+        .cost = best_cost,
+        .runner_up_cost = runner_up_cost,
+    };
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+        // A cube that wears no standard scheme under the new names is no cube a person could
+        // have: it was a mirror image of one, which only the old names made.
+        if (std::ranges::find(options.at(i), possible.at(best)) != options.at(i).end()) {
+            repair.candidates.push_back(renamed(candidates.at(i), possible.at(best)));
+        }
+    }
+    return repair;
+}
+
+// Renames the cubes and the session's colours into a standard scheme where an even size's
+// naming has left them in another, and says so in the trace (see SchemeRepair).
+void rename_into_standard_scheme(std::vector<nxn::NCube>& candidates, SessionColours& colours,
+                                 AssemblyTrace& trace) {
+    if (candidates.empty()) {
+        return;
+    }
+    std::optional<SchemeRepair> repair = repaired_scheme(candidates, colours);
+    if (!repair.has_value()) {
+        return;
+    }
+    candidates = std::move(repair->candidates);
+    colours = renamed(colours, repair->fix.renamed_to);
+    trace.scheme_fix = repair->fix;
+}
+
 // The cube of any size that trading the names of the two closest-looking
 // centres makes, when any trade does: the 3x3's repair (see
 // assemble_with_closest_exchange) for a size the 3x3 assembly cannot read.
@@ -1551,10 +1711,15 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
     std::vector<nxn::NCube> candidates =
         nxn::assemble_all_scanned_sides(size, *sides, kMaxCandidates + 1);
     trace.candidates = candidates.size();
+    SessionColours colours = colours_of(named, faces);
+    // An odd size's centres pin the names, so a naming that is wrong makes no cube and is
+    // repaired below. An even size's cannot, and a wrong one makes a cube all the same.
+    if (size % 2 == 0) {
+        rename_into_standard_scheme(candidates, colours, trace);
+    }
     if (candidates.size() == 1) {
         trace.path = AssemblyPath::single_candidate;
-        out.result_n =
-            ScannedCubeN{.cube = candidates.front(), .colours = colours_of(named, faces)};
+        out.result_n = ScannedCubeN{.cube = candidates.front(), .colours = colours};
         return out;
     }
     if (candidates.size() > 1) {
@@ -1565,7 +1730,6 @@ using NamedFaces = std::array<std::vector<model::Facelet>, 6>;
             candidates.erase(candidates.begin() + static_cast<std::ptrdiff_t>(kMaxCandidates),
                              candidates.end());
         }
-        const SessionColours colours = colours_of(named, faces);
         CornerVotes votes = corner_votes(candidates, corners, colours);
         trace.corner_fits = std::move(votes.fits);
         trace.chosen = all_looked_at ? choose_by_corners(votes.misses) : std::nullopt;

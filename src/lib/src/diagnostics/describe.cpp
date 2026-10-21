@@ -265,6 +265,24 @@ Json to_json(const cube::vision::AssemblyTrace& trace) {
     } else {
         out.set("exchange", Json());
     }
+    if (trace.scheme_fix.has_value()) {
+        // Only the colours that changed name: {"red": "orange", "orange": "red"}.
+        Json renamed = Json::object();
+        const auto& to = trace.scheme_fix->renamed_to;
+        for (std::size_t colour = 0; colour < to.size(); ++colour) {
+            const auto from = static_cast<cube::solver::Color>(colour);
+            if (to.at(colour) != from) {
+                renamed.set(name_of(from), name_of(to.at(colour)));
+            }
+        }
+        Json fix = Json::object();
+        fix.set("renamed", std::move(renamed));
+        fix.set("cost", trace.scheme_fix->cost);
+        fix.set("runner_up_cost", trace.scheme_fix->runner_up_cost);
+        out.set("scheme_fix", std::move(fix));
+    } else {
+        out.set("scheme_fix", Json());
+    }
     out.set("error", optional_error(trace.error));
     return out;
 }
