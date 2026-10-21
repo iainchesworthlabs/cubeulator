@@ -27,10 +27,11 @@ on:
           The workflow uploads nothing to it.
         type: string
         default: ""
-  # Iteration only, removed before this merges: GitHub cannot dispatch a workflow
-  # that is not yet on the default branch, so a push to the work branch runs it.
+  # GitHub can dispatch a workflow only from the default branch (main), which a
+  # change to this build reaches last, so a push to a branch of the iOS work runs
+  # it. Branches with any other name do not cost a Mac.
   push:
-    branches: [feature/ios-device-build]
+    branches: ["feature/ios-**", "bugfix/ios-**"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
