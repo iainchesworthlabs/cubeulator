@@ -8,9 +8,10 @@ name: iOS device build
 #
 # With the five Apple secrets set (docs/ios-install.md) the app is signed with
 # the Apple Distribution certificate and an ad-hoc provisioning profile and
-# packed into an .ipa with an over-the-air install manifest.plist; with none of
-# them it is built unsigned, which proves the build and nothing else. A partial
-# set is an error, so that a forgotten secret is not a quietly unsigned build.
+# packed into an .ipa with an over-the-air install manifest.plist; with no
+# profile it is built unsigned, which proves the build and nothing else. A
+# profile without the certificate or the team is an error, so that a forgotten
+# secret is not a quietly unsigned build.
 #
 # The library leg of CI (ios-build) compiles only cube::lib, without Qt. This one
 # builds the whole app against Qt's static iOS kit, so it is where a missing
@@ -78,11 +79,13 @@ jobs:
           if [ "$set_count" -eq 5 ]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
             echo "All five Apple secrets are set: the build is signed."
-          elif [ "$set_count" -eq 0 ]; then
+          elif [ -z "$IOS_PROVISIONING_PROFILE_BASE64" ] && [ -z "$APPLE_PROVISIONING_PROFILE_NAME" ]; then
+            # The certificate can be set long before the profile exists (the
+            # profile needs the device and the App ID): that is a build, not a fault.
             echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Unsigned build::No Apple secret is set, so the app is built but not signed (docs/ios-install.md)."
+            echo "::notice title=Unsigned build::No provisioning profile is set, so the app is built but not signed. Not set:$missing. docs/ios-install.md."
           else
-            echo "::error title=iOS signing secrets incomplete::Repository secret(s) not set:$missing. Set all five to sign, or none to build unsigned. docs/ios-install.md."
+            echo "::error title=iOS signing secrets incomplete::Repository secret(s) not set:$missing. Set all five to sign, or the two profile secrets last. docs/ios-install.md."
             exit 1
           fi
 
@@ -170,6 +173,12 @@ jobs:
           security import "$RUNNER_TEMP/dist.p12" -k "$keychain" -P "$IOS_DIST_CERTIFICATE_PASSWORD" \
             -T /usr/bin/codesign -T /usr/bin/security
           rm -f "$RUNNER_TEMP/dist.p12"
+          # The certificate's issuer, Apple's G3 intermediate, so that the chain to
+          # Apple's root can be built (the runner image may not carry it).
+          curl -fsSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o "$RUNNER_TEMP/wwdr.cer"
+          openssl x509 -inform DER -in "$RUNNER_TEMP/wwdr.cer" -noout -subject | grep -q 'Apple Worldwide Developer Relations'
+          security import "$RUNNER_TEMP/wwdr.cer" -k "$keychain" -T /usr/bin/codesign
+          rm -f "$RUNNER_TEMP/wwdr.cer"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
           # shellcheck disable=SC2046  # the existing list is words without spaces
           security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
