@@ -38,18 +38,37 @@ jobs:
     steps:
       # fetch-depth: 0 is required for vcpkg's version resolution against the
       # deps/vcpkg submodule — see the equivalent comment in ci.yml.
+      #
+      # A merge-queue entry is not analysed at all (see the next step), so it does
+      # not check out either.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ github.event_name != 'merge_group' }}
         with:
           submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
-      # A change to documentation alone is not analysed. The job still runs and
-      # reports `Analyze (C++)`: a job skipped by `if` reports under the raw text
-      # of its name, which for a required check is no report at all.
+      # Two cases are not analysed, and in both the job still runs and reports
+      # `Analyze (C++)` as a success (a job skipped by `if` reports under the raw
+      # text of its name, which for a required check is no report at all):
+      #
+      # - a change to documentation alone (.github/actions/changed-code);
+      # - a merge-queue entry. Code scanning does not take results for a
+      #   gh-readonly-queue ref: the upload fails with "CodeQL job status was
+      #   configuration error", which turned the check red on the queue commit
+      #   that develop then fast-forwards to (run 39540846415, 2026-10-21) and
+      #   made tools/release/check_health.py say develop was not green. The pull
+      #   request has been analysed already; the push to develop is analysed
+      #   after the merge.
       - name: Does anything but documentation change?
         id: changed
+        if: ${{ github.event_name != 'merge_group' }}
         uses: $/.github/actions/changed-code
+
+      - name: Nothing to analyse in a merge-queue entry
+        if: ${{ github.event_name == 'merge_group' }}
+        shell: bash
+        run: echo "the pull request was analysed; a queue entry is not uploaded"
 
 
       # Keyed per vcpkg triplet (x64-linux), shared with ci.yml's Linux legs,
