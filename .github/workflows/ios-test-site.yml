@@ -1,0 +1,33 @@
+name: iOS test site
+
+# Publishes the documentation site with the iPhone test build in it, from a work
+# branch, without waiting for a release: the same site as docs.yml, built from
+# `main` (so the released documentation stays what it is) plus the folder of the
+# test build. docs/ios-install.md has the whole procedure and the one setting the
+# maintainer must change for it.
+#
+# It runs when the trigger file changes on a feature/ios-* branch (or by hand once
+# this workflow is on `main`). Pages serves only a deployment from a branch the
+# github-pages environment allows, so until the maintainer adds `feature/ios-*` to
+# Settings > Environments > github-pages > Deployment branches, the deploy job
+# of a run is refused (the build jobs still run).
+
+on:
+  push:
+    branches: ["feature/ios-**"]
+    paths: [".github/ios-test-site.trigger"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    uses: ./.github/workflows/docs.yml
+    with:
+      ref: main
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write

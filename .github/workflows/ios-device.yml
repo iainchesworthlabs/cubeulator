@@ -23,8 +23,8 @@ on:
       release_tag:
         description: >-
           The GitHub release the .ipa and manifest.plist will be uploaded to by
-          hand, which the manifest's download address names (default: v<version>; a
-          build started by a push names `ios-test`).
+          hand, which the manifest's download address names (default: the test folder
+          of the documentation site when IOS_TEST_PATH is set, else v<version>).
           The workflow uploads nothing to it.
         type: string
         default: ""
@@ -270,21 +270,27 @@ jobs:
           FULL: ${{ steps.version.outputs.full }}
           BASE: ${{ steps.version.outputs.base }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          TEST_PATH: ${{ vars.IOS_TEST_PATH }}
         run: |
           set -euo pipefail
           ipa="Cubeulator-$FULL-ios-adhoc.ipa"
-          # A push (no input) is a test build: its manifest names the release `ios-test`,
-          # which docs/ios-install.md has the maintainer make once and reuse.
-          if [ -n "$RELEASE_TAG" ]; then tag="$RELEASE_TAG"
-          elif [ "$GITHUB_EVENT_NAME" = push ]; then tag=ios-test
-          else tag="v$FULL"; fi
+          # Where the .ipa will be served from. A test build is served by the
+          # documentation site from an unlisted folder (the repository variable
+          # IOS_TEST_PATH, docs/ios-install.md); a release names its own asset.
+          if [ -n "$TEST_PATH" ] && [ -z "$RELEASE_TAG" ]; then
+            where=(--base-url "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/$TEST_PATH")
+          else
+            where=(--repo "$GITHUB_REPOSITORY" --tag "${RELEASE_TAG:-v$FULL}")
+          fi
           rm -rf stage ios-dist && mkdir -p stage/Payload ios-dist
           ditto "$APP" stage/Payload/Cubeulator.app
           (cd stage && ditto -c -k --keepParent Payload "../ios-dist/$ipa")
           bash packaging/ios/verify_ipa.sh "ios-dist/$ipa" --version "$BASE" --signed
           bash tools/release/make_ios_manifest.sh --out ios-dist/manifest.plist --ipa "$ipa" \
-            --repo "$GITHUB_REPOSITORY" --tag "$tag" --version "$BASE" --bundle-id "$BUNDLE_ID"
+            "${where[@]}" --version "$BASE" --bundle-id "$BUNDLE_ID"
           plutil -lint ios-dist/manifest.plist
+          # The page that makes the install link, for when the documentation site serves it.
+          cp packaging/ios/test-install.html ios-dist/index.html
           ls -l ios-dist
 
       - name: Upload the IPA and its manifest
@@ -294,6 +300,8 @@ jobs:
           name: cubeulator-ios-adhoc
           path: ios-dist/*
           if-no-files-found: error
+          # The documentation site carries this artifact while IOS_TEST_RUN_ID names its
+          # run (docs.yml), so this is also how long the test build can be published.
           retention-days: 14
 
       # Whatever happened above, the certificate and the profile do not stay on the

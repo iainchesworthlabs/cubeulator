@@ -110,8 +110,8 @@ workflow is on `main`.
 
 ## Install from a Windows PC
 
-You do not need a Mac. The phone installs the app from a link in Safari, over the
-air; all the PC does is carry two files to an address on the web.
+You do not need a Mac. The phone installs the app from a page in Safari, over the air;
+all the PC does is get the build onto a web address.
 
 Safari installs an ad-hoc app from a link of the form
 
@@ -119,52 +119,79 @@ Safari installs an ad-hoc app from a link of the form
 itms-services://?action=download-manifest&url=<https URL of manifest.plist>
 ```
 
-The manifest names the app and where its `.ipa` is. Both must be on an **https**
-address the phone can reach without signing in. A GitHub release's files are (the
-repository is public; the `.ipa` is useless to anyone else, because it installs
-only on the devices in the profile). One release, `ios-test`, is made once and reused
-for every test build:
+The manifest names the app and where its `.ipa` is, and both must be on a plain **https**
+address (no redirect, no sign-in) that the phone can reach. A release's files are served
+through a redirect, so the build is served by the project's own GitHub Pages site
+instead, from a folder that nothing links to.
 
-```sh
-# Git Bash or PowerShell, in a clone of the repository; <run> is the workflow run's id
-gh run download <run> --repo iainchesworthlabs/cubeulator -n cubeulator-ios-adhoc -D ios-dist
-gh release create ios-test --repo iainchesworthlabs/cubeulator --prerelease \
-    --title "iOS test build" --notes "Ad-hoc build for registered devices. Not for anyone else." \
-    ios-dist/*.ipa ios-dist/manifest.plist
-# next time:  gh release upload ios-test ios-dist/* --clobber --repo iainchesworthlabs/cubeulator
+!!! warning "Who can download it"
+    The site and the repository are public. The folder has a random name 32 or more
+    characters long, is linked from nowhere, is left out of the site map and asks search
+    engines to leave it alone, but **anyone who has its address can download the file**,
+    and the `.ipa` holds the provisioning profile (the team ID and the phone's UDID). It
+    installs only on the registered phone, and the app is open source anyway; even so,
+    do not pass the address on, and take the files down after the install
+    ([below](#take-it-down)).
+
+### What happens
+
+1. The workflow signs the build and uploads the artifact `cubeulator-ios-adhoc`: the
+   `.ipa`, a `manifest.plist` that names the folder, and an `index.html` with an
+   **Install** button that makes the link.
+2. Two repository variables name what the site carries: `IOS_TEST_PATH` (the random
+   folder) and `IOS_TEST_RUN_ID` (the run whose artifact to publish). While both are
+   set, **every** publish of the site, the release's own included, carries the folder,
+   because a Pages deployment replaces the whole site and would otherwise wipe it.
+3. `.github/workflows/ios-test-site.yml` publishes the site: the documentation and the
+   web app **as they are on `main`** (so the released site is not replaced by unreleased
+   pages) plus the folder. It runs when `.github/ios-test-site.trigger` is changed on a
+   `feature/ios-*` branch. Nothing is committed to the repository.
+
+### The one setting to change
+
+GitHub Pages deploys only from the branches the `github-pages` environment allows, and
+that is `main` alone. To publish before the release, add the work branches once:
+*Settings*, *Environments*, *github-pages*, *Deployment branches and tags*, **Add
+deployment branch or tag rule**, ref type *Branch*, name pattern `feature/ios-*`. Only
+the repository owner can change this. Remove the rule again when the iPhone work is
+merged to `main`; the workflow then runs from there.
+
+### On the phone
+
+Open this address in **Safari** on the phone (send it to yourself in a message or an
+e-mail; the maintainer is told the real one, which is not written here):
+
+```text
+https://iainchesworthlabs.github.io/cubeulator/<the random folder>/
 ```
 
-Then on the phone:
-
-1. Put this line in an e-mail to yourself (or a message, or a note) and open it on the
-   phone:
-
-    ```text
-    itms-services://?action=download-manifest&url=https://github.com/iainchesworthlabs/cubeulator/releases/download/ios-test/manifest.plist
-    ```
-
-    Tap the link. The documentation site's `install-ios.html` page makes the same link
-    with a button (`?tag=ios-test` names the release), once the site has been
-    published from `main`; the e-mail needs nothing published.
-2. iOS asks whether to install Cubeulator. Confirm; the icon appears on the Home Screen
-   and fills in as it downloads.
-3. If iOS says the developer is **untrusted**, go to *Settings, General, VPN & Device
+1. Tap **Install on iPhone** and confirm iOS's question. The icon appears on the Home
+   Screen and fills in as it downloads.
+2. If iOS says the developer is **untrusted**, go to *Settings, General, VPN & Device
    Management*, choose the developer app and tap **Trust**. A distribution certificate
    normally does not need this.
-4. The first time the app opens the camera, iOS asks; allow it.
+3. The first time the app opens the camera, iOS asks; allow it.
 
-An update is the same again with a newer build: iOS replaces the app and keeps its data.
+An update is the same again after a new build and a new publish: iOS replaces the app and
+keeps its data.
 
-Other routes exist, and none is needed: Apple Configurator and Xcode's *Devices*
-window install an `.ipa` over a cable but only run on a Mac; Windows tools such as
-Sideloadly install by signing the app again with an Apple ID, which makes the ad-hoc
-profile pointless.
+### Take it down
 
-!!! note "If the link does nothing, or the download fails"
-    GitHub sends a release file through a redirect, and iOS is fussier about the
-    manifest than a browser is. If the link opens but the install never starts, the
-    manifest (not the signing) is the first suspect: say so, and the files can be put
-    at a plainer address.
+When the install is done:
+
+```sh
+gh variable delete IOS_TEST_RUN_ID --repo iainchesworthlabs/cubeulator
+```
+
+and publish the site again (change `.github/ios-test-site.trigger` on a `feature/ios-*`
+branch, or let the next release's publish do it): the folder is gone. Even if nobody does,
+the artifact expires **14 days** after the build, and a publish after that date leaves the
+folder out with a warning. Set a reminder for the day after the install. The profile
+itself lasts until 2027-07-16 ([below](#when-the-signing-runs-out)).
+
+Other routes exist and none is needed: Apple Configurator and Xcode's *Devices* window
+install an `.ipa` over a cable but only run on a Mac, and Windows tools such as Sideloadly
+install by signing the app again with an Apple ID, which makes the ad-hoc profile pointless.
 
 ## Add a device
 
@@ -198,7 +225,7 @@ window. Supporting the iPad properly is a change to the build's device family
 
 | What happens | Likely cause |
 | --- | --- |
-| Tapping the link does nothing | Not in Safari (an e-mail app's own viewer, or a link in another browser). Open it in Safari |
+| Tapping the button does nothing | Not in Safari (an e-mail app's own viewer, or another browser). Open the address in Safari |
 | "Unable to install", or the icon is dimmed and stays on *Waiting* | The phone is not in the profile this build was signed with: [add it](#add-a-device) and build again |
 | iOS asks to trust the developer | Step 4 of [Install](#install) |
 | It opened before and now closes at once | The profile expired ([above](#when-the-signing-runs-out)) |

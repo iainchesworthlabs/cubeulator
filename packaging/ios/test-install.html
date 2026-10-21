@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="color-scheme" content="light dark">
+<title>Cubeulator test build</title>
+<!--
+  The install page of the iPhone test build (docs/ios-install.md). The docs workflow
+  copies it beside the .ipa and manifest.plist under an unguessable folder of the
+  documentation site. It is not linked from anywhere and asks search engines to
+  leave it alone. The link it makes names the manifest next to it, so the page works
+  wherever the folder is.
+-->
+<style>
+  :root { --page: #f3f2f2; --ink: #201e1d; --muted: #5e5b5a; --accent: #b82009; --accent-ink: #ffffff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --page: #1a1918; --ink: #f3f2f2; --muted: #b0acab; --accent: #ff7359; --accent-ink: #1a1918; }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--page);
+         color: var(--ink); max-width: 32rem; margin: 3rem auto; padding: 0 1.25rem; text-align: center; }
+  h1 { font-size: 1.35rem; }
+  p { line-height: 1.5; }
+  a.install { display: inline-block; margin-top: 1.5rem; padding: 0.85rem 1.75rem; background: var(--accent);
+              color: var(--accent-ink); text-decoration: none; border-radius: 0.6rem; font-weight: 600; font-size: 1.05rem; }
+  .muted { color: var(--muted); font-size: 0.9rem; margin-top: 2rem; }
+</style>
+</head>
+<body>
+  <h1>Cubeulator test build</h1>
+  <p>For a registered iPhone only. Open this page <strong>in Safari</strong> on the phone and tap the button.</p>
+  <a id="install" class="install" href="#">Install on iPhone</a>
+  <p class="muted">
+    It installs only on a device listed in its provisioning profile. If iOS says the
+    developer is untrusted, trust it in <strong>Settings &rarr; General &rarr; VPN &amp;
+    Device Management</strong>. Anyone who has this address can download the file, so do
+    not pass it on; it is taken down after the install.
+  </p>
+  <script>
+    const manifest = new URL("manifest.plist", window.location.href).href;
+    document.getElementById("install").href =
+      "itms-services://?action=download-manifest&url=" + encodeURIComponent(manifest);
+  </script>
+</body>
+</html>
