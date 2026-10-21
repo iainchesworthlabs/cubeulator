@@ -72,7 +72,8 @@ echo "    Info.plist: identifier, executable, version, icon, camera text, launch
 for required in "$app/$executable" "$app/Assets.car"; do
   [ -e "$required" ] || fail "missing ${required#"$app"/}"
 done
-echo "    executable, asset catalogue"
+ls -d "$app"/*.lproj > /dev/null 2>&1 || fail "no <language>.lproj folder: the camera text is not translated"
+echo "    executable, asset catalogue, translations"
 
 archs="$(lipo -archs "$app/$executable" 2>/dev/null || true)"
 [ "$archs" = "arm64" ] || fail "the executable is for '$archs', expected arm64"
