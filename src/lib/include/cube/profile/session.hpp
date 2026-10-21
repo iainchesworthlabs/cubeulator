@@ -9,8 +9,11 @@
 // that decides whether it does:
 //
 //   1. the command line:  --profile  /  --no-profile  (the last one wins)
+//                         --profile-wait  starts it and also waits for a
+//                         profiler to connect before the application goes on
 //   2. the environment:   CUBEULATOR_PROFILE = 1 | true | on | yes   (start)
 //                                              0 | false | off | no  (do not)
+//                                              wait   (start, and wait)
 //   3. the build's default: on in a Debug build, off in every other (the
 //      CUBEULATOR_TRACY_AUTOSTART CMake option; docs/profiling.md)
 //
@@ -21,7 +24,9 @@
 // The decision is a pure function so it is unit-tested without starting
 // anything; Session is the RAII object main() holds for the process's life.
 
+#include <chrono>
 #include <cstdint>
+#include <functional>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -34,6 +39,11 @@ enum class switch_source : std::uint8_t { build_default, environment, command_li
 struct startup_decision {
     bool enabled = false;
     switch_source source = switch_source::build_default;
+    // Start, and then hold the application until a profiler has connected
+    // (Session::wait_for_profiler): Tracy records from the moment a profiler
+    // connects, so what happens before - the start-up zones - is lost to a
+    // profiler that is attached by hand a second after launch.
+    bool wait = false;
 
     friend bool operator==(const startup_decision&, const startup_decision&) = default;
 };
@@ -42,6 +52,7 @@ struct startup_decision {
 inline constexpr const char* environment_variable = "CUBEULATOR_PROFILE";
 inline constexpr std::string_view enable_flag = "--profile";
 inline constexpr std::string_view disable_flag = "--no-profile";
+inline constexpr std::string_view wait_flag = "--profile-wait";
 
 // What the build was configured to do when nobody says: true in a Debug
 // build (CUBEULATOR_TRACY_AUTOSTART=AUTO), or whatever the option forced.
@@ -53,6 +64,15 @@ inline constexpr std::string_view disable_flag = "--no-profile";
 // a profiler.
 [[nodiscard]] startup_decision decide_startup(bool default_on, const char* environment,
                                               std::span<const std::string_view> arguments) noexcept;
+
+// Polls `ready` every `poll` until it is true or `timeout` has passed; returns
+// whether it was. The waiting in wait_for_profiler, separated so that a test
+// can drive it with a clock of its own choosing.
+struct wait_policy {
+    std::chrono::milliseconds timeout;
+    std::chrono::milliseconds poll;
+};
+[[nodiscard]] bool wait_until(const std::function<bool()>& ready, const wait_policy& policy);
 
 // argv[1..] as the views decide_startup takes. The environment is read by the
 // caller (Qt's qgetenv in the application, std::getenv in a test binary), so
@@ -76,6 +96,11 @@ public:
     // The profiler is running (decided to, and this build has one to start).
     [[nodiscard]] bool running() const noexcept { return running_; }
     [[nodiscard]] const startup_decision& decision() const noexcept { return decision_; }
+
+    // Blocks until a profiler has connected, or `timeout` has passed so that a
+    // user is never left with a window that does not open. Returns whether one
+    // connected; false at once if the profiler is not running.
+    [[nodiscard]] bool wait_for_profiler(std::chrono::milliseconds timeout) const;
 
 private:
     startup_decision decision_;

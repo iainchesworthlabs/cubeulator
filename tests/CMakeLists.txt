@@ -50,6 +50,7 @@ add_test(NAME platform_fragments_satisfy_contract
 add_executable(cube_unit_tests
     unit/error_test.cpp
     unit/version_test.cpp
+    unit/graphics_backend_choice_test.cpp
     unit/profiling_test.cpp
     unit/profile_recorder_test.cpp
     unit/color_resolution_test.cpp
@@ -59,6 +60,7 @@ add_executable(cube_unit_tests
     unit/direct_scan_test.cpp
     unit/direct_scan_nxn_test.cpp
     unit/sticker_colour_test.cpp
+    unit/prepared_frame_test.cpp
     unit/read_set_test.cpp
     unit/corner_view_test.cpp
     unit/corner_view_nxn_test.cpp
@@ -542,6 +544,7 @@ endif()
 if(CUBEULATOR_BUILD_APP AND TARGET cube_app_desktop)
     add_executable(cube_desktop_tests
         qt_test_main.cpp
+        unit/graphics_backend_guard_test.cpp
         unit/keep_awake_test.cpp
         unit/window_geometry_test.cpp)
 

@@ -37,10 +37,12 @@ set(CUBEULATOR_PLATFORM_NOTICES_DIR "share/doc/cubeulator")
 
 set(CUBEULATOR_PLATFORM_SOURCES
     platform/linux/camera_linux.cpp
+    platform/linux/graphics_probe_linux.cpp
     platform/linux/paths_linux.cpp
     platform/linux/platform_info_linux.cpp
     platform/posix/capture_thread_scope_posix.cpp
-    platform/posix/crash_handler_posix.cpp)
+    platform/posix/crash_handler_posix.cpp
+    platform/detail/vulkan_probe.cpp)
 
 # The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
 set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_none.cpp)
@@ -50,7 +52,8 @@ set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_
 set(CUBEULATOR_PLATFORM_PROFILING_VULKAN ON)
 set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
 
-set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "")
+# dlopen, for the Vulkan probe (graphics_probe_linux.cpp).
+set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "${CMAKE_DL_LIBS}")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")
 set(CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS "")
 

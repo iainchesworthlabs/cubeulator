@@ -282,6 +282,11 @@ inline constexpr TimeBudget kAdvancedSolveTime = {30.0};
 inline constexpr TimeBudget kReadTime360 = {2.0};
 inline constexpr TimeBudget kReadTime1080 = {4.0};
 inline constexpr TimeBudget kEmptyReadTime360 = {2.0};
+// The glare look's outlines of a 640 x 360 working frame: 0.26 to 0.28 since
+// its channels were walked by row pointers, 0.51 to 0.52 when they were read a
+// pixel at a time through Mat::at (2.2 ms against this machine's 4.4 ms of
+// calibration), which this budget is under.
+inline constexpr TimeBudget kGlareLookTime360 = {0.45};
 // 0.08 to 0.10 each: a hundred reads fed to SideScan::add, and one scanned().
 inline constexpr TimeBudget kScanAddTime = {1.0};
 inline constexpr TimeBudget kScannedTime = {1.0};

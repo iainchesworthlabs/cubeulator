@@ -415,6 +415,8 @@ if(CUBEULATOR_BUILD_APP)
         desktop/desktop_integration.hpp
         desktop/desktop_integration.cpp
         desktop/keep_awake.hpp
+        desktop/graphics_backend.hpp
+        desktop/graphics_backend.cpp
         desktop/keep_awake.cpp
         desktop/window_geometry.hpp
         desktop/window_geometry.cpp

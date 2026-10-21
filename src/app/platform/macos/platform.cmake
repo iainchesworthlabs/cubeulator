@@ -33,7 +33,8 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/macos/paths_macos.cpp
     platform/macos/platform_info_macos.cpp
     platform/posix/capture_thread_scope_posix.cpp
-    platform/posix/crash_handler_posix.cpp)
+    platform/posix/crash_handler_posix.cpp
+    platform/posix/graphics_probe_none.cpp)
 
 # The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
 set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/posix/tracy_gpu_direct3d_none.cpp)

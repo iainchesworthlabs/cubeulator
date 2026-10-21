@@ -41,8 +41,10 @@ set(CUBEULATOR_PLATFORM_SOURCES
     platform/windows/camera_windows.cpp
     platform/windows/capture_thread_scope_windows.cpp
     platform/windows/crash_handler_windows.cpp
+    platform/windows/graphics_probe_windows.cpp
     platform/windows/paths_windows.cpp
-    platform/windows/platform_info_windows.cpp)
+    platform/windows/platform_info_windows.cpp
+    platform/detail/vulkan_probe.cpp)
 
 # The Direct3D 11 Tracy GPU backend, built into cube::lib when Tracy is on.
 set(CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES platform/windows/tracy_gpu_d3d11_windows.cpp)
