@@ -46,7 +46,7 @@ function(_cube_notices_common_args out app_target)
         list(APPEND port_dirs "${d}")
     endforeach()
     list(APPEND port_dirs
-        "${PROJECT_SOURCE_DIR}/deps/vcpkg/ports")
+        "${CUBEULATOR_VCPKG_ROOT_DIR}/ports")
 
     set(qt_prefix "")
     if(DEFINED Qt6_DIR)

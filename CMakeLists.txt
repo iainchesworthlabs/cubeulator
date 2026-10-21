@@ -2,36 +2,16 @@
 cmake_minimum_required(VERSION 3.28...4.4)
 
 # ---------------------------------------------------------------------------
-# Vendored vcpkg (git submodule at deps/vcpkg).
+# vcpkg (pinned by the git submodule at deps/vcpkg).
 #
-# The dependency provider is pinned by the submodule so builds are fully
-# reproducible without a machine-wide vcpkg or a VCPKG_ROOT env var. The
-# CMakePresets point CMAKE_TOOLCHAIN_FILE at deps/vcpkg/scripts/buildsystems.
-# If the submodule was not checked out, initialise it here so a fresh clone
-# configures without extra steps.
+# The submodule pins the dependency provider so builds are reproducible
+# without a machine-wide vcpkg or a VCPKG_ROOT env var. Which checkout of that
+# commit a configure uses - the submodule's own, or one shared between your
+# checkouts through ICL_VCPKG_STORE - is decided in cmake/VcpkgRoot.cmake,
+# which sets CMAKE_TOOLCHAIN_FILE. The presets deliberately do not.
 # ---------------------------------------------------------------------------
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/vcpkg/scripts/buildsystems/vcpkg.cmake")
-    find_package(Git QUIET)
-    if(GIT_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-        message(STATUS "Initialising vendored vcpkg submodule (deps/vcpkg)")
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" submodule update --init --depth 1 -- deps/vcpkg
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            RESULT_VARIABLE CUBEULATOR_SUBMODULE_RESULT)
-        if(NOT CUBEULATOR_SUBMODULE_RESULT EQUAL 0)
-            message(FATAL_ERROR
-                "Failed to initialise the vcpkg submodule. Run:\n"
-                "  git submodule update --init --depth 1 deps/vcpkg")
-        endif()
-    endif()
-endif()
-
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/vcpkg/scripts/buildsystems/vcpkg.cmake")
-    message(FATAL_ERROR
-        "Vendored vcpkg not found at deps/vcpkg.\n"
-        "Clone with submodules (git clone --recurse-submodules ...) or run:\n"
-        "  git submodule update --init --depth 1 deps/vcpkg")
-endif()
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/VcpkgRoot.cmake")
+cubeulator_resolve_vcpkg("${CMAKE_CURRENT_SOURCE_DIR}")
 
 # ---------------------------------------------------------------------------
 # Select vcpkg manifest features BEFORE project() (the vcpkg toolchain reads
