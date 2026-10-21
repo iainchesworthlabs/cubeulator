@@ -542,3 +542,132 @@ TEST_CASE("sticker colours are named at any size, exactly N^2 of each", "[vision
         }
     }
 }
+
+namespace {
+
+// The six colours of the cube in the recorded 4x4 sessions of the evening of 2026-10-17, as
+// the last of them measured the six clusters under the lamp: float Lab.
+cv::Vec3f evening_lamp_lab(Color colour) {
+    switch (colour) {
+        case Color::White:
+            return {63.0F, 24.2F, 24.3F};
+        case Color::Yellow:
+            return {59.5F, 22.1F, 54.8F};
+        case Color::Red:
+            return {31.0F, 52.8F, 37.6F};
+        case Color::Orange:
+            return {42.8F, 58.1F, 47.4F};
+        case Color::Green:
+            return {18.8F, -6.2F, 16.0F};
+        case Color::Blue:
+            return {7.8F, 2.1F, -6.7F};
+    }
+    return {};
+}
+
+float linear_light(float encoded) {
+    return encoded <= 0.04045F ? encoded / 12.92F : std::pow((encoded + 0.055F) / 1.055F, 2.4F);
+}
+
+float encoded_light(float linear) {
+    const float v = std::clamp(linear, 0.0F, 1.0F);
+    return v <= 0.0031308F ? v * 12.92F : (1.055F * std::pow(v, 1.0F / 2.4F)) - 0.055F;
+}
+
+// That lamp's cube, lit a little differently: a gain on the red, the green and the blue in
+// linear light.
+Drawing evening_lamp_drawing(const std::array<float, 3>& rgb_gain) {
+    Drawing drawing;
+    drawing.paint = [rgb_gain](Color colour) {
+        const cv::Mat3f lab(1, 1, evening_lamp_lab(colour));
+        cv::Mat3f bgr;
+        cv::cvtColor(lab, bgr, cv::COLOR_Lab2BGR);
+        const cv::Vec3f value = bgr(0, 0);
+        std::array<double, 3> lit{};
+        for (int channel = 0; channel < 3; ++channel) {
+            // OpenCV's channels are blue, green, red; the gain is given red first.
+            const float gain = rgb_gain.at(static_cast<std::size_t>(2 - channel));
+            lit.at(static_cast<std::size_t>(channel)) =
+                255.0 * static_cast<double>(encoded_light(linear_light(value(channel)) * gain));
+        }
+        return cv::Scalar(lit.at(0), lit.at(1), lit.at(2));
+    };
+    return drawing;
+}
+
+// How the scan renamed the colours of its cube to put them in a standard scheme, if it did.
+std::optional<cube::vision::SchemeFix> scheme_fix_of(const SideScan& scan) {
+    const cube::vision::ScanDiagnosis diagnosis = scan.diagnose();
+    return cube::test::must_have(diagnosis.assembly).scheme_fix;
+}
+
+// The renaming that exchanges red and orange and keeps every other name.
+std::array<Color, 6> red_and_orange_exchanged() {
+    std::array<Color, 6> to{};
+    for (std::size_t colour = 0; colour < to.size(); ++colour) {
+        to.at(colour) = static_cast<Color>(colour);
+    }
+    to.at(static_cast<std::size_t>(Color::Red)) = Color::Orange;
+    to.at(static_cast<std::size_t>(Color::Orange)) = Color::Red;
+    return to;
+}
+
+}  // namespace
+
+TEST_CASE(
+    "an even size is read with red and orange the right way round when the palette would "
+    "trade them",
+    "[vision][nxn]") {
+    // The cube of the recorded 4x4 sessions, lit with less green than it was. Its red and its
+    // orange are a few Lab units from trading names in the palette's eyes (the margin over those
+    // sessions fell from 24 to 2 through the evening, and sessions replayed with less green
+    // came out with every red sticker orange), the white and yellow read orange by hue and so
+    // leave the naming nothing to go on, and an even size has no centres to catch the trade.
+    // What does is the cube itself: the trade makes a mirror image of the cube in the hand.
+    const Drawing lamp = evening_lamp_drawing({1.0F, 0.65F, 1.0F});
+    std::size_t renamed = 0;
+    std::size_t scans = 0;
+    for (const int size : {4, 6}) {
+        for (unsigned seed = 1; seed <= 6; ++seed) {
+            CAPTURE(size, seed);
+            const NCube cube =
+                cube::nxn::random_scramble({.size = size, .seed = 200 + seed, .moves = 30 * size});
+            SideScan scan(size);
+            show_cube(scan, cube, seed, lamp, 0.6F);
+            const auto made = scan.scanned_n();
+            REQUIRE(made.has_value());
+            CHECK(is_cube(made->cube, cube));
+            ++scans;
+            if (const auto fix = scheme_fix_of(scan); fix.has_value()) {
+                ++renamed;
+                // Red and orange traded, and no other colour touched...
+                CHECK(fix->renamed_to == red_and_orange_exchanged());
+                // ...by a choice with room to spare: the next best renaming that makes a
+                // standard scheme costs 35 Lab more here, where the call between red and
+                // orange alone was a margin of about 1.
+                CHECK(fix->runner_up_cost - fix->cost > 15.0F);
+            }
+        }
+    }
+    // The case means what it says only if the naming did trade them, and it was put right.
+    WARN("renamed " << renamed << " of " << scans);
+    CHECK(renamed > 0);
+}
+
+TEST_CASE("a scan whose naming already makes a standard scheme is not renamed", "[vision][nxn]") {
+    // In even light, in the lamp as it was recorded, and at odd sizes (whose centres pin the
+    // names, so the naming is repaired by trading them) nothing is changed.
+    for (const int size : {4, 5, 6}) {
+        for (const Drawing& drawing : {even_light(), evening_lamp_drawing({1.0F, 1.0F, 1.0F})}) {
+            CAPTURE(size);
+            const NCube cube =
+                cube::nxn::random_scramble({.size = size, .seed = 300U, .moves = 30 * size});
+            SideScan scan(size);
+            show_cube(scan, cube, 5U, drawing, 0.6F);
+            const auto made = scan.scanned_n();
+            REQUIRE(made.has_value());
+            CHECK(is_cube(made->cube, cube));
+            CHECK_FALSE(scheme_fix_of(scan).has_value());
+        }
+    }
+}

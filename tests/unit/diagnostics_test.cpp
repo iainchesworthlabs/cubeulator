@@ -565,7 +565,28 @@ TEST_CASE("an assembly trace says which path was taken and why it failed", "[dia
           R"("chosen":null,"settling_corner":null,"direct_error":"invalid_cube_state",)"
           R"("exchange":{"first_side":2,)"
           R"("second_side":5,"first_name":"red","second_name":"orange","centre_distance":9.5},)"
-          R"("error":null})");
+          R"("scheme_fix":null,"error":null})");
+
+    // A cube of an even size renamed into a standard scheme says which colours changed.
+    cube::vision::AssemblyTrace renamed;
+    renamed.path = cube::vision::AssemblyPath::single_candidate;
+    renamed.candidates = 1;
+    cube::vision::SchemeFix fix;
+    for (std::size_t colour = 0; colour < fix.renamed_to.size(); ++colour) {
+        fix.renamed_to.at(colour) = static_cast<cube::solver::Color>(colour);
+    }
+    fix.renamed_to.at(static_cast<std::size_t>(cube::solver::Color::Red)) =
+        cube::solver::Color::Orange;
+    fix.renamed_to.at(static_cast<std::size_t>(cube::solver::Color::Orange)) =
+        cube::solver::Color::Red;
+    fix.cost = 255.5F;
+    fix.runner_up_cost = 301.25F;
+    renamed.scheme_fix = fix;
+    const std::string renamed_line = cube::diagnostics::to_json(renamed).dump();
+    CHECK(is_json(renamed_line));
+    CHECK_THAT(renamed_line,
+               ContainsSubstring(R"("scheme_fix":{"renamed":{"orange":"red","red":"orange"},)"
+                                 R"("cost":255.5,"runner_up_cost":301.25})"));
 
     cube::vision::AssemblyTrace ambiguous;
     ambiguous.path = cube::vision::AssemblyPath::ambiguous;

@@ -174,4 +174,20 @@ struct ScrambleSpec {
 // [kMinSize, kMaxSize] or the stickers are not that many colours.
 [[nodiscard]] Result<std::array<Color, 6>> scheme_of(int size, std::span<const Color> facelets);
 
+// The ways of renaming the colours of `cube` that leave it wearing the scheme of a standard
+// cube: the six faces showing the colours canonical_color gives them, as a cube held some way
+// up. A real cube's scheme has a handedness (look at a corner where white, green and red meet and
+// go round it clockwise: the same way on every standard cube, and the other way on its mirror
+// image), and exchanging two colour names turns a scheme into its mirror image. So a cube with
+// red and orange traded is a cube validate() accepts - an even size has no centres to pin the
+// names, and a colour scheme is read off the corners as they are - and this is what tells it
+// apart: it wears no standard scheme, and the renamings that would make it wear one are few.
+//
+// There are 24, one for each way of holding the cube, each a map from a colour (by its number) to
+// its new name. They differ from one another in at least four colours, so whatever else says
+// which colour is which - what the stickers measured - picks the right one with room to spare.
+// The renaming that changes nothing is among them exactly when the cube wears such a scheme
+// already. Empty when the cube has no scheme to read (scheme_of fails).
+[[nodiscard]] std::vector<std::array<Color, 6>> standard_renamings(const NCube& cube);
+
 }  // namespace cube::nxn

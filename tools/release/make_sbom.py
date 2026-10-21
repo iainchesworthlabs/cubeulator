@@ -19,7 +19,7 @@ cannot disagree):
 
 What it says:
 
-  * one SPDX package per release file (the .exe, .dmg, .deb, .rpm and the web .zip), with its
+  * one SPDX package per release file (the .exe, .dmg, .deb, .rpm, the iOS .ipa and the web .zip), with its
     file name, its SHA-256 and SHA-512, and where it will be downloaded from;
   * one package per component that ships in it, with version, the licence it
     declares and the one it is distributed under, copyright and homepage;
@@ -49,7 +49,7 @@ from pathlib import Path
 SPDX_VERSION = "SPDX-2.3"
 
 # Which inventory a release file belongs to.
-PLATFORM_OF_SUFFIX = {".exe": "windows", ".dmg": "macos", ".deb": "linux", ".rpm": "linux", ".zip": "web"}
+PLATFORM_OF_SUFFIX = {".exe": "windows", ".dmg": "macos", ".deb": "linux", ".rpm": "linux", ".ipa": "ios", ".zip": "web"}
 
 _ID_SANITISE_RE = re.compile(r"[^A-Za-z0-9.\-]+")
 _LICENSE_TOKEN_RE = re.compile(r"[A-Za-z0-9.+\-]+")
@@ -203,7 +203,7 @@ def build(
             )
 
     if not describes:
-        raise SbomError("none of the files is a package this tool knows (.exe, .dmg, .deb, .rpm, .zip)")
+        raise SbomError("none of the files is a package this tool knows (.exe, .dmg, .deb, .rpm, .ipa, .zip)")
 
     # A namespace that is unique to this content, as SPDX asks.
     digest = hashlib.sha256(

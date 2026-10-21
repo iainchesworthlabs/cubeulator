@@ -141,6 +141,7 @@ lightness floor: `unknown`), `neutral_white`, `warm_cast_white` or `hue_band`.
 | `settling_corner` | When `path` is `ambiguous`: the three centre colours of the corner whose view would tell the most of the cubes still possible apart - what the scan screen asks the person to show. `null` otherwise. |
 | `direct_error` | Why assembling the naming as it stood failed, when it did. |
 | `exchange` | The pair traded when `path` is `names_exchanged`: `first_side`, `second_side` (indices into `sides`), `first_name`, `second_name`, `centre_distance` (the closest-looking pair wins). |
+| `scheme_fix` | A cube of an even size (no centres to pin the names) whose naming made a cube that wears no standard scheme - red and orange traded, say - and was renamed to make one. `renamed` lists only the colours that changed, as `{"red": "orange", "orange": "red"}`; `cost` is how far the six colours as measured sit from the palette under the new names and `runner_up_cost` the same under the next best renaming that also makes a standard scheme (the wider apart, the surer the choice). `null` when the naming already made a standard scheme, and at every odd size. `naming` still shows the names the clusters were first given. |
 | `error` | Why there is no cube. |
 
 **`camera`** - the camera and its photometry lock. `data.event` is
