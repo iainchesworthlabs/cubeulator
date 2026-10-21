@@ -323,7 +323,7 @@ endfunction()
 # stem (lowercase, no extension) -> qt-modules.json component id, or "".
 # Tried in order: the stem as is (plugins: qtquick2plugin), as a Qt 6 module
 # (macOS frameworks are called QtCore, not Qt6Core), without the Windows debug
-# "d" suffix, the manifest's fileAliases (Qt6EntryPoint, qwindows, qjpeg ...) and
+# "d" suffix or Apple's "_debug", the manifest's fileAliases (Qt6EntryPoint, qwindows, qjpeg ...) and
 # its filePrefixes (qmldbg_*).
 function(cn_qt_lookup out key)
     set(found "")
@@ -332,6 +332,15 @@ function(cn_qt_lookup out key)
         list(APPEND candidates "qt6${CMAKE_MATCH_1}")
     endif()
     if(key MATCHES "^(.*)d$")
+        list(APPEND candidates "${CMAKE_MATCH_1}")
+        if(CMAKE_MATCH_1 MATCHES "^qt([a-z].*)$")
+            list(APPEND candidates "qt6${CMAKE_MATCH_1}")
+        endif()
+    endif()
+    # Apple's debug build of a Qt library or static plugin: QtCore_debug,
+    # libqtquick2plugin_debug.a. An Xcode build names both configurations on the
+    # link line, and the debug file is the same component as the release one.
+    if(key MATCHES "^(.*)_debug$")
         list(APPEND candidates "${CMAKE_MATCH_1}")
         if(CMAKE_MATCH_1 MATCHES "^qt([a-z].*)$")
             list(APPEND candidates "qt6${CMAKE_MATCH_1}")

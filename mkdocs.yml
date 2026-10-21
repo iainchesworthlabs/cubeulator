@@ -53,6 +53,7 @@ nav:
   - User guide:
       - Overview: guide/index.md
       - Installing: guide/install.md
+      - Installing on an iPhone: ios-install.md
       - Scanning a cube: guide/scan.md
       - Following the solution: guide/solve.md
       - Another size of cube: guide/other-sizes.md
@@ -65,7 +66,7 @@ nav:
   - Build and contribute:
       - Getting started: getting-started.md
       - Building & packaging: building.md
-      - Installing on an iPhone: ios-install.md
+      - iPhone build, signing and releasing: ios-signing.md
       - Testing & coverage: testing.md
       - Profiling: profiling.md
       - Performance: performance.md

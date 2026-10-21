@@ -16,16 +16,6 @@ on:
       - "CMakePresets.json"
       - "vcpkg.json"
   workflow_dispatch:
-  # Called by ios-test-site.yml to publish the iPhone test build with the site
-  # (docs/ios-install.md): `ref` is the revision whose documentation and web app the
-  # site is made of, so that a publish from a work branch does not replace the
-  # released site with unreleased pages.
-  workflow_call:
-    inputs:
-      ref:
-        description: The revision to build the site from (empty: the one that ran).
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -45,7 +35,6 @@ jobs:
       # fetch-depth: 0 for vcpkg's version resolution - see ci.yml.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           submodules: recursive
           fetch-depth: 0
           persist-credentials: false
@@ -75,14 +64,9 @@ jobs:
   build:
     needs: web
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # To fetch the iPhone test build from the run that made it (below).
-      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -105,34 +89,6 @@ jobs:
         with:
           name: cubeulator-web
           path: site/app
-
-      # The iPhone test build (docs/ios-install.md): the .ipa and manifest.plist of
-      # the workflow run named by the repository variable IOS_TEST_RUN_ID, in a
-      # folder named by the secret IOS_TEST_PATH (32 or more random hex digits; a secret
-      # so that the public logs mask it) that nothing links to; the artifact brings its own page that makes the install link. A Pages deployment
-      # replaces the whole site, so every publish, this workflow's own included,
-      # carries the files for as long as the variable is set; unsetting
-      # IOS_TEST_RUN_ID and publishing again takes them down, and so does the
-      # run's artifact expiring (14 days). Nothing is committed to the repository.
-      - name: Add the iPhone test build
-        if: ${{ vars.IOS_TEST_RUN_ID != '' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ vars.IOS_TEST_RUN_ID }}
-          TEST_PATH: ${{ secrets.IOS_TEST_PATH }}
-        run: |
-          set -euo pipefail
-          if [ -z "$TEST_PATH" ]; then echo "::warning::IOS_TEST_RUN_ID is set but the secret IOS_TEST_PATH is not (or is not passed to this workflow); the site is published without the iPhone test build."; exit 0; fi
-          echo "::add-mask::$TEST_PATH"
-          [[ "$TEST_PATH" =~ ^[0-9a-f]{32,}$ ]] || { echo "::error::IOS_TEST_PATH must be 32 or more hex digits"; exit 1; }
-          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::IOS_TEST_RUN_ID must be a run id"; exit 1; }
-          mkdir -p "site/$TEST_PATH"
-          if gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" -n cubeulator-ios-adhoc -D "site/$TEST_PATH"; then
-            ls "site/$TEST_PATH" | sed 's/^/  published: /'
-          else
-            echo "::warning::The iPhone test build of run $RUN_ID could not be fetched (its artifact expires after 14 days); the site is published without it."
-            rm -rf "site/$TEST_PATH"
-          fi
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
