@@ -259,7 +259,7 @@ jobs:
           echo "path=$app" >> "$GITHUB_OUTPUT"
           if [ "$SIGNED" = true ]; then flag=--signed; else flag=; fi
           # shellcheck disable=SC2086  # $flag is one word or nothing
-          packaging/ios/verify_ipa.sh "$app" --version "$VERSION" $flag
+          bash packaging/ios/verify_ipa.sh "$app" --version "$VERSION" $flag
 
       # An .ipa is the application in a Payload folder, zipped. ditto keeps what a
       # signed bundle must keep (symlinks, permissions, extended attributes).
@@ -281,8 +281,8 @@ jobs:
           rm -rf stage ios-dist && mkdir -p stage/Payload ios-dist
           ditto "$APP" stage/Payload/Cubeulator.app
           (cd stage && ditto -c -k --keepParent Payload "../ios-dist/$ipa")
-          packaging/ios/verify_ipa.sh "ios-dist/$ipa" --version "$BASE" --signed
-          tools/release/make_ios_manifest.sh --out ios-dist/manifest.plist --ipa "$ipa" \
+          bash packaging/ios/verify_ipa.sh "ios-dist/$ipa" --version "$BASE" --signed
+          bash tools/release/make_ios_manifest.sh --out ios-dist/manifest.plist --ipa "$ipa" \
             --repo "$GITHUB_REPOSITORY" --tag "$tag" --version "$BASE" --bundle-id "$BUNDLE_ID"
           plutil -lint ios-dist/manifest.plist
           ls -l ios-dist
