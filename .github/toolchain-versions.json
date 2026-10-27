@@ -1,0 +1,16 @@
+{
+  "$comment": "The toolchain the CI legs are pinned to, in one place. tools/ci/check_toolchain_versions.py fails when a workflow, an action or an install script carries a different value (docs/ci.md). The shared setup actions of icl-common-infra read qt, aqtsource, cmake, gcc and llvm from here. The vcpkg baseline stays in vcpkg.json. msvc_toolset is what windows-2025-vs2026 carries (VCToolsVersion 14.51.36231 in the CI log of 2026-10-27) and has no other home.",
+  "qt": "6.12.0",
+  "aqtsource": "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7",
+  "cmake": "4.4.2",
+  "ninja": "1.13.2",
+  "gcc": "16",
+  "llvm": "23",
+  "msvc_toolset": "14.51",
+  "emscripten": "5.0.5",
+  "android": {
+    "ndk": "28.2.13676358",
+    "platform": "36",
+    "build_tools": "36.0.0"
+  }
+}
