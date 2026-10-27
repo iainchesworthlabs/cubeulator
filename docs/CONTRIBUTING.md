@@ -64,6 +64,21 @@ that check.
   but the Qt app; a build on your machine does not run it. Compiler warnings
   are treated as errors in every build, so fix them rather than silencing
   them where you reasonably can.
+- Names follow what the code already does, and `.clang-tidy` enforces it
+  (`readability-identifier-naming`): types are `PascalCase`; functions,
+  methods, locals, parameters, namespaces and struct fields are `lower_case`;
+  private and protected members end in an underscore (`name_`); constants are
+  `kPascal`; macros are `UPPER_CASE`; files are `snake_case.cpp`. The
+  Qt-facing code under `src/app` (properties, signals, slots and invokable
+  functions that QML sees) is `camelCase`, set by `src/app/.clang-tidy`, and
+  the QML files and the classes registered with QML are `PascalCase`.
+  Enumerators are not checked, because both `lower_case` and `PascalCase` are
+  in use; follow the enum you are adding to.
+- [`.editorconfig`](https://github.com/iainchesworthlabs/cubeulator/blob/develop/.editorconfig)
+  carries the indent and line-ending rules for the files `clang-format` does
+  not read. A commit that only reformats goes in
+  [`.git-blame-ignore-revs`](https://github.com/iainchesworthlabs/cubeulator/blob/develop/.git-blame-ignore-revs)
+  (`git config blame.ignoreRevsFile .git-blame-ignore-revs`).
 - Modern C++23 is encouraged over older idioms — see
   [Architecture](architecture.md) for the patterns already in use
   (`Result<T>` over `std::expected`, for one) and follow their lead.

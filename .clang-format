@@ -1,7 +1,7 @@
 ---
 Language: Cpp
 BasedOnStyle: Google
-Standard: c++20
+Standard: c++23
 ColumnLimit: 100
 IndentWidth: 4
 TabWidth: 4
@@ -17,4 +17,26 @@ NamespaceIndentation: None
 FixNamespaceComments: true
 IncludeBlocks: Preserve
 SortIncludes: CaseSensitive
+...
+---
+# Objective-C++ (src/app/platform/ios/*.mm): clang-format reads a file by language and refuses
+# an .mm file when only Language: Cpp is configured. Same layout, includes left in order.
+Language: ObjC
+BasedOnStyle: Google
+Standard: c++23
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+PointerAlignment: Left
+DerivePointerAlignment: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BreakBeforeBraces: Attach
+NamespaceIndentation: None
+FixNamespaceComments: true
+IncludeBlocks: Preserve
+SortIncludes: Never
 ...
