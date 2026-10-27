@@ -73,6 +73,7 @@ nav:
       - Graphics API: graphics-api.md
       - Translations: i18n.md
       - Contributing: CONTRIBUTING.md
+      - Alignment with the ICL standard: migration.md
       - Code of conduct: CODE_OF_CONDUCT.md
   - How it works:
       - Architecture: architecture.md
