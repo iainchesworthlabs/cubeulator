@@ -31,7 +31,7 @@ KEY = "permission.system.camera"
 PLIST_KEY = "NSCameraUsageDescription"
 
 # Apple's name for a language directory where it differs from the app's code.
-LPROJ = {"zh-CN": "zh-Hans"}
+LPROJ = {"zh_CN": "zh-Hans"}
 
 
 def translation(catalogue: Path) -> str | None:

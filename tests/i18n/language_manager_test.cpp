@@ -65,7 +65,7 @@ TEST_CASE("the languages of the app are the nine, English first, in their own na
         names << v.toMap().value(QStringLiteral("name")).toString();
     }
     CHECK(codes == QStringList{QStringLiteral("en"), QStringLiteral("de"), QStringLiteral("fr"),
-                               QStringLiteral("es"), QStringLiteral("ja"), QStringLiteral("zh-CN"),
+                               QStringLiteral("es"), QStringLiteral("ja"), QStringLiteral("zh_CN"),
                                QStringLiteral("he"), QStringLiteral("ar"), QStringLiteral("yi")});
     CHECK(names == QStringList{QStringLiteral("English"), QStringLiteral("Deutsch"),
                                QStringLiteral("Français"), QStringLiteral("Español"),
@@ -105,10 +105,10 @@ TEST_CASE("a language is recognised however a system writes it", "[i18n][manager
         {"fr_CA", "fr"},
         {"es-419", "es"},
         {"ja_JP", "ja"},
-        {"zh", "zh-CN"},
-        {"zh_CN", "zh-CN"},
-        {"zh-Hans-CN", "zh-CN"},
-        {"zh-SG", "zh-CN"},
+        {"zh", "zh_CN"},
+        {"zh_CN", "zh_CN"},
+        {"zh-Hans-CN", "zh_CN"},
+        {"zh-SG", "zh_CN"},
         // Traditional Chinese is not one of the nine; it is not guessed at.
         {"zh-TW", ""},
         {"zh-Hant", ""},
@@ -165,6 +165,14 @@ TEST_CASE("start-up: the environment, then the saved choice, then the device", "
         CHECK(manager.rtl());
         CHECK(manager.hasOverride());
         CHECK(qGuiApp->layoutDirection() == Qt::RightToLeft);
+    }
+    SECTION("a choice saved under an older spelling is read and written back in the current one") {
+        QSettings().setValue(QStringLiteral("language/code"), QStringLiteral("zh-CN"));
+        LanguageManager manager(*qGuiApp, engine);
+        manager.applyInitialLanguage();
+        CHECK(manager.currentLanguage() == QLatin1String("zh_CN"));
+        CHECK(manager.selectedLanguage() == QLatin1String("zh_CN"));
+        CHECK(saved_language() == QLatin1String("zh_CN"));
     }
     SECTION("the environment beats a saved choice, and the saved choice is left alone") {
         QSettings().setValue(QStringLiteral("language/code"), QStringLiteral("ar"));
@@ -229,7 +237,7 @@ TEST_CASE("setLanguage changes everything a switch touches, and saves it", "[i18
             CHECK(manager.rtl());
             CHECK(qGuiApp->layoutDirection() == Qt::RightToLeft);
         }
-        for (const char* code : {"en", "de", "fr", "es", "ja", "zh-CN"}) {
+        for (const char* code : {"en", "de", "fr", "es", "ja", "zh_CN"}) {
             INFO(code);
             REQUIRE(manager.setLanguage(QString::fromLatin1(code)));
             CHECK_FALSE(manager.rtl());
@@ -370,7 +378,7 @@ TEST_CASE("a draft language shows its translation through the manager",
         bool rtl;
     };
     const Draft drafts[] = {
-        {"ja", 0x3000, 0xFFFF, false}, {"zh-CN", 0x3000, 0xFFFF, false},
+        {"ja", 0x3000, 0xFFFF, false}, {"zh_CN", 0x3000, 0xFFFF, false},
         {"he", 0x0590, 0x05FF, true},  {"yi", 0x0590, 0x05FF, true},
         {"ar", 0x0600, 0x06FF, true},
     };

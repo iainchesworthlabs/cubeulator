@@ -398,11 +398,11 @@ As of 2026-10-14, `develop` at 7e764eef, from the code.
 | E0b Licences | Landed (27). Notices are generated from the build and ship with the desktop packages; no screen shows them yet |
 | E1 Design | Landed: `docs/design/`. The prototype page is built from `strings.json` by `build.py`; run it after the strings change |
 | E2a Kit | Not landed. `Theme.qml` is the legacy one; `AppButton` is still an item and a mouse area; only `installBundledFonts()` is there |
-| E2b Translations | Landed (20), with ja and zh-CN machine drafts (96). See [i18n.md](i18n.md) |
+| E2b Translations | Landed (20), with ja and zh_CN machine drafts (96). See [i18n.md](i18n.md) |
 | E3a-E3d Screens | Mostly not on `develop`: the legacy Launch, Permission, Scan, Solve, Settings and Complete screens remain, some converted to ids. The solution and History screens are built (`SolutionScreen.qml`, `HistoryScreen.qml`) |
 | E4a Desktop | Landed (3): icon, version resource, installers, shortcuts, remembered window, macOS menu bar (`platforms.md` says it has not been run on a Mac). Nothing calls the keep-awake helper yet |
 | E4b Mobile | Nothing on `develop`. No mobile capture, so a phone build cannot scan |
-| E5 Languages | Not reviewed. ja and zh-CN are complete drafts; de, fr, es, he, ar and yi are empty |
+| E5 Languages | Not reviewed. ja and zh_CN are complete drafts; de, fr, es, he, ar and yi are empty |
 | E6 Release readiness | Nothing on `develop`: no screen-reader pass, no sessions with people, no store listings |
 | F Family alignment | Nothing on `develop`; the decisions D1-D9 are recorded in `design/family.md` |
 

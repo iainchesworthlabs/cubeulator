@@ -400,7 +400,7 @@ TEST_CASE(
     "[system][language][cjk]") {
     // The drafts, not their proxy. The three right-to-left ones are mirrored
     // as well, which the pseudo-locale (left to right) never is.
-    const char* language = GENERATE("ja", "zh-CN", "he", "ar", "yi");
+    const char* language = GENERATE("ja", "zh_CN", "he", "ar", "yi");
     const Layout layout = GENERATE(Layout::wide, Layout::narrow);
     DYNAMIC_SECTION(language << " in the " << cube::systest::to_string(layout) << " layout") {
         nothing_is_cut_off_in(language, layout);
@@ -418,7 +418,7 @@ TEST_CASE("choosing a language in Settings switches it at once and keeps it",
     app.settle();
 
     // 0 follows the device; then the nine in the order of the list: en de fr
-    // es ja zh-CN he ar yi.
+    // es ja zh_CN he ar yi.
     QQuickItem* hebrew = app.find("settings.language.7");
     REQUIRE(hebrew != nullptr);
     app.click(hebrew);

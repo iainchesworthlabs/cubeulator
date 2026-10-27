@@ -189,7 +189,7 @@ test.describe('language', () => {
     [3, 'fr', 'Français', false],
     [4, 'es', 'Español', false],
     [5, 'ja', '日本語', false],
-    [6, 'zh-CN', '简体中文', false],
+    [6, 'zh_CN', '简体中文', false],
     [7, 'he', 'עברית', true],
     [8, 'ar', 'العربية', true],
     [9, 'yi', 'יידיש', true],
@@ -262,7 +262,7 @@ test.describe('language', () => {
     // since) shows its English and never its id. What is on screen is words,
     // in each of the eight.
     await openSettings(app);
-    for (const [chip, code] of [[2, 'de'], [3, 'fr'], [4, 'es'], [5, 'ja'], [6, 'zh-CN'],
+    for (const [chip, code] of [[2, 'de'], [3, 'fr'], [4, 'es'], [5, 'ja'], [6, 'zh_CN'],
                                 [7, 'he'], [8, 'ar'], [9, 'yi']]) {
       await app.click(`settings.language.${chip}`);
       await expect.poll(async () => (await manager(app)).selectedLanguage).toBe(code);
