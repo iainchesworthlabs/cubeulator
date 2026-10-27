@@ -194,7 +194,9 @@ branch with no fragment behind it). It runs on every leg that runs the tests
 build in seconds rather than the macOS one in an hour.
 
 Deliberately not scanned: `third_party/` and `deps/` (vendored code with its
-own conventions), anything git ignores, and shader sources (GLSL has no
-operating system to branch on). The same rule is held by ICL Forge
+own conventions), `cmake/icl/` (the CMake modules of icl-common-infra, which
+choose per operating system themselves and are held to their source by
+`tools/ci/sync_cmake.py --check`), anything git ignores, and shader sources
+(GLSL has no operating system to branch on). The same rule is held by ICL Forge
 (`tools/checks/check_platform_macros.ps1`) and, for OS macros, by Aqualink
 Automate (`scripts/check-os-macros.ps1`).
