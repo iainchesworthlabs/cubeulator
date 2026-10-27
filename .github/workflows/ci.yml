@@ -105,6 +105,11 @@ jobs:
         shell: pwsh
         run: ./tools/checks/check_platform_isolation.ps1 -Root $PWD
 
+      # The pins live in .github/toolchain-versions.json; this fails when a
+      # workflow, an action or an install script carries another version.
+      - name: Check the toolchain pins agree
+        run: python3 -I tools/ci/check_toolchain_versions.py
+
   clang-tidy:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - clang-tidy' || 'clang-tidy' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',clang-tidy,') }}

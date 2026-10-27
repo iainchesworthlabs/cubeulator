@@ -361,6 +361,14 @@ installs stored per pull request
 What CI builds with, and why anything is not simply "the newest". The pins that
 are bumped by hand are listed under [Dependabot](#pins-dependabot-cannot-see).
 
+The values are held in `.github/toolchain-versions.json` (Qt, the aqtinstall
+commit, CMake, Ninja, GCC, LLVM, the MSVC toolset, Emscripten and the Android
+NDK, platform and build-tools). The workflows, actions and install scripts still
+carry their own copies; `tools/ci/check_toolchain_versions.py` runs in the
+`platform-isolation` job and fails when one differs from the file, so a bump is
+a change to the file followed by the places the check names. The shared setup
+actions of `icl-common-infra` read the same file.
+
 | Component | In use | Newer exists? |
 | --- | --- | --- |
 | Qt | 6.12.0 (LTS; every fourth minor, 6.8 before it) | No - 6.12.0 is the newest release. The Windows kit is `msvc2022_64`; Qt ships no MSVC 2026 x64 kit, and it works with the VS 2026 toolset. Installing the Windows kit, and the WebAssembly kit, needs an unreleased aqtinstall (the pinned commit in `ci.yml`, `release.yml`, `.github/actions/web-build/action.yml` and `ci/install-qt.ps1`): the last release predates Qt 6.11's per-architecture repository layout. |
