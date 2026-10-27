@@ -6,41 +6,37 @@ The code conventions of this repository stay: Google-based layout with attached 
 
 ## Decisions made
 
-| Date | Topic | Decision | Consequence |
-|---|---|---|---|
-| 2026-10-27 | Branch model | Adopt the standard's D1. `develop` is the default branch and the trunk; pull requests squash through the merge queue; `main` holds published releases and is fast-forwarded by the release bot after a successful release. No pull requests into `main`, no back-merge. | Rulesets, branch names, `release.yml`, `release-check.yml`, `docs.yml` and the contributor documents change. Order below |
-| 2026-10-27 | vcpkg | Use the labs' fork `iainchesworthlabs/vcpkg` through `cmake/icl/IclVcpkgRoot.cmake` and the `setup-vcpkg` action, and remove the `deps/vcpkg` submodule. The baseline in `vcpkg.json` is the only pin. | One baseline pin; the `vcpkg-baseline-in-fork` check; the `gitsubmodule` Dependabot entry goes. The Tracy overlay port stays for now (open item) |
-| 2026-10-27 | CI | Hybrid. Adopt the shared `policy`, `zizmor`, `docs`, `docs-deploy`, `dependabot-auto-merge`, `dependency-review`, `ci-status` and `report-nightly-failure` workflows and the `setup-*` actions. Keep the project's own jobs where the shared workflows do not cover them: clang-format, platform isolation, clang-tidy, the three desktop legs with packaging, Android, web and web tests, iOS, system tests, coverage and performance. | `CI Status` becomes the required check on `develop`. Tiers and the queue run are open items below |
-| 2026-10-27 | Licence | The source stays `GPL-3.0-or-later`. A binary that links Qt Quick 3D is GPL-3.0-only, and the project says so (About text, package metadata, `docs/licensing.md`, `LICENSE-NOTE.md`). Qt Quick 3D stays. | The Apple stores remain blocked by this position; the decision of 2026-10-13 to leave them alone stands. TestFlight is therefore an open item. Wording changes in their own pull request |
+All decided on 2026-10-27.
 
-## Open items
+| Topic | Decision | Consequence |
+|---|---|---|
+| Branch model | Adopt the standard's D1. `develop` is the default branch and the trunk; pull requests squash through the merge queue; `main` holds published releases and is fast-forwarded by the release bot after a successful release. No pull requests into `main`, no back-merge. | Rulesets, branch names, `release.yml`, `release-check.yml`, `docs.yml` and the contributor documents change. `main` became an ancestor of `develop` with the back-merge #246. `spike/*` stays outside the ruleset: ask for a project list of extra prefixes in the ruleset and `check_branch_name.py`; the weekly sweep stays. The `release/<version>` preparation branch becomes `chore/release-<version>` |
+| vcpkg | Use the labs' fork `iainchesworthlabs/vcpkg` through `cmake/icl/IclVcpkgRoot.cmake` and the `setup-vcpkg` action, and remove the `deps/vcpkg` submodule. The baseline in `vcpkg.json` is the only pin. | One baseline pin; the `vcpkg-baseline-in-fork` check; the `gitsubmodule` Dependabot entry goes. The Tracy overlay port stays and its two features go upstream |
+| CI | Hybrid. Adopt the shared `policy`, `zizmor`, `docs`, `docs-deploy`, `dependabot-auto-merge`, `dependency-review`, `ci-status` and `report-nightly-failure` workflows and the `setup-*` actions. Keep the project's own jobs where the shared workflows do not cover them: clang-format, platform isolation, clang-tidy, the three desktop legs with packaging, Android, web and web tests, iOS, system tests, coverage and performance. | `CI Status` becomes the required check on `develop` and `merge_group` stays on `ci.yml`. Tiers: static checks, clang-tidy, Linux GCC build and tests and coverage on the pull request; Windows and macOS in the queue; Android, iOS, web, web tests and system tests after the merge. CodeQL stays on every pull request |
+| Licence | The source stays `GPL-3.0-or-later`. A binary that links Qt Quick 3D is GPL-3.0-only, and the project says so (About text, package metadata, `docs/licensing.md`, `LICENSE-NOTE.md`). Qt Quick 3D stays. | Wording changes in their own pull request. The copyright line stays `Copyright (C) 2026 Iain Chesworth` |
+| iOS and Android | iOS goes to TestFlight (internal testers) through the shared `import-ios-signing`, `export-ios-ipa` and `upload-testflight` actions, with validation only on branch runs. The ad-hoc IPA leaves the public release; the IPA and install manifest were removed from v0.2.0-beta.1 on 2026-10-27. Android gets its application id (`com.iainchesworthlabs.cubeulator`) and a locked orientation. No store submission. | The ad-hoc steps, `docs/ios-install.md` and `docs/install-ios.html` are replaced by the TestFlight route. The Linux package is checked against the glibc 2.39 floor and built on a 24.04 image |
+| Signing key | Releases are signed with the organisation key (`FD13CB8C…4DBE`). The maintainer deletes the repository secrets. | `docs/signing-key.asc` and `SECURITY.md` carry the organisation key; `SECURITY.md` records that releases up to v0.2.0-beta.1 used the project key `0CF2A242…EB46` |
+| Release tooling | `release.yml` is rewritten on the shared `release-publish.yml`. The shared workflow gains a notes input, an `sbom-files` input with attestation read-back, and a `pre-release-script`; `tools/release/*` and `changelog.d/` stay. The draft step stays for one release and is then dropped | Pull requests to `icl-common-infra` first, each with a tag the maintainer creates |
+| Next release | A corrected pre-release `v0.2.0-beta.2` follows the glibc fix and the iOS asset change | Tag commands from the maintainer |
+| Layout | `src/lib` and `src/app` stay | Recorded in `docs/architecture.md`; the two GPU files that `cube_lib` compiles from `src/app/platform/` move into the library |
+| Coverage | The baseline (89.8% lines, 85.8% branches on the library layer) is recorded as the ratchet floor and raised each release towards 90/80. The app is measured separately | A floor file and a `quality-history` branch with badges |
+| Sanitisers and presets | Linux ASan/UBSan (`-O1`, Tracy off), TSan and fuzz presets are added. Windows ARM64, Linux ARM64, macOS x64 and the iOS simulator wait for a stated need | Tracy stays dormant-on in desktop release builds (extension request) |
+| Languages | Nine are kept; Arabic is added to the standard's list. The Chinese catalogue and setting are renamed from `zh` to `zh_CN`, with a migration of the saved setting | Fonts for Hebrew, Yiddish and Arabic are bundled as subsets |
+| Naming | Both enumerator styles and the `kPascal` constants are written into `.clang-tidy`; nothing is renamed | The nested `src/app/.clang-tidy` covers the Qt-facing code |
+| Portable libraries | The solver and N x N model are recorded as candidates in `docs/architecture.md`; no split | |
 
-Each has the default that is used until it is decided. The options are in the maintainer's decision list.
+## To confirm later
 
-| Item | Default until decided |
-|---|---|
-| Spike branches: `spike/*` is outside the `branch-names` ruleset | Keep the weekly sweep; ask for a project list of extra prefixes in the ruleset and `check_branch_name.py` |
-| The `release/<version>` preparation branch (the standard reserves `release/x.y` for support branches) | Rename to `chore/release-<version>` when the branch model lands |
-| Tracy overlay port (`vcpkg-overlay-ports/tracy`) | Keep the overlay; send `manual-lifetime` and `only-localhost` upstream |
-| Which legs gate a pull request, which the queue and which the push; `merge_group` handling | Static checks, clang-tidy, Linux GCC build and tests and coverage on the pull request; Windows and macOS in the queue; Android, iOS, web, web tests and system tests after the merge |
-| CodeQL on every pull request or nightly | Keep every pull request |
-| iOS: TestFlight through the shared actions, or ad hoc | No change until decided. The ad-hoc IPA stays off public releases from the next release |
-| Android: shipped target, application id, orientation, signed AAB | Set the application id and lock the orientation; no store build |
-| Signing key: organisation key `FD13CB8C…4DBE` or the project key | The project key, as now |
-| Release tooling: how much `release-publish.yml` replaces | Keep `tools/release/*` and `changelog.d/`; extend the shared workflow before adopting it |
-| Coverage | Gate at 80/80 until the baseline (89.8% lines, 85.8% branches on the library layer) is recorded as the ratchet floor |
-| Sanitiser, TSan and fuzz presets; Windows ARM64, Linux ARM64, macOS x64, iOS simulator | Add the Linux sanitiser, TSan and fuzz presets; the other platforms wait for a stated need |
-| Language set: Arabic is a ninth language; `zh` against `zh_CN` | Keep nine; no rename |
-| Copyright wording in SPDX headers | `Copyright (C) 2026 Iain Chesworth`, as the repository states it today |
-| Enumerator and constant naming (26 lower_case enums against 20 PascalCase; about 520 `kPascal` constants against 41 lower_case) | Write both patterns into `.clang-tidy` without renaming |
-| Portable solver library | Recorded as a candidate in `docs/architecture.md`; no split |
+- Signed Android bundle and store build: when Android has a camera backend.
+- `SIGN_WINDOWS=test` (the organisation test-signing secrets already reach this repository) and `SIGN_MACOS`: before the first release on the new workflow.
+- Release notes of v0.2.0-beta.1 still name the removed IPA.
 
 ## Order of pull requests
 
 Each pull request is one step and its checks are green before the next starts. Anything that touches many files is scheduled with the maintainer, so it does not collide with feature work, and lands alone.
 
 1. This plan.
-2. Back-merge #246, with a merge commit, so that `main` is an ancestor of `develop`.
+2. Back-merge #246, so that `main` is an ancestor of `develop` (done).
 3. Pending Dependabot updates (#247 to #249).
 4. Toolchain pins: `.github/toolchain-versions.json`, the vendored `cmake/icl` with `cmake/icl/SOURCE`, `tools/ci/sync_cmake.py` and `repin.py`, and `FindQt6` reading `ICL_QT_ROOT`.
 5. vcpkg: switch to `IclVcpkgRoot.cmake` and `setup-vcpkg`, remove the submodule, drop the `gitsubmodule` Dependabot entry, add the `vcpkg-baseline-in-fork` check.
@@ -57,13 +53,13 @@ Each pull request is one step and its checks are green before the next starts. A
 
 These change settings, secrets or accounts and are done by the maintainer.
 
-- Merge pull request #246 with a merge commit (the only method the rulesets allow today).
 - Turn on secret scanning, push protection and Dependabot security updates.
 - Create the Dependabot secret `MERGE_QUEUE_TOKEN`.
 - Apply the branch-model settings from the `admin/apply.sh` dry run (step 9), including making `develop` the default branch.
 - Create the `release` environment with the maintainer as required reviewer.
-- If the organisation key is chosen: delete the repository secret `REPO_GPG_PRIVATE_KEY`.
-- iOS account items (App Store Connect record, App Store profile, access of the organisation secrets to this repository, TestFlight group) once TestFlight is decided.
+- Delete the repository secrets `REPO_GPG_PRIVATE_KEY`, and after the iOS pull request merges `IOS_DIST_CERTIFICATE_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID` and `APPLE_PROVISIONING_PROFILE_NAME`.
+- iOS account items (App Store Connect app record, an App Store distribution profile as `IOS_PROVISIONING_PROFILE_BASE64`, access of the five organisation Apple secrets to this repository, the TestFlight internal group, the variable `SIGN_IOS_UPLOAD`). The step list is in `docs/releasing.md` when it is written.
+- Create the tags (including `v0.2.0-beta.2`) and approve the `release` environment for each release.
 - TODO(owner): Apple team ID, App Store name, any contact addresses the documents need.
 
 ## Kept as they are
