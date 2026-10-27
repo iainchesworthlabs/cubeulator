@@ -49,8 +49,11 @@
 #      property names such as WIN32_EXECUTABLE.)
 #
 # Not scanned, deliberately: third_party/ and deps/ (vendored code, with its own
-# licence and conventions), anything git ignores (build output, generated
-# headers), and shader sources (GLSL has no operating system to branch on).
+# licence and conventions), cmake/icl/ (the CMake modules of icl-common-infra,
+# copied by tools/ci/sync_cmake.py and held to their source by CI, which choose
+# per operating system themselves), anything git ignores (build output,
+# generated headers), and shader sources (GLSL has no operating system to
+# branch on).
 #
 # Usage:  ./tools/checks/check_platform_isolation.ps1 [-Root <repo-root>]
 # Exit:   0 = clean, 1 = violation(s) found, 2 = bad invocation.
@@ -134,6 +137,10 @@ if ($null -ne $sourcePaths -and $sourcePaths.Count -gt 0) {
     $candidates = @($candidates | Where-Object { $sourcePaths.Contains((Get-RelativePath $_.FullName)) })
 }
 $skipped = $scannedBeforeFilter - @($candidates).Count
+
+# cmake/icl/ is a copy of another repository's modules (see the header): the
+# copy is checked against its source, not against this repository's rules.
+$candidates = @($candidates | Where-Object { -not ((Get-RelativePath $_.FullName) -like 'cmake/icl/*') })
 
 # --- the rules --------------------------------------------------------------
 
