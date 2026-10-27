@@ -39,7 +39,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
@@ -55,7 +55,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   build:
     needs: web

@@ -145,7 +145,7 @@ jobs:
       # why per-preset keys were wasteful/over quota.
       - name: Set up vcpkg
         if: ${{ needs.plan.outputs.code == 'true' }}
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: x64-linux
 
@@ -234,7 +234,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ needs.plan.outputs.code == 'true' && (always()) }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # Picks the desktop build legs. A push, pull request or merge_group run
   # always gets all three; only a manual dispatch can narrow it. The matrix
@@ -371,7 +371,7 @@ jobs:
       # across 15 entries, over the limit).
       - name: Set up vcpkg
         if: ${{ needs.plan.outputs.code == 'true' }}
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: ${{ matrix.triplet }}
 
@@ -592,7 +592,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ needs.plan.outputs.code == 'true' && (always()) }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   android-build:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Android (arm64-v8a)' || 'Android (arm64-v8a)' }}
@@ -661,7 +661,7 @@ jobs:
       # 10GB cap; keeping the same scheme everywhere avoids reintroducing the
       # same mistake later.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: arm64-android
 
@@ -750,7 +750,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The browser (docs/web.md): the same Qt/QML app, as WebAssembly. Built here
   # to prove it still builds; docs.yml builds it again for the site, from the
@@ -778,7 +778,7 @@ jobs:
 
       # Keyed per vcpkg triplet, like every other leg (see build-and-test).
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
@@ -799,7 +799,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The browser's tests (docs/testing.md, "Browser tests"): the library's own
   # test binaries as WebAssembly under Node, and the app driven in Chromium.
@@ -825,7 +825,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
@@ -876,7 +876,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # Wall-time budgets for the browser, read from the in-process recorder. Only
   # when it is named, as `perf` is (docs/ci.md).
@@ -900,7 +900,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
@@ -940,7 +940,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   ios-build:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - iOS (device, build-only, unsigned)' || 'iOS (device, build-only, unsigned)' }}
@@ -971,7 +971,7 @@ jobs:
       # Keyed per vcpkg triplet (arm64-ios), shared across debug/release -
       # see the equivalent comment on android-build above.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: arm64-ios
 
@@ -1001,7 +1001,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The system tests: the real app, started from its main() wiring, driven by
   # mouse, touch and key events, rendered for real. Qt Quick 3D has no
@@ -1028,7 +1028,7 @@ jobs:
 
       # The x64-linux triplet cache, shared with build-and-test's Linux leg.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: x64-linux
 
@@ -1131,7 +1131,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   coverage:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Coverage (Linux, GCC)' || 'Coverage (Linux, GCC)' }}
@@ -1171,7 +1171,7 @@ jobs:
       # above on why per-preset keys were wasteful/over the 10GB cap.
       - name: Set up vcpkg
         if: ${{ needs.plan.outputs.code == 'true' }}
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: x64-linux
 
@@ -1255,7 +1255,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ needs.plan.outputs.code == 'true' && (always()) }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The wall-time half of the performance tier (docs/testing.md, "Performance
   # tests"), on the Linux Release build. Dispatch only, and only when it is
@@ -1285,7 +1285,7 @@ jobs:
 
       # Keyed per vcpkg triplet (x64-linux), shared with the other Linux legs.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: x64-linux
 
@@ -1321,4 +1321,4 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17

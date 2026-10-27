@@ -245,7 +245,7 @@ jobs:
       # one, so that nothing a release run does can end up in what the other
       # workflows trust. A cold cache only costs time.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: ${{ matrix.triplet }}
 
@@ -458,7 +458,7 @@ jobs:
 
       # Read-only, as the desktop legs: see there.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
