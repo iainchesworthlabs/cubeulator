@@ -135,9 +135,13 @@ public:
     // Back to the blank cube, or to the cube the camera read.
     Q_INVOKABLE void revert();
 
-    // Solves the cube painted, if it is one: { ok: true } once the solve has begun, or
-    // { ok: false, error: "notACube" }. A cube that is not one never reaches the
-    // solver.
+    // Solves the cube painted, if it is one: { ok: true, solved, camera } once the solve
+    // has begun, or { ok: false, error: "notACube" }. A cube that is not one never reaches
+    // the solver. `camera` is true when the cube began as what a finished scan read, however
+    // it has been changed since: the camera is still on that cube, and the scan has been
+    // told how it was put right (DirectScan::putRight), so the solve screen keeps the
+    // camera and goes on following the cube in the hand. False for a cube typed in, and for
+    // a reading that made no cube (there is nothing for the camera to be matched against).
     Q_INVOKABLE QVariantMap solve();
 
 signals:

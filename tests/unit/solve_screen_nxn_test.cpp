@@ -516,6 +516,104 @@ TEST_CASE("the colours a camera read of a bigger cube can be looked over from th
     }
 }
 
+namespace {
+
+// The cube with red and orange traded everywhere. A cube with no fixed middles is as good a cube
+// either way round, so a scan can come out with the two the wrong way round and still be one.
+[[nodiscard]] NCube red_and_orange_traded(const NCube& cube) {
+    std::vector<Color> stickers(cube.facelets().begin(), cube.facelets().end());
+    for (Color& sticker : stickers) {
+        if (sticker == Color::Red) {
+            sticker = Color::Orange;
+        } else if (sticker == Color::Orange) {
+            sticker = Color::Red;
+        }
+    }
+    return *NCube::from_facelets(cube.size(), stickers);
+}
+
+}  // namespace
+
+TEST_CASE("a bigger cube whose red and orange were put right is solved with the camera on it",
+          "[qml][solve-screen][nxn][review][camera-follow]") {
+    constexpr int size = 4;
+    const ScannedAndSolving scanned(size);
+    cube::app::AppControllers& app = scanned.app();
+    QObject* state = scanned.state();
+    SolveController& solver = app.solve;
+    cube::app::DirectScan& camera = app.directScan;
+    REQUIRE(state->setProperty("screen", QStringLiteral("solve")));
+    REQUIRE(camera.complete());
+
+    // The person looks over what the camera read and trades red and orange: the two the
+    // camera had the wrong way round.
+    QVariant reviewed;
+    REQUIRE(
+        QMetaObject::invokeMethod(state, "reviewScanFromSolve", Q_RETURN_ARG(QVariant, reviewed)));
+    REQUIRE(reviewed.toBool());
+    REQUIRE(app.colours.fromScan());
+    const QVariantMap read = app.colours.sides();
+    for (auto it = read.cbegin(); it != read.cend(); ++it) {
+        const QVariantList names = it.value().toList();
+        for (int i = 0; i < names.size(); ++i) {
+            const QString name = names.at(i).toString();
+            if (name == QLatin1String("Red")) {
+                app.colours.paint(it.key(), i, static_cast<int>(Color::Orange));
+            } else if (name == QLatin1String("Orange")) {
+                app.colours.paint(it.key(), i, static_cast<int>(Color::Red));
+            }
+        }
+    }
+    REQUIRE(app.colours.status().value("state").toString() == QLatin1String("valid"));
+
+    // Solve it as put right. The camera is still on the cube, so the preview does not go.
+    QVariant solved;
+    REQUIRE(QMetaObject::invokeMethod(state, "solveColours", Q_RETURN_ARG(QVariant, solved)));
+    CHECK(solved.toMap().value("ok").toBool());
+    CHECK(solved.toMap().value("camera").toBool());
+    CHECK(state->property("screen").toString() == "solve");
+    CHECK(state->property("solveCamera").toBool());
+    CHECK(camera.corrected());
+    REQUIRE(wait_for([&]() { return !solver.isSolving(); }, 120'000));
+    REQUIRE(solver.size() == size);
+
+    Screen screen;
+    screen.settle();
+    const auto* preview = qobject_cast<QQuickItem*>(screen.find("solve.camera"));
+    REQUIRE(preview != nullptr);
+    CHECK(preview->isVisible());
+    // What the scan read is not the cube now, so there is nothing of the scan's to look over.
+    CHECK_FALSE(screen.get("canCheckColours").toBool());
+
+    // And the cube in the hand is followed under the names the person gave. The camera sees
+    // it as it always looked, red where it was red: the solver's cube with the two traded back.
+    const NCube before = solver.plan().current_cube();
+    const NCube moved = solver.plan().cube_at(solver.plan().current_index() + 1);
+    const auto hold =
+        cube::test::hold_that_sees_n(before, moved, 3, solver.plan().current_move().face);
+    REQUIRE(hold.has_value());
+    const auto frame = [&](const NCube& put_right) {
+        return cube::test::draw_side(
+            cube::nxn::camera_view(red_and_orange_traded(put_right), *hold),
+            cube::test::pose_for(size));
+    };
+    for (int i = 0; i < 12; ++i) {
+        camera.processFrame(frame(before));
+    }
+    CHECK(app.held.sight() == "matched");
+    CHECK(app.held.hold() == *hold);
+    CHECK(solver.moveIndex() == 0);
+    camera.processFrame(cube::test::room({640, 360}));
+
+    // The move is made: the screen steps on by itself.
+    for (int i = 0; i < 12; ++i) {
+        camera.processFrame(frame(moved));
+    }
+    REQUIRE(wait_for([&]() { return solver.moveIndex() == 1; }));
+
+    app.colours.begin(3);
+}
+
 TEST_CASE("a bigger cube is rescanned part-way at its own size, and solved again from the scan",
           "[qml][solve-screen][nxn][rescan]") {
     cube::app::AppControllers& app = cube::test::app_controllers();

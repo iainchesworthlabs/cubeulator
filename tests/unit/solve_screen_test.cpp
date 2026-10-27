@@ -679,8 +679,10 @@ TEST_CASE("a cube the camera read can be looked over from the solve screen, and 
     CHECK(solver.moveIndex() == 1);
     CHECK(camera.complete());
 
-    // Solving what was looked over is a new solve, from the start; and it is a cube
-    // typed in as far as the screen is concerned, so the way in is not offered again.
+    // Solving what was looked over is a new solve, from the start. The camera is still on
+    // the cube it read, so it stays: the preview is there and the cube in the hand is
+    // followed. What the scan read is not the cube any more, though, so the way to look the
+    // scan over is not offered again.
     QVariant reviewed;
     REQUIRE(
         QMetaObject::invokeMethod(state, "reviewScanFromSolve", Q_RETURN_ARG(QVariant, reviewed)));
@@ -688,18 +690,23 @@ TEST_CASE("a cube the camera read can be looked over from the solve screen, and 
     QVariant solved;
     REQUIRE(QMetaObject::invokeMethod(state, "solveColours", Q_RETURN_ARG(QVariant, solved)));
     CHECK(solved.toMap().value("ok").toBool());
+    CHECK(solved.toMap().value("camera").toBool());
     CHECK(state->property("screen").toString() == "solve");
-    CHECK_FALSE(state->property("solveCamera").toBool());
+    CHECK(state->property("solveCamera").toBool());
+    CHECK(camera.complete());
+    CHECK(camera.corrected());
     REQUIRE(wait_for([&]() { return !solver.isSolving(); }, 60'000));
     CHECK(solver.moveIndex() == 0);
     CHECK(solver.currentCube() == scrambled);
     CHECK_FALSE(check()->isVisible());
+    CHECK_FALSE(screen.get("canCheckColours").toBool());
+    const auto* preview = qobject_cast<QQuickItem*>(screen.find("solve.camera"));
+    REQUIRE(preview != nullptr);
+    CHECK(preview->isVisible());
 
-    // Not offered for a solve that has no scan behind it: one carried on from the
-    // history or typed in (solveCamera is off), or a scan since started over.
-    state->setProperty("solveCamera", true);
-    CHECK(check()->isVisible());
+    // A scan since started over has nothing behind it, and nothing put right either.
     camera.restart();
+    CHECK_FALSE(camera.corrected());
     CHECK_FALSE(check()->isVisible());
 
     state->setProperty("screen", QStringLiteral("launch"));

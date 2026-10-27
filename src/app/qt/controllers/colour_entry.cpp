@@ -351,9 +351,16 @@ QVariantMap ColourEntry::solve() {
         out.insert(QStringLiteral("error"), QStringLiteral("notACube"));
         return out;
     }
+    // A cube the camera read and a person put right is still the cube the camera was
+    // looking at, and it is watching it still when the solve screen comes up. What each
+    // colour looked like was measured under the names the scan gave; the person has
+    // given others, and the camera is to know the cube by theirs.
+    const bool camera = edit_.from_reading() && scan_ != nullptr &&
+                        scan_->putRight(edit_.began_with(), edit_.stickers());
     solve_.solveCube(held_like_the_solver(*cube));
     out.insert(QStringLiteral("ok"), true);
     out.insert(QStringLiteral("solved"), cube->is_solved());
+    out.insert(QStringLiteral("camera"), camera);
     return out;
 }
 

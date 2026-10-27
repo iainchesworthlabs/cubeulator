@@ -235,18 +235,32 @@ on only for a valid cube. There is no "solve anyway".
 
 **From the solve screen.** A cube the camera read as valid and read wrong is only
 found out at the solve, so the solve screen has the same button (`solve.checkColours`,
-`scan.checkColours`, ghost) for a 3x3 that came from a scan: `AppState.solveCamera` and
-`DirectScan.complete`, so not for a typed cube, a scramble, a solve carried on from the
-history, a cube that has been corrected and solved (it is a typed cube from then on) or a
-scan since started over. It is a row of its own over the stepping buttons in both
-layouts, and *Out of step? Rescan* narrow moves up over it: beside that button it did not
-fit in every language. **Back from there is the solve screen**, as it was (the solution is
-untouched, the camera comes back on it); only *Scan again* starts a new scan. Leaving with
-changes asks first, as always. *Solve* on the corrected colours is a new solve from the
-first turn (`solveColours`); the solve it replaces stays in the history as unfinished.
+`scan.checkColours`, ghost) for a cube of any size that came from a scan:
+`AppState.solveCamera`, `DirectScan.complete` and not `DirectScan.corrected`, so not for a
+typed cube, a scramble, a solve carried on from the history, a cube that has been corrected
+and solved (what the scan read is not that cube any more) or a scan since started over. It is
+a row of its own over the stepping buttons in both layouts, and *Out of step? Rescan* narrow
+moves up over it: beside that button it did not fit in every language. **Back from there is
+the solve screen**, as it was (the solution is untouched, the camera comes back on it); only
+*Scan again* starts a new scan. Leaving with changes asks first, as always. *Solve* on the
+corrected colours is a new solve from the first turn (`solveColours`); the solve it replaces
+stays in the history as unfinished.
 
-**Not built, and not verified.** Any size but 3x3 from a scan (the scan reads 3x3 only). The "?"
-threshold on real recordings. A cube that fits two ways is shown as six sides to
+**The camera stays on a corrected cube.** The camera is still looking at the cube the person
+corrected, so the solve screen keeps its preview and goes on following the cube in the hand
+(`ColourEntry.solve` answers `camera: true` for any cube that began as a finished scan). That
+needs more than leaving the preview on. The camera knows what each colour looks like from the
+scan, under the names the scan gave, and a person who trades red and orange has given them the
+other way round: matched against the old names, every red sticker is "wrong" and the camera
+never picks up the side. `DirectScan.putRight` files what was measured under the names the
+person gave (`colours_after_correction`: each colour takes the measurement of the colour most
+of its stickers were named by in the scan), so a few stickers put right change nothing and a
+trade of two colours trades their measurements. A cube typed in from nothing, a scramble and a
+solve carried on from the history have no scan, and still have no camera.
+
+**Not built, and not verified.** The "?" threshold on real recordings. The camera following a
+cube whose red and orange were traded on the colours screen, on a real cube (it is held by drawn
+frames). A cube that fits two ways is shown as six sides to
 compare, not as the two candidates (the sketch's "Two cubes that both fit").
 
 ## A cube of another size

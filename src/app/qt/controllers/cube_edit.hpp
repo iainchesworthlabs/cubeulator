@@ -143,6 +143,11 @@ public:
     [[nodiscard]] int doubtful_on(cube::solver::Face face) const;
     // All the stickers, numbered as cube::nxn::NCube numbers them.
     [[nodiscard]] const std::vector<std::int8_t>& stickers() const noexcept { return stickers_; }
+    // The same as they were where the edit began (the reading, or blank): what revert()
+    // comes back to. With stickers(), what a person has changed.
+    [[nodiscard]] const std::vector<std::int8_t>& began_with() const noexcept {
+        return origin_.stickers;
+    }
 
     [[nodiscard]] EditStatus status() const;
 

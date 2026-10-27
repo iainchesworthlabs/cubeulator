@@ -23,6 +23,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace cube::app {
 
@@ -122,6 +123,10 @@ class DirectScan : public QObject {
     // be wrong), or six sides came in and made none. The review screen starts from
     // it (reviewReading).
     Q_PROPERTY(bool reviewable READ reviewable NOTIFY sidesChanged)
+    // The cube the scan made has been put right by hand and is being solved as it was put
+    // (putRight): what the scan read is no longer the cube on the solve screen, so the
+    // screen does not offer to look it over again. A new scan clears it.
+    Q_PROPERTY(bool corrected READ corrected NOTIFY correctionChanged)
 
     // The camera is being kept for the solve screen: sides are looked for in
     // every frame and reported (frameWatched), and none is added to the scan.
@@ -198,10 +203,25 @@ public:
         return scanned_n_.transform([](const cube::vision::ScannedCubeN& s) { return s.cube; });
     }
     // What each colour measured in that scan; later frames from the same
-    // camera session are matched against these.
+    // camera session are matched against these. Once the cube has been put right by
+    // hand, what each colour of the cube as it is measured (putRight).
     [[nodiscard]] std::optional<cube::vision::SessionColours> colours() const {
-        return scanned_n_.transform([](const cube::vision::ScannedCubeN& s) { return s.colours; });
+        return corrected_colours_.has_value()
+                   ? corrected_colours_
+                   : scanned_n_.transform(
+                         [](const cube::vision::ScannedCubeN& s) { return s.colours; });
     }
+    [[nodiscard]] bool corrected() const noexcept { return corrected_colours_.has_value(); }
+
+    // A person has put the cube this scan made right, by hand (ColourEntry), and is to
+    // solve it as they have put it. `as_read` is the stickers as the scan had them and
+    // `as_corrected` as they are now, numbered as cube::nxn::NCube numbers them. The
+    // camera keeps watching the cube in the hand, so what each colour of the cube as it
+    // now is looks like has to be known: what was measured stays, filed under the names
+    // the person has given (colours_after_correction). False, and nothing changes,
+    // when the scan has made no cube or the stickers are not that cube's.
+    bool putRight(const std::vector<std::int8_t>& as_read,
+                  const std::vector<std::int8_t>& as_corrected);
 
     // The scan as the review screen takes it (scan_reading.hpp): the cube, with the
     // stickers the colour naming was not sure of marked, when the scan made one;
@@ -257,6 +277,7 @@ signals:
     void sidesChanged();
     void recordingRootChanged();
     void sizeChanged();
+    void correctionChanged();
     // Six sides have been read and make exactly one valid cube: cube().
     void scanCompleted();
     // A frame has been looked at while watching: read() is its side, or
@@ -319,6 +340,9 @@ private:
     // The scan's cube, of any size; and for a size of 3 the same as a 3x3.
     std::optional<cube::vision::ScannedCubeN> scanned_n_;
     std::optional<cube::vision::ScannedCube> scanned_;
+    // What the colours of scanned_n_'s cube measured once a person had put it right.
+    // Always worked out from the scan's own, so putting right twice is not doing it twice.
+    std::optional<cube::vision::SessionColours> corrected_colours_;
     bool watching_ = false;
 
     QString recording_root_;

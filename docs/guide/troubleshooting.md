@@ -76,7 +76,9 @@ solve screen, over the buttons at the bottom. It shows what the camera read, one
 side at a time, as you would see it on your cube, with the sides named by their
 middle colour. **Back** from the solve screen's button returns to the solution
 where you left it; **Scan again** starts a new scan. **Solve** after a correction
-solves the corrected cube from the first turn.
+solves the corrected cube from the first turn, with the camera still on it: the
+preview stays in the corner and the solution still steps on by itself when you
+make the move. (A cube you typed in has no scan, so it has no camera.)
 
 - **A "?" on a sticker** is one the camera was not sure of. Look at that sticker
   on your cube first. Painting it, with the colour you can see, clears the mark.
