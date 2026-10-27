@@ -213,7 +213,7 @@ expect_ok("VCPKG_ROOT at another commit")
 expect_in_log("VCPKG_ROOT at another commit" "builtin-baseline is ${pin2}")
 
 # --- nothing named: a configure that asks for vcpkg stops -----------------
-configure(b-none "" "-DVCPKG_TARGET_TRIPLET=x64-linux")
+configure(b-none "" "-DVCPKG_TARGET_TRIPLET=test-triplet")
 if(rc EQUAL 0)
     message(FATAL_ERROR "nothing named: the configure should have failed.")
 endif()
