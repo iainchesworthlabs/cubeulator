@@ -94,11 +94,9 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "2"
       BUNDLE_ID: com.iainchesworthlabs.cubeulator
     steps:
-      # fetch-depth: 0 and the submodule: vcpkg's version resolution reads
-      # historical trees of deps/vcpkg (see CI's build legs).
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
@@ -155,11 +153,10 @@ jobs:
           echo "tag=${TAG_INPUT:-v$full}" >> "$GITHUB_OUTPUT"
           echo "version $full (the bundle's is $base)"
 
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
         with:
-          triplet: arm64-ios
+          cache-key-suffix: arm64-ios
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -316,10 +313,8 @@ jobs:
       # runs are the ones that save).
       - name: Save vcpkg binaries
         if: ${{ always() && (inputs.save_cache == true || github.workflow == 'iOS device build') }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: arm64-ios
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
 
       # The built application, opened as a user's device would: identifier,
       # version, the camera text, the icon, arm64, nothing linked outside the

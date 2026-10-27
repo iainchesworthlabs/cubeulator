@@ -137,15 +137,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -202,10 +200,8 @@ jobs:
 
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
 
   sanitizers-app:
     name: Sanitizers - ASan + UBSan (app)
@@ -226,15 +222,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -303,10 +297,8 @@ jobs:
 
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
 
   clang-tidy-app:
     name: clang-tidy over the app
@@ -322,15 +314,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.sha || inputs.ref || 'develop' }}
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -407,10 +397,8 @@ jobs:
 
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
 
   report:
     name: Report

@@ -183,7 +183,7 @@ and `merge-queue-develop` rules apply unchanged.
 
 The queue merges once the *required* checks pass, so the set of ecosystems that
 may merge themselves is tied to the [Required checks](#required-checks) table:
-major updates, and the vcpkg baseline + `deps/vcpkg` submodule, stay manual until
+major updates, and the vcpkg baseline, stay manual until
 the build and test checks that would catch their breakage are promoted. The
 policy and the one place to widen it are in `dependabot-auto-merge.yml`.
 

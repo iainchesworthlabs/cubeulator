@@ -1,8 +1,7 @@
 # Dependency strategy: vcpkg on every platform
 
-Cubeulator vendors [vcpkg](https://github.com/iainchesworthlabs/vcpkg) (the labs fork of microsoft/vcpkg: it tracks upstream and carries our ports until they are merged there) as a pinned git
-submodule (manifest mode, `vcpkg.json`) for its C++ dependencies: Catch2,
-fmt and OpenCV. Qt is a separate prebuilt install
+Cubeulator uses [vcpkg](https://github.com/iainchesworthlabs/vcpkg) (the labs fork of microsoft/vcpkg: it tracks upstream and carries our ports until they are merged there) in manifest mode (`vcpkg.json`, pinned by its `builtin-baseline`, a commit of the fork) for its C++ dependencies: Catch2,
+fmt and OpenCV. Where the checkout comes from is in [Getting started](getting-started.md#vcpkg). Qt is a separate prebuilt install
 (aqtinstall / `jurplel/install-qt-action`), not a vcpkg dependency, for the
 same reasons CountdownSolver keeps it out of vcpkg (build size, Windows
 `MAX_PATH`).
@@ -50,7 +49,7 @@ the application is asked to profile (see [Profiling](profiling.md)).
 
 The `profiling` feature asks for `tracy[manual-lifetime,on-demand,only-localhost]`
 for the target - **from an overlay port**, `vcpkg-overlay-ports/tracy/`, a copy
-of the registry's port (`deps/vcpkg/ports/tracy`) with the two features the
+of the registry's port (`ports/tracy` of the vcpkg checkout) with the two features the
 registry's lacks, each one line mapping a feature to the Tracy CMake option of
 the same name - and `vulkan-headers` (header-only) where Qt can render with
 Vulkan. `tracy[cli-tools]` is the separate `profiling-tools` feature, a `host`
@@ -59,10 +58,10 @@ machine that will run them; a shipped build does not select it, which is why
 `capstone`, `zstd` and `ppqsort` are not in a shipped build's notices.
 
 **Keeping the overlay current:** when the vcpkg baseline moves its `tracy` port
-(`deps/vcpkg/ports/tracy/vcpkg.json` `version` / `port-version` changes), copy
+(`ports/tracy/vcpkg.json` of the checkout at the new baseline changes its `version` / `port-version`), copy
 the registry's files over `vcpkg-overlay-ports/tracy/` and put the header
 comment, the two feature lines in `vcpkg.json` and the two in `portfile.cmake`
-back (`git diff --no-index deps/vcpkg/ports/tracy vcpkg-overlay-ports/tracy`
+back (`git diff --no-index <vcpkg checkout>/ports/tracy vcpkg-overlay-ports/tracy`
 shows exactly those). The overlay's `port-version` is the registry's plus one,
 so that the notices (`tracy 0.14.1#2`) show it is not the registry's build.
 
@@ -99,7 +98,7 @@ unverified or gappy:
 | `bgfx` | No verified iOS/Android build via vcpkg's own port | [bgfx#905](https://github.com/bkaradzic/bgfx/issues/905) — upstream tracking issue for iOS arm64 |
 | `opencv4` | Android is an officially tested vcpkg triplet; iOS is unverified | [vcpkg blog: Android tested triplets](https://devblogs.microsoft.com/cppblog/vcpkg-2023-06-20-and-2023-07-21-releases-github-dependency-graph-support-android-tested-triplets-xbox-triplet-improvements-and-more/) |
 
-Re-checking the actual vcpkg port manifests (`deps/vcpkg/ports/*/vcpkg.json`)
+Re-checking the actual vcpkg port manifests (`ports/*/vcpkg.json` of the vcpkg checkout)
 rather than just those linked issues showed neither is actually blocked by
 vcpkg on mobile triplets:
 

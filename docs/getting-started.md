@@ -9,29 +9,34 @@ This page is for building Cubeulator from source. To use it, see the
 - CMake 4+ and Ninja.
 - Qt 6.12.x, the current LTS (prebuilt, via [aqtinstall](https://github.com/miurahr/aqtinstall))
   — only needed if you're building the desktop GUI shell (the default).
-- Git (vcpkg is vendored as a submodule and bootstraps itself automatically —
-  nothing else to install for it).
+- Git, and a place for vcpkg (the labs' fork, pinned by `vcpkg.json`; see
+  [vcpkg](#vcpkg) below).
 
 ## Clone
 
 ```sh
-git clone --recurse-submodules https://github.com/iainchesworthlabs/cubeulator
+git clone https://github.com/iainchesworthlabs/cubeulator
 cd cubeulator
 ```
 
-If you already cloned without `--recurse-submodules`:
+## vcpkg
 
-```sh
-git submodule update --init --depth 1 deps/vcpkg
-```
+vcpkg supplies fmt, OpenCV and Catch2. `vcpkg.json` pins it with a
+`builtin-baseline`, a commit of the labs' fork `iainchesworthlabs/vcpkg`, and
+`cmake/icl/IclVcpkgRoot.cmake` picks the checkout for a configure, first match
+wins:
 
-## Sharing vcpkg between checkouts
+1. A `CMAKE_TOOLCHAIN_FILE` you pass (or an IDE sets) is used as it is.
+2. `CUBEULATOR_VCPKG_ROOT` names one vcpkg checkout you manage yourself. A
+   different commit from the baseline is a warning, since a baseline newer than
+   the scripts it is built with can fail.
+3. A **store**, from `CUBEULATOR_VCPKG_STORE` or, for every Iain Chesworth Labs
+   repository on the machine, `ICL_VCPKG_STORE`.
+4. `VCPKG_ROOT`, which is what CI sets (icl-common-infra's `setup-vcpkg` checks
+   out the baseline and exports it).
 
-By default every checkout has its own copy of vcpkg: the `deps/vcpkg`
-submodule. That is what a fresh clone and CI use, and nothing needs setting up.
-If you keep several checkouts or worktrees (or several repositories that use
-vcpkg), that is a lot of copies. Point them at one shared **store** instead;
-set this once per machine, in your environment:
+With none of them a configure that needs vcpkg stops and lists these options.
+Set the store once per machine, in your environment:
 
 ```sh
 # Windows (new terminals and Visual Studio pick it up after a restart)
@@ -40,44 +45,23 @@ setx ICL_VCPKG_STORE C:\Repos\common\vcpkg
 export ICL_VCPKG_STORE=$HOME/.cache/icl/vcpkg
 ```
 
-`ICL_VCPKG_STORE` is read by every Iain Chesworth Labs repository that carries
-the same `cmake/VcpkgRoot.cmake`, so they all share the one directory.
-`CUBEULATOR_VCPKG_STORE` overrides it for Cubeulator alone.
+The first configure clones the fork into `<store>/mirror` and checks out the
+baseline commit into `<store>/<first 12 characters of the commit>`. Every
+checkout, worktree or repository that pins the same commit uses that directory.
+When the baseline moves (a vcpkg bump) the new commit gets a directory of its
+own and nothing that already exists is touched, so a build that is running never
+has vcpkg change under it. Directories of old commits can be deleted when you no
+longer need them (`git -C <store>/mirror worktree remove <dir>`).
 
-The first configure clones the fork the submodule points at into
-`<store>/mirror`, and checks out the commit this checkout pins into
-`<store>/<first 12 characters of the commit>`. Every checkout (of this
-repository or another) that pins the same commit uses that directory; when a pin
-moves (a vcpkg bump), the new commit gets a directory of its own, and nothing
-that already exists is touched. That is the point of a directory per commit
-rather than one shared checkout: a checkout of another branch, or a build that
-is running, never has vcpkg change under it. A repository whose submodule points
-at a different fork has its commit fetched into the same mirror. Directories of
-old commits can be deleted when you no longer need them
-(`git -C <store>/mirror worktree remove <dir>`).
-
-Already have a full clone of your fork somewhere? Set `ICL_VCPKG_MIRROR` (or
+Already have a full clone of the fork? Set `ICL_VCPKG_MIRROR` (or
 `CUBEULATOR_VCPKG_MIRROR`) to it and the store makes its checkouts from that
-instead of cloning again.
+instead of cloning again. `CUBEULATOR_VCPKG_URL` names another fork to clone.
 
-A build directory remembers the vcpkg it was first configured with, so after
-the pin moves, configure it again with `cmake --fresh --preset <name>` (CMake
+A build directory remembers the vcpkg it was first configured with, so after the
+baseline moves, configure it again with `cmake --fresh --preset <name>` (CMake
 says so). Build artifacts are separate from all this: share the downloads,
-binary cache and installed tree with `VCPKG_DOWNLOADS`,
-`VCPKG_BINARY_SOURCES` and `VCPKG_INSTALLED_DIR`, as vcpkg documents.
-
-Two other ways in, for when the store does not fit:
-
-- `CUBEULATOR_VCPKG_ROOT` names one vcpkg checkout you manage yourself. There is
-  no organisation-wide equivalent on purpose: one directory cannot be at the
-  commit every repository pins. A different commit from the pin is a warning,
-  since a baseline newer than the scripts it is built with can fail.
-- `-DCMAKE_TOOLCHAIN_FILE=...` (or an IDE that sets it) is used as it is.
-
-Avoid pointing `deps/vcpkg` itself at a shared directory with a junction or
-symlink: deleting that checkout (or a worktree of it) can then empty the shared
-copy for everyone, and a dead link makes git report only that it "cannot find
-the current revision". The configure now says which link is dead.
+binary cache and installed tree with `VCPKG_DOWNLOADS`, `VCPKG_BINARY_SOURCES`
+and `VCPKG_INSTALLED_DIR`, as vcpkg documents.
 
 ## First build
 

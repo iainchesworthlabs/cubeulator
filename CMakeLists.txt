@@ -2,16 +2,18 @@
 cmake_minimum_required(VERSION 3.28...4.4)
 
 # ---------------------------------------------------------------------------
-# vcpkg (pinned by the git submodule at deps/vcpkg).
+# vcpkg (pinned by the builtin-baseline in vcpkg.json).
 #
-# The submodule pins the dependency provider so builds are reproducible
-# without a machine-wide vcpkg or a VCPKG_ROOT env var. Which checkout of that
-# commit a configure uses - the submodule's own, or one shared between your
-# checkouts through ICL_VCPKG_STORE - is decided in cmake/VcpkgRoot.cmake,
-# which sets CMAKE_TOOLCHAIN_FILE. The presets deliberately do not.
+# The baseline names a commit of the labs' vcpkg fork. Which checkout of that
+# commit a configure uses - one shared between your checkouts through
+# ICL_VCPKG_STORE, a root you name, or the VCPKG_ROOT that CI sets - is decided
+# in cmake/icl/IclVcpkgRoot.cmake (docs/building.md), which sets
+# CMAKE_TOOLCHAIN_FILE. The presets deliberately do not. The module is included
+# by path: cmake/icl is not on CMAKE_MODULE_PATH, so its FindQt6 does not take
+# the place of cmake/FindQt6.cmake.
 # ---------------------------------------------------------------------------
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/VcpkgRoot.cmake")
-cubeulator_resolve_vcpkg("${CMAKE_CURRENT_SOURCE_DIR}")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/icl/IclVcpkgRoot.cmake")
+icl_resolve_vcpkg("${CMAKE_CURRENT_SOURCE_DIR}" CUBEULATOR)
 
 # ---------------------------------------------------------------------------
 # Select vcpkg manifest features BEFORE project() (the vcpkg toolchain reads

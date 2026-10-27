@@ -36,15 +36,13 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "2"
 
     steps:
-      # fetch-depth: 0 is required for vcpkg's version resolution against the
-      # deps/vcpkg submodule — see the equivalent comment in ci.yml.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       #
       # A merge-queue entry is not analysed at all (see the next step), so it does
       # not check out either.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: ${{ github.event_name != 'merge_group' }}
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
@@ -79,12 +77,11 @@ jobs:
       # actions/cache tolerates concurrent jobs racing to populate the same
       # key (whichever finishes first wins; the others just skip their own
       # save harmlessly).
-      - name: Restore vcpkg binaries
+      - name: Set up vcpkg
         if: ${{ steps.changed.outputs.code == 'true' }}
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         if: ${{ steps.changed.outputs.code == 'true' }}
@@ -125,7 +122,7 @@ jobs:
       # push to develop on 2026-10-18 restored 52 archives of 64 and rebuilt
       # libjpeg-turbo, OpenCV and the rest, and a scheduled run on main with a
       # cold cache rebuilt them all), the code-scanning tab filled with some
-      # 380 "high" alerts in deps/vcpkg/buildtrees/ that no one here can fix.
+      # 380 "high" alerts in the vcpkg checkout's buildtrees/ that no one here can fix.
       - name: Initialize CodeQL
         if: ${{ steps.changed.outputs.code == 'true' }}
         uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
@@ -160,10 +157,8 @@ jobs:
       # Saved even when a later step fails: otherwise a red leg throws away every
       # package vcpkg had already built and the next attempt starts from nothing
       # (an hour or more on Windows and macOS). Only saves when packages were
-      # added since the restore - see .github/actions/vcpkg-cache.
+      # added since the restore - see save-vcpkg-cache in icl-common-infra.
       - name: Save vcpkg binaries
         if: ${{ steps.changed.outputs.code == 'true' && (always()) }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@dd980dbe9d40a468cedf651de91bb429a4bbb10f # v0.1.16

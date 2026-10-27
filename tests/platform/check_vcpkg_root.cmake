@@ -1,24 +1,23 @@
-# Script-mode CTest case (cmake -P): cmake/VcpkgRoot.cmake picks the vcpkg root
-# the way its header says it does.
+# Script-mode CTest case (cmake -P): cmake/icl/IclVcpkgRoot.cmake picks the
+# vcpkg root the way its header says it does.
 #
-# Nothing here touches the network or the real deps/vcpkg. A fake upstream
-# repository stands in for the vcpkg fork (one file, a toolchain that prints a
-# line), a fake superproject pins it as deps/vcpkg, and a tiny project that
-# calls cubeulator_resolve_vcpkg() before project() is configured against them
-# in each of the situations that matter:
+# Nothing here touches the network or a real vcpkg. A fake upstream repository
+# stands in for the vcpkg fork (one file, a toolchain that prints a line), a
+# fake source directory names a commit of it as the builtin-baseline in its
+# vcpkg.json, and a tiny project that calls icl_resolve_vcpkg() before project()
+# is configured against them in each of the situations that matter:
 #
-#   store         first use makes <store>/<pin>, the second configure reuses it
+#   store         first use makes <store>/<baseline>, the second configure reuses it
+#   baseline moved an old build directory is told to configure --fresh (CMake
+#                 would otherwise keep the old toolchain), and does after it
 #   ICL store     ICL_VCPKG_STORE does the same; CUBEULATOR_VCPKG_STORE wins
 #                 when both are set
-#   other fork    a pin that is not in the mirror's origin is fetched from the
-#                 URL in .gitmodules, so repositories with different forks can
-#                 share one store
-#   pin moved     an old build directory is told to configure --fresh (CMake
-#                 would otherwise keep the old toolchain), and does after it
+#   other fork    CUBEULATOR_VCPKG_URL names a repository the mirror does not
+#                 know, so projects with different forks can share one store
 #   root          CUBEULATOR_VCPKG_ROOT at another commit warns, does not fail
+#   VCPKG_ROOT    what CI sets: used as it is, a different commit warns
 #   dead toolchain a CMAKE_TOOLCHAIN_FILE that does not exist says so
-#   dead link     deps/vcpkg as a link whose target is gone says so, and is
-#                 never initialised over (what a link points at is shared)
+#   nothing named a configure that asks for vcpkg by its triplet stops
 #
 # Run: cmake -DREPO_ROOT=<repo> -DWORK_DIR=<scratch dir> -P check_vcpkg_root.cmake
 
@@ -55,20 +54,17 @@ function(upstream_commit label out)
 endfunction()
 
 function(pin_super sha)
-    git("${super}" update-index --add --cacheinfo "160000,${sha},deps/vcpkg")
+    file(WRITE "${super}/vcpkg.json" "{ \"name\": \"t\", \"version\": \"0\", \"builtin-baseline\": \"${sha}\" }\n")
 endfunction()
 
 file(MAKE_DIRECTORY "${upstream}" "${super}" "${proj}")
 git("${upstream}" init -q)
 upstream_commit("one" pin1)
-git("${super}" init -q)
-file(WRITE "${super}/.gitmodules"
-    "[submodule \"deps/vcpkg\"]\n\tpath = deps/vcpkg\n\turl = ${upstream}\n")
 pin_super("${pin1}")
 file(WRITE "${proj}/CMakeLists.txt" [[
 cmake_minimum_required(VERSION 3.28)
-include("${REPO}/cmake/VcpkgRoot.cmake")
-cubeulator_resolve_vcpkg("${SUPER}")
+include("${REPO}/cmake/icl/IclVcpkgRoot.cmake")
+icl_resolve_vcpkg("${SUPER}" CUBEULATOR)
 project(t LANGUAGES NONE)
 message(STATUS "root-dir=${CUBEULATOR_VCPKG_ROOT_DIR}")
 ]])
@@ -78,11 +74,11 @@ message(STATUS "root-dir=${CUBEULATOR_VCPKG_ROOT_DIR}")
 function(configure build env)
     set(unset)
     foreach(name CUBEULATOR_VCPKG_ROOT CUBEULATOR_VCPKG_STORE CUBEULATOR_VCPKG_MIRROR
-                ICL_VCPKG_STORE ICL_VCPKG_MIRROR)
+                CUBEULATOR_VCPKG_URL ICL_VCPKG_STORE ICL_VCPKG_MIRROR VCPKG_ROOT)
         list(APPEND unset "--unset=${name}")
     endforeach()
     execute_process(
-        COMMAND "${CMAKE_COMMAND}" -E env ${unset} ${env}
+        COMMAND "${CMAKE_COMMAND}" -E env ${unset} "CUBEULATOR_VCPKG_URL=${vcpkg_url}" ${env}
             "${CMAKE_COMMAND}" -S "${proj}" -B "${WORK_DIR}/${build}" -G "${GEN}"
             "-DREPO=${REPO_ROOT}" "-DSUPER=${super}" ${ARGN}
         RESULT_VARIABLE rc OUTPUT_VARIABLE log ERROR_VARIABLE log)
@@ -120,6 +116,7 @@ function(expect_not_in_log what text)
     endif()
 endfunction()
 
+set(vcpkg_url "${upstream}")
 set(GEN "${CMAKE_GENERATOR}")
 if(GEN STREQUAL "")
     set(GEN "Ninja")
@@ -131,7 +128,7 @@ configure(b-store1 "CUBEULATOR_VCPKG_STORE=${store}")
 expect_ok("store, first use")
 expect_in_log("store, first use" "fake-vcpkg one")
 expect_in_log("store, first use" "root-dir=${store}/${short1}")
-if(NOT EXISTS "${store}/${short1}/.cubeulator-ready")
+if(NOT EXISTS "${store}/${short1}/.icl-ready")
     message(FATAL_ERROR "store: ${store}/${short1} was not marked ready.")
 endif()
 
@@ -153,7 +150,7 @@ configure(b-store1 "CUBEULATOR_VCPKG_STORE=${store}" --fresh)
 expect_ok("pin moved, --fresh")
 expect_in_log("pin moved, --fresh" "fake-vcpkg two")
 expect_in_log("pin moved, --fresh" "root-dir=${store}/${short2}")
-if(NOT EXISTS "${store}/${short1}/.cubeulator-ready")
+if(NOT EXISTS "${store}/${short1}/.icl-ready")
     message(FATAL_ERROR "pin moved: the checkout of the old pin must be left alone.")
 endif()
 
@@ -169,7 +166,7 @@ if(EXISTS "${store_icl}-unused")
     message(FATAL_ERROR "both stores set: ICL_VCPKG_STORE must be ignored when CUBEULATOR_VCPKG_STORE is set.")
 endif()
 
-# --- other fork: the pin is in a repository the mirror does not know -----
+# --- other fork: the baseline is in a repository the mirror does not know -
 set(upstream_b "${WORK_DIR}/upstream-b")
 set(super_b "${WORK_DIR}/super-b")
 file(MAKE_DIRECTORY "${upstream_b}" "${super_b}")
@@ -178,23 +175,25 @@ set(upstream_save "${upstream}")
 set(upstream "${upstream_b}")
 upstream_commit("other fork" pin_b)
 set(upstream "${upstream_save}")
-git("${super_b}" init -q)
-file(WRITE "${super_b}/.gitmodules"
-    "[submodule \"deps/vcpkg\"]
-	path = deps/vcpkg
-	url = ${upstream_b}
-")
-git("${super_b}" update-index --add --cacheinfo "160000,${pin_b},deps/vcpkg")
+set(super_save "${super}")
+set(super "${super_b}")
+pin_super("${pin_b}")
+set(super "${super_save}")
 string(SUBSTRING "${pin_b}" 0 12 short_b)
 configure(b-other "CUBEULATOR_VCPKG_STORE=${store}" "-DSUPER=${super_b}")
-expect_ok("other fork")
-expect_in_log("other fork" "fake-vcpkg other fork")
-expect_in_log("other fork" "root-dir=${store}/${short_b}")
+if(rc EQUAL 0)
+    message(FATAL_ERROR "other fork: the mirror's origin does not have the commit, so this must fail.")
+endif()
+expect_in_log("other fork" "is not in")
+configure(b-other "CUBEULATOR_VCPKG_STORE=${store};CUBEULATOR_VCPKG_URL=${upstream_b}" "-DSUPER=${super_b}")
+expect_ok("other fork, with its URL")
+expect_in_log("other fork, with its URL" "fake-vcpkg other fork")
+expect_in_log("other fork, with its URL" "root-dir=${store}/${short_b}")
 
 # --- root: another commit than the pin is a warning ----------------------
 configure(b-root "CUBEULATOR_VCPKG_ROOT=${store}/${short1}")
 expect_ok("root at another commit")
-expect_in_log("root at another commit" "deps/vcpkg pins ${pin2}")
+expect_in_log("root at another commit" "builtin-baseline is ${pin2}")
 expect_in_log("root at another commit" "root-dir=${store}/${short1}")
 
 # --- dead toolchain -------------------------------------------------------
@@ -204,39 +203,20 @@ if(rc EQUAL 0)
 endif()
 expect_in_log("dead toolchain" "does not exist")
 
-# --- dead link at deps/vcpkg ---------------------------------------------
-# The link is a symbolic link where the machine lets this user make one, and
-# otherwise a directory junction (what the repo's Windows developers have),
-# which needs no privilege. Which of the two is found out by trying, not by
-# asking what the OS is: that is a CMake decision made elsewhere.
-set(link "${super}/deps/vcpkg")
-set(target "${WORK_DIR}/link-target")
-file(MAKE_DIRECTORY "${super}/deps" "${target}")
-file(CREATE_LINK "${target}" "${link}" SYMBOLIC RESULT made)
-if(NOT made STREQUAL "0")
-    find_program(CMD_EXECUTABLE cmd)
-    if(NOT CMD_EXECUTABLE)
-        message(FATAL_ERROR "dead link: cannot make a symbolic link (${made}) and there is no cmd to make a junction.")
-    endif()
-    string(REPLACE "/" "\\" link_native "${link}")
-    string(REPLACE "/" "\\" target_native "${target}")
-    execute_process(COMMAND cmd /c mklink /J "${link_native}" "${target_native}"
-        RESULT_VARIABLE rc OUTPUT_QUIET ERROR_QUIET)
-    if(NOT rc EQUAL 0)
-        message(FATAL_ERROR "dead link: could not make a junction at ${link}.")
-    endif()
-endif()
-file(REMOVE_RECURSE "${target}")
-configure(b-link "")
+# --- VCPKG_ROOT: what CI sets --------------------------------------------
+configure(b-env "VCPKG_ROOT=${store}/${short2}")
+expect_ok("VCPKG_ROOT at the baseline")
+expect_in_log("VCPKG_ROOT at the baseline" "root-dir=${store}/${short2}")
+expect_not_in_log("VCPKG_ROOT at the baseline" "WARNING")
+configure(b-env2 "VCPKG_ROOT=${store}/${short1}")
+expect_ok("VCPKG_ROOT at another commit")
+expect_in_log("VCPKG_ROOT at another commit" "builtin-baseline is ${pin2}")
+
+# --- nothing named: a configure that asks for vcpkg stops -----------------
+configure(b-none "" "-DVCPKG_TARGET_TRIPLET=x64-linux")
 if(rc EQUAL 0)
-    message(FATAL_ERROR "dead link: the configure should have failed.")
+    message(FATAL_ERROR "nothing named: the configure should have failed.")
 endif()
-expect_in_log("dead link" "is a link to")
-expect_in_log("dead link" "does not exist")
-expect_not_in_log("dead link" "Initialising vendored vcpkg submodule")
-file(REMOVE "${link}")
-if(IS_SYMLINK "${link}" AND CMD_EXECUTABLE)
-    execute_process(COMMAND cmd /c rmdir "${link_native}" OUTPUT_QUIET ERROR_QUIET)
-endif()
+expect_in_log("nothing named" "none is set")
 
 message(STATUS "vcpkg root selection behaves as documented")
