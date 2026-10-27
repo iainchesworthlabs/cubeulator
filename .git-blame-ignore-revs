@@ -1,0 +1,9 @@
+# Commits that only reformat code. `git blame` skips them when this file is set:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub reads the file by this name on its own. List a mass reformat here in
+# the same pull request that makes it, or the next one.
+
+# Format src and tests with clang-format 21.1.6 (134 files)
+77ef2f328ace916618b6f0c05e54b7e6b6443053
+# Format with clang-format 22, and pin the CI leg to it (136 files)
+ea6e87b86acf1b9f64a1633205d098791574a2e4

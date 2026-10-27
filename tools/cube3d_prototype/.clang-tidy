@@ -1,0 +1,9 @@
+# The prototype is Qt-facing code and uses the QML camelCase convention; see
+# src/app/.clang-tidy.
+InheritParentConfig: true
+CheckOptions:
+  readability-identifier-naming.MethodIgnoredRegexp: '^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+$'
+  readability-identifier-naming.FunctionIgnoredRegexp: '^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+$'
+  readability-identifier-naming.ParameterIgnoredRegexp: '^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+$'
+  readability-identifier-naming.LocalVariableIgnoredRegexp: '^([a-z][a-z0-9]*([A-Z][a-z0-9]*)+|k[A-Z][A-Za-z0-9]*)$'
+  readability-identifier-naming.MemberIgnoredRegexp: '^^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+_?$'

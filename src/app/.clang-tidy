@@ -1,0 +1,11 @@
+# The Qt-facing code (Q_PROPERTY, Q_INVOKABLE, signals, slots and the QObject
+# classes around them) is camelCase, the QML convention, and so are the
+# parameters, locals and members of those classes. The rest of this directory
+# keeps the root's lower_case, so a name is accepted in either form.
+InheritParentConfig: true
+CheckOptions:
+  readability-identifier-naming.MethodIgnoredRegexp: '^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+$'
+  readability-identifier-naming.FunctionIgnoredRegexp: '^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+$'
+  readability-identifier-naming.ParameterIgnoredRegexp: '^[a-z][a-z0-9]*([A-Z][a-z0-9]*)+$'
+  readability-identifier-naming.LocalVariableIgnoredRegexp: '^([a-z][a-z0-9]*([A-Z][a-z0-9]*)+|assertion_|writeCrashDump|ES_CONTINUOUS|keepAwake|shortScreen|k[A-Z][A-Za-z0-9]*)$'
+  readability-identifier-naming.MemberIgnoredRegexp: '^([a-z][a-z0-9]*([A-Z][a-z0-9]*)+_?|keepAwake|activeSignals|heldSignals)$'
