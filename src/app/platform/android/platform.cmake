@@ -64,8 +64,16 @@ set(CUBEULATOR_PLATFORM_COMPILE_DEFINITIONS "")
 # doesn't recognise the app as having requested it at all). A directory of
 # its own, because androiddeployqt copies the whole of it into the Gradle
 # project and the platform directory also holds sources.
+#
+# QT_ANDROID_PACKAGE_NAME is the application id and the Gradle namespace.
+# androiddeployqt swaps it in for the package="org.qtproject.example" line of
+# the manifest, so that line stays as it is. The id is the one on every
+# platform (cmake/AppIdentity.cmake) and must not change after the first
+# store release.
+include("${PROJECT_SOURCE_DIR}/cmake/AppIdentity.cmake")
 set(CUBEULATOR_PLATFORM_APP_PROPERTIES
-    QT_ANDROID_PACKAGE_SOURCE_DIR "${CUBEULATOR_PLATFORM_DIR}/package")
+    QT_ANDROID_PACKAGE_SOURCE_DIR "${CUBEULATOR_PLATFORM_DIR}/package"
+    QT_ANDROID_PACKAGE_NAME "${CUBEULATOR_APP_ID}")
 
 # CMake's FindThreads (transitively pulled in by abseil, itself pulled in by
 # protobuf/opencv4) fails outright under this project's NDK-chainloaded-under-

@@ -102,8 +102,8 @@ Read from `feature/direct-scan` at `fa81b2e`.
   browser build bundles Japanese and Chinese subsets.
 - *Identity.* The app has an icon, a version resource and installers
   (E4a), and its identifier and publisher are `com.iainchesworthlabs.cubeulator`
-  and Iain Chesworth Labs. The Android manifest's package is still
-  `org.qtproject.example`, the Android and iOS camera backends are still
+  and Iain Chesworth Labs. The Android application id is the same
+  identifier (`QT_ANDROID_PACKAGE_NAME`), the Android and iOS camera backends are still
   stubs, and iOS builds in CI (device, build-only, unsigned).
 - *Legal.* Third-party notices are generated and ship in the desktop
   packages. There is no About or Licences screen: only a placeholder About
