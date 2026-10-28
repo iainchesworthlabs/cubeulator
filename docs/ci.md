@@ -26,6 +26,22 @@ See [Branch protection and the merge queue](branch-protection.md) for which
 checks are required on `develop` and `main`, how the queue is configured, and
 the `merge_group` rule a workflow has to follow to be part of it.
 
+### CI Status
+
+`ci.yml` ends in one job, `CI Status`, that collects the others (`needs:` lists the
+clang-format, platform-isolation, clang-tidy, plan, build, Android, web, web test, iOS,
+system test and coverage jobs). It uses the shared `ci-status` action: it fails when a
+collected job failed or was cancelled, and when a job the plan asked for was skipped,
+because a check that silently did not run is a failure of the gate. Which jobs the plan
+asks for is the `expected` map in the job: the mobile, web and system jobs skip as a
+whole on a documentation-only change and on a merge-queue entry, and platform-isolation
+skips on a queue entry. Add a job to `ci.yml` by adding it to `needs:`, and to `expected`
+if it can skip.
+
+This is the check that branch protection and the merge queue will name, instead of each
+leg. A manual dispatch renames its jobs and runs only the legs it names, so it has no
+`CI Status`. The two performance jobs run on a dispatch alone and are not collected.
+
 ### Documentation-only changes
 
 A pull request (or merge-queue entry) whose every changed file is documentation
