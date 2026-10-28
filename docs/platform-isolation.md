@@ -200,3 +200,23 @@ choose per operating system themselves and are held to their source by
 (GLSL has no operating system to branch on). The same rule is held by ICL Forge
 (`tools/checks/check_platform_macros.ps1`) and, for OS macros, by Aqualink
 Automate (`scripts/check-os-macros.ps1`).
+
+## The preprocessor check
+
+`check_no_preprocessor.py` from icl-common-infra runs beside the isolation check
+(`python3 <infra>/scripts/check_no_preprocessor.py --root .`; `tools/ci/precheck.py` runs
+it). It has two levels:
+
+- A conditional that tests a platform, operating system, architecture, compiler or
+  standard-library version fails, wherever it is. There is no exemption.
+- Every other `#if`, `#ifdef`, `#ifndef`, `#elif`, `#else`, `#endif`, `#define` and
+  `#undef` is counted per file. `tools/preprocessor-baseline.json` records the count each
+  file may have (a file with no entry may have none), and a change may lower a number
+  but not raise it: `--update-baseline` writes the lower ones and refuses to raise any.
+  `#include`, `#pragma` and `#error` are free.
+
+`tools/preprocessor-allowlist.txt` exempts a path from the second level only, with a reason
+on the same line. Today it holds the three Tracy profiling files, where a macro is the only
+way to capture the source location of a zone or to stand in for a function the header calls
+by name. The one remaining count in the baseline is the `SKIP` wrapper in
+`tests/unit/jpeg_codec.hpp`.

@@ -1,0 +1,6 @@
+# Paths exempt from the soft rule of the preprocessor check (standard 4.4): the count of
+# #if, #define and similar directives. The hard rule (no conditional on a platform,
+# compiler or library version) has no exemption. One "glob  # reason" per line.
+src/lib/variants/profiling-*/cube/profiling.hpp  # the zone macros capture the source location of the call, so they cannot be functions; the three variants (recorder, Tracy off, Tracy on) share one macro interface
+src/lib/src/profile/tracy_gpu.cpp  # Tracy's GPU header calls the OpenGL entry points by name; the macros point those names at the entry points Qt resolved at run time, and are undefined again after the include
+src/lib/src/profile/tracy_gpu_vulkan.cpp  # VK_NO_PROTOTYPES and TRACY_VK_USE_SYMBOL_TABLE must be defined before the Tracy Vulkan header is included
