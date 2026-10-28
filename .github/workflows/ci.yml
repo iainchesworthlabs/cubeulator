@@ -58,6 +58,10 @@ jobs:
       contents: read
       pull-requests: read
     uses: iainchesworthlabs/icl-common-infra/.github/workflows/policy.yml@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+    with:
+      # Seconds of work, so routed like clang-format: by the CONTROL_RUNNER_JSON repository
+      # variable, with a fork pull request pinned to the hosted image (docs/ci.md).
+      runner: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["ubuntu-24.04"]' || vars.CONTROL_RUNNER_JSON || '["ubuntu-24.04"]' }}
 
   clang-format:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - clang-format' || 'clang-format' }}
