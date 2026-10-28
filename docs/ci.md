@@ -20,6 +20,7 @@
 | `docs-check.yml` | On a PR that touches `docs/` or `mkdocs.yml`: builds the documentation (not the web app) with `mkdocs build --strict`, so a broken link shows on the PR and not on the push to `main` that publishes the site | No (advisory) | No |
 | `dependabot-auto-merge.yml` | Enables auto-merge on Dependabot's minor/patch PRs for GitHub Actions and pip | No (acts on Dependabot PRs only) | No |
 | `cache-hygiene.yml` | Prunes the Actions cache quota: closed PRs' and deleted branches' entries, superseded vcpkg and Qt generations ([below](#the-vcpkg-binary-cache)) | No (acts on the cache only) | No |
+| `vcpkg-baseline.yml` | `vcpkg-baseline-in-fork`: a pull request that moves `builtin-baseline` must name a commit the labs' vcpkg fork already has (the script comes from `icl-common-infra`, through `checkout-infra`). Dependabot proposes upstream commits, so its pull request fails until the fork's daily sync has them | Not yet (advisory until it is made a required check) | Reports success without checking |
 
 See [Branch protection and the merge queue](branch-protection.md) for which
 checks are required on `develop` and `main`, how the queue is configured, and
@@ -219,17 +220,19 @@ the manifest (it has since been removed, and these figures have not been
 re-measured) ONNX Runtime alone was 39 minutes on the Windows leg, OpenCV 14 on
 Linux, and a whole macOS or iOS configure was over an hour. With the cache
 restored it is seconds (96 of 98 Linux packages came back in 19 s; a macOS
-configure took 43 s instead of 67 minutes). Every job that runs vcpkg uses the
-same two composite actions,
-[`.github/actions/vcpkg-cache/restore` and `/save`](https://github.com/iainchesworthlabs/cubeulator/tree/main/.github/actions/vcpkg-cache),
-which wrap vcpkg's `files` binary-cache provider (its `x-gha` provider was
-removed) around `actions/cache`.
+configure took 43 s instead of 67 minutes). Every job that runs vcpkg uses two
+shared actions of `icl-common-infra`, pinned by commit like every other
+reference: `setup-vcpkg` clones the labs' fork at the `builtin-baseline` of
+`vcpkg.json`, bootstraps it, exports `VCPKG_ROOT` and restores the caches, and
+`save-vcpkg-cache` is the job's last step, with `if: always()`. They wrap vcpkg's
+`files` binary-cache provider (its `x-gha` provider was removed) around
+`actions/cache`.
 
 | Step | What it does |
 | --- | --- |
-| restore | Points `VCPKG_BINARY_SOURCES` at `$RUNNER_TEMP/vcpkg-cache` and fills it from the **newest** entry whose key starts `vcpkg-binary-cache-<triplet>-`. |
+| `setup-vcpkg` | Points `VCPKG_DEFAULT_BINARY_CACHE` and `VCPKG_DOWNLOADS` at `~/.cache/vcpkg` and fills them from the **newest** entry whose key starts `vcpkg-<OS>-<arch>-<baseline>-<hash of vcpkg.json>-<lineage>-`, then the same manifest, the same baseline and the same OS and architecture. The lineage is the `cache-key-suffix`, which is the triplet here. |
 | *(build)* | vcpkg restores every archive whose ABI hash matches and builds only the rest. |
-| save | Runs with `if: always()`, so a red or cancelled leg keeps what it already built. Stores the directory under `vcpkg-binary-cache-<triplet>-<hash of its file listing>` - **only if** an archive was added since the restore **and** that exact key is not already readable from this ref. |
+| `save-vcpkg-cache` | Runs with `if: always()`, so a red or cancelled leg keeps what it already built. Stores the directory under the key plus a hash of its file listing - **only if** an archive was added since the restore **and** that exact key is not already readable from this ref. |
 
 The job summary of every leg carries one line saying which of those happened,
 and the log has `vcpkg cache: restored N archive(s) from <key>` and
@@ -307,10 +310,10 @@ Content-addressed keys mean every change stores a *full* new copy, and vcpkg
 never forgets an archive, so a family grows by the stale archives of every
 dependency bump it has been through. There is no automatic reset (a wrong one
 would throw an hour of work away); when `Largest families kept` in a hygiene
-run's summary shows a triplet far past what its install plan needs, reset it:
+run's summary shows a triplet far past what its install plan needs, reset it (the family's keys start `vcpkg-<OS>-<arch>-`, and the lineage is the triplet):
 
 ```sh
-gh workflow run cache-hygiene.yml -f purge=vcpkg-binary-cache-x64-windows- -f dry_run=false
+gh workflow run cache-hygiene.yml -f purge=vcpkg-Windows-X64-x64-windows -f dry_run=false
 ```
 
 The next run on that triplet builds from cold and stores a clean entry.
@@ -399,7 +402,7 @@ change is a reviewed diff (the exceptions are listed under the table):
 | zizmor | `ci/requirements-zizmor.txt`, exact | Dependabot (`pip`, `/ci`), weekly |
 | mkdocs and its theme | `docs/requirements.txt`, exact (their own dependencies still float) | By hand |
 | Qt (`install-qt-action`) | `6.12.0`, the LTS line (see Toolchain versions above) | By hand, deliberately: moving Qt moves the app's platform, and its minimum macOS and Windows with it |
-| vcpkg and the ports | The submodule commit and `builtin-baseline` | By hand |
+| vcpkg and the ports | `builtin-baseline` in `vcpkg.json`, a commit of the labs' fork | Dependabot's `vcpkg` ecosystem, monthly, reviewed by hand; the `vcpkg-baseline-in-fork` check fails until the fork holds the commit |
 | Runner images | The label (`ubuntu-26.04`, `macos-26`, `windows-2025-vs2026`; `macos-15` for iOS; `ubuntu-24.04` for the short control jobs and the scanners) | By hand |
 
 What is **not** pinned: the apt packages installed on a runner
@@ -415,7 +418,7 @@ and the same rule applies when bumping by hand.
 
 ## Dependencies
 
-vcpkg (vendored submodule, manifest mode) supplies fmt, OpenCV and (behind the
+vcpkg (the labs' fork, manifest mode) supplies fmt, OpenCV and (behind the
 `tests` feature) Catch2 on every triplet, desktop and mobile alike, via a
 chainloaded toolchain on `arm64-ios`/`arm64-android` — see below. Qt is a
 separate prebuilt install (`jurplel/install-qt-action` in CI,
@@ -439,7 +442,7 @@ is published (`cooldown`), so a compromised release has time to be caught.
 | `github-actions` | The SHA-pinned actions in `.github/workflows` and `.github/actions/web-build` | Weekly | Minor/patch, grouped in one PR. A major is its own PR and waits for a human. |
 | `pip` (`/docs`) | `mkdocs`, `mkdocs-material` (the exact pins in `docs/requirements.txt`) | Weekly | Minor/patch |
 | `pip` (`/ci`) | `zizmor` (`ci/requirements-zizmor.txt`) and `clang-format` (`ci/requirements-lint.txt`) | Weekly | Minor/patch |
-| `vcpkg` + `gitsubmodule` | `builtin-baseline` in `vcpkg.json` and the `deps/vcpkg` checkout, as one PR | Monthly | No |
+| `vcpkg` | `builtin-baseline` in `vcpkg.json` | Monthly | No |
 
 "Merges itself" means `dependabot-auto-merge.yml` runs `gh pr merge --auto
 --merge` on the PR, which puts it in `develop`'s merge queue once the required

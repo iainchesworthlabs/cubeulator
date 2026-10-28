@@ -11,7 +11,7 @@ name: Dependabot auto-merge
 #   - every updated dependency is a minor or patch bump. A major, or an
 #     update type the metadata does not report, fails closed.
 #
-# vcpkg and git-submodule updates never qualify, on purpose: a baseline bump
+# vcpkg updates never qualify, on purpose: a baseline bump
 # rebuilds every dependency, and develop does not yet require the build jobs
 # (docs/branch-protection.md, "Required checks"). Add an ecosystem to
 # ALLOWED_ECOSYSTEMS below when the checks that would catch its breakage are

@@ -235,21 +235,19 @@ jobs:
             artifact: linux-x64
 
     steps:
-      # The whole history, for vcpkg's version resolution: see build-and-test
-      # in ci.yml.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # Read-only: a release run restores the cache CI built and never writes
       # one, so that nothing a release run does can end up in what the other
       # workflows trust. A cold cache only costs time.
-      - name: Restore vcpkg binaries
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: ${{ matrix.triplet }}
+          cache-key-suffix: ${{ matrix.triplet }}
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -452,19 +450,17 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "4"
       VERSION: ${{ needs.verify.outputs.version }}
     steps:
-      # The whole history, for vcpkg's version resolution: see build-and-test
-      # in ci.yml.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # Read-only, as the desktop legs: see there.
-      - name: Restore vcpkg binaries
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: wasm32-emscripten-threads
+          cache-key-suffix: wasm32-emscripten-threads
 
       - name: Build the web app
         uses: $/.github/actions/web-build

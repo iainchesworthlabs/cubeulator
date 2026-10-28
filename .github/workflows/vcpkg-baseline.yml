@@ -1,0 +1,53 @@
+name: vcpkg baseline
+
+# A pull request that moves vcpkg.json's builtin-baseline must name a commit
+# that the labs' vcpkg fork has on its master branch, because CI and developers
+# check the baseline out from the fork (cmake/icl/IclVcpkgRoot.cmake). Dependabot
+# proposes upstream commits, so its pull request fails here until the fork's
+# daily sync has brought the commit over; re-run the job then.
+#
+# The script comes from icl-common-infra at the commit this workflow pins
+# (checkout-infra), so the check and the shared actions move together.
+#
+# Runs on every pull request, not only those that touch vcpkg.json: a check that
+# is required must report on all of them, and the script exits 0 at once when the
+# baseline is unchanged. A merge-queue entry reports success without checking,
+# because the pull request was checked.
+
+on:
+  pull_request:
+  merge_group:
+
+permissions: {}
+
+concurrency:
+  group: vcpkg-baseline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  vcpkg-baseline-in-fork:
+    name: vcpkg-baseline-in-fork
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Queue entry (checked on the pull request)
+        if: ${{ github.event_name == 'merge_group' }}
+        run: echo "checked when the pull request was open"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: iainchesworthlabs/icl-common-infra/actions/checkout-infra@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+        if: ${{ github.event_name == 'pull_request' }}
+
+      - name: The baseline is in the fork
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I .icl-infra/scripts/check_vcpkg_baseline_in_fork.py --base "origin/$BASE_REF"

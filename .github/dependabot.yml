@@ -8,11 +8,12 @@ version: 2
 #                         that the auto-merge workflow puts in develop's merge
 #                         queue. A major update is its own PR and waits for a
 #                         human.
-#   vcpkg + deps/vcpkg    monthly, one combined PR (the manifest baseline and
-#                         the submodule have to move together), never
-#                         auto-merged: it rebuilds every dependency, and the
-#                         build jobs are not yet required checks on develop
-#                         (docs/branch-protection.md).
+#   vcpkg                 monthly, the manifest baseline, never auto-merged:
+#                         it rebuilds every dependency, and the build jobs are
+#                         not yet required checks on develop
+#                         (docs/branch-protection.md). The baseline must name a
+#                         commit of the labs' fork; the vcpkg-baseline-in-fork
+#                         check fails the pull request until the fork has it.
 #
 # Dependabot cannot see Qt, the Android NDK/SDK, the Emscripten version, the
 # Clang/GCC packages the jobs apt-install, or the runner image labels;
@@ -31,15 +32,6 @@ version: 2
 # cooldown waits a week after a version is published before proposing it, so
 # the community has time to catch a compromised release before this repo
 # updates to it. (Security updates ignore it.)
-
-multi-ecosystem-groups:
-  vcpkg-stack:
-    schedule:
-      interval: "monthly"
-    target-branch: "develop"
-    labels:
-      - "dependencies"
-      - "vcpkg"
 
 updates:
   - package-ecosystem: "github-actions"
@@ -102,22 +94,18 @@ updates:
           - "minor"
           - "patch"
 
-  # vcpkg: the manifest's builtin-baseline, and the vendored vcpkg checkout
-  # the toolchain file and ports' helper scripts come from. One PR, because
-  # the ports resolved from the baseline are built with the submodule's
-  # scripts; a baseline that is newer than the submodule can fail.
+  # vcpkg: the manifest's builtin-baseline, a commit of iainchesworthlabs/vcpkg.
+  # The checkout the toolchain file and ports' helper scripts come from is made
+  # from that same commit (cmake/icl/IclVcpkgRoot.cmake, setup-vcpkg), so the
+  # baseline is the only pin.
   - package-ecosystem: "vcpkg"
     directory: "/"
-    multi-ecosystem-group: "vcpkg-stack"
-    patterns:
-      - "*"
+    target-branch: "develop"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "vcpkg"
     cooldown:
       default-days: 7
-
-  - package-ecosystem: "gitsubmodule"
-    directory: "/"
-    multi-ecosystem-group: "vcpkg-stack"
-    patterns:
-      - "*"
-    cooldown:
-      default-days: 7
+    rebase-strategy: "disabled"

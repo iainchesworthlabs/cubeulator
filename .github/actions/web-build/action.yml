@@ -7,10 +7,10 @@ description: >-
   CI legs (ci.yml) and for the documentation publish (docs.yml), so the
   toolchain versions below are stated once.
 
-  Not included, on purpose: the checkout (it needs the vcpkg submodule with
-  full history, and the caller's own settings) and the vcpkg binary cache
-  (restore before this, save after it with if: always(), as the other legs
-  do - triplet wasm32-emscripten-threads).
+  Not included, on purpose: the checkout (the caller's own settings) and vcpkg
+  with its binary cache (set up with icl-common-infra's setup-vcpkg before
+  this, with cache-key-suffix wasm32-emscripten-threads, and save with
+  save-vcpkg-cache after it with if: always(), as the other legs do).
 
 inputs:
   presets:

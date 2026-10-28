@@ -1,4 +1,4 @@
-# OVERLAY of the vcpkg registry port deps/vcpkg/ports/tracy (0.14.1, port-version 1)
+# OVERLAY of the vcpkg registry port ports/tracy (0.14.1, port-version 1)
 # with two extra features, mapped to Tracy's own CMake options and nothing else:
 #   manual-lifetime  TRACY_MANUAL_LIFETIME   the profiler starts when the application
 #                                            calls tracy::StartupProfiler(), not at

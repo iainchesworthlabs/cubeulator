@@ -122,8 +122,7 @@ jobs:
     env:
       VCPKG_MAX_CONCURRENCY: "2"
     steps:
-      # fetch-depth: 0 is required for vcpkg's version resolution - see the
-      # equivalent comment on build-and-test below.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       # A change to documentation alone builds and tests nothing, and this job
       # still reports under its own name: a job skipped by `if` reports under the
       # raw text of its `name:` expression, so a required check that was skipped
@@ -138,19 +137,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: ${{ needs.plan.outputs.code == 'true' }}
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # Keyed per vcpkg triplet (x64-linux), shared with build-and-test's
       # Linux legs and the coverage job - see the fuller comment there on
       # why per-preset keys were wasteful/over quota.
-      - name: Restore vcpkg binaries
+      - name: Set up vcpkg
         if: ${{ needs.plan.outputs.code == 'true' }}
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         if: ${{ needs.plan.outputs.code == 'true' }}
@@ -233,13 +230,11 @@ jobs:
       # Saved even when a later step fails: otherwise a red leg throws away every
       # package vcpkg had already built and the next attempt starts from nothing
       # (an hour or more on Windows and macOS). Only saves when packages were
-      # added since the restore - see .github/actions/vcpkg-cache.
+      # added since the restore - see save-vcpkg-cache in icl-common-infra.
       - name: Save vcpkg binaries
         if: ${{ needs.plan.outputs.code == 'true' && (always()) }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # Picks the desktop build legs. A push, pull request or merge_group run
   # always gets all three; only a manual dispatch can narrow it. The matrix
@@ -341,13 +336,9 @@ jobs:
         include: ${{ fromJSON(needs.plan.outputs.matrix) }}
 
     steps:
-      # fetch-depth: 0 is required, not just nice-to-have: vcpkg's version
-      # resolution does `git read-tree <historical-tree-hash>` against the
-      # deps/vcpkg submodule to check out the exact pinned version of each
-      # port. A shallow submodule clone (actions/checkout's default) only has
-      # the tip commit's objects, so it fails for any port whose pinned tree
-      # isn't byte-identical to the tree at HEAD (confirmed in CI: failed on
-      # protobuf, a transitive onnxruntime dependency).
+      # fetch-depth: 0 so the version header can name the nearest tag
+      # (cmake/GenerateVersion.cmake). vcpkg is cloned by setup-vcpkg below,
+      # not by this checkout.
       # A change to documentation alone builds and tests nothing, and this job
       # still reports under its own name: a job skipped by `if` reports under the
       # raw text of its `name:` expression, so a required check that was skipped
@@ -362,7 +353,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: ${{ needs.plan.outputs.code == 'true' }}
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
@@ -379,12 +369,11 @@ jobs:
       # duplication across every preset/triplet combination, causing
       # semi-random eviction (confirmed via the cache usage API - 10.7GB
       # across 15 entries, over the limit).
-      - name: Restore vcpkg binaries
+      - name: Set up vcpkg
         if: ${{ needs.plan.outputs.code == 'true' }}
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: ${{ matrix.triplet }}
+          cache-key-suffix: ${{ matrix.triplet }}
 
       - name: Install CMake 4 + Ninja
         if: ${{ needs.plan.outputs.code == 'true' }}
@@ -599,13 +588,11 @@ jobs:
       # Saved even when a later step fails: otherwise a red leg throws away every
       # package vcpkg had already built and the next attempt starts from nothing
       # (an hour or more on Windows and macOS). Only saves when packages were
-      # added since the restore - see .github/actions/vcpkg-cache.
+      # added since the restore - see save-vcpkg-cache in icl-common-infra.
       - name: Save vcpkg binaries
         if: ${{ needs.plan.outputs.code == 'true' && (always()) }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: ${{ matrix.triplet }}
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   android-build:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Android (arm64-v8a)' || 'Android (arm64-v8a)' }}
@@ -623,16 +610,11 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "2"
 
     steps:
-      # fetch-depth: 0 is required, not just nice-to-have: vcpkg's version
-      # resolution does `git read-tree <historical-tree-hash>` against the
-      # deps/vcpkg submodule to check out the exact pinned version of each
-      # port. A shallow submodule clone (actions/checkout's default) only has
-      # the tip commit's objects, so it fails for any port whose pinned tree
-      # isn't byte-identical to the tree at HEAD (confirmed in CI: failed on
-      # protobuf, a transitive onnxruntime dependency).
+      # fetch-depth: 0 so the version header can name the nearest tag
+      # (cmake/GenerateVersion.cmake). vcpkg is cloned by setup-vcpkg below,
+      # not by this checkout.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
@@ -678,11 +660,10 @@ jobs:
       # build-and-test above on why per-preset keys were wasteful/over the
       # 10GB cap; keeping the same scheme everywhere avoids reintroducing the
       # same mistake later.
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: arm64-android
+          cache-key-suffix: arm64-android
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -765,13 +746,11 @@ jobs:
       # Saved even when a later step fails: otherwise a red leg throws away every
       # package vcpkg had already built and the next attempt starts from nothing
       # (an hour or more on Windows and macOS). Only saves when packages were
-      # added since the restore - see .github/actions/vcpkg-cache.
+      # added since the restore - see save-vcpkg-cache in icl-common-infra.
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: arm64-android
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The browser (docs/web.md): the same Qt/QML app, as WebAssembly. Built here
   # to prove it still builds; docs.yml builds it again for the site, from the
@@ -791,20 +770,17 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "4"
 
     steps:
-      # fetch-depth: 0 for vcpkg's version resolution - see the equivalent
-      # comment on the Android leg above.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # Keyed per vcpkg triplet, like every other leg (see build-and-test).
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: wasm32-emscripten-threads
+          cache-key-suffix: wasm32-emscripten-threads
 
       - name: Build the web app
         uses: $/.github/actions/web-build
@@ -822,10 +798,8 @@ jobs:
       # Saved even when a later step fails - see the Android leg above.
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: wasm32-emscripten-threads
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The browser's tests (docs/testing.md, "Browser tests"): the library's own
   # test binaries as WebAssembly under Node, and the app driven in Chromium.
@@ -844,19 +818,16 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "4"
 
     steps:
-      # fetch-depth: 0 for vcpkg's version resolution - see the equivalent
-      # comment on the Android leg above.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: wasm32-emscripten-threads
+          cache-key-suffix: wasm32-emscripten-threads
 
       # The diagnostics build is the app with the recorder and the read-only
       # driver the browser tests use; the tests preset is the library, its
@@ -904,10 +875,8 @@ jobs:
       # Saved even when a later step fails - see the Android leg above.
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: wasm32-emscripten-threads
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # Wall-time budgets for the browser, read from the in-process recorder. Only
   # when it is named, as `perf` is (docs/ci.md).
@@ -924,19 +893,16 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "4"
 
     steps:
-      # fetch-depth: 0 for vcpkg's version resolution - see the equivalent
-      # comment on the Android leg above.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: wasm32-emscripten-threads
+          cache-key-suffix: wasm32-emscripten-threads
 
       - name: Build the diagnostics app
         uses: $/.github/actions/web-build
@@ -973,10 +939,8 @@ jobs:
       # Saved even when a later step fails - see the Android leg above.
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: wasm32-emscripten-threads
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   ios-build:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - iOS (device, build-only, unsigned)' || 'iOS (device, build-only, unsigned)' }}
@@ -996,26 +960,20 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "2"
 
     steps:
-      # fetch-depth: 0 is required, not just nice-to-have: vcpkg's version
-      # resolution does `git read-tree <historical-tree-hash>` against the
-      # deps/vcpkg submodule to check out the exact pinned version of each
-      # port. A shallow submodule clone (actions/checkout's default) only has
-      # the tip commit's objects, so it fails for any port whose pinned tree
-      # isn't byte-identical to the tree at HEAD (confirmed in CI: failed on
-      # protobuf, a transitive onnxruntime dependency).
+      # fetch-depth: 0 so the version header can name the nearest tag
+      # (cmake/GenerateVersion.cmake). vcpkg is cloned by setup-vcpkg below,
+      # not by this checkout.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # Keyed per vcpkg triplet (arm64-ios), shared across debug/release -
       # see the equivalent comment on android-build above.
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: arm64-ios
+          cache-key-suffix: arm64-ios
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -1039,13 +997,11 @@ jobs:
       # Saved even when a later step fails: otherwise a red leg throws away every
       # package vcpkg had already built and the next attempt starts from nothing
       # (an hour or more on Windows and macOS). Only saves when packages were
-      # added since the restore - see .github/actions/vcpkg-cache.
+      # added since the restore - see save-vcpkg-cache in icl-common-infra.
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: arm64-ios
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The system tests: the real app, started from its main() wiring, driven by
   # mouse, touch and key events, rendered for real. Qt Quick 3D has no
@@ -1064,19 +1020,17 @@ jobs:
       LIBGL_ALWAYS_SOFTWARE: "1"
 
     steps:
-      # fetch-depth: 0 is required - see the comment on build-and-test.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # The x64-linux triplet cache, shared with build-and-test's Linux leg.
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -1176,10 +1130,8 @@ jobs:
       # Saved even when a later step fails - see build-and-test.
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   coverage:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Coverage (Linux, GCC)' || 'Coverage (Linux, GCC)' }}
@@ -1194,13 +1146,9 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "2"
 
     steps:
-      # fetch-depth: 0 is required, not just nice-to-have: vcpkg's version
-      # resolution does `git read-tree <historical-tree-hash>` against the
-      # deps/vcpkg submodule to check out the exact pinned version of each
-      # port. A shallow submodule clone (actions/checkout's default) only has
-      # the tip commit's objects, so it fails for any port whose pinned tree
-      # isn't byte-identical to the tree at HEAD (confirmed in CI: failed on
-      # protobuf, a transitive onnxruntime dependency).
+      # fetch-depth: 0 so the version header can name the nearest tag
+      # (cmake/GenerateVersion.cmake). vcpkg is cloned by setup-vcpkg below,
+      # not by this checkout.
       # A change to documentation alone builds and tests nothing, and this job
       # still reports under its own name: a job skipped by `if` reports under the
       # raw text of its `name:` expression, so a required check that was skipped
@@ -1215,19 +1163,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: ${{ needs.plan.outputs.code == 'true' }}
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # Keyed per vcpkg triplet (x64-linux), shared with build-and-test's
       # Linux legs and clang-tidy - see the fuller comment on build-and-test
       # above on why per-preset keys were wasteful/over the 10GB cap.
-      - name: Restore vcpkg binaries
+      - name: Set up vcpkg
         if: ${{ needs.plan.outputs.code == 'true' }}
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         if: ${{ needs.plan.outputs.code == 'true' }}
@@ -1305,13 +1251,11 @@ jobs:
       # Saved even when a later step fails: otherwise a red leg throws away every
       # package vcpkg had already built and the next attempt starts from nothing
       # (an hour or more on Windows and macOS). Only saves when packages were
-      # added since the restore - see .github/actions/vcpkg-cache.
+      # added since the restore - see save-vcpkg-cache in icl-common-infra.
       - name: Save vcpkg binaries
         if: ${{ needs.plan.outputs.code == 'true' && (always()) }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
   # The wall-time half of the performance tier (docs/testing.md, "Performance
   # tests"), on the Linux Release build. Dispatch only, and only when it is
@@ -1333,19 +1277,17 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "2"
 
     steps:
-      # fetch-depth: 0 for the same reason as build-and-test.
+      # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
           fetch-depth: 0
           persist-credentials: false
 
       # Keyed per vcpkg triplet (x64-linux), shared with the other Linux legs.
-      - name: Restore vcpkg binaries
-        id: vcpkg-cache
-        uses: $/.github/actions/vcpkg-cache/restore
+      - name: Set up vcpkg
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
         with:
-          triplet: x64-linux
+          cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
         uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
@@ -1378,7 +1320,5 @@ jobs:
       # Saved even when a later step fails - see build-and-test.
       - name: Save vcpkg binaries
         if: ${{ always() }}
-        uses: $/.github/actions/vcpkg-cache/save
-        with:
-          triplet: x64-linux
-          restored: ${{ steps.vcpkg-cache.outputs.listing }}
+        continue-on-error: true
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17

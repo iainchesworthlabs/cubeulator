@@ -80,7 +80,7 @@ through each screen, and says what to do when a side will not read.
 ## Build from source
 
 ```sh
-git clone --recurse-submodules https://github.com/iainchesworthlabs/cubeulator
+git clone https://github.com/iainchesworthlabs/cubeulator
 cd cubeulator
 ./ci/install-qt.sh   # or ci/install-qt.ps1 on Windows
 cmake --preset linux-gcc-debug -DCMAKE_PREFIX_PATH=$HOME/Qt/6.12.0/gcc_64
