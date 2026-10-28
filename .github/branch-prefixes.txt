@@ -1,0 +1,4 @@
+# Branch prefixes this project uses beyond the standard's (feature, bugfix, docs, chore, agent).
+# scripts/check_branch_name.py and admin/apply.sh (the branch-names ruleset) both read this file.
+# spike: a time-boxed investigation (docs/design/ and the spike process); swept weekly.
+spike
