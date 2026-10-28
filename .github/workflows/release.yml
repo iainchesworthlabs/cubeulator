@@ -228,7 +228,10 @@ jobs:
             generators: DragNDrop
             artifact: macos-arm64
           - name: Linux
-            os: ubuntu-26.04
+            # Built on 24.04, the oldest system the package is for (glibc 2.39). A build on a newer
+            # runner links against the newest symbol versions of its glibc, and the first beta did not
+            # start on 24.04 or Debian 13 for that reason (acosf, atan2f and sqrtf at GLIBC_2.43).
+            os: ubuntu-24.04
             preset: linux-gcc-release
             triplet: x64-linux
             generators: "DEB;RPM"
@@ -257,9 +260,11 @@ jobs:
 
       # GCC 16 is installed, not shipped: see the comment on ci.yml's
       # build-and-test job.
+      # 24.04 carries GCC 14; the shared action adds the toolchain PPA for the GCC 16 pinned in
+      # .github/toolchain-versions.json.
       - name: Install GCC 16 (Linux)
         if: runner.os == 'Linux'
-        uses: $/.github/actions/install-gcc
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
 
       - name: Install vcpkg build dependencies (Linux)
         if: runner.os == 'Linux'
@@ -381,6 +386,25 @@ jobs:
       - name: Check the package contents
         shell: bash
         run: packaging/check-package.sh .
+
+      # The floor of the package: it has to start on Ubuntu 24.04 and Debian 13 (glibc 2.39, GCC 14's
+      # libstdc++). The package job below starts the program on this runner, which is that system, but a
+      # build on a newer one passes there and fails everywhere older, so the symbols are read directly.
+      - name: Unpack the .deb (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: dpkg-deb -x Cubeulator-*-linux-x64.deb "$RUNNER_TEMP/deb"
+
+      - name: Check the glibc the package needs (Linux)
+        if: runner.os == 'Linux'
+        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+        with:
+          folder: ${{ runner.temp }}/deb
+
+      - name: Check the libstdc++ the package needs (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: bash packaging/linux/check-libstdcxx-floor.sh "$RUNNER_TEMP/deb"
 
       # What the package holds, for the SBOM (tools/release/make_sbom.py): the
       # build's own inventory of what it linked and deployed, which it refuses

@@ -277,6 +277,17 @@ fee, and neither can be tried without one). It plugs in at two places:
 
 Linux packages are unsigned; repository signing is the repository's.
 
+### The Linux floor
+
+The Linux package has to start on Ubuntu 24.04 and Debian 13: glibc 2.39 and the libstdc++ of GCC 14
+(`GLIBCXX_3.4.33`, `CXXABI_1.3.15`). The release builds it on the `ubuntu-24.04` runner, with GCC 16 from the
+toolchain PPA (the shared `setup-gcc` action), because a build on a newer runner links against the newest symbol
+versions of its glibc. The first beta, built on 26.04, called `acosf`, `atan2f` and `sqrtf` at `GLIBC_2.43` and did
+not start on either system. After packaging, the release workflow unpacks the `.deb` and runs two checks on every
+program and library in it: the shared `check-glibc-floor` action, and `packaging/linux/check-libstdcxx-floor.sh`
+for libstdc++. Either fails the build job, before anything is signed. Pull requests still build on 26.04 and do not
+run them, because that build would fail by design. Raising a floor needs its reason written here.
+
 ## Not yet
 
 - **An elevated Windows install.** The installer's contents are checked
