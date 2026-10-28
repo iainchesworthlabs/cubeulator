@@ -21,7 +21,8 @@ All decided on 2026-10-27.
 | Layout | `src/lib` and `src/app` stay | Recorded in `docs/architecture.md`; the two GPU files that `cube_lib` compiles from `src/app/platform/` move into the library |
 | Coverage | The baseline (89.8% lines, 85.8% branches on the library layer) is recorded as the ratchet floor and raised each release towards 90/80. The app is measured separately | A floor file and a `quality-history` branch with badges |
 | Sanitisers and presets | Linux ASan/UBSan (`-O1`, Tracy off), TSan and fuzz presets are added. Windows ARM64, Linux ARM64, macOS x64 and the iOS simulator wait for a stated need | Tracy stays dormant-on in desktop release builds (extension request) |
-| Languages | Nine are kept; Arabic is added to the standard's list. The Chinese catalogue and setting are renamed from `zh` to `zh_CN`, with a migration of the saved setting | Fonts for Hebrew, Yiddish and Arabic are bundled as subsets |
+| Languages | Nine are kept; Arabic is added to the standard's list. The stored code of Simplified Chinese is renamed from `zh-CN` to `zh_CN` (the catalogue file already was), and a setting saved the old way is rewritten at the next start (done, #256) | Fonts for Hebrew, Yiddish and Arabic are bundled as subsets |
+| Orientation | The app keeps its design: both orientations, following the device (`docs/design/platforms.md`), on Android and on iOS. The standard asks for a locked orientation (7.7); an exception is requested | Android gets its application id only (done, #255) |
 | Naming | Both enumerator styles and the `kPascal` constants are written into `.clang-tidy`; nothing is renamed | The nested `src/app/.clang-tidy` covers the Qt-facing code |
 | Portable libraries | The solver and N x N model are recorded as candidates in `docs/architecture.md`; no split | |
 
@@ -29,7 +30,7 @@ All decided on 2026-10-27.
 
 - Signed Android bundle and store build: when Android has a camera backend.
 - `SIGN_WINDOWS=test` (the organisation test-signing secrets already reach this repository) and `SIGN_MACOS`: before the first release on the new workflow.
-- Release notes of v0.2.0-beta.1 still name the removed IPA.
+- The `SHA512SUMS` and `SHA512SUMS.asc` of v0.2.0-beta.1 still list the removed IPA files; the README, `docs/ios-install.md` and `docs/install-ios.html` still link to it until the iOS pull request. The release notes of v0.2.0-beta.1 no longer name it.
 
 ## Order of pull requests
 
@@ -37,15 +38,15 @@ Each pull request is one step and its checks are green before the next starts. A
 
 1. This plan.
 2. Back-merge #246, so that `main` is an ancestor of `develop` (done).
-3. Pending Dependabot updates (#247 to #249).
-4. Toolchain pins: `.github/toolchain-versions.json`, the vendored `cmake/icl` with `cmake/icl/SOURCE`, `tools/ci/sync_cmake.py` and `repin.py`, and `FindQt6` reading `ICL_QT_ROOT`.
-5. vcpkg: switch to `IclVcpkgRoot.cmake` and `setup-vcpkg`, remove the submodule, drop the `gitsubmodule` Dependabot entry, add the `vcpkg-baseline-in-fork` check.
-6. Conventions written down: the `readability-identifier-naming` section of `.clang-tidy`, `.editorconfig`, `.git-blame-ignore-revs`, the Objective-C++ document in `.clang-format`.
-7. Hardening flags and the missing presets; the shared preprocessor check with its allowlist.
-8. CI: the `CI Status` aggregator, `merge_group` handling, the planner and draft-pull-request rule, ccache and ctest phases, then the shared workflows one at a time. The two required checks of today stay until `CI Status` has passed on a code change and on a documentation change.
+3. Pending Dependabot updates (#247 to #249) (done).
+4. (Done, #252.) Toolchain pins: `.github/toolchain-versions.json`, the vendored `cmake/icl` with `cmake/icl/SOURCE`, `tools/ci/sync_cmake.py` and `repin.py`, and `FindQt6` reading `ICL_QT_ROOT`.
+5. (Done, #254.) vcpkg: switch to `IclVcpkgRoot.cmake` and `setup-vcpkg`, remove the submodule, drop the `gitsubmodule` Dependabot entry, add the `vcpkg-baseline-in-fork` check.
+6. (Done, #253.) Conventions written down: the `readability-identifier-naming` section of `.clang-tidy`, `.editorconfig`, `.git-blame-ignore-revs`, the Objective-C++ document in `.clang-format`.
+7. Hardening flags (done, #259); the shared preprocessor check with its allowlist (done, #258). The sanitiser, TSan and fuzz presets are open: Debug presets already carry ASan and UBSan, TSan runs nightly, and the fuzz harnesses wait for a list of the parsers that take untrusted input.
+8. CI (in progress; the `CI Status` aggregator is #257): the `CI Status` aggregator, `merge_group` handling, the planner and draft-pull-request rule, ccache and ctest phases, then the shared workflows one at a time. The two required checks of today stay until `CI Status` has passed on a code change and on a documentation change.
 9. Settings: the branch model (default branch, squash and linear history, `branch-names`, `tags`, `main-release-only`, the `release` environment, labels, variables). Applied by the maintainer from the dry run of `admin/apply.sh`.
 10. Licence wording, then SPDX headers and `REUSE.toml` (its own pull request, scheduled).
-11. Release: the glibc floor check on the Linux package, the signing key, `docs/signing-key.asc`, the release workflow on the shared `release-publish.yml`, `-unsigned` and `-testsigned` file names.
+11. Release: the glibc floor check on the Linux package (#260), the signing key, `docs/signing-key.asc`, the release workflow on the shared `release-publish.yml`, `-unsigned` and `-testsigned` file names.
 12. Documentation: `AGENTS.md`, `CONTRIBUTING.md` (the branching text changes only after step 9), root `SECURITY.md`, `docs/releasing.md` with the owner runbook.
 13. Mobile signing and distribution, after the iOS decision.
 
@@ -53,11 +54,12 @@ Each pull request is one step and its checks are green before the next starts. A
 
 These change settings, secrets or accounts and are done by the maintainer.
 
-- Turn on secret scanning, push protection and Dependabot security updates.
-- Create the Dependabot secret `MERGE_QUEUE_TOKEN`.
-- Apply the branch-model settings from the `admin/apply.sh` dry run (step 9), including making `develop` the default branch.
-- Create the `release` environment with the maintainer as required reviewer.
-- Delete the repository secrets `REPO_GPG_PRIVATE_KEY`, and after the iOS pull request merges `IOS_DIST_CERTIFICATE_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID` and `APPLE_PROVISIONING_PROFILE_NAME`.
+Done: secret scanning, push protection and Dependabot security updates; the `release` environment with the maintainer as required reviewer; the labels and the variables `SIGN_WINDOWS`, `SIGN_MACOS` and `SIGN_IOS_UPLOAD`; the repository secret `REPO_GPG_PRIVATE_KEY` deleted. The Dependabot secret `MERGE_QUEUE_TOKEN` is the organisation's, which reaches this repository.
+
+To do:
+
+- Apply the branch-model settings from the `admin/apply.sh` dry run (step 9), including making `develop` the default branch. This waits for `CI Status` to have passed on a code change and on a documentation-only change.
+- After the iOS pull request merges, delete the repository secrets `IOS_DIST_CERTIFICATE_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID` and `APPLE_PROVISIONING_PROFILE_NAME`.
 - iOS account items (App Store Connect app record, an App Store distribution profile as `IOS_PROVISIONING_PROFILE_BASE64`, access of the five organisation Apple secrets to this repository, the TestFlight internal group, the variable `SIGN_IOS_UPLOAD`). The step list is in `docs/releasing.md` when it is written.
 - Create the tags (including `v0.2.0-beta.2`) and approve the `release` environment for each release.
 - TODO(owner): Apple team ID, App Store name, any contact addresses the documents need.
@@ -79,9 +81,9 @@ These are project features that the standard has no room for or that go beyond i
 
 Each is made at its origin in a pull request of its own before cubeulator pins it.
 
-- A project list of extra branch prefixes for `branch-names` and `check_branch_name.py`.
-- A `pre-release-script` input, a notes input and an `sbom-files` input (with attestation and read-back) on `release-publish.yml`.
-- A Ninja pin in `setup-cmake`; the LLVM key fingerprint check in `install-llvm.sh`.
+- A project list of extra branch prefixes for `branch-names` and `check_branch_name.py` (done, infra #38).
+- A `pre-release-script` input, a `notes-script` input and `spdx-sbom` and `cyclonedx-sbom` inputs (with attestation and read-back) on `release-publish.yml` (done, infra #35).
+- A Ninja pin in `setup-cmake` (done, infra #36); the LLVM key fingerprint check in `install-llvm.sh` (done, infra #37).
 - Platform-isolation rules for OS headers, OS tests in CMake and unwired platform files.
 - The nightly report reader that closes its issue on a green night; `cache-hygiene.yml`; the Scorecard workflow; zizmor pinned through a requirements file.
-- Standard text: patched upstream ports stay overlays or go upstream (4.2); `src/lib` and `src/app` count as `libs/<name>` and `apps/<name>` in a single-library, single-application repository (D14); Quick 3D may stay while the store decision is open (7.1); Tracy may be present but dormant in desktop release builds (8); OpenCV intrinsics may serve for SIMD where OpenCV is already a dependency (9); a ninth language (D3).
+- Standard text: patched upstream ports stay overlays or go upstream (4.2); `src/lib` and `src/app` count as `libs/<name>` and `apps/<name>` in a single-library, single-application repository (D14); Quick 3D may stay while the store decision is open (7.1); Tracy may be present but dormant in desktop release builds (8); OpenCV intrinsics may serve for SIMD where OpenCV is already a dependency (9); a ninth language (D3); mobile orientation follows the device where the design says so, as an exception to the locked orientation of 7.7.
