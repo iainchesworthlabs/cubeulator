@@ -195,6 +195,16 @@ worker that adds the two headers and reloads the page once.
   The `web-emscripten-diagnostics` preset turns it on; the published build has
   none of it.
 
+## Hardening
+
+The library, the platform layer and the app link `cube::hardening` (`cmake/Hardening.cmake`),
+which is the shared `IclHardening` module of icl-common-infra: the stack protector,
+`_FORTIFY_SOURCE=3` in optimised builds, control-flow protection on x86, `relro` and `now`
+on Linux, and position-independent code; `/GS /guard:cf /sdl` and the matching link flags
+on MSVC. WebAssembly has none of these to ask for, so the target is empty there. Tests and
+tools are not hardened. To see what a build got:
+`readelf -dW build/linux-gcc-release/bin/cubeulator | grep -E 'BIND_NOW|PIE'`.
+
 ## Packaging
 
 `cmake --build --preset <preset> --target package` (desktop only) produces a

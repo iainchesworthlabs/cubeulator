@@ -41,6 +41,7 @@ target_link_libraries(cube_platform
         cube::lib
     PRIVATE
         cube::warnings
+        cube::hardening
         cube::sanitizers
         cube::coverage
         ${CUBEULATOR_PLATFORM_LINK_LIBRARIES})
@@ -124,6 +125,7 @@ if(CUBEULATOR_BUILD_APP)
             Qt6::Quick
         PRIVATE
             cube::warnings
+            cube::hardening
             cube::sanitizers
             cube::coverage)
 
@@ -247,6 +249,7 @@ if(CUBEULATOR_BUILD_APP)
             cube_app_controllers
             cube::platform
             cube::warnings
+            cube::hardening
             cube::sanitizers
             cube::coverage
             Qt6::Quick
@@ -304,6 +307,7 @@ if(CUBEULATOR_BUILD_APP)
             Qt6::Qml
         PRIVATE
             cube::warnings
+            cube::hardening
             cube::sanitizers
             cube::coverage)
 
@@ -392,6 +396,7 @@ if(CUBEULATOR_BUILD_APP)
             Qt6::Quick
         PRIVATE
             cube::warnings
+            cube::hardening
             cube::sanitizers
             cube::coverage)
 
@@ -433,6 +438,7 @@ if(CUBEULATOR_BUILD_APP)
             Qt6::Quick
         PRIVATE
             cube::warnings
+            cube::hardening
             cube::sanitizers
             cube::coverage)
     cube_platform_configure_desktop_shell(cube_app_desktop)

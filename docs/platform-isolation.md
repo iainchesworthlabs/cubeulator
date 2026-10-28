@@ -76,8 +76,8 @@ The full contract is the header comment of `cmake/Platform.cmake`; a fragment
 that forgets part of it fails configure by name, not three files away.
 
 Compiler concerns (`/W4` versus `-Wall`, sanitizer flags) are a separate
-axis and stay in `cmake/CompilerWarnings.cmake`, `Sanitizers.cmake` and
-`Coverage.cmake`, keyed on the compiler, not the OS.
+axis and stay in `cmake/CompilerWarnings.cmake`, `Sanitizers.cmake`,
+`Hardening.cmake` and `Coverage.cmake`, keyed on the compiler, not the OS.
 
 ## Adding a platform
 

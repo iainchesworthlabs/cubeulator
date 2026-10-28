@@ -93,6 +93,9 @@ set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
 # (-msimd128 in cube_platform_prepare_dependencies below).
 set(CUBEULATOR_PLATFORM_SIMD vector128)
 
+# The compiler and linker protections of cmake/Hardening.cmake.
+set(CUBEULATOR_PLATFORM_HARDENING OFF)
+
 # camera_web.js is the page's half of the camera: an Emscripten JS library, so
 # camera_web.cpp calls its functions like any other and Emscripten proxies them
 # to the main thread. As a link flag of the static library it reaches the app's

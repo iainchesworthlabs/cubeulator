@@ -57,6 +57,9 @@ set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
 # The vector kernels follow the architecture (cmake/Simd.cmake).
 set(CUBEULATOR_PLATFORM_SIMD auto)
 
+# The compiler and linker protections of cmake/Hardening.cmake.
+set(CUBEULATOR_PLATFORM_HARDENING ON)
+
 # camera_windows.cpp enumerates via native DirectShow device enumeration
 # (ICreateDevEnum/IEnumMoniker) rather than OpenCvCaptureLoop's generic
 # probe - see its own comment for why, and for why DirectShow rather than

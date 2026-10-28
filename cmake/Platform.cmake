@@ -131,6 +131,9 @@
 #                                      browser, with -msimd128, which the page
 #                                      already requires). Every platform but
 #                                      the browser says "auto".
+#   CUBEULATOR_PLATFORM_HARDENING      ON when the platform has the protections
+#                                      of cmake/Hardening.cmake to ask for (every
+#                                      platform but the browser, which says OFF).
 #   CUBEULATOR_PLATFORM_SOURCES        Compiled into cube_platform: one
 #                                      implementation of every interfaces/
 #                                      header (and of the detail/ seams).

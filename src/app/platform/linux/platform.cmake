@@ -55,6 +55,9 @@ set(CUBEULATOR_PLATFORM_PROFILING_OPENGL ON)
 # The vector kernels follow the architecture (cmake/Simd.cmake).
 set(CUBEULATOR_PLATFORM_SIMD auto)
 
+# The compiler and linker protections of cmake/Hardening.cmake.
+set(CUBEULATOR_PLATFORM_HARDENING ON)
+
 # dlopen, for the Vulkan probe (graphics_probe_linux.cpp).
 set(CUBEULATOR_PLATFORM_LINK_LIBRARIES "${CMAKE_DL_LIBS}")
 set(CUBEULATOR_PLATFORM_QT_LINK_LIBRARIES "")
