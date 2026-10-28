@@ -58,6 +58,9 @@ set(CUBEULATOR_PLATFORM_PROFILING_OPENGL OFF)
 # The vector kernels follow the architecture (cmake/Simd.cmake).
 set(CUBEULATOR_PLATFORM_SIMD auto)
 
+# The compiler and linker protections of cmake/Hardening.cmake.
+set(CUBEULATOR_PLATFORM_HARDENING ON)
+
 # AVFoundation captures, CoreMedia and CoreVideo carry its frames, UIKit opens the
 # app's settings page.
 set(CUBEULATOR_PLATFORM_LINK_LIBRARIES

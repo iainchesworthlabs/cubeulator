@@ -202,6 +202,7 @@ target_link_libraries(cube_lib
         cube::tracy
     PRIVATE
         cube::warnings
+        cube::hardening
         cube::sanitizers
         cube::coverage
         fmt::fmt)

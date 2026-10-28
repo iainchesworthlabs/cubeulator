@@ -99,6 +99,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # CMake file reads what the platform's fragment declared.
 include(Platform)
 include(CompilerWarnings)
+include(Hardening)
 include(Sanitizers)
 include(Coverage)
 include(Tracy)
