@@ -1322,3 +1322,49 @@ jobs:
         if: ${{ always() }}
         continue-on-error: true
         uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+
+  # The one status check that branch protection and the merge queue name
+  # (docs/branch-protection.md). It collects the jobs of this workflow so that
+  # a leg can be renamed, added or skipped without touching the rules, and it
+  # fails when a job the plan asked for was skipped, because that means a check
+  # did not happen. A manual dispatch renames its jobs and runs only the legs it
+  # names, so it has no aggregate. The two performance jobs run on a dispatch
+  # alone and are not collected.
+  ci-status:
+    name: CI Status
+    if: ${{ always() && github.event_name != 'workflow_dispatch' }}
+    needs:
+      - clang-format
+      - platform-isolation
+      - clang-tidy
+      - plan
+      - build-and-test
+      - android-build
+      - web-build
+      - web-test
+      - ios-build
+      - system-tests
+      - coverage
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && fromJSON('["ubuntu-26.04"]') || fromJSON(vars.CONTROL_RUNNER_JSON || '["ubuntu-26.04"]') }}
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # The action runs a script from icl-common-infra, which a remote `uses:`
+      # brings with it, so the repository itself is not checked out.
+      - name: Aggregate
+        uses: iainchesworthlabs/icl-common-infra/actions/ci-status@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+        with:
+          needs: ${{ toJSON(needs) }}
+          # The mobile, web and system jobs skip as a whole on a documentation-only
+          # change and on a merge-queue entry (see their `if`). Every other job
+          # reports on every event, so it needs no entry.
+          expected: >-
+            {
+            "platform-isolation": ${{ github.event_name != 'merge_group' }},
+            "android-build": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
+            "web-build": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
+            "web-test": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
+            "ios-build": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
+            "system-tests": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }}
+            }
