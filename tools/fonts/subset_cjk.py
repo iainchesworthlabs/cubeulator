@@ -59,7 +59,7 @@ FONTS = ROOT / "src" / "app" / "platform" / "web" / "fonts"
 # Language code in languages.json -> (catalogue file, subset file).
 FACES = {
     "ja": ("cubeulator_ja.ts", "NotoSansJP-Subset.ttf"),
-    "zh-CN": ("cubeulator_zh_CN.ts", "NotoSansSC-Subset.ttf"),
+    "zh_CN": ("cubeulator_zh_CN.ts", "NotoSansSC-Subset.ttf"),
 }
 
 ASCII = set(range(0x20, 0x7F))
@@ -258,7 +258,7 @@ def main() -> int:
         return check()
     if not (args.jp and args.sc):
         parser.error("--write needs --jp and --sc")
-    return write({"ja": args.jp, "zh-CN": args.sc})
+    return write({"ja": args.jp, "zh_CN": args.sc})
 
 
 if __name__ == "__main__":

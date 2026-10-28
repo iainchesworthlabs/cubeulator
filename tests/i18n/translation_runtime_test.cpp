@@ -79,7 +79,7 @@ TEST_CASE("a raw id never reaches the screen, in any language", "[i18n][runtime]
 }
 
 TEST_CASE("a language with no translation yet shows the English", "[i18n][runtime][fallback]") {
-    // Entry by entry, not language by language: a draft language (ja, zh-CN)
+    // Entry by entry, not language by language: a draft language (ja, zh_CN)
     // has a translation for every id and shows it; a string added to
     // strings.json since, or a language with nothing finished, falls back to
     // the English installed under it.
@@ -227,7 +227,7 @@ TEST_CASE("each language's plural rule picks the form its language has",
         {QStringLiteral("es"), +english_like},
         {QStringLiteral("fr"), +french},
         {QStringLiteral("ja"), +single},
-        {QStringLiteral("zh-CN"), +single},
+        {QStringLiteral("zh_CN"), +single},
         // Qt's table has two forms for Hebrew and Yiddish: one, and the rest.
         {QStringLiteral("he"), +english_like},
         {QStringLiteral("yi"), +english_like},

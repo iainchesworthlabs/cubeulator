@@ -747,7 +747,7 @@ TEST_CASE("every converted screen holds the real Japanese and Chinese without cu
           "[i18n][screen][cjk]") {
     // The drafts, not their proxy: whatever the machine draws Han and kana
     // with, a translated string must fit the box the English was given.
-    for (const char* language : {"ja", "zh-CN"}) {
+    for (const char* language : {"ja", "zh_CN"}) {
         holds_the_layout_in(language);
     }
 }
@@ -814,7 +814,7 @@ TEST_CASE("the solve screen holds its panel at the sizes of phones for a 3x3 and
                 continue;
             }
             for (const char* language :
-                 {"en", "xx", "he", "ar", "yi", "de", "fr", "es", "ja", "zh-CN"}) {
+                 {"en", "xx", "he", "ar", "yi", "de", "fr", "es", "ja", "zh_CN"}) {
                 in_language(language);
                 for (const Size& size : phones) {
                     Screen screen("SolveScreen", size.w, size.h);
@@ -887,8 +887,8 @@ TEST_CASE("the face follows the app's language for Japanese and Chinese, and bac
     CHECK(face("en") == QLatin1String("Archivo"));
 
     const QString ja = face("ja");
-    const QString zh = face("zh-CN");
-    INFO("ja: " << str(ja) << ", zh-CN: " << str(zh));
+    const QString zh = face("zh_CN");
+    INFO("ja: " << str(ja) << ", zh_CN: " << str(zh));
     // Whatever it names exists on this machine: a family that is not installed
     // would be glyph fallback again, under a name.
     for (const QString& chosen : {ja, zh}) {

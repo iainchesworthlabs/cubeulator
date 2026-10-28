@@ -15,7 +15,7 @@ namespace cube::i18n {
 
 // One language of the set (src/app/i18n/languages.json).
 struct LanguageInfo {
-    QString code;  // what is stored under language/code, e.g. "zh-CN"
+    QString code;  // what is stored under language/code, e.g. "zh_CN"
     QString file;  // the catalogue: cubeulator_<file>.qm
     QString tag;   // the QLocale name numbers and dates follow, e.g. "zh_CN"
     QString name;  // the language written in itself; never translated

@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QLibraryInfo>
 #include <QLocale>
+#include <QRegularExpression>
 #include <QSettings>
 
 #include <utility>
@@ -102,11 +103,13 @@ QString canonicalCode(const QString& tag, const std::vector<LanguageInfo>& langu
                                  region == QLatin1String("HK") || region == QLatin1String("MO");
         return traditional
                    ? QString{}
-                   : (find(languages, QStringLiteral("zh-CN")) != nullptr ? QStringLiteral("zh-CN")
+                   : (find(languages, QStringLiteral("zh_CN")) != nullptr ? QStringLiteral("zh_CN")
                                                                           : QString{});
     }
     for (const LanguageInfo& l : languages) {
-        if (!l.pseudo && l.code.section(QLatin1Char('-'), 0, 0).toLower() == language) {
+        if (!l.pseudo &&
+            l.code.section(QRegularExpression(QStringLiteral("[-_]")), 0, 0).toLower() ==
+                language) {
             return l.code;
         }
     }
@@ -146,10 +149,15 @@ LanguageManager::LanguageManager(QGuiApplication& app, QQmlEngine& engine,
 }
 
 void LanguageManager::applyInitialLanguage() {
-    const QSettings settings;
-    const QString saved =
-        canonicalCode(settings.value(QLatin1String(kSettingsKey)).toString(), languages_);
+    QSettings settings;
+    const QString stored = settings.value(QLatin1String(kSettingsKey)).toString();
+    const QString saved = canonicalCode(stored, languages_);
     selected_ = saved;
+    // A code saved under an older spelling ("zh-CN" before "zh_CN") is written back in
+    // the current one, so that the store holds the code the list uses.
+    if (!saved.isEmpty() && stored != saved) {
+        settings.setValue(QLatin1String(kSettingsKey), saved);
+    }
 
     // The override first: it exists for the pseudo-locale and for runs that
     // must not depend on the machine's settings.
