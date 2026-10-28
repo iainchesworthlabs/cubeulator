@@ -1,0 +1,13 @@
+{
+  "description": "A camera-driven Rubik's Cube solver: scan each side, get the solution turn by turn on a 3D cube. Qt 6, Qt Quick 3D and OpenCV, C++23.",
+  "homepage": "https://iainchesworthlabs.github.io/cubeulator/",
+  "topics": [
+    "cpp",
+    "cpp23",
+    "cmake",
+    "vcpkg",
+    "qt6",
+    "opencv",
+    "rubiks-cube"
+  ]
+}

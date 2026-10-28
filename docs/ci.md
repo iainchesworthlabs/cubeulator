@@ -42,6 +42,20 @@ This is the check that branch protection and the merge queue will name, instead 
 leg. A manual dispatch renames its jobs and runs only the legs it names, so it has no
 `CI Status`. The two performance jobs run on a dispatch alone and are not collected.
 
+### Policy
+
+The `Policy` job in `ci.yml` calls the shared `policy.yml` of icl-common-infra on pull requests and merge-queue
+entries, drafts included. One run does what the three small workflows (`branch-name-check.yml`,
+`changelog-check.yml`, `vcpkg-baseline.yml`) do between them, and more: the branch name, commit and pull request
+text, the text of committed files, the preprocessor check (`tools/preprocessor-baseline.json` and
+`tools/preprocessor-allowlist.txt`), action pinning, the changelog fragment, the vcpkg baseline in the fork, and REUSE
+once there is a `REUSE.toml`. `CI Status` collects it. The prefixes this project adds to the standard's
+(`spike/`) are in `.github/branch-prefixes.txt`, which the check and the `branch-names` ruleset both read; the shared
+scripts at the pinned commit have to be new enough to read it (infra v0.1.18).
+
+The three old workflows stay until the rulesets stop requiring `Validate gitflow branch name`, because a required check
+whose workflow is gone never reports and blocks every pull request.
+
 ### Documentation-only changes
 
 A pull request (or merge-queue entry) whose every changed file is documentation

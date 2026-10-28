@@ -46,6 +46,23 @@ permissions:
   contents: read
 
 jobs:
+  # The static checks of icl-common-infra's policy.yml: branch name (the extra prefixes are in
+  # .github/branch-prefixes.txt), commit and pull request text, committed-file text, the
+  # preprocessor check, action pinning, the changelog fragment and the vcpkg baseline in the
+  # fork. They need no build and run on drafts too. Not on a push (nothing to compare) or a
+  # manual dispatch (which runs the legs it names).
+  policy:
+    name: Policy
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/policy.yml@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+    with:
+      # Seconds of work, so routed like clang-format: by the CONTROL_RUNNER_JSON repository
+      # variable, with a fork pull request pinned to the hosted image (docs/ci.md).
+      runner: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["ubuntu-24.04"]' || vars.CONTROL_RUNNER_JSON || '["ubuntu-24.04"]' }}
+
   clang-format:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - clang-format' || 'clang-format' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',clang-format,') }}
@@ -1334,6 +1351,7 @@ jobs:
     name: CI Status
     if: ${{ always() && github.event_name != 'workflow_dispatch' }}
     needs:
+      - policy
       - clang-format
       - platform-isolation
       - clang-tidy
@@ -1357,10 +1375,12 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
           # The mobile, web and system jobs skip as a whole on a documentation-only
-          # change and on a merge-queue entry (see their `if`). Every other job
-          # reports on every event, so it needs no entry.
+          # change and on a merge-queue entry (see their `if`), and the policy job
+          # skips on a push. Every other job reports on every event, so it needs no
+          # entry.
           expected: >-
             {
+            "policy": ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }},
             "platform-isolation": ${{ github.event_name != 'merge_group' }},
             "android-build": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
             "web-build": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
