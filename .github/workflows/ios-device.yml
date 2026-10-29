@@ -1,28 +1,30 @@
 name: iOS device build
 
-# The Qt app as an iPhone application (arm64), built by Xcode on a hosted Mac: the
-# build for the maintainer's own registered devices, not a store build
-# (docs/ios-install.md, docs/ios-signing.md).
+# The Qt app as an iPhone application (arm64), built by Xcode on a hosted Mac. With
+# SIGN_IOS_UPLOAD=true it is signed with the Apple Distribution certificate and an App
+# Store provisioning profile, exported as an App Store IPA and checked by Apple; a
+# release also uploads it to TestFlight (docs/ios-install.md, docs/ios-signing.md).
+# With the variable unset it is built unsigned, which proves the build and nothing else.
 #
 # Three ways in:
-#   * release.yml calls it (workflow_call) for the package a release carries:
-#       with:    version (full, e.g. 0.2.0-beta.1), tag (e.g. v0.2.0-beta.1),
-#                signed (true), save_cache (false: a release only reads the cache)
-#       secrets: the five Apple ones, passed explicitly
+#   * release.yml calls it (workflow_call) for a release:
+#       with:    version (full, e.g. 0.2.0-beta.2), upload (true: upload to TestFlight;
+#                false: Apple validates the build and makes none), save_cache (false: a
+#                release only reads the cache)
+#       secrets: the six Apple ones, passed explicitly
 #       permissions: contents: read
-#     and takes the artifacts `package-ios` (Cubeulator-<version>-ios.ipa and
-#     Cubeulator-<version>-ios-manifest.plist, nothing else) and `notices-ios`
-#     (third-party-notices.json, the build's own inventory).
+#     and takes the artifact `notices-ios` (third-party-notices.json, the build's own
+#     inventory). The IPA goes to TestFlight and is not kept anywhere else: an
+#     App Store IPA installs on no device, and a workflow artifact of a public
+#     repository can be downloaded by any signed-in GitHub account.
 #   * by hand: gh workflow run ios-device.yml --ref <branch>  (only once this file
-#     is on `main`: GitHub dispatches only workflows that are on the default branch)
+#     is on the default branch: GitHub dispatches only workflows that are on it)
 #   * a push to a feature/ios-* or bugfix/ios-* branch, which is how the work on the
 #     build is tried before that.
 #
-# With all five Apple secrets the app is signed with the Apple Distribution
-# certificate and an ad-hoc provisioning profile and packed into an .ipa with an
-# over-the-air install manifest; a call that asks for `signed` and finds a secret
-# missing fails. A push or dispatch with no provisioning profile builds unsigned,
-# which proves the build and nothing else.
+# A push or a dispatch never uploads: TestFlight refuses a build number that is not
+# higher than every earlier one for the version, and the number is the run number of
+# release.yml, which is the one counter that uploads.
 #
 # The library leg of CI (ios-build) compiles only cube::lib, without Qt. This one
 # builds the whole app against Qt's static iOS kit, so it is where a missing
@@ -35,40 +37,31 @@ on:
         description: "The full version (empty: read from CMakeLists.txt, which it must equal)."
         type: string
         default: ""
-      tag:
-        description: "The release tag the manifest's download address names (empty: v<version>)."
-        type: string
-        default: ""
-      signed:
-        description: "Require signing; a missing secret then fails the build."
+      upload:
+        description: "Upload the build to TestFlight. Without it Apple only validates the build."
         type: boolean
-        default: true
+        default: false
       save_cache:
         description: "Save the vcpkg binary cache (a release only restores it)."
         type: boolean
         default: false
     secrets:
-      IOS_DIST_CERTIFICATE_BASE64:
+      IOS_DIST_CERT_P12_BASE64:
         required: false
-      IOS_DIST_CERTIFICATE_PASSWORD:
+      IOS_DIST_CERT_PASSWORD:
         required: false
       IOS_PROVISIONING_PROFILE_BASE64:
         required: false
-      APPLE_TEAM_ID:
+      APPSTORE_API_KEY_ID:
         required: false
-      APPLE_PROVISIONING_PROFILE_NAME:
+      APPSTORE_API_ISSUER_ID:
+        required: false
+      APPSTORE_API_PRIVATE_KEY:
         required: false
   workflow_dispatch:
-    inputs:
-      tag:
-        description: >-
-          The release the manifest's download address names, when the files are
-          uploaded to one by hand (default: v<version>).
-        type: string
-        default: ""
-  # GitHub can dispatch a workflow only from the default branch (main), which a
-  # change to this build reaches last, so a push to a branch of the iOS work runs
-  # it. Branches with any other name do not cost a Mac.
+  # GitHub can dispatch a workflow only from the default branch, which a change to
+  # this build reaches last, so a push to a branch of the iOS work runs it.
+  # Branches with any other name do not cost a Mac.
   push:
     branches: ["feature/ios-**", "bugfix/ios-**"]
 
@@ -93,6 +86,9 @@ jobs:
     env:
       VCPKG_MAX_CONCURRENCY: "2"
       BUNDLE_ID: com.iainchesworthlabs.cubeulator
+      # The repository variable that turns signing on: the same one for every
+      # project that builds for TestFlight.
+      SIGNED: ${{ vars.SIGN_IOS_UPLOAD == 'true' }}
     steps:
       # fetch-depth: 0 so the version header can name the nearest tag.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -100,45 +96,26 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # Before a Qt download of several gigabytes: which of the five secrets are
-      # set, by name; the values are never printed. All five sign; none builds
-      # unsigned; anything between is a mistake and says which are missing.
-      - name: Decide whether to sign
-        id: sign
-        env:
-          SIGNED_INPUT: ${{ inputs.signed }}
-          IOS_DIST_CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
-          IOS_DIST_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_PROVISIONING_PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
-        run: |
-          missing=""
-          set_count=0
-          for name in IOS_DIST_CERTIFICATE_BASE64 IOS_DIST_CERTIFICATE_PASSWORD IOS_PROVISIONING_PROFILE_BASE64 APPLE_TEAM_ID APPLE_PROVISIONING_PROFILE_NAME; do
-            if [ -n "${!name}" ]; then set_count=$((set_count + 1)); else missing="$missing $name"; fi
-          done
-          if [ "$SIGNED_INPUT" = false ]; then
-            echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Unsigned build::Asked not to sign."
-          elif [ "$set_count" -eq 5 ]; then
-            echo "signed=true" >> "$GITHUB_OUTPUT"
-            echo "All five Apple secrets are set: the build is signed."
-          elif [ "$SIGNED_INPUT" != true ] && [ -z "$IOS_PROVISIONING_PROFILE_BASE64" ] && [ -z "$APPLE_PROVISIONING_PROFILE_NAME" ]; then
-            # The certificate can be set long before the profile exists (the
-            # profile needs the device and the App ID): that is a build, not a fault.
-            echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Unsigned build::No provisioning profile is set, so the app is built but not signed. Not set:$missing. docs/ios-install.md."
-          else
-            echo "::error title=iOS signing secrets incomplete::Repository secret(s) not set:$missing. Set all five to sign, or the two profile secrets last. docs/ios-install.md."
-            exit 1
-          fi
+      # Before a Qt download of several gigabytes: the action names the secret that
+      # is missing. The certificate goes into a keychain made for this job (never
+      # the runner's login keychain) and the profile where Xcode looks for it; the
+      # profile is checked for the bundle identifier, for expiry and for being an
+      # App Store one. Only counts and names are printed, never a secret.
+      - name: Import the certificate and the provisioning profile
+        id: signing
+        if: env.SIGNED == 'true'
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        with:
+          certificate-base64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          certificate-password: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          profile-base64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          bundle-id: ${{ env.BUNDLE_ID }}
+          method: app-store
 
       - name: Read the version
         id: version
         env:
           VERSION_INPUT: ${{ inputs.version }}
-          TAG_INPUT: ${{ inputs.tag }}
         run: |
           base="$(sed -nE 's/^[[:space:]]*VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
           label="$(sed -nE 's/^set\(CUBEULATOR_VERSION_PRERELEASE "([^"]*)"\).*/\1/p' CMakeLists.txt | head -n 1)"
@@ -150,8 +127,25 @@ jobs:
           fi
           echo "base=$base" >> "$GITHUB_OUTPUT"
           echo "full=$full" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG_INPUT:-v$full}" >> "$GITHUB_OUTPUT"
           echo "version $full (the bundle's is $base)"
+
+      # App Store Connect refuses a build made with an SDK older than iOS 26
+      # ("SDK version issue", validation 409), and macos-15's default Xcode is 16.4
+      # (iOS 18.5). The image carries Xcode 26 beside it, so this selects that and
+      # keeps macos-15, whose pkgconf the vcpkg libwebp build needs (see the note
+      # on the runner above). DEVELOPER_DIR is read by xcodebuild, by CMake's Xcode
+      # generator and by the compiler wrappers, with no sudo and no xcode-select.
+      - name: Select Xcode 26
+        run: |
+          set -euo pipefail
+          xcode="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "$xcode" ]; then
+            echo "::error title=No Xcode 26::This runner image has no /Applications/Xcode_26*.app, and Apple refuses builds made with an older SDK. Installed:"
+            ls -d /Applications/Xcode*.app || true
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$xcode/Contents/Developer" >> "$GITHUB_ENV"
+          echo "using $xcode"
 
       - name: Set up vcpkg
         uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
@@ -196,88 +190,19 @@ jobs:
             [ -e "$kit" ] || { echo "::error::$kit is not there: the Qt install put its kits somewhere else (look at the install step's log)"; ls "$RUNNER_TEMP/Qt" "$RUNNER_TEMP/Qt/6.12.0" || true; exit 1; }
           done
 
-      # The distribution certificate goes into a keychain made for this job (never
-      # the runner's login keychain) and the profile where Xcode looks for it, by
-      # its UUID. The profile is checked against the secrets before anything is
-      # built, so a stale or mismatched one says so here and not as an Xcode error
-      # an hour in. Only counts and names are printed, never a device or a secret.
-      - name: Import the signing certificate and the provisioning profile
-        if: steps.sign.outputs.signed == 'true'
-        env:
-          IOS_DIST_CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
-          IOS_DIST_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_PROVISIONING_PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
-        run: |
-          set -euo pipefail
-          keychain="$RUNNER_TEMP/cubeulator-ios.keychain-db"
-          password="$(openssl rand -hex 24)"
-          echo "::add-mask::$password"
-          echo "IOS_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
-
-          printf '%s' "$IOS_DIST_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
-          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$RUNNER_TEMP/cubeulator.mobileprovision"
-
-          security create-keychain -p "$password" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$password" "$keychain"
-          security import "$RUNNER_TEMP/dist.p12" -k "$keychain" -P "$IOS_DIST_CERTIFICATE_PASSWORD" \
-            -T /usr/bin/codesign -T /usr/bin/security
-          rm -f "$RUNNER_TEMP/dist.p12"
-          # The certificate's issuer, Apple's G3 intermediate, so that the chain to
-          # Apple's root can be built (the runner image may not carry it).
-          curl -fsSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o "$RUNNER_TEMP/wwdr.cer"
-          openssl x509 -inform DER -in "$RUNNER_TEMP/wwdr.cer" -noout -subject | grep -q 'Apple Worldwide Developer Relations'
-          security import "$RUNNER_TEMP/wwdr.cer" -k "$keychain" -T /usr/bin/codesign
-          rm -f "$RUNNER_TEMP/wwdr.cer"
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
-          # shellcheck disable=SC2046  # the existing list is words without spaces
-          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
-
-          identities="$(security find-identity -v -p codesigning "$keychain" | grep -c 'Apple Distribution' || true)"
-          if [ "$identities" -lt 1 ]; then
-            echo "::error title=No Apple Distribution certificate::IOS_DIST_CERTIFICATE_BASE64 holds no 'Apple Distribution' identity with its private key (or IOS_DIST_CERTIFICATE_PASSWORD is wrong). Export the certificate from Keychain Access as a .p12 including its private key, and base64 it."
-            exit 1
-          fi
-
-          profile="$RUNNER_TEMP/cubeulator.mobileprovision"
-          security cms -D -i "$profile" > "$RUNNER_TEMP/profile.plist"
-          pb() { /usr/libexec/PlistBuddy -c "Print :$1" "$RUNNER_TEMP/profile.plist"; }
-          uuid="$(pb UUID)"
-          name="$(pb Name)"
-          team="$(pb TeamIdentifier:0)"
-          appid="$(pb Entitlements:application-identifier)"
-          expires="$(plutil -extract ExpirationDate raw -o - "$RUNNER_TEMP/profile.plist")"
-          devices="$(/usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices' "$RUNNER_TEMP/profile.plist" 2>/dev/null | grep -c '^    ' || true)"
-          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-          fail() { echo "::error title=Provisioning profile does not fit::$*"; exit 1; }
-          [ "$name" = "$APPLE_PROVISIONING_PROFILE_NAME" ] || fail "The profile in IOS_PROVISIONING_PROFILE_BASE64 is named '$name', but APPLE_PROVISIONING_PROFILE_NAME says '$APPLE_PROVISIONING_PROFILE_NAME'. Set the secret to the profile's name exactly as the Apple developer portal shows it."
-          [ "$team" = "$APPLE_TEAM_ID" ] || fail "The profile belongs to team $team, but APPLE_TEAM_ID is $APPLE_TEAM_ID."
-          [ "$appid" = "$team.$BUNDLE_ID" ] || fail "The profile is for '$appid', not $team.$BUNDLE_ID. Make an ad-hoc profile for the App ID $BUNDLE_ID."
-          [ "$devices" -gt 0 ] || fail "The profile lists no devices, so it is not an ad-hoc profile (a store profile cannot install on a device)."
-          [[ "$expires" > "$now" ]] || fail "The profile expired on $expires. Regenerate it in the Apple developer portal and set IOS_PROVISIONING_PROFILE_BASE64 again."
-
-          dir="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$dir"
-          cp "$profile" "$dir/$uuid.mobileprovision"
-          echo "IOS_PROFILE_FILE=$dir/$uuid.mobileprovision" >> "$GITHUB_ENV"
-          echo "profile '$name' (team $team) lists $devices device(s) and expires $expires"
-
       # Unsigned for every target but the application: the preset turns signing off
       # project-wide, and the two cache variables turn it on for the application
-      # alone (packaging/ios/ConfigureApp.cmake says why).
+      # alone (packaging/ios/ConfigureApp.cmake says why). The build number is the
+      # run number: TestFlight wants it to grow with every upload.
       - name: Configure
         env:
-          SIGNED: ${{ steps.sign.outputs.signed }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_PROVISIONING_PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
+          TEAM_ID: ${{ steps.signing.outputs.team-id }}
+          PROFILE_NAME: ${{ steps.signing.outputs.profile-name }}
         run: |
           set -euo pipefail
           args=(-DCUBEULATOR_IOS_BUILD_NUMBER="$GITHUB_RUN_NUMBER")
           if [ "$SIGNED" = true ]; then
-            args+=(-DCUBEULATOR_IOS_SIGNING_TEAM="$APPLE_TEAM_ID" -DCUBEULATOR_IOS_SIGNING_PROFILE="$APPLE_PROVISIONING_PROFILE_NAME")
+            args+=(-DCUBEULATOR_IOS_SIGNING_TEAM="$TEAM_ID" -DCUBEULATOR_IOS_SIGNING_PROFILE="$PROFILE_NAME")
           fi
           cmake --preset ios-device-release "${args[@]}"
 
@@ -318,11 +243,10 @@ jobs:
 
       # The built application, opened as a user's device would: identifier,
       # version, the camera text, the icon, arm64, nothing linked outside the
-      # system, and when signed the signature and an ad-hoc profile.
+      # system, and when signed the signature and an App Store profile.
       - name: Find and check the application
         id: app
         env:
-          SIGNED: ${{ steps.sign.outputs.signed }}
           VERSION: ${{ steps.version.outputs.base }}
         run: |
           set -euo pipefail
@@ -330,40 +254,56 @@ jobs:
           app="build/ios-device-release/bin/Release/Cubeulator.app"
           [ -d "$app" ] || { echo "::error::no Cubeulator.app was built at $app"; find build/ios-device-release -name '*.app' -maxdepth 4 || true; exit 1; }
           echo "path=$app" >> "$GITHUB_OUTPUT"
-          if [ "$SIGNED" = true ]; then flag=--signed; else flag=; fi
-          # shellcheck disable=SC2086  # $flag is one word or nothing
-          bash packaging/ios/verify_ipa.sh "$app" --version "$VERSION" $flag
+          args=(--version "$VERSION")
+          if [ "$SIGNED" = true ]; then args+=(--signed --store); fi
+          bash packaging/ios/verify_ipa.sh "$app" "${args[@]}"
 
-      # An .ipa is the application in a Payload folder, zipped. ditto keeps what a
-      # signed bundle must keep (symlinks, permissions, extended attributes).
-      - name: Make the IPA and its install manifest
-        if: steps.sign.outputs.signed == 'true'
+      - name: Name the IPA
+        id: ipa
+        if: env.SIGNED == 'true'
         env:
-          APP: ${{ steps.app.outputs.path }}
           FULL: ${{ steps.version.outputs.full }}
-          BASE: ${{ steps.version.outputs.base }}
-          TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          ipa="Cubeulator-$FULL-ios.ipa"
-          rm -rf stage ios-dist && mkdir -p stage/Payload ios-dist
-          ditto "$APP" stage/Payload/Cubeulator.app
-          (cd stage && ditto -c -k --keepParent Payload "../ios-dist/$ipa")
-          bash packaging/ios/verify_ipa.sh "ios-dist/$ipa" --version "$BASE" --signed
-          # The release's own asset addresses: the manifest names the .ipa beside it.
-          bash tools/release/make_ios_manifest.sh --out "ios-dist/Cubeulator-$FULL-ios-manifest.plist" --ipa "$ipa" \
-            --repo "$GITHUB_REPOSITORY" --tag "$TAG" --version "$BASE" --bundle-id "$BUNDLE_ID"
-          plutil -lint "ios-dist/Cubeulator-$FULL-ios-manifest.plist"
-          ls -l ios-dist
+          project="$(find build/ios-device-release -maxdepth 1 -name '*.xcodeproj' | head -n 1)"
+          [ -n "$project" ] || { echo "::error::CMake made no .xcodeproj under build/ios-device-release"; exit 1; }
+          echo "project=$project" >> "$GITHUB_OUTPUT"
+          echo "path=ios-dist/Cubeulator-$FULL-ios-appstore.ipa" >> "$GITHUB_OUTPUT"
 
-      - name: Upload the IPA and its manifest
-        if: steps.sign.outputs.signed == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      # xcodebuild archive and the export, signed for the App Store with the
+      # certificate and profile imported above. CMake made the scheme (the
+      # preset sets CMAKE_XCODE_GENERATE_SCHEME); it is named for the target.
+      - name: Archive and export the IPA
+        id: export
+        if: env.SIGNED == 'true'
+        uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
-          name: package-ios
-          path: ios-dist/*
-          if-no-files-found: error
-          retention-days: 14
+          project: ${{ steps.ipa.outputs.project }}
+          scheme: cube_app
+          bundle-id: ${{ env.BUNDLE_ID }}
+          team-id: ${{ steps.signing.outputs.team-id }}
+          profile-name: ${{ steps.signing.outputs.profile-name }}
+          method: app-store
+          output: ${{ steps.ipa.outputs.path }}
+
+      - name: Check the IPA
+        if: env.SIGNED == 'true'
+        env:
+          IPA: ${{ steps.export.outputs.ipa }}
+          VERSION: ${{ steps.version.outputs.base }}
+        run: bash packaging/ios/verify_ipa.sh "$IPA" --version "$VERSION" --signed --store
+
+      # Apple's own check of the icon, the property list, the signature and the
+      # privacy declarations; and, for a release, the upload to TestFlight.
+      - name: Validate with Apple, and upload to TestFlight
+        if: env.SIGNED == 'true'
+        uses: iainchesworthlabs/icl-common-infra/actions/upload-testflight@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        with:
+          ipa: ${{ steps.export.outputs.ipa }}
+          key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          issuer-id: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+          validate-only: ${{ inputs.upload != true }}
 
       # Qt's own SBOMs of the two kits, for tools/licences/qt_sbom_manifest.py: the
       # snapshot in third_party/notices/qt-modules.json has to know the iOS kit's
@@ -394,8 +334,7 @@ jobs:
       # Whatever happened above, the certificate and the profile do not stay on the
       # runner.
       - name: Remove the signing keychain and the provisioning profile
-        if: ${{ always() }}
-        run: |
-          if [ -n "${IOS_KEYCHAIN:-}" ]; then security delete-keychain "$IOS_KEYCHAIN" || true; fi
-          if [ -n "${IOS_PROFILE_FILE:-}" ]; then rm -f "$IOS_PROFILE_FILE"; fi
-          rm -f "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/cubeulator.mobileprovision" "$RUNNER_TEMP/profile.plist"
+        if: ${{ always() && env.SIGNED == 'true' }}
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        with:
+          remove: "true"

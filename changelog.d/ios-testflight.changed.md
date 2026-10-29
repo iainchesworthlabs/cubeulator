@@ -1,0 +1,1 @@
+**The iPhone app goes to TestFlight.** A release no longer carries an iPhone file or an install page for registered devices. The app is sent to TestFlight for the maintainer's internal testers, who install it from the TestFlight app; there is nothing to download and no device to register. See [Installing on an iPhone](docs/ios-install.md).

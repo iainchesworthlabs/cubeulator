@@ -1,9 +1,9 @@
 name: Release
 
 # Builds the desktop packages (an installer for Windows, a disk image for macOS,
-# a .deb and an .rpm for Linux), the iPhone app (an ad-hoc .ipa for the
-# maintainer's own devices) and the web build's zip, signs and attests
-# them, renders the release notes from CHANGELOG.md and, for a real release,
+# a .deb and an .rpm for Linux) and the web build's zip, signs and attests
+# them, builds the iPhone app and sends it to TestFlight (the .ipa is not a
+# release file), renders the release notes from CHANGELOG.md and, for a real release,
 # creates a DRAFT GitHub Release. How to cut one is docs/releasing.md.
 #
 #   push a tag vX.Y.Z[-label.N]      ->  a release: verify, build, sign and
@@ -38,9 +38,10 @@ on:
         default: true
       ios:
         description: >-
-          Build the iPhone app too, signed ad hoc with the Apple signing secrets
-          (docs/ios-install.md). A tag push always builds it. Untick to
-          rehearse the rest without a Mac and without those secrets.
+          Build the iPhone app too, signed for TestFlight when SIGN_IOS_UPLOAD is
+          true (docs/ios-install.md); a real release uploads it, a dry run has
+          Apple validate it. A tag push always builds it. Untick to rehearse the
+          rest without a Mac and without those secrets.
         type: boolean
         default: true
       unsigned:
@@ -428,14 +429,16 @@ jobs:
           if-no-files-found: error
 
   # The iPhone app: the Qt app for iOS (arm64) built by Xcode on a hosted Mac,
-  # signed ad hoc with the maintainer's Apple Distribution certificate and an
-  # ad-hoc provisioning profile, packed as an .ipa with an over-the-air install
-  # manifest. The build, the signing and their checks are
+  # signed for the App Store with the organisation's Apple Distribution
+  # certificate and this repository's App Store provisioning profile, and sent
+  # to TestFlight. The build, the signing and their checks are
   # .github/workflows/ios-device.yml, which the maintainer also runs by hand;
-  # this calls it so that the package a release attaches is the one that is
-  # installed, not a test build. It installs only on devices registered in the
-  # profile (docs/ios-install.md). The secrets are named here, one by one, and
-  # not inherited. Holding Apple's signing material, it has no other permission.
+  # this calls it so that the build testers get is the release's. A real
+  # release uploads it; a dry run only has Apple validate it. With
+  # SIGN_IOS_UPLOAD unset the app is built unsigned and nothing is sent. The
+  # IPA is not a release file: an App Store IPA installs on no device
+  # (docs/ios-install.md). The secrets are named here, one by one, and not
+  # inherited. Holding Apple's signing material, it has no other permission.
   ios:
     name: Build the iOS app
     needs: verify
@@ -447,15 +450,15 @@ jobs:
     uses: ./.github/workflows/ios-device.yml # zizmor: ignore[self-repository]
     with:
       version: ${{ needs.verify.outputs.version }}
-      tag: ${{ needs.verify.outputs.tag }}
-      signed: true
+      upload: ${{ needs.verify.outputs.publish == 'true' }}
       save_cache: false
     secrets:
-      IOS_DIST_CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
-      IOS_DIST_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+      IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+      IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
       IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      APPLE_PROVISIONING_PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
+      APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+      APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+      APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
 
   # The browser build: Qt and OpenCV for WebAssembly, as one directory of static
   # files, zipped with the licence, the notices and a note on hosting it
@@ -535,7 +538,6 @@ jobs:
       VERSION: ${{ needs.verify.outputs.version }}
       TAG: ${{ needs.verify.outputs.tag }}
       REPO: ${{ github.repository }}
-      IOS: ${{ needs.verify.outputs.ios }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -560,11 +562,6 @@ jobs:
                     "Cubeulator-${VERSION}-linux-x64.deb" "Cubeulator-${VERSION}-linux-x64.rpm"
                     "Cubeulator-${VERSION}-web.zip")
           expected=5
-          if [ "$IOS" = "true" ]; then
-            # The iPhone app and the over-the-air manifest that names it.
-            patterns+=("Cubeulator-${VERSION}-ios.ipa" "Cubeulator-${VERSION}-ios-manifest.plist")
-            expected=7
-          fi
           for pattern in "${patterns[@]}"; do
             n=$(find . -maxdepth 1 -name "$pattern" | wc -l)
             if [ "$n" -ne 1 ]; then
@@ -598,9 +595,6 @@ jobs:
                    --notices macos=inventory/notices-macos-arm64/third-party-notices.json
                    --notices linux=inventory/notices-linux-x64/third-party-notices.json
                    --notices web=inventory/notices-web/third-party-notices.json)
-          if [ "$IOS" = "true" ]; then
-            notices+=(--notices ios=inventory/notices-ios/third-party-notices.json)
-          fi
           python3 tools/release/make_sbom.py \
             --version "$VERSION" --tag "$TAG" --repo "$REPO" --files dist/files \
             "${notices[@]}" \
@@ -693,10 +687,9 @@ jobs:
             gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 --armor --detach-sign "$1" 3<<<"$passphrase"
           }
           cd dist/files
-          # No iPhone files when a dispatch left the iPhone build out.
           shopt -s nullglob
           signed_files=(SHA512SUMS Cubeulator-*.exe Cubeulator-*.dmg Cubeulator-*.deb Cubeulator-*.rpm Cubeulator-*.zip
-                        Cubeulator-*.ipa Cubeulator-*-ios-manifest.plist Cubeulator-*.spdx.json Cubeulator-*.cdx.json)
+                        Cubeulator-*.spdx.json Cubeulator-*.cdx.json)
           for f in "${signed_files[@]}"; do
             sign "$f"
             gpg --verify "$f.asc" "$f"
@@ -715,7 +708,6 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
-            dist/files/*.ipa
             dist/files/*.zip
 
       - name: Attest the SBOM
@@ -726,7 +718,6 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
-            dist/files/*.ipa
             dist/files/*.zip
           sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.spdx.json
 
@@ -738,7 +729,6 @@ jobs:
             dist/files/*.dmg
             dist/files/*.deb
             dist/files/*.rpm
-            dist/files/*.ipa
             dist/files/*.zip
           sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.cdx.json
 
@@ -751,7 +741,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          for f in dist/files/*.exe dist/files/*.dmg dist/files/*.deb dist/files/*.rpm dist/files/*.ipa dist/files/*.zip; do
+          for f in dist/files/*.exe dist/files/*.dmg dist/files/*.deb dist/files/*.rpm dist/files/*.zip; do
             ok=false
             for attempt in 1 2 3 4 5 6; do
               if gh attestation verify "$f" --repo "$REPO" > /dev/null 2>&1; then

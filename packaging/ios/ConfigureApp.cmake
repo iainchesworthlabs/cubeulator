@@ -85,8 +85,9 @@ set_source_files_properties("${_assets}" PROPERTIES MACOSX_PACKAGE_LOCATION Reso
 
 # --- code signing --------------------------------------------------------------
 # Both empty for the unsigned compile check, which needs no Apple account; the
-# workflow gives both together (APPLE_TEAM_ID and the profile's NAME in the Apple
-# developer portal, not its file). They sign the application target alone:
+# workflow gives both together (the team and the profile's NAME, which the
+# import-ios-signing action reads out of the profile; the name is the one the Apple
+# developer portal shows, not the file's). They sign the application target alone:
 # signing every Xcode target, as a project-wide setting does, makes Xcode
 # demand a bundle identifier of the static libraries and Qt's resource targets,
 # which have none.

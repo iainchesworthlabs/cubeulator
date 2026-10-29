@@ -219,12 +219,13 @@
     {
       "name": "ios-device-base",
       "hidden": true,
-      "description": "The Qt app for an iPhone (arm64), built by Xcode from a Mac with Qt's iOS kit (QT_ROOT_DIR) and a desktop Qt of the same version for its host tools (QT_HOST_PATH). vcpkg's toolchain is the CMAKE_TOOLCHAIN_FILE as everywhere else and chains to Qt's. Unsigned unless CUBEULATOR_IOS_SIGNING_TEAM and CUBEULATOR_IOS_SIGNING_PROFILE are given (docs/ios-install.md).",
+      "description": "The Qt app for an iPhone (arm64), built by Xcode from a Mac with Qt's iOS kit (QT_ROOT_DIR) and a desktop Qt of the same version for its host tools (QT_HOST_PATH). vcpkg's toolchain is the CMAKE_TOOLCHAIN_FILE as everywhere else and chains to Qt's. Unsigned unless CUBEULATOR_IOS_SIGNING_TEAM and CUBEULATOR_IOS_SIGNING_PROFILE are given (docs/ios-install.md). It asks CMake for an Xcode scheme per target, which `xcodebuild archive` needs.",
       "inherits": ["ios-clang-base"],
       "cacheVariables": {
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{QT_ROOT_DIR}/lib/cmake/Qt6/qt.toolchain.cmake",
         "QT_HOST_PATH": "$env{QT_HOST_PATH}",
-        "CUBEULATOR_BUILD_APP": "ON"
+        "CUBEULATOR_BUILD_APP": "ON",
+        "CMAKE_XCODE_GENERATE_SCHEME": "ON"
       }
     },
     {

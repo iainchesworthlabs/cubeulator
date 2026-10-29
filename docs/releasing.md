@@ -2,8 +2,8 @@
 
 How a version of Cubeulator becomes downloadable packages on a GitHub Release
 (an installer for Windows, a disk image for macOS, a `.deb` and an `.rpm` for
-Linux, an ad-hoc `.ipa` for the maintainer's iPhone, and the browser build's
-site as a zip), with the
+Linux, and the browser build's site as a zip; the iPhone app goes to TestFlight, see
+[below](#the-iphone-signing-material)), with the
 notes, the checksums and the signatures that go with them. The workflow is
 `.github/workflows/release.yml`; the tools are in `tools/release/`; what is in
 the packages is [Packaging the desktop app](packaging.md).
@@ -47,8 +47,6 @@ feature/* bugfix/* ──PR──▶ merge queue ──▶ develop
 | `Cubeulator-<version>-macos-arm64.dmg` | macOS 14.4 and later, Apple Silicon |
 | `Cubeulator-<version>-linux-x64.deb` | Debian and Ubuntu |
 | `Cubeulator-<version>-linux-x64.rpm` | Fedora |
-| `Cubeulator-<version>-ios.ipa` | The iPhone app, signed ad hoc with the maintainer's Apple Distribution certificate and an ad-hoc provisioning profile (built by `.github/workflows/ios-device.yml`, which `release.yml` calls). It installs only on iPhones registered in that profile, so it is not a download for everyone: [Installing on an iPhone](ios-install.md). A release without the iOS secrets fails, unless a dispatch unticks `ios` |
-| `Cubeulator-<version>-ios-manifest.plist` | The over-the-air install manifest that names the `.ipa` by its release URL, for the install page on the documentation site, `install-ios.html?tag=<tag>` (default: the latest release), which builds the `itms-services://` link from the tag because GitHub strips that link from release-note markdown; the release notes link to the page. It names the `.ipa`'s release-asset URL. Checksummed and signed like the packages |
 | `Cubeulator-<version>-web.zip` | The browser build: the static site that [Try it in your browser](web.md) serves under `/app/`, with `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and `HOSTING.txt`, to be hosted over https. Not an installer; held by `packaging/web/check-package.sh` |
 | `SHA512SUMS` | one line per package and for each SBOM |
 | `SHA512SUMS.asc`, `<file>.asc` | detached GPG signatures, from the project key, on the manifest, every package and each SBOM |
@@ -376,25 +374,19 @@ checks the packages on every push.
 
 ## The iPhone signing material
 
-The iPhone app is signed with an Apple Distribution certificate and an ad-hoc
-provisioning profile, held as five repository secrets (the names Word Jewels
-Solver uses, set from files kept off the repository; the walk-through of
-making them is [Installing on an iPhone](ios-install.md)):
+The iPhone app goes to TestFlight, not to the release page. It is signed with the
+organisation's Apple Distribution certificate and this repository's App Store
+provisioning profile, and uploaded with an App Store Connect API key. What is set,
+where, and how it is made are in [iPhone build: signing and releasing](ios-signing.md).
+In short: the repository variable `SIGN_IOS_UPLOAD` is `true`; the organisation secrets
+`IOS_DIST_CERT_P12_BASE64`, `IOS_DIST_CERT_PASSWORD`, `APPSTORE_API_KEY_ID`,
+`APPSTORE_API_ISSUER_ID` and `APPSTORE_API_PRIVATE_KEY` reach this repository; and the
+repository secret `IOS_PROVISIONING_PROFILE_BASE64` holds the profile.
 
-| Secret | Value |
-|---|---|
-| `IOS_DIST_CERTIFICATE_BASE64` | the Apple Distribution certificate with its private key, a `.p12`, base64 |
-| `IOS_DIST_CERTIFICATE_PASSWORD` | its passphrase |
-| `IOS_PROVISIONING_PROFILE_BASE64` | the ad-hoc provisioning profile for `com.iainchesworthlabs.cubeulator` and the registered devices, base64 |
-| `APPLE_TEAM_ID` | the Apple team identifier |
-| `APPLE_PROVISIONING_PROFILE_NAME` | the profile's name exactly as the portal shows it |
-
-A release (and a dry run) with the iPhone build on and one of them missing
-fails in the iOS job before anything is built. The profile expires after a year
-and when a device is added; a stale one is found by the job, which says when it
-expired. The embedded profile **lists the registered devices' identifiers**, so
-the `.ipa` of a public release carries them: the owner has decided to accept
-that (2026-10-21), and the release page says only registered devices install.
+A release (and a dry run) with the iPhone build on and one of them missing fails in the
+iOS job before anything is built. A real release uploads the build; a dry run has Apple
+validate it. The IPA is not a release file, so the release carries no device
+identifiers.
 
 ## The signing key
 

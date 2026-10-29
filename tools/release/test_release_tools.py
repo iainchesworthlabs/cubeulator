@@ -178,7 +178,6 @@ class Render(unittest.TestCase):
         "Cubeulator-0.2.0-beta.1-macos-arm64.dmg",
         "Cubeulator-0.2.0-beta.1-linux-x64.deb",
         "Cubeulator-0.2.0-beta.1-linux-x64.rpm",
-        "Cubeulator-0.2.0-beta.1-ios.ipa",
         "Cubeulator-0.2.0-beta.1-web.zip",
         "Cubeulator-0.2.0-beta.1.spdx.json",
         "Cubeulator-0.2.0-beta.1.cdx.json",
@@ -192,7 +191,7 @@ class Render(unittest.TestCase):
             repo="owner/repo",
             names=self.NAMES,
             install_template=(
-                "## Installing\n\nRun `@WINDOWS@`; `@MACOS@`; `@DEB@`; `@RPM@`; `@IOS@`; host `@WEB@`.\n"
+                "## Installing\n\nRun `@WINDOWS@`; `@MACOS@`; `@DEB@`; `@RPM@`; host `@WEB@`.\n"
             ),
         )
         base.update(kw)
@@ -250,26 +249,14 @@ class Render(unittest.TestCase):
         self.assertIn("`Cubeulator-0.2.0-beta.1-linux-x64.deb`", out)
         self.assertIn("host `Cubeulator-0.2.0-beta.1-web.zip`", out)
 
-    def test_the_iphone_package_has_its_own_row_and_install_name(self):
+    def test_the_iphone_app_is_not_a_release_file(self):
         out = self.render(attested=True)
-        self.assertIn("| iPhone (ad hoc: installs only on devices registered to the maintainer) | `Cubeulator-0.2.0-beta.1-ios.ipa` |", out)
-        self.assertIn("`Cubeulator-0.2.0-beta.1-ios.ipa`;", out)
-        preview = notes.render(
-            GOOD, version="0.2.0-beta.1", tag="v0.2.0-beta.1", repo="owner/repo",
-            install_template="phone `@IOS@`",
-        )
-        self.assertIn("phone `Cubeulator-0.2.0-beta.1-ios.ipa`", preview)
-
-    def test_the_install_page_link_names_this_releases_tag(self):
-        preview = notes.render(
-            GOOD, version="0.2.0-beta.1", tag="v0.2.0-beta.1", repo="owner/repo",
-            install_template="[install](https://example.test/install-ios.html?tag=@TAG@)",
-        )
-        self.assertIn("install-ios.html?tag=v0.2.0-beta.1)", preview)
-        self.assertNotIn("@TAG@", preview)
-        # the repository's own template carries it, in the iPhone paragraph
+        self.assertNotIn(".ipa", out)
+        self.assertNotIn("@IOS@", out)
+        # the repository's own template sends a reader to TestFlight, not to a file
         template = (Path(__file__).resolve().parent / "install-notes.md").read_text(encoding="utf-8")
-        self.assertIn("install-ios.html?tag=@TAG@", template)
+        self.assertNotIn("@IOS@", template)
+        self.assertIn("TestFlight", template)
 
     def test_the_web_package_has_its_own_row(self):
         out = self.render(attested=True)
