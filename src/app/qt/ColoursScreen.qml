@@ -164,9 +164,10 @@ Rectangle {
                                  ? status.turnFixes : []
     readonly property int fixSides: fixes.length > 0 ? fixes[0].length : 0
     function turnWords(turn) {
-        var key = turn.quarterTurns === 2 ? "review.fix.half"
-                : (turn.quarterTurns === 3 ? "review.fix.quarterBack" : "review.fix.quarter");
-        return qsTrId(key).arg(sideName(turn.side));
+        var words = turn.quarterTurns === 2 ? qsTrId("review.fix.half")
+                  : (turn.quarterTurns === 3 ? qsTrId("review.fix.quarterBack")
+                                             : qsTrId("review.fix.quarter"));
+        return words.arg(sideName(turn.side));
     }
     function fixWords(turns) {
         var parts = [];

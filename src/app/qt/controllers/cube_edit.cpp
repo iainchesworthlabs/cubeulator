@@ -359,16 +359,20 @@ bool CubeEdit::rotate_side(Face face, int quarter_turns) {
 
 namespace {
 
-// `stickers` of a cube of `size` with `face` turned in place, `turns` quarter turns
-// clockwise as seen from outside (what CubeEdit::rotate_side does to a side).
-void turn_side(std::vector<std::int8_t>& stickers, Face face, int size, int turns) {
+using Stickers = std::vector<std::int8_t>;
+
+constexpr int kSides = 6;
+
+// `stickers` of a cube of `size` with a side turned in place, as CubeEdit::rotate_side
+// does to it: `turn.quarter_turns` clockwise as seen from outside.
+void turn_side(Stickers& stickers, int size, const SideTurn& turn) {
     const auto n = static_cast<std::size_t>(size);
-    std::vector<std::int8_t> side(n * n);
+    Stickers side(n * n);
     for (int i = 0; i < size * size; ++i) {
-        side.at(static_cast<std::size_t>(i)) = stickers.at(seen_facelet(face, size, i));
+        side.at(static_cast<std::size_t>(i)) = stickers.at(seen_facelet(turn.face, size, i));
     }
-    for (int t = 0; t < turns; ++t) {
-        std::vector<std::int8_t> next(side.size());
+    for (int t = 0; t < turn.quarter_turns; ++t) {
+        Stickers next(side.size());
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t col = 0; col < n; ++col) {
                 next.at((col * n) + (n - 1 - row)) = side.at((row * n) + col);
@@ -377,8 +381,65 @@ void turn_side(std::vector<std::int8_t>& stickers, Face face, int size, int turn
         side = std::move(next);
     }
     for (int i = 0; i < size * size; ++i) {
-        stickers.at(seen_facelet(face, size, i)) = side.at(static_cast<std::size_t>(i));
+        stickers.at(seen_facelet(turn.face, size, i)) = side.at(static_cast<std::size_t>(i));
     }
+}
+
+// The sides whose bit is set in `chosen`, in the order of kAllFaces.
+std::vector<Face> sides_in(unsigned chosen) {
+    std::vector<Face> faces;
+    for (int bit = 0; bit < kSides; ++bit) {
+        if ((chosen & (1U << bit)) != 0) {
+            faces.push_back(cube::solver::kAllFaces.at(static_cast<std::size_t>(bit)));
+        }
+    }
+    return faces;
+}
+
+// Steps `turns` (each 1 to 3) to the next choice, the first side changing fastest.
+// False once every choice has been made.
+bool next_turns(std::vector<int>& turns) {
+    std::size_t at = 0;
+    while (at < turns.size() && turns.at(at) == 3) {
+        turns.at(at++) = 1;
+    }
+    if (at == turns.size()) {
+        return false;
+    }
+    ++turns.at(at);
+    return true;
+}
+
+bool is_cube(const Stickers& stickers, int size) {
+    std::vector<cube::solver::Color> colours(stickers.size());
+    std::ranges::transform(stickers, colours.begin(), [](std::int8_t colour) {
+        return static_cast<cube::solver::Color>(colour);
+    });
+    return cube::nxn::validate(size, colours).ok();
+}
+
+// Every way of turning each of `faces` by 1, 2 or 3 quarter turns that leaves a cube
+// whose stickers are not in `seen`; what it tries is added to `seen`.
+std::vector<TurnFix> fixes_turning(const Stickers& stickers, int size,
+                                   const std::vector<Face>& faces, std::vector<Stickers>& seen) {
+    std::vector<TurnFix> found;
+    std::vector<int> turns(faces.size(), 1);
+    for (bool more = true; more; more = next_turns(turns)) {
+        Stickers trial = stickers;
+        TurnFix fix;
+        for (std::size_t i = 0; i < faces.size(); ++i) {
+            fix.turns.push_back({.face = faces.at(i), .quarter_turns = turns.at(i)});
+            turn_side(trial, size, fix.turns.back());
+        }
+        if (std::ranges::find(seen, trial) != seen.end()) {
+            continue;
+        }
+        if (is_cube(trial, size)) {
+            found.push_back(std::move(fix));
+        }
+        seen.push_back(std::move(trial));
+    }
+    return found;
 }
 
 }  // namespace
@@ -388,61 +449,19 @@ TurnFixes CubeEdit::turn_fixes(int max_sides, std::size_t limit) const {
     if (status().state != EditState::Impossible) {
         return out;
     }
-    constexpr int kSides = 6;
     max_sides = std::clamp(max_sides, 1, kSides);
-    std::vector<std::vector<std::int8_t>> seen{stickers_};
-    std::vector<cube::solver::Color> colours(stickers_.size());
-    for (int count = 1; count <= max_sides; ++count) {
-        std::vector<TurnFix> found;
+    std::vector<Stickers> seen{stickers_};
+    for (int count = 1; count <= max_sides && out.fixes.empty(); ++count) {
         for (unsigned chosen = 1; chosen < (1U << kSides); ++chosen) {
-            if (std::popcount(chosen) != count) {
-                continue;
-            }
-            std::vector<Face> faces;
-            for (int bit = 0; bit < kSides; ++bit) {
-                if ((chosen & (1U << bit)) != 0) {
-                    faces.push_back(cube::solver::kAllFaces.at(static_cast<std::size_t>(bit)));
-                }
-            }
-            // Every choice of 1, 2 or 3 quarter turns for each chosen side.
-            std::vector<int> turns(faces.size(), 1);
-            while (true) {
-                std::vector<std::int8_t> trial = stickers_;
-                for (std::size_t i = 0; i < faces.size(); ++i) {
-                    turn_side(trial, faces.at(i), size_, turns.at(i));
-                }
-                if (std::ranges::find(seen, trial) == seen.end()) {
-                    std::ranges::transform(trial, colours.begin(), [](std::int8_t colour) {
-                        return static_cast<cube::solver::Color>(colour);
-                    });
-                    if (cube::nxn::validate(size_, colours).ok()) {
-                        TurnFix fix;
-                        for (std::size_t i = 0; i < faces.size(); ++i) {
-                            fix.turns.push_back(
-                                {.face = faces.at(i), .quarter_turns = turns.at(i)});
-                        }
-                        found.push_back(std::move(fix));
-                    }
-                    seen.push_back(std::move(trial));
-                }
-                std::size_t at = 0;
-                while (at < turns.size() && turns.at(at) == 3) {
-                    turns.at(at++) = 1;
-                }
-                if (at == turns.size()) {
-                    break;
-                }
-                ++turns.at(at);
+            if (std::popcount(chosen) == count) {
+                std::vector<TurnFix> more = fixes_turning(stickers_, size_, sides_in(chosen), seen);
+                std::ranges::move(more, std::back_inserter(out.fixes));
             }
         }
-        if (!found.empty()) {
-            out.more = found.size() > limit;
-            if (out.more) {
-                found.resize(limit);
-            }
-            out.fixes = std::move(found);
-            return out;
-        }
+    }
+    out.more = out.fixes.size() > limit;
+    if (out.more) {
+        out.fixes.resize(limit);
     }
     return out;
 }
