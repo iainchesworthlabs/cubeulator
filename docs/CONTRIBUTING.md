@@ -21,15 +21,15 @@ This project follows [gitflow](https://nvie.com/posts/a-successful-git-branching
 - **`develop`** is the integration branch — target your PR here. It is
   protected: nothing is pushed to it directly, and pull requests land
   through a [merge queue](branch-protection.md) rather than by hand.
-- **`main`** only receives tagged releases (a `develop` → `main` release PR,
-  or a `hotfix/*`); day-to-day work never targets it directly.
-- Branch names must start with `feature/`, `bugfix/`, `release/`,
-  `hotfix/`, or `support/`, followed by letters, digits, `.`, `_` or `-` (no
-  second `/`) — a required CI check (`Validate gitflow branch name`) enforces
-  this on every PR.
+- Pull requests are squashed into `develop`, one commit each.
+- **`main`** holds published releases. The release bot fast-forwards it after a
+  release; nobody opens a pull request into it.
+- Branch names start with `feature/`, `bugfix/`, `release/`, `hotfix/` or
+  `support/` (`chore/` and `docs/` are also accepted), followed by letters,
+  digits, `.`, `_` or `-`. The `branch-names` ruleset and the `Policy` check
+  enforce this.
 - **`spike/<name>`** is for finding something out. It is pushed, tried (CI legs
-  are dispatched at it by hand) and shown, and it is **never merged**: a pull
-  request from one fails that same check, deliberately. What it found goes in
+  are dispatched at it by hand) and shown, and it is **never merged**. What it found goes in
   [a page under `docs/investigations/`](investigations/README.md); a spike left
   alone for 30 days is tagged `archive/spike-<name>` and its branch deleted.
 
@@ -104,7 +104,7 @@ that check.
    refactor, a test, a build detail), label the PR `no-changelog`. How to write
    one is in
    [`changelog.d/README.md`](https://github.com/iainchesworthlabs/cubeulator/blob/develop/changelog.d/README.md);
-   the `Changelog fragment` check says when one is missing and is advisory.
+   the `Policy` check says when one is missing.
 5. Keep PRs focused — a bug fix doesn't need to carry an unrelated
    refactor along with it.
 

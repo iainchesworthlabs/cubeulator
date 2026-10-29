@@ -6,12 +6,10 @@
 | --- | --- | --- | --- |
 | `ci.yml` | `clang-format`, `clang-tidy` and the `platform-isolation` check; build + test matrix (Linux/macOS/Windows, release only), system tests (Linux, under Xvfb), Android build (Qt/QML app, release only), Web build (the same app as WebAssembly, release only), iOS build-only (release only), coverage gate; a wall-time performance leg that only a manual run can name | Yes on `main`; on `develop` as each check goes green | Yes, the required legs only |
 | `release.yml` | Builds the desktop packages (an installer for Windows, a disk image for macOS, a `.deb` and an `.rpm` for Linux) and the web build's zip on a version tag, signs and attests them, and attaches them to a **draft** GitHub Release with notes rendered from `CHANGELOG.md` ([Cutting a release](releasing.md)). Run by hand it is a dry run unless `dry_run` is unticked. A PR that changes it, `packaging/check-package.sh` or `tools/release/` runs only the release tools' self-test | N/A (tags and manual runs) | No |
-| `changelog-check.yml` | On a PR into `develop`: does a change a person using the app can see carry a `changelog.d/` fragment (or the `no-changelog` label), and is every fragment it adds well formed | No (advisory) | No |
 | `nightly.yml` | Every evening (UTC), against the tip of `develop`: the whole of `ci.yml` with every leg including `perf` and `web-perf`, read job by job; the library under ASan + UBSan and under TSan; the Qt app under ASan + UBSan; clang-tidy over `src/app`. Opens one `nightly` issue when something that gates is red, closes it when a night is green ([Nightly](#nightly)) | No (an issue, never a check) | No |
 | `spike-sweep.yml` | Mondays: a `spike/*` branch whose tip is 30 days old is tagged `archive/spike-<name>` and deleted ([Investigations](investigations/README.md)). Run by hand it is a dry run unless `dry_run` is unticked | N/A (schedule and manual runs) | No |
 | `release-check.yml` | On a PR into `main`, two jobs: `Release readiness` (is this a release the Release workflow will accept, and what would its notes say, in the job summary) and `Commit is green` (is the PR's head green on every workflow the README has a badge for: CI, CodeQL, OSV-Scanner, Zizmor; waits up to three hours for ones still running, fails at once on a red one) | No (advisory) | No |
 | `codeql.yml` | Static analysis (C++) | Yes on `main`; on `develop` once green | Yes |
-| `branch-name-check.yml` | Enforces gitflow branch naming | Yes | Yes (skipped, a pass) |
 | `dependency-review.yml` | Fails on a moderate+ vulnerability newly introduced in a PR | Yes | Yes |
 | `osv-scanner.yml` | Scans `vcpkg.json` against the OSV database | No (visible only) | No |
 | `zizmor.yml` | Lints the workflow YAML itself | No (visible only) | No |
@@ -20,7 +18,6 @@
 | `docs-check.yml` | On a PR that touches `docs/` or `mkdocs.yml`: builds the documentation (not the web app) with `mkdocs build --strict`, so a broken link shows on the PR and not on the push to `main` that publishes the site | No (advisory) | No |
 | `dependabot-auto-merge.yml` | Enables auto-merge on Dependabot's minor/patch PRs for GitHub Actions and pip | No (acts on Dependabot PRs only) | No |
 | `cache-hygiene.yml` | Prunes the Actions cache quota: closed PRs' and deleted branches' entries, superseded vcpkg and Qt generations ([below](#the-vcpkg-binary-cache)) | No (acts on the cache only) | No |
-| `vcpkg-baseline.yml` | `vcpkg-baseline-in-fork`: a pull request that moves `builtin-baseline` must name a commit the labs' vcpkg fork already has (the script comes from `icl-common-infra`, through `checkout-infra`). Dependabot proposes upstream commits, so its pull request fails until the fork's daily sync has them | Not yet (advisory until it is made a required check) | Reports success without checking |
 
 See [Branch protection and the merge queue](branch-protection.md) for which
 checks are required on `develop` and `main`, how the queue is configured, and
@@ -45,16 +42,17 @@ leg. A manual dispatch renames its jobs and runs only the legs it names, so it h
 ### Policy
 
 The `Policy` job in `ci.yml` calls the shared `policy.yml` of icl-common-infra on pull requests and merge-queue
-entries, drafts included. One run does what the three small workflows (`branch-name-check.yml`,
-`changelog-check.yml`, `vcpkg-baseline.yml`) do between them, and more: the branch name, commit and pull request
+entries, drafts included. One run does what three small workflows used to do between them
+(branch name, changelog fragment, vcpkg baseline), and more: the branch name, commit and pull request
 text, the text of committed files, the preprocessor check (`tools/preprocessor-baseline.json` and
 `tools/preprocessor-allowlist.txt`), action pinning, the changelog fragment, the vcpkg baseline in the fork, and REUSE
 once there is a `REUSE.toml`. `CI Status` collects it. The prefixes this project adds to the standard's
 (`spike/`) are in `.github/branch-prefixes.txt`, which the check and the `branch-names` ruleset both read; the shared
 scripts at the pinned commit have to be new enough to read it (infra v0.1.18).
 
-The three old workflows stay until the rulesets stop requiring `Validate gitflow branch name`, because a required check
-whose workflow is gone never reports and blocks every pull request.
+The three workflows were removed once the rulesets stopped requiring `Validate gitflow branch name`, because a
+required check whose workflow is gone never reports and blocks every pull request. Unlike the old changelog check,
+which was advisory, the fragment check inside `Policy` blocks, as `CI Status` does.
 
 ### Documentation-only changes
 
@@ -83,8 +81,7 @@ What `code=false` does, and why it is built this way:
   tests are not required, so they are skipped by `if:`. If one is ever made a
   required check it needs the same treatment as the legs above first.
 - **Still runs on documentation:** `clang-format`, `platform-isolation`,
-  `Changelog fragment`, `Docs build (strict)`, `Validate gitflow branch name`,
-  `Scan dependency diff`, Zizmor and OSV-Scanner.
+  `Policy`, `Docs build (strict)`, `Scan dependency diff`, Zizmor and OSV-Scanner.
 
 ### Running some legs by hand
 
@@ -141,9 +138,8 @@ not this repo, decide who may use it):
 
 | Job | Workflow |
 | --- | --- |
-| `Validate gitflow branch name` | `branch-name-check.yml` |
 | `Scan dependency diff` | `dependency-review.yml` |
-| `Changelog fragment` | `changelog-check.yml` |
+| `Policy` | `ci.yml` |
 | `clang-format` | `ci.yml` |
 | `platform-isolation` | `ci.yml` |
 | `Plan build legs` | `ci.yml` |
@@ -480,12 +476,11 @@ checks pass. It is the same command a maintainer would run: no ruleset is
 bypassed, and a PR that fails a required check simply leaves the queue.
 
 Auto-merge is only as safe as the required checks behind it, and today those
-are `Validate gitflow branch name` and `Scan dependency diff` only (see
-[Required checks](branch-protection.md#required-checks)). That is why the
-vcpkg baseline, which rebuilds every dependency, is excluded: nothing required
-would catch it breaking the build. Add an ecosystem to `ALLOWED_ECOSYSTEMS` in
-`dependabot-auto-merge.yml` once the checks that would catch its breakage are
-required on `develop`.
+are `CI Status` and `Scan dependency diff` (see
+[Required checks](branch-protection.md#required-checks)). The vcpkg baseline,
+which rebuilds every dependency, stays manual on purpose: a bump is reviewed by
+hand. Add an ecosystem to `ALLOWED_ECOSYSTEMS` in `dependabot-auto-merge.yml`
+when it should merge itself.
 
 ### Pins Dependabot cannot see
 

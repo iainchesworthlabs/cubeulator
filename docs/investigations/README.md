@@ -11,7 +11,7 @@ leaves behind when it is closed.
 | | A change | An investigation |
 |---|---|---|
 | Branch | `feature/*`, `bugfix/*`, ... | `spike/<name>` |
-| Opens a PR into `develop` | yes | no need to; if it does, `Validate gitflow branch name` fails by design |
+| Opens a PR into `develop` | yes | no need to; it is never merged |
 | CI runs on push | no (on the PR) | no |
 | Can be merged | yes, through the queue | **never** |
 | Ends as | commits on `develop` | a page in this folder, and an archive tag |

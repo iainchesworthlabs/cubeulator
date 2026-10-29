@@ -208,7 +208,7 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
 
    Every pull request since the last tag that a person would notice has a
    fragment in `changelog.d/` (or the `no-changelog` label, which says it has
-   none to write). `changelog-check.yml` asks at review time; this asks for the
+   none to write). The `Policy` check asks at review time; this asks for the
    whole interval, and should print only changes nobody reads about (a
    dependency bump, a CI change):
 

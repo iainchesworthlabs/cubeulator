@@ -1,255 +1,119 @@
 # Branch protection and the merge queue
 
-GitHub branch/repo security settings can't be expressed as a workflow file —
-they're applied in **Settings → Rules → Rulesets** by someone with admin
-rights on the repo. This page records what is configured and why, so the
-settings can be rebuilt (or audited) from the page alone.
+GitHub branch and repository settings can't be expressed as a workflow file. They are applied by an
+administrator, from the shared `admin/apply.sh` in `iainchesworthlabs/icl-common-infra`, and this page
+records what is configured and why, so the settings can be rebuilt or audited from the page alone.
+The decision to adopt the shared branch model is in [Aligning cubeulator with the ICL standard](migration.md).
 
 ## The flow
 
-Cubeulator uses a gitflow shape with a merge queue in front of `develop`:
-
 ```text
-feature/* bugfix/* ──PR──▶ merge queue ──▶ develop ──release PR──▶ main
-                                                       ▲
-                                  release/* hotfix/* support/* ─┘
+feature/* bugfix/* chore/* docs/* ...  ──PR──▶  merge queue  ──squash──▶  develop
+                                                                             │
+                                          release workflow, after a release  ▼
+                                                                    fast-forward main
 ```
 
-- **Topic branches** (`feature/*`, `bugfix/*`, `release/*`, `hotfix/*`,
-  `support/*`, plus Dependabot's `dependabot/*`) open a pull request against
-  `develop`, and a PR that is ready is put in the **merge queue**. Nobody
-  pushes to `develop` directly, and nobody merges by hand.
-- **`develop` → `main`** is a release step: a `develop` → `main` pull request
-  merged with a *merge commit* (never squash or rebase, or the two branches
-  diverge and the next release PR re-lists every commit). Hotfixes go to
-  `main` from a `hotfix/*` branch and are merged back into `develop`
-  through a PR from a `bugfix/*` or `support/*` branch.
-- **`spike/*` is the one prefix that is never merged.** It is for
-  investigations ([Investigations](investigations/README.md)): the branch is
-  pushed, CI legs are dispatched at it by hand, and a pull request from it fails
-  `Validate gitflow branch name` on purpose, which is a required check, so it can
-  neither be queued nor merged. `spike-sweep.yml` tags and deletes one that has
-  been untouched for 30 days.
-- **Head branches are deleted** when their PR merges. A stacked PR whose base
-  was the merged branch is retargeted to `develop` automatically.
+- `develop` is the default branch and the trunk. Every change reaches it through a pull request and
+  the **merge queue**. Nobody pushes to `develop`, and nobody merges by hand.
+- Pull requests are **squashed**: one commit per pull request, a linear history. The commit title and
+  message come from the pull request title and body.
+- `main` holds published releases only. It is never the target of a pull request. After a release is
+  published the release bot fast-forwards `main` to the released commit of `develop`, so `main` is
+  always an ancestor of `develop`. There is no back-merge.
+- Tags `v*` are created by the release workflow and the organisation owner only.
+- **`spike/*`** is for investigations ([Investigations](investigations/README.md)): the branch is pushed,
+  CI legs are dispatched at it by hand, and it is never merged. It is listed in
+  `.github/branch-prefixes.txt`, so the `branch-names` ruleset allows it. `spike-sweep.yml` tags and
+  deletes a spike that has been untouched for 30 days.
+- Head branches are deleted when their pull request merges.
 
-## `develop-protection` (ruleset on `develop`)
+## Rulesets
 
-- **Require a pull request before merging**, with 0 required approvals and
-  stale approvals dismissed on push. Zero, not one: this is a solo-maintainer
-  repo and GitHub doesn't count an author's own approval, so a required
-  approval can only be met by bypassing it. Merge method: **merge commit**
-  only, so `develop` keeps the `Merge feature/x: …` history gitflow expects.
-- **Require status checks to pass**, "up to date" **off** — the merge queue
-  makes each entry current server-side, without a rebase treadmill (see
-  below). Which checks are required is staged, see
-  [Required checks](#required-checks).
-- **Block force pushes** and **restrict deletions**.
-- The repository admin role can bypass **through a pull request only**
-  (`bypass_mode: pull_request`): direct pushes to `develop` stay blocked even
-  for an admin, and anything that skips a requirement is a deliberate
-  `gh pr merge --admin` / "merge without waiting" that someone has to choose.
+| Ruleset | Applies to | What it does |
+| --- | --- | --- |
+| `branch-names` | every branch except `main`, `develop`, `gh-pages`, `quality-history` and the allowed prefixes | A branch name must start with `feature/`, `bugfix/`, `release/`, `hotfix/` or `support/`, or with a prefix in the exclusion list below. Dependabot (`dependabot/`), the merge queue (`gh-readonly-queue/`), `docs/`, `chore/`, `agent/` and `spike/` are allowed |
+| `develop-protection` | `develop` | A pull request is required (0 approvals, conversations resolved, stale approvals dismissed), squash only, linear history, required checks `CI Status` and `Scan dependency diff`, no deletion, no force push. There is no bypass actor |
+| `merge-queue-develop` | `develop` | The merge queue: `SQUASH`, `ALLGREEN`, up to 4 entries built and 5 merged, check timeout 180 minutes |
+| `main-release-only` | `main` | No update, deletion or force push, except by the release bot (the only bypass actor) |
+| `tags` | `v*` | No creation, update or deletion, except by the organisation owner and the release bot |
 
-## `merge-queue-develop` (ruleset on `develop`)
+The approval count is 0 because this is a solo-maintainer repository and GitHub doesn't count an
+author's own approval, so a required approval could only be met by bypassing it.
 
-One `merge_queue` rule: `merge_method: MERGE`, `grouping_strategy: ALLGREEN`,
-`max_entries_to_build: 4`, `max_entries_to_merge: 5`,
-`min_entries_to_merge: 1`, `min_entries_to_merge_wait_minutes: 1`,
-`check_response_timeout_minutes: 180`.
-
-A PR enters the queue once its own checks pass (or earlier, with auto-merge
-enabled: `gh pr merge --auto --merge <n>`). GitHub then builds a temporary
-`gh-readonly-queue/develop/pr-<n>-<sha>` branch — the PR merged onto the
-current queue tip — re-runs the required checks on *that* tree, and merges it
-only if they pass. A failed entry leaves the queue and the entries behind it
-are rebuilt without it.
-
-Two rules keep the queue honest:
-
-- **Every workflow that produces a required check must also trigger on
-  `merge_group`.** GitHub only runs workflows that opt in on the queue's
-  temporary ref, so a required check from a workflow without that trigger
-  never reports, and the entry sits until `check_response_timeout_minutes`
-  expires. `branch-name-check.yml`, `dependency-review.yml`, `ci.yml` and
-  `codeql.yml` carry it today.
-- **A workflow that produces no required check must *not* carry
-  `merge_group`**, or every queue entry burns a full run of it for nothing.
-  A workflow that produces some required checks and some that are not (`ci.yml`)
-  carries it and skips the rest itself: its Android, iOS, Web, Web tests,
-  system-test and `platform-isolation` jobs, and the experimental
-  Windows/macOS system-test step, have `github.event_name != 'merge_group'`, so
-  a queue entry runs `clang-format`, `clang-tidy`, the three build legs and
-  coverage, plus `Analyze (C++)` from `codeql.yml`.
-
-A queue entry has no PR head name, so `Validate gitflow branch name` is
-skipped there (the name was checked when the PR was opened); a skipped job
-counts as a pass for a required check.
+Which prefixes the `branch-names` ruleset exempts comes from the shared `admin/apply.sh` plus the
+project's own `.github/branch-prefixes.txt`. The same file is read by the `Policy` check, so the
+check and the ruleset agree.
 
 ## Required checks
 
-`develop`'s required set is **staged**, because `develop` was not green: the
-build, test and static-analysis jobs in `ci.yml` and `codeql.yml` were not run
-against `develop` between 17 July and 13 October 2026 (commits went in without
-a PR), and they failed on `develop` itself when they were — a required check
-that fails on the base fails every PR. They have passed on `develop`'s tip since
-14 October 2026, so what holds a check back now is the second half of the rule,
-that its workflow has to carry `merge_group`. Both workflows carry it now
-(2026-10-20); what is left is the ruleset itself (below). The rule is:
+Two checks are required on `develop`:
 
-> A check becomes required on `develop` when it is green on the `develop` tip
-> **and** its workflow has `merge_group` added in the same change.
+- **`CI Status`** is the one job in `ci.yml` that summarises the rest. It needs every other job in the
+  workflow, lists the result it expects from each one, and fails if a job that should have run was
+  skipped. A failed or cancelled job fails it as well. A new job goes into its `needs` list and, when
+  the planner decides whether it runs, its `expected` map ([CI](ci.md)). That is why a
+  documentation-only change, which skips the builds, still reports a result.
+- **`Scan dependency diff`** (`dependency-review.yml`) fails a pull request that adds a vulnerable or
+  disallowed-licence dependency.
 
-| Check | Workflow | Required on `develop` | Required on `main` |
-| --- | --- | --- | --- |
-| `Validate gitflow branch name` | `branch-name-check.yml` | yes | yes |
-| `Scan dependency diff` | `dependency-review.yml` | yes | yes |
-| `clang-format` | `ci.yml` | when green | yes |
-| `clang-tidy` | `ci.yml` | when green | yes |
-| `Linux (GCC 16)` | `ci.yml` | when green | yes |
-| `macOS (AppleClang)` | `ci.yml` | when green | yes |
-| `Windows (MSVC)` | `ci.yml` | when green | yes |
-| `Coverage (Linux, GCC)` | `ci.yml` | when green | yes |
-| `Analyze (C++)` | `codeql.yml` | when green | yes |
-| `Commit is green` | `release-check.yml` | no (it runs only on a pull request into `main`) | yes |
+`Policy` (branch name, commit and pull request text, the preprocessor check, action pinning, the
+changelog fragment, the vcpkg baseline in the fork) is a job in `ci.yml`, so it is part of
+`CI Status`.
 
-Promoting a check only ever tightens the ruleset. Android, iOS, Web and Web tests no
-longer carry `continue-on-error` (2026-10-21): a red one fails the CI run and
-shows on the pull request, though none of them is a *required* check yet.
-Requiring them is the ruleset edit in
-[Promoting the build checks](#promoting-the-build-checks-on-develop).
-The system tests, `platform-isolation`, `Changelog fragment`, `Docs build
-(strict)` and `Release readiness` are not in the table either: none is required.
+## The merge queue
 
-## `main-protection` (ruleset on `main`)
+A pull request enters the queue once its own checks pass, or earlier with auto-merge
+(`gh pr merge --merge <n>`; the queue picks the squash strategy). GitHub builds a temporary
+`gh-readonly-queue/develop/pr-<n>-<sha>` branch, the pull request merged onto the current queue tip,
+re-runs the required checks on that tree and merges it only if they pass. A failed entry leaves the
+queue and the entries behind it are rebuilt without it.
 
-`main` only receives `develop`, `release/*`, `hotfix/*` and `support/*`
-(`branch-name-check.yml` enforces the pairing). The ruleset requires a pull
-request, every check in the table above with "up to date" **on**, conversation
-resolution, and blocks force pushes and deletions. Releases are a deliberate
-human step ([Cutting a release](releasing.md)): the release PR is the decision,
-and the tag on the merge commit is the build.
+Two rules keep the queue honest:
 
-Set the same way as `develop-protection`, for the same reason (a solo
-maintainer, whose own approval GitHub does not count):
-
-- **0 required approvals**, stale reviews still dismissed on push.
-- **Merge commit only.** A squash or a rebase of a release PR would make
-  `develop` and `main` diverge, so the next release PR would re-list every
-  commit.
-- **The repository admin role can bypass through a pull request only**
-  (`bypass_mode: pull_request`): a direct push to `main` stays blocked even for
-  an admin, and a release PR whose required checks are not all green merges only
-  by someone choosing "merge without waiting" (`gh pr merge --admin`) on it.
-
-This was changed on 2026-10-14, on the maintainer's instruction. Before that it
-had no bypass actor and required one approval, which a solo author cannot give,
-so a release PR could not merge at all. The required checks are untouched: a
-release PR is expected to have them green, and bypassing them is a deliberate
-act, not something the ruleset allows by default.
-
-`release-check.yml` also runs on a pull request into `main`, as two jobs.
-`Release readiness` is advisory and not in the table above: it says whether the
-tree is a release the Release workflow will accept and what its notes would
-say. `Commit is green`, in the table, says whether the PR's head commit is green on every
-workflow the README has a badge for (CI, CodeQL, OSV-Scanner, Zizmor). The
-nine required checks already hold the build, test, coverage, clang and CodeQL
-legs of the PR's own run, but not OSV-Scanner or Zizmor, and not the push runs
-on `develop` that the badges on `main` come to show, so a release can pass
-them and still arrive with a red badge. It waits (up to three hours) for a
-workflow that has not finished and fails at once on a red one.
-`Commit is green` is required on `main` so that "do not release from a red
-`develop`" is a rule of the repository and not only of the maintainer. A red
-that is not about the change (a flaky scheduled leg, in front of a hotfix) is
-handled as [Preparing the release](releasing.md#preparing-the-release) step 4
-says: re-run what is red; bypass through the pull request only when the red is
-known not to matter.
+- **Every workflow that produces a required check must also trigger on `merge_group`.** GitHub only
+  runs workflows that opt in on the queue's temporary ref, so a required check from a workflow
+  without that trigger never reports, and the entry waits until the timeout. `ci.yml` and
+  `dependency-review.yml` carry it.
+- **A workflow that produces no required check must not carry `merge_group`**, or every queue entry
+  runs it for nothing. A workflow that mixes required and other jobs (`ci.yml`) carries the trigger
+  and skips the rest itself. Which jobs run on a pull request, in the queue and after the merge is in
+  [CI](ci.md).
 
 ## Repository settings
 
-- **Allow auto-merge**: on — it is how a ready PR goes into the queue.
-- **Automatically delete head branches**: on.
-- **Allow merge commits / squash / rebase**: all on at the repo level; the
-  rulesets above restrict `develop` to merge commits.
+- Default branch `develop`.
+- Squash merging only; merge commits and rebase merging off.
+- Squash commit title from the pull request title, message from its body.
+- Allow auto-merge: on. Automatically delete head branches: on. Allow update branch: on.
+- Wiki, projects and discussions off.
+- The description, homepage and topics are kept in `.github/repo-settings.json`.
 
 ## Dependabot pull requests
 
-Dependabot opens its pull requests against `develop` from `dependabot/*`
-branches (its prefix is not configurable, so `branch-name-check.yml` allows
-it). `dependabot-auto-merge.yml` then enables auto-merge on the low-risk ones —
-minor and patch updates of GitHub Actions and the pip tooling — so they go
-through the queue like any other pull request. Nothing is bypassed: it uses the
-workflow's `GITHUB_TOKEN`, not an admin identity, and the `develop-protection`
-and `merge-queue-develop` rules apply unchanged.
+Dependabot opens its pull requests against `develop` from `dependabot/*` branches (its prefix is not
+configurable, so the `branch-names` ruleset and the `Policy` check allow it).
+`dependabot-auto-merge.yml` enables auto-merge on the low-risk ones: minor and patch updates of
+GitHub Actions and the pip tooling. They go through the queue like any other pull request. Nothing
+is bypassed: the `develop-protection` and `merge-queue-develop` rules apply unchanged. Major updates
+and the vcpkg baseline stay manual. The policy and the one place to widen it are in the workflow.
 
-The queue merges once the *required* checks pass, so the set of ecosystems that
-may merge themselves is tied to the [Required checks](#required-checks) table:
-major updates, and the vcpkg baseline, stay manual until
-the build and test checks that would catch their breakage are promoted. The
-policy and the one place to widen it are in `dependabot-auto-merge.yml`.
+## Other scanners (visible only)
 
-## Other scanners (visible-only)
+`osv-scanner.yml`, `zizmor.yml` and `scorecard.yml` upload SARIF to **Security → Code scanning** but
+don't fail pull request checks. Triage their alerts there rather than through a required status
+check. `scorecard.yml` runs on pushes to `main` and weekly, not on pull requests.
 
-`osv-scanner.yml`, `zizmor.yml`, and `scorecard.yml` upload SARIF to
-**Security → Code scanning** but don't fail PR checks — triage their alerts
-there rather than via a required status check. `scorecard.yml`'s
-branch-protection sub-check scores more completely with a fine-grained PAT
-(read-only, "Administration: read") added as a repo secret named
-`SCORECARD_READ_TOKEN`, and the `repo_token` line in the workflow uncommented;
-without it, that sub-check degrades gracefully instead of failing. `scorecard.yml`
-runs on pushes to `main` and weekly, not on pull requests.
+## Rebuilding the settings
 
-## Promoting the build checks on `develop`
+From a checkout of this repository on `develop` and one of `icl-common-infra`:
 
-`develop-protection` requires only `Validate gitflow branch name` and `Scan
-dependency diff`, and the queue only re-runs those, so a change that breaks the
-build or the tests reaches `develop` (#200 did, on 2026-10-18: the i18n
-catalogue test and `system.reach` were red on its push run and fixed by #202
-two merges later). The seven checks of the table above are what to require.
-An admin does it (the repository's rulesets are not edited from a workflow or
-by an agent), **in this order**:
+```sh
+RELEASE_BOT_APP_ID=5426061 OWNER_USER=iainchesworth \
+  admin/apply.sh --repo iainchesworthlabs/cubeulator --config-dir <this checkout>/.github \
+  --only settings,rulesets            # a dry run; add --apply to make the change
+```
 
-1. **Land the workflows that make the checks exist on every kind of pull
-   request and every queue entry.** `merge_group` on `ci.yml` and `codeql.yml`
-   (this change); the documentation-only path, under which the seven jobs still
-   run and report on a documentation-only change instead of being skipped
-   (`.github/actions/changed-code`; [Documentation-only changes](ci.md#documentation-only-changes)),
-   because a required check that is skipped by `if:` is never reported and the
-   pull request waits for it for ever; and the gating of the porting legs and
-   the Windows/macOS system tests, so a check that goes required is one that is
-   green.
-2. **See them green on a code pull request and on a documentation-only one**,
-   with all seven names reporting `success` on both (the proof pull requests of
-   the change that added the path are linked from it).
-3. **Edit the ruleset.** One `PUT`, with the seven contexts added to the
-   existing two; the queue's own rule is unchanged (`merge-queue-develop`
-   re-runs whatever `develop-protection` requires):
-
-   ```sh
-   RS=24974265   # develop-protection
-   gh api repos/iainchesworthlabs/cubeulator/rulesets/$RS > develop-protection.json
-   jq '{name, target, enforcement, conditions, bypass_actors,
-        rules: (.rules | map(if .type == "required_status_checks"
-          then .parameters.required_status_checks +=
-               ([ "clang-format", "clang-tidy", "Linux (GCC 16)", "macOS (AppleClang)",
-                  "Windows (MSVC)", "Coverage (Linux, GCC)", "Analyze (C++)" ]
-                | map({context: .}))
-          else . end))}' develop-protection.json > develop-protection.new.json
-   gh api -X PUT repos/iainchesworthlabs/cubeulator/rulesets/$RS --input develop-protection.new.json
-   ```
-
-   Check the diff of the two JSON files before the `PUT`. To undo: `PUT` the
-   saved `develop-protection.json` back (strip the same read-only keys with `jq
-   '{name, target, enforcement, conditions, bypass_actors, rules}'`).
-4. **Watch the first queue entry.** It runs the seven jobs on the queue's merge
-   ref (about an hour on a free pool, more on the shared one), and a cache entry
-   is readable from its own ref, the base branch and the default branch only
-   ([Where an entry can be read from](ci.md#where-an-entry-can-be-read-from)):
-   whether a `gh-readonly-queue/develop/...` ref reads `develop`'s vcpkg entries
-   has not been observed, so that first entry may build the dependencies cold.
-   If it does, `check_response_timeout_minutes` (180) is the bound on it.
-
-Android, iOS, Web and Web tests are not in the list on purpose: they gate a CI
-run (no `continue-on-error`) but a required check also has to report in the
-queue, and on a documentation-only change, which today they do not (they skip
-whole). Requiring them is a second step: give them the step-level skip the
-seven have, run them in the queue, and add their four names to the list above.
+`apply.sh` creates a ruleset that is missing and updates one it finds by name. It never deletes a
+ruleset, so one that is no longer wanted is removed by hand. Rulesets are not edited from a workflow
+or by an agent without the maintainer's say.
