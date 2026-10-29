@@ -5,7 +5,7 @@
   "description": "A camera-driven, on-device Rubik's Cube solver.",
   "homepage": "https://github.com/iainchesworthlabs/cubeulator",
   "license": "GPL-3.0-or-later",
-  "builtin-baseline": "02a476b3a4adaf6c4bdbb79b702458eae5f34b12",
+  "builtin-baseline": "9eec002df1cd109f8f104cd966a763daf9751489",
   "dependencies": [
     "fmt",
     {
