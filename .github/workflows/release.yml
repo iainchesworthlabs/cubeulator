@@ -248,7 +248,7 @@ jobs:
       # one, so that nothing a release run does can end up in what the other
       # workflows trust. A cold cache only costs time.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           cache-key-suffix: ${{ matrix.triplet }}
 
@@ -264,7 +264,7 @@ jobs:
       # .github/toolchain-versions.json.
       - name: Install GCC 16 (Linux)
         if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-gcc@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
 
       - name: Install vcpkg build dependencies (Linux)
         if: runner.os == 'Linux'
@@ -397,7 +397,7 @@ jobs:
 
       - name: Check the glibc the package needs (Linux)
         if: runner.os == 'Linux'
-        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+        uses: iainchesworthlabs/icl-common-infra/actions/check-glibc-floor@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           folder: ${{ runner.temp }}/deb
 
@@ -482,7 +482,7 @@ jobs:
 
       # Read-only, as the desktop legs: see there.
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@0b66ebe4f1ac93b75323b3065777b4dd3f287cdf # v0.1.17
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
