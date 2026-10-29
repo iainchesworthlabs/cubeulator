@@ -264,7 +264,10 @@ Rectangle {
             objectName: "colours.cube"
             anchors.centerIn: parent
             width: Math.min(parent.width, parent.height); height: width
-            interactive: false
+            // Drag it to look round the cube being painted: the side being painted
+            // is where it comes back to when let go (CubeNView, dragTurnsView).
+            interactive: true
+            dragTurnsView: true
             autoRotate: false
             evenLight: true
             homeRotation: Qt.vector3d(0, 0, 0)
@@ -337,22 +340,45 @@ Rectangle {
                 color: Theme.inkMuted(0.7)
             }
 
-            // The sides, to choose which is painted. A tick says a side is done.
-            Flow {
+            // The sides, to choose which is painted. A tick says a side is done. Every
+            // tile is the same size whatever its name and whether or not it is ticked,
+            // and the tick has a place of its own, so that the sides stay where the
+            // eye left them as they fill: two columns on a narrow screen, three where
+            // there is room, the top, front and right first as a person goes round.
+            Grid {
+                id: sideGrid
                 objectName: "colours.sides"
                 x: Theme.space4
                 width: parent.width - 2 * Theme.space4
+                columns: width >= 420 ? 3 : 2
                 spacing: Theme.space2
+                // The height of the tallest name, so that a name that wraps in one
+                // language makes every tile that tall and not just its own.
+                property real tileHeight: 44
+                function fit() {
+                    var h = 44;
+                    for (var i = 0; i < sideTiles.count; i++) {
+                        var tile = sideTiles.itemAt(i);
+                        if (tile)
+                            h = Math.max(h, tile.implicitHeight);
+                    }
+                    tileHeight = h;
+                }
                 Accessible.name: qsTrId("review.sidePicker")
                 Repeater {
+                    id: sideTiles
                     model: root.sideOrder
                     delegate: AppButton {
                         required property string modelData
                         objectName: "colours.side." + modelData
-                        height: 44
+                        width: Math.floor((sideGrid.width - (sideGrid.columns - 1) * sideGrid.spacing) / sideGrid.columns)
+                        height: sideGrid.tileHeight
                         variant: modelData === root.side ? "primary" : "secondary"
                         text: root.sideName(modelData)
                         trailingIcon: root.complete(modelData) ? "check" : ""
+                        trailingSlot: true
+                        onImplicitHeightChanged: sideGrid.fit()
+                        Component.onCompleted: sideGrid.fit()
                         onClicked: root.side = modelData
                     }
                 }
