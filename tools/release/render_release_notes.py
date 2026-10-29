@@ -50,7 +50,6 @@ PLATFORMS: tuple[tuple[str, str], ...] = (
     (".dmg", "macOS 14.4 and later, Apple Silicon"),
     (".deb", "Linux, Debian and Ubuntu"),
     (".rpm", "Linux, Fedora"),
-    (".ipa", "iPhone (ad hoc: installs only on devices registered to the maintainer)"),
     (".zip", "Web: any current browser (static files to host)"),
 )
 
@@ -68,7 +67,6 @@ def expected_names(version: str) -> list[str]:
         f"Cubeulator-{version}-macos-arm64.dmg",
         f"Cubeulator-{version}-linux-x64.deb",
         f"Cubeulator-{version}-linux-x64.rpm",
-        f"Cubeulator-{version}-ios.ipa",
         f"Cubeulator-{version}-web.zip",
     ]
 
@@ -87,7 +85,7 @@ def install_section(template: str, names: list[str], version: str, tag: str) -> 
     """The template with the real package names, and this release's tag, in it."""
     fallback = dict(zip((s for s, _ in PLATFORMS), expected_names(version)))
     filled = template
-    for token, suffix in (("@WINDOWS@", ".exe"), ("@MACOS@", ".dmg"), ("@DEB@", ".deb"), ("@RPM@", ".rpm"), ("@IOS@", ".ipa"), ("@WEB@", ".zip")):
+    for token, suffix in (("@WINDOWS@", ".exe"), ("@MACOS@", ".dmg"), ("@DEB@", ".deb"), ("@RPM@", ".rpm"), ("@WEB@", ".zip")):
         files = _files_for(names, suffix)
         filled = filled.replace(token, files[0] if files else fallback[suffix])
     return filled.replace("@TAG@", tag).strip("\n")
