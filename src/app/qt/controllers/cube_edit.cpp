@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cctype>
+#include <cstddef>
 #include <iterator>
 #include <utility>
 
@@ -353,6 +355,109 @@ bool CubeEdit::rotate_side(Face face, int quarter_turns) {
         doubtful_.at(at) = moved.at(static_cast<std::size_t>(i));
     }
     return true;
+}
+
+namespace {
+
+// `stickers` of a cube of `size` with `face` turned in place, `turns` quarter turns
+// clockwise as seen from outside (what CubeEdit::rotate_side does to a side).
+void turn_side(std::vector<std::int8_t>& stickers, Face face, int size, int turns) {
+    const auto n = static_cast<std::size_t>(size);
+    std::vector<std::int8_t> side(n * n);
+    for (int i = 0; i < size * size; ++i) {
+        side.at(static_cast<std::size_t>(i)) = stickers.at(seen_facelet(face, size, i));
+    }
+    for (int t = 0; t < turns; ++t) {
+        std::vector<std::int8_t> next(side.size());
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t col = 0; col < n; ++col) {
+                next.at((col * n) + (n - 1 - row)) = side.at((row * n) + col);
+            }
+        }
+        side = std::move(next);
+    }
+    for (int i = 0; i < size * size; ++i) {
+        stickers.at(seen_facelet(face, size, i)) = side.at(static_cast<std::size_t>(i));
+    }
+}
+
+}  // namespace
+
+TurnFixes CubeEdit::turn_fixes(int max_sides, std::size_t limit) const {
+    TurnFixes out;
+    if (status().state != EditState::Impossible) {
+        return out;
+    }
+    constexpr int kSides = 6;
+    max_sides = std::clamp(max_sides, 1, kSides);
+    std::vector<std::vector<std::int8_t>> seen{stickers_};
+    std::vector<cube::solver::Color> colours(stickers_.size());
+    for (int count = 1; count <= max_sides; ++count) {
+        std::vector<TurnFix> found;
+        for (unsigned chosen = 1; chosen < (1U << kSides); ++chosen) {
+            if (std::popcount(chosen) != count) {
+                continue;
+            }
+            std::vector<Face> faces;
+            for (int bit = 0; bit < kSides; ++bit) {
+                if ((chosen & (1U << bit)) != 0) {
+                    faces.push_back(cube::solver::kAllFaces.at(static_cast<std::size_t>(bit)));
+                }
+            }
+            // Every choice of 1, 2 or 3 quarter turns for each chosen side.
+            std::vector<int> turns(faces.size(), 1);
+            while (true) {
+                std::vector<std::int8_t> trial = stickers_;
+                for (std::size_t i = 0; i < faces.size(); ++i) {
+                    turn_side(trial, faces.at(i), size_, turns.at(i));
+                }
+                if (std::ranges::find(seen, trial) == seen.end()) {
+                    std::ranges::transform(trial, colours.begin(), [](std::int8_t colour) {
+                        return static_cast<cube::solver::Color>(colour);
+                    });
+                    if (cube::nxn::validate(size_, colours).ok()) {
+                        TurnFix fix;
+                        for (std::size_t i = 0; i < faces.size(); ++i) {
+                            fix.turns.push_back(
+                                {.face = faces.at(i), .quarter_turns = turns.at(i)});
+                        }
+                        found.push_back(std::move(fix));
+                    }
+                    seen.push_back(std::move(trial));
+                }
+                std::size_t at = 0;
+                while (at < turns.size() && turns.at(at) == 3) {
+                    turns.at(at++) = 1;
+                }
+                if (at == turns.size()) {
+                    break;
+                }
+                ++turns.at(at);
+            }
+        }
+        if (!found.empty()) {
+            out.more = found.size() > limit;
+            if (out.more) {
+                found.resize(limit);
+            }
+            out.fixes = std::move(found);
+            return out;
+        }
+    }
+    return out;
+}
+
+bool CubeEdit::apply_turns(const std::vector<SideTurn>& turns) {
+    const bool was_open = stroke_open_;
+    begin_stroke();
+    bool changed_any = false;
+    for (const SideTurn& turn : turns) {
+        changed_any = rotate_side(turn.face, turn.quarter_turns) || changed_any;
+    }
+    if (!was_open) {
+        end_stroke();
+    }
+    return changed_any;
 }
 
 bool CubeEdit::clear_all() {

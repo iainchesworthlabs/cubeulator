@@ -319,6 +319,16 @@ sticker to name it by and a 5x5 has 150 stickers to set:
 - **Paint, do not pick**: choose a colour once, then tap or drag over the
   stickers that have it. A seventh swatch takes a colour away. **Fill this side**
   paints the whole side, which is how a solved side is entered in one touch.
+- **A side held the wrong way up is found.** Entering a side a quarter turn out is
+  the likeliest mistake, and a scan can make it too. When the cube is not one, the
+  screen tries turning each side in place, one side first, then two, then three, and
+  offers the fewest that make a cube (`review.fix.intro`). The fewest, because the
+  more sides a fix turns, the likelier it is a cube that only looks right. When more
+  than one way works they are all offered, each a button that says which sides turn
+  and how (`review.fix.several`, `review.fix.quarter`, `review.fix.half`,
+  `review.fix.quarterBack`); choosing one turns them as one step that Undo takes
+  back. Nothing is offered when turning cannot help: a colour counted wrong, or
+  stickers swapped between sides.
 - **What is wrong is said and pointed at**: too many or too few of a colour; or
   every colour N × N times and still not a cube, with what is wrong with it and the
   sticker of the piece at fault outlined. Solve is on only for a cube that is one.

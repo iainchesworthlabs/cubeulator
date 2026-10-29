@@ -261,6 +261,43 @@ TEST_CASE("the side tiles keep one size, ticked or not, and the cube beside can 
     CHECK(cube.property("dragTurnsView").toBool());
 }
 
+TEST_CASE("a side held the wrong way up is offered turned back, and turning it makes a cube",
+          "[qml][colours]") {
+    const HomeAgain home;
+    REQUIRE(QMetaObject::invokeMethod(&app_state(), "openColours", Q_ARG(QVariant, 3)));
+    // A cube a person could hold, typed in a side at a time...
+    const NCube cube = cube::nxn::random_scramble({.size = 3, .seed = 4, .moves = 48});
+    const std::array<const char*, 6> letters = {"U", "D", "L", "R", "F", "B"};
+    for (const cube::nxn::Face face : cube::solver::kAllFaces) {
+        const std::vector<Color> stickers = cube::test::outside_view_of(cube, face);
+        for (std::size_t i = 0; i < stickers.size(); ++i) {
+            entry().paint(QString::fromLatin1(letters.at(static_cast<std::size_t>(face))),
+                          static_cast<int>(i), static_cast<int>(stickers.at(i)));
+        }
+    }
+    REQUIRE(entry().edit().status().state == cube::app::EditState::Valid);
+    Screen screen;
+    CHECK(screen.status_headline() == "review.status.valid");
+    CHECK_FALSE(screen.require("colours.fix").property("visible").toBool());
+
+    // ...with the front held a quarter turn out.
+    entry().rotateSide("F", 1);
+    REQUIRE(entry().edit().status().state == cube::app::EditState::Impossible);
+    CHECK(screen.status_headline() == "review.status.impossible");
+    CHECK(screen.require("colours.fix").property("visible").toBool());
+    CHECK_FALSE(screen.require("colours.fix.intro").property("text").toString().isEmpty());
+    const QString offered = screen.require("colours.fix.0").property("text").toString();
+    CHECK_FALSE(offered.isEmpty());
+
+    // Choosing it turns the side back: a cube, in one step of undo.
+    screen.click("colours.fix.0");
+    CHECK(screen.status_headline() == "review.status.valid");
+    CHECK_FALSE(screen.require("colours.fix").property("visible").toBool());
+    CHECK(entry().canUndo());
+    entry().undo();
+    CHECK(screen.status_headline() == "review.status.impossible");
+}
+
 TEST_CASE("the cube is typed in, said to be a cube, and solved", "[qml][colours]") {
     const HomeAgain home;
     const NCube cube = cube::nxn::random_scramble({.size = 3, .seed = 4, .moves = 40});

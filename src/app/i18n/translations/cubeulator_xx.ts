@@ -1247,6 +1247,34 @@ In your hands.</source>
         <extracomment>Button on the colours screen. Turns the side being edited a quarter turn clockwise, as seen from outside, in the picture only: for a side the camera read the wrong way up. It does not turn the cube.</extracomment>
         <translation>[Tûrn thîs sîdé ~~~~~ ~]</translation>
     </message>
+    <message id="review.fix.intro" numerus="yes">
+        <source>%Ln sides may be the wrong way round. Turning them would make this a cube.</source>
+        <extracomment>Shown on the colours screen under the message that the cube cannot be one, when turning sides in place would make it one. %n is how many sides the fix turns.</extracomment>
+        <translation>
+            <numerusform>[Õné sîdé mày bé thé wrõng wày rõûnd. Tûrnîng ît wõûld màké thîs à cûbé. ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~]</numerusform>
+            <numerusform>[%Ln sîdés mày bé thé wrõng wày rõûnd. Tûrnîng thém wõûld màké thîs à cûbé. ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~~]</numerusform>
+        </translation>
+    </message>
+    <message id="review.fix.several">
+        <source>There is more than one way. Choose the one that matches how your cube is held. Undo takes it back.</source>
+        <extracomment>Shown under review.fix.intro when there are several ways to turn sides, each a button. Undo is the Undo button.</extracomment>
+        <translation>[Théré îs mõré thàn õné wày. Chõõsé thé õné thàt màtchés hõw yõûr cûbé îs héld. Ûndõ tàkés ît bàck. ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~~ ~~~~]</translation>
+    </message>
+    <message id="review.fix.quarter">
+        <source>%1: a quarter turn clockwise</source>
+        <extracomment>Part of a button on the colours screen that turns a side in place. %1 is a side name (a colourSide or side string); the turn is as seen from outside. A fix that turns several sides lists them with commas on one button.</extracomment>
+        <translation>[%1: à qûàrtér tûrn clõckwîsé ~~~~~ ~~~~~ ~]</translation>
+    </message>
+    <message id="review.fix.half">
+        <source>%1: a half turn</source>
+        <extracomment>Part of a button on the colours screen that turns a side in place. %1 is a side name (a colourSide or side string). A half turn is the same either way.</extracomment>
+        <translation>[%1: à hàlf tûrn ~~~~~ ~]</translation>
+    </message>
+    <message id="review.fix.quarterBack">
+        <source>%1: a quarter turn anticlockwise</source>
+        <extracomment>Part of a button on the colours screen that turns a side in place. %1 is a side name (a colourSide or side string); the turn is as seen from outside.</extracomment>
+        <translation>[%1: à qûàrtér tûrn àntîclõckwîsé ~~~~~ ~~~~~ ~~~]</translation>
+    </message>
     <message id="review.describe.open">
         <source>Describe this side</source>
         <extracomment>Button on the colours screen. Opens a box to type the colours of the whole side as letters instead of tapping each sticker.</extracomment>

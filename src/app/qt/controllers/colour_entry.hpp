@@ -126,6 +126,9 @@ public:
     // (negative for the other way): for a reading whose sides came out the wrong
     // way up.
     Q_INVOKABLE void rotateSide(const QString& side, int quarterTurns);
+    // Turns the sides of one of status.turnFixes together, each { side, quarterTurns },
+    // as one step that undo takes back.
+    Q_INVOKABLE void applyTurns(const QVariantList& turns);
 
     // A finger dragged over several stickers is one step to undo.
     Q_INVOKABLE void beginStroke();
