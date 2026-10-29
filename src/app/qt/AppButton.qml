@@ -9,6 +9,10 @@ Item {
     property string text: ""
     property string variant: "primary" // primary | secondary | ghost
     property string trailingIcon: ""
+    // Keeps the room for a trailing icon when there is none, so that a button
+    // that shows a mark only sometimes (a tick on a side that is done) is the
+    // same size, and its label in the same place, with and without it.
+    property bool trailingSlot: false
     property string leadingIcon: ""
     property bool block: false // fill width; label flush-left instead of centered
     property bool enabled: true
@@ -19,7 +23,8 @@ Item {
     // given, and wraps the same way.
     property real maxWidth: -1
 
-    readonly property real chrome: (root.leadingIcon ? 26 : 0) + (root.trailingIcon ? 26 : 0) + Theme.space6
+    readonly property bool hasTrailing: root.trailingIcon !== "" || root.trailingSlot
+    readonly property real chrome: (root.leadingIcon ? 26 : 0) + (root.hasTrailing ? 26 : 0) + Theme.space6
     readonly property real textRoom: root.block
         ? root.width - Theme.space4 * 2 - (root.leadingIcon ? 26 : 0) - (root.trailingIcon ? 26 : 0)
         : root.width - root.chrome
@@ -81,6 +86,21 @@ Item {
             wrapMode: Text.Wrap
             width: root.textRoom > 0 ? Math.min(implicitWidth, root.textRoom) : implicitWidth
         }
+
+        // Inside the row, so that the label and the icon are centred together:
+        // beside the row the icon stood outside the label's own centre and
+        // stuck out past the edge of the button.
+        Item {
+            visible: !root.block && root.hasTrailing
+            width: 18; height: 18
+            anchors.verticalCenter: parent.verticalCenter
+            Icon {
+                visible: root.trailingIcon !== ""
+                anchors.fill: parent
+                name: root.trailingIcon
+                color: root.primary ? Theme.paper : Theme.ink
+            }
+        }
     }
 
     Icon {
@@ -90,16 +110,6 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
         anchors.rightMargin: Theme.space4
-        color: root.primary ? Theme.paper : Theme.ink
-    }
-
-    Icon {
-        visible: root.trailingIcon !== "" && !root.block
-        name: root.trailingIcon
-        width: 18; height: 18
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: content.right
-        anchors.leftMargin: 8
         color: root.primary ? Theme.paper : Theme.ink
     }
 

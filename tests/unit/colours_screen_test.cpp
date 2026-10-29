@@ -23,6 +23,7 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSizeF>
 #include <QString>
 #include <QVariant>
 #include <QVariantList>
@@ -219,6 +220,45 @@ TEST_CASE("what is painted arrives in the controller, and the cube drawn beside 
     CHECK(entry().paintedOn("F") == 16);
     screen.click("colours.clearAll");
     CHECK_FALSE(entry().touched());
+}
+
+TEST_CASE("the side tiles keep one size, ticked or not, and the cube beside can be looked round",
+          "[qml][colours]") {
+    const HomeAgain home;
+    REQUIRE(QMetaObject::invokeMethod(&app_state(), "openColours", Q_ARG(QVariant, 3)));
+    Screen screen;
+
+    const std::array<const char*, 6> tiles = {"colours.side.U", "colours.side.F", "colours.side.R",
+                                              "colours.side.B", "colours.side.L", "colours.side.D"};
+    const auto size_of = [&](const char* name) {
+        const QObject& tile = screen.require(name);
+        return QSizeF(tile.property("width").toReal(), tile.property("height").toReal());
+    };
+    const auto check_all_alike = [&](const QSizeF& wanted) {
+        for (const char* name : tiles) {
+            INFO(name);
+            CHECK(size_of(name) == wanted);
+        }
+    };
+    const QSizeF alike = size_of("colours.side.U");
+    CHECK(alike.width() > 0);
+    CHECK(alike.height() >= 44);
+    check_all_alike(alike);
+    CHECK(screen.require("colours.side.U").property("trailingIcon").toString().isEmpty());
+
+    // A side that is full is ticked, and not one tile changes: the tick has a place
+    // of its own in every tile, filled or not.
+    screen.click("colours.side.U");
+    screen.set("brush", 0);
+    screen.click("colours.fillSide");
+    CHECK(screen.require("colours.side.U").property("trailingIcon").toString() == "check");
+    check_all_alike(alike);
+
+    // The cube drawn beside the grid can be turned by hand, to look round it, and
+    // comes back to the side being painted when let go.
+    const QObject& cube = screen.require("colours.cube");
+    CHECK(cube.property("interactive").toBool());
+    CHECK(cube.property("dragTurnsView").toBool());
 }
 
 TEST_CASE("the cube is typed in, said to be a cube, and solved", "[qml][colours]") {

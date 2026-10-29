@@ -311,7 +311,11 @@ sticker to name it by and a 5x5 has 150 stickers to set:
 - **One side at a time, as it looks from outside**, with the sides against its
   four edges named round the grid, so which way up the grid goes is read off the
   screen and not guessed. Wide, the cube is drawn beside it and turned to show the
-  side being painted, with the unpainted stickers grey.
+  side being painted, with the unpainted stickers grey. It can be dragged to look
+  round the cube, and comes back to the side being painted when let go.
+- **The side picker is six tiles of one size**, two columns on a narrow screen and
+  three where there is room, in the order a person goes round a cube. A tile's
+  check has a place of its own, so a side filling in moves nothing.
 - **Paint, do not pick**: choose a colour once, then tap or drag over the
   stickers that have it. A seventh swatch takes a colour away. **Fill this side**
   paints the whole side, which is how a solved side is entered in one touch.
