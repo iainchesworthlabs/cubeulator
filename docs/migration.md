@@ -43,8 +43,8 @@ Each pull request is one step and its checks are green before the next starts. A
 5. (Done, #254.) vcpkg: switch to `IclVcpkgRoot.cmake` and `setup-vcpkg`, remove the submodule, drop the `gitsubmodule` Dependabot entry, add the `vcpkg-baseline-in-fork` check.
 6. (Done, #253.) Conventions written down: the `readability-identifier-naming` section of `.clang-tidy`, `.editorconfig`, `.git-blame-ignore-revs`, the Objective-C++ document in `.clang-format`.
 7. Hardening flags (done, #259); the shared preprocessor check with its allowlist (done, #258). The sanitiser, TSan and fuzz presets are open: Debug presets already carry ASan and UBSan, TSan runs nightly, and the fuzz harnesses wait for a list of the parsers that take untrusted input.
-8. CI (in progress; the `CI Status` aggregator is #257): the `CI Status` aggregator, `merge_group` handling, the planner and draft-pull-request rule, ccache and ctest phases, then the shared workflows one at a time. The two required checks of today stay until `CI Status` has passed on a code change and on a documentation change.
-9. Settings: the branch model (default branch, squash and linear history, `branch-names`, `tags`, `main-release-only`, the `release` environment, labels, variables). Applied by the maintainer from the dry run of `admin/apply.sh`.
+8. CI (in progress; the `CI Status` aggregator is #257, the `Policy` job #263, and the three old policy workflows are removed): the `CI Status` aggregator, `merge_group` handling, the planner and draft-pull-request rule, ccache and ctest phases, then the shared workflows one at a time. The two required checks of today stay until `CI Status` has passed on a code change and on a documentation change.
+9. (Done on 2026-10-29: default branch `develop`, squash only, `branch-names`, `develop-protection`, `merge-queue-develop`, `main-release-only`, `tags`; the old `main-protection` ruleset deleted.) Settings: the branch model (default branch, squash and linear history, `branch-names`, `tags`, `main-release-only`, the `release` environment, labels, variables). Applied by the maintainer from the dry run of `admin/apply.sh`.
 10. Licence wording, then SPDX headers and `REUSE.toml` (its own pull request, scheduled).
 11. Release: the glibc floor check on the Linux package (#260), the signing key, `docs/signing-key.asc`, the release workflow on the shared `release-publish.yml`, `-unsigned` and `-testsigned` file names.
 12. Documentation: `AGENTS.md`, `CONTRIBUTING.md` (the branching text changes only after step 9), root `SECURITY.md`, `docs/releasing.md` with the owner runbook.
@@ -54,11 +54,10 @@ Each pull request is one step and its checks are green before the next starts. A
 
 These change settings, secrets or accounts and are done by the maintainer.
 
-Done: secret scanning, push protection and Dependabot security updates; the `release` environment with the maintainer as required reviewer; the labels and the variables `SIGN_WINDOWS`, `SIGN_MACOS` and `SIGN_IOS_UPLOAD`; the repository secret `REPO_GPG_PRIVATE_KEY` deleted. The Dependabot secret `MERGE_QUEUE_TOKEN` is the organisation's, which reaches this repository.
+Done: secret scanning, push protection and Dependabot security updates; the `release` environment with the maintainer as required reviewer; the labels and the variables `SIGN_WINDOWS`, `SIGN_MACOS` and `SIGN_IOS_UPLOAD`; the repository secret `REPO_GPG_PRIVATE_KEY` deleted. The Dependabot secret `MERGE_QUEUE_TOKEN` is the organisation's, which reaches this repository. The branch-model settings (step 9) were applied on 2026-10-29. The repository secret `IOS_PROVISIONING_PROFILE_BASE64` is set, and `SIGN_IOS_UPLOAD` is `true`.
 
 To do:
 
-- Apply the branch-model settings from the `admin/apply.sh` dry run (step 9), including making `develop` the default branch. This waits for `CI Status` to have passed on a code change and on a documentation-only change.
 - After the iOS pull request merges, delete the repository secrets `IOS_DIST_CERTIFICATE_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`, `APPLE_TEAM_ID` and `APPLE_PROVISIONING_PROFILE_NAME`.
 - iOS account items (App Store Connect app record, an App Store distribution profile as `IOS_PROVISIONING_PROFILE_BASE64`, access of the five organisation Apple secrets to this repository, the TestFlight internal group, the variable `SIGN_IOS_UPLOAD`). The step list is in `docs/releasing.md` when it is written.
 - Create the tags (including `v0.2.0-beta.2`) and approve the `release` environment for each release.

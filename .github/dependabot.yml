@@ -9,19 +9,19 @@ version: 2
 #                         queue. A major update is its own PR and waits for a
 #                         human.
 #   vcpkg                 monthly, the manifest baseline, never auto-merged:
-#                         it rebuilds every dependency, and the build jobs are
-#                         not yet required checks on develop
+#                         it rebuilds every dependency and is reviewed by hand
 #                         (docs/branch-protection.md). The baseline must name a
 #                         commit of the labs' fork; the vcpkg-baseline-in-fork
-#                         check fails the pull request until the fork has it.
+#                         check in Policy fails the pull request until the fork
+#                         has it.
 #
 # Dependabot cannot see Qt, the Android NDK/SDK, the Emscripten version, the
 # Clang/GCC packages the jobs apt-install, or the runner image labels;
 # docs/ci.md lists those pins.
 #
-# Every PR targets develop: gitflow only lets release/hotfix/support branches
-# (or develop itself) open a PR against main. branch-name-check.yml allows the
-# dependabot/* branch prefix, which is not configurable.
+# Every PR targets develop: nothing opens a pull request into main. The
+# branch-names ruleset and the Policy check allow the dependabot/* branch
+# prefix, which is not configurable.
 #
 # rebase-strategy is "disabled" on purpose: develop's rule does not require
 # branches to be up to date (the merge queue makes each entry current), and an

@@ -44,10 +44,10 @@ A pull request that changes `src/`, `packaging/`, `cmake/`, `third_party/`,
 the changelog would want to hear about (a refactor, a test, a build detail),
 label the pull request **`no-changelog`**.
 
-The `Changelog fragment` check says which; it is advisory (it is not one of the
-required checks), so it never blocks a merge, but it marks the pull request. It
-looks only at pull requests into `develop`, and skips those from `release/*`,
-`dependabot/*` and `support/back-merge-*` branches.
+The `Policy` check says which: it fails a pull request that changes what a person
+using the app can see and has neither a fragment nor the label, and one that adds
+a fragment that is not well formed. It skips pull requests from `release/*` and
+`dependabot/*` branches.
 
 ## At release time
 
