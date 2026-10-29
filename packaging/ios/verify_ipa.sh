@@ -8,6 +8,8 @@
 #   * Info.plist is valid, names the identifier, the executable, the version, the
 #     icon set and the camera usage text (a program that asks for the camera
 #     without it is ended by iOS), and says it is an iPhone program;
+#   * with --store: it was built with the iOS 26 SDK or later, which App Store Connect
+#     requires of an upload;
 #   * Info.plist has a build number and declares that the app uses no encryption beyond
 #     the system's (ITSAppUsesNonExemptEncryption), as TestFlight asks;
 #   * the compiled asset catalogue (the icon) is in the bundle;
@@ -69,6 +71,13 @@ key() { /usr/libexec/PlistBuddy -c "Print :$1" "$plist" 2>/dev/null || true; }
 [ -n "$(key UILaunchScreen)" ] || fail "Info.plist has no UILaunchScreen (iOS would run the program in a legacy window)"
 [ "$(key DTPlatformName)" = "iphoneos" ] || fail "DTPlatformName is '$(key DTPlatformName)'; this is not a device build"
 [ -n "$(key MinimumOSVersion)" ] || fail "Info.plist has no MinimumOSVersion"
+if $store; then
+  sdk="$(key DTPlatformVersion)"
+  case "${sdk%%.*}" in
+    ''|*[!0-9]*) fail "Info.plist has no DTPlatformVersion, so the SDK the app was built with is unknown" ;;
+  esac
+  [ "${sdk%%.*}" -ge 26 ] || fail "built with the iOS $sdk SDK; App Store Connect refuses anything older than iOS 26 (build with Xcode 26)"
+fi
 [ -n "$(key CFBundleVersion)" ] || fail "Info.plist has no CFBundleVersion (the build number)"
 [ "$(key ITSAppUsesNonExemptEncryption)" = "false" ] || fail "ITSAppUsesNonExemptEncryption is '$(key ITSAppUsesNonExemptEncryption)', expected false (TestFlight asks about export compliance otherwise)"
 if [ -n "$version" ]; then
