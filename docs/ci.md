@@ -56,17 +56,29 @@ which was advisory, the fragment check inside `Policy` blocks, as `CI Status` do
 
 ### Documentation-only changes
 
-A pull request (or merge-queue entry) whose every changed file is documentation
-builds and tests nothing. `plan` runs `.github/actions/changed-code`, which
-diffs the merge commit against its first parent (a queue entry against its
-`base_sha`) and outputs `code=false` when each changed file is under `docs/`
-(except `docs/design/`, which the icon rasterising, the packaging and the
-translation tests read), `changelog.d/`, `.github/ISSUE_TEMPLATE/`, is
-`mkdocs.yml`, a root-level `*.md` or `LICENSE*`. Anything else, an empty or
-failed diff, and every event that is not a pull request or queue entry (a
-push, a manual run, a schedule), is `code=true`.
+A draft pull request, and a pull request (or merge-queue entry) whose every
+changed file is documentation, build and test nothing. `plan` runs
+`.github/actions/changed-code`, which outputs `code=false` for a draft pull
+request, and otherwise diffs the merge commit against its first parent (a queue
+entry against its `base_sha`) and outputs `code=false` when each changed file is
+under `docs/` (except `docs/design/`, which the icon rasterising, the packaging
+and the translation tests read), `changelog.d/`, `.github/ISSUE_TEMPLATE/`, is
+`.github/PULL_REQUEST_TEMPLATE.md`, `.github/CODEOWNERS`, `mkdocs.yml`, a
+root-level `*.md` or `LICENSE*`. Anything else, an empty or failed diff, and
+every event that is not a pull request or queue entry (a push, a manual run, a
+schedule), is `code=true`.
 
-What `code=false` does, and why it is built this way:
+**Drafts.** A draft runs the planner and the static checks (`Policy`,
+`clang-format`, `platform-isolation`, the documentation build, the dependency
+diff), and its build, test and analysis jobs report success in seconds without a
+step. `ci.yml` and `codeql.yml` list `ready_for_review` among the pull request
+types, so marking the pull request ready starts the full gate on the same
+commit. A draft cannot be queued, and the queue runs the required legs on its own
+merge commit whatever the pull request showed. Open a pull request as a draft
+while the work moves, and mark it ready when it is complete and
+`tools/ci/precheck.py` is clean.
+
+What `code=false` does (for a draft as for a documentation change), and why it is built this way:
 
 - **The required checks still report.** A job skipped by `if:` reports under
   the raw text of its `name:` expression, not under the name it would have had,

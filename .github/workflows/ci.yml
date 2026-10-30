@@ -5,6 +5,10 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+    # ready_for_review is not one of the default types: a draft runs the static
+    # checks only (.github/actions/changed-code), and marking it ready starts the
+    # full gate.
+    types: [opened, synchronize, reopened, ready_for_review]
   # The merge queue in front of develop (docs/branch-protection.md). A queue
   # entry runs only the jobs whose checks develop requires - clang-format,
   # clang-tidy, the three build legs and coverage - and the jobs below that are
@@ -131,7 +135,7 @@ jobs:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - clang-tidy' || 'clang-tidy' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',clang-tidy,') }}
     needs: plan
-    # A documentation-only change runs no step: the fleet, not the hosted queue.
+    # A documentation-only change, or a draft, runs no step: the fleet, not the hosted queue.
     runs-on: ${{ needs.plan.outputs.code == 'true' && fromJSON('["ubuntu-26.04"]') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && fromJSON('["ubuntu-26.04"]') || fromJSON(vars.CONTROL_RUNNER_JSON || '["ubuntu-26.04"]') }}
     # Caps vcpkg's internal build parallelism - see the equivalent comment
     # on build-and-test below (onnxruntime OOM'd this runner at full nproc
@@ -140,13 +144,13 @@ jobs:
       VCPKG_MAX_CONCURRENCY: "2"
     steps:
       # fetch-depth: 0 so the version header can name the nearest tag.
-      # A change to documentation alone builds and tests nothing, and this job
+      # A draft, or a change to documentation alone, builds and tests nothing, and this job
       # still reports under its own name: a job skipped by `if` reports under the
       # raw text of its `name:` expression, so a required check that was skipped
       # that way would never be reported and the pull request would wait for it
       # forever. Every step below is skipped instead (needs.plan.outputs.code,
       # from .github/actions/changed-code) and the job is a success.
-      - name: Nothing to build or test (documentation only)
+      - name: Nothing to build or test (documentation only, or a draft)
         if: ${{ needs.plan.outputs.code != 'true' }}
         shell: bash
         run: echo "only documentation changed; nothing to do"
@@ -265,8 +269,9 @@ jobs:
     runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && fromJSON('["ubuntu-26.04"]') || fromJSON(vars.CONTROL_RUNNER_JSON || '["ubuntu-26.04"]') }}
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
-      # "false" when a pull request or a merge-queue entry changes documentation
-      # alone (.github/actions/changed-code). The jobs that build and test read it:
+      # "false" when a pull request is a draft, or a pull request or a merge-queue
+      # entry changes documentation alone (.github/actions/changed-code). The jobs
+      # that build and test read it:
       # the three required legs and clang-tidy and coverage skip their steps and
       # still report under their own names, the others skip as a whole.
       code: ${{ steps.changed.outputs.code }}
@@ -324,7 +329,7 @@ jobs:
     # The matrix is empty when a dispatch names no desktop leg, which would
     # otherwise be an error rather than a skip.
     if: ${{ needs.plan.outputs.matrix != '[]' }}
-    # A documentation-only change runs no step, so it is given a runner of the
+    # A documentation-only change, or a draft, runs no step, so it is given a runner of the
     # organisation's fleet (docs/ci.md, "Self-hosted runners") rather than a macOS
     # or Windows one, or a place in the hosted queue behind real builds, for the
     # seconds it takes to say so.
@@ -356,13 +361,13 @@ jobs:
       # fetch-depth: 0 so the version header can name the nearest tag
       # (cmake/GenerateVersion.cmake). vcpkg is cloned by setup-vcpkg below,
       # not by this checkout.
-      # A change to documentation alone builds and tests nothing, and this job
+      # A draft, or a change to documentation alone, builds and tests nothing, and this job
       # still reports under its own name: a job skipped by `if` reports under the
       # raw text of its `name:` expression, so a required check that was skipped
       # that way would never be reported and the pull request would wait for it
       # forever. Every step below is skipped instead (needs.plan.outputs.code,
       # from .github/actions/changed-code) and the job is a success.
-      - name: Nothing to build or test (documentation only)
+      - name: Nothing to build or test (documentation only, or a draft)
         if: ${{ needs.plan.outputs.code != 'true' }}
         shell: bash
         run: echo "only documentation changed; nothing to do"
@@ -1154,7 +1159,7 @@ jobs:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - Coverage (Linux, GCC)' || 'Coverage (Linux, GCC)' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',coverage,') }}
     needs: plan
-    # A documentation-only change runs no step: the fleet, not the hosted queue.
+    # A documentation-only change, or a draft, runs no step: the fleet, not the hosted queue.
     runs-on: ${{ needs.plan.outputs.code == 'true' && fromJSON('["ubuntu-26.04"]') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && fromJSON('["ubuntu-26.04"]') || fromJSON(vars.CONTROL_RUNNER_JSON || '["ubuntu-26.04"]') }}
     # Caps vcpkg's internal build parallelism - see the equivalent comment
     # on build-and-test above (onnxruntime OOM'd this runner at full nproc
@@ -1166,13 +1171,13 @@ jobs:
       # fetch-depth: 0 so the version header can name the nearest tag
       # (cmake/GenerateVersion.cmake). vcpkg is cloned by setup-vcpkg below,
       # not by this checkout.
-      # A change to documentation alone builds and tests nothing, and this job
+      # A draft, or a change to documentation alone, builds and tests nothing, and this job
       # still reports under its own name: a job skipped by `if` reports under the
       # raw text of its `name:` expression, so a required check that was skipped
       # that way would never be reported and the pull request would wait for it
       # forever. Every step below is skipped instead (needs.plan.outputs.code,
       # from .github/actions/changed-code) and the job is a success.
-      - name: Nothing to build or test (documentation only)
+      - name: Nothing to build or test (documentation only, or a draft)
         if: ${{ needs.plan.outputs.code != 'true' }}
         shell: bash
         run: echo "only documentation changed; nothing to do"
@@ -1374,7 +1379,7 @@ jobs:
         uses: iainchesworthlabs/icl-common-infra/actions/ci-status@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           needs: ${{ toJSON(needs) }}
-          # The mobile, web and system jobs skip as a whole on a documentation-only
+          # The mobile, web and system jobs skip as a whole on a draft, on a documentation-only
           # change and on a merge-queue entry (see their `if`), and the policy job
           # skips on a push. Every other job reports on every event, so it needs no
           # entry.

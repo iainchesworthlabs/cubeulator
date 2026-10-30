@@ -6,6 +6,7 @@ on:
     tags: ["v*.*.*"]
   pull_request:
     branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review]
   # The merge queue in front of develop (docs/branch-protection.md): Analyze
   # (C++) is one of the checks develop requires.
   merge_group:
@@ -50,7 +51,8 @@ jobs:
       # `Analyze (C++)` as a success (a job skipped by `if` reports under the raw
       # text of its name, which for a required check is no report at all):
       #
-      # - a change to documentation alone (.github/actions/changed-code);
+      # - a draft pull request, or a change to documentation alone
+      #   (.github/actions/changed-code);
       # - a merge-queue entry. Code scanning does not take results for a
       #   gh-readonly-queue ref: the upload fails with "CodeQL job status was
       #   configuration error", which turned the check red on the queue commit

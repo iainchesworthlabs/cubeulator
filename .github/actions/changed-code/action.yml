@@ -1,10 +1,13 @@
 name: Changed code
 description: >-
-  Says whether a pull request or a merge-queue entry changes anything but
-  documentation. Output `code` is "true" unless every changed file is one that
-  nothing builds or tests reads. Any other event (a push, a manual run, a
-  schedule) is "true": those runs are what warm the caches and gate releases,
-  and are not worth being clever about.
+  Says whether a pull request or a merge-queue entry has anything to build and
+  test. Output `code` is "false" for a draft pull request (it runs the static
+  checks only; the full gate runs when it is marked ready, and again in the
+  queue) and for a change to documentation alone, and "true" otherwise. A
+  documentation change is one where every changed file is one that nothing
+  builds or tests reads. Any other event (a push, a manual run, a schedule) is
+  "true": those runs are what warm the caches and gate releases, and are not
+  worth being clever about.
 
   Needs a checkout with the merge commit and its first parent (fetch-depth: 2)
   for a pull request. A merge-queue entry fetches its base commit itself.
@@ -12,7 +15,7 @@ description: >-
 
 outputs:
   code:
-    description: '"true" when something other than documentation changed.'
+    description: '"true" unless the pull request is a draft or changes documentation alone.'
     value: ${{ steps.diff.outputs.code }}
 
 runs:
@@ -24,7 +27,13 @@ runs:
       env:
         EVENT_NAME: ${{ github.event_name }}
         MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+        DRAFT: ${{ github.event.pull_request.draft }}
       run: |
+        if [ "$EVENT_NAME" = pull_request ] && [ "$DRAFT" = true ]; then
+          echo "a draft pull request: static checks only; the full gate runs when it is marked ready"
+          echo "code=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
         code=true
         base=""
         case "$EVENT_NAME" in
@@ -45,7 +54,7 @@ runs:
             case "$f" in
               docs/design/*) code=true ;;
               docs/*) ;;
-              mkdocs.yml | changelog.d/* | .github/ISSUE_TEMPLATE/*) ;;
+              mkdocs.yml | changelog.d/* | .github/ISSUE_TEMPLATE/* | .github/PULL_REQUEST_TEMPLATE.md | .github/CODEOWNERS) ;;
               */*) code=true ;;
               *.md | LICENSE | LICENSE.*) ;;
               *) code=true ;;
