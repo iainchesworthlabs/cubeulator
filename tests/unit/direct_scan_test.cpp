@@ -327,18 +327,15 @@ TEST_CASE("a frame of noise is refused before the lattice fit, not after tens of
         "\xff\xff\xff\xff\xff\xff\xff"
         "\x1f"
         "789 ABCDEF abcdef";
-    cv::Mat frame(112, 115, CV_8UC3);
-    std::size_t next = 0;
-    for (int row = 0; row < frame.rows; ++row) {
-        auto* line = frame.ptr<std::uint8_t>(row);
-        for (int i = 0; i < frame.cols * 3; ++i) {
-            line[i] = static_cast<std::uint8_t>(text.at(next++ % text.size()));
-        }
+    std::vector<std::uint8_t> pixels(112U * 115U * 3U);
+    for (std::size_t i = 0; i < pixels.size(); ++i) {
+        pixels.at(i) = static_cast<std::uint8_t>(text.at(i % text.size()));
     }
-    const auto prepared = prepare_frame(frame, 9);
-    REQUIRE(prepared.has_value());
+    const cv::Mat frame = cv::Mat(112, 115, CV_8UC3, pixels.data()).clone();
+    const auto prepared_frame = prepare_frame(frame, 9);
+    const auto& prepared = ::cube::test::must_have(prepared_frame);
     cube::vision::SideAttempt attempt;
-    CHECK_FALSE(cube::vision::read_side_explained(*prepared, 9, attempt).has_value());
+    CHECK_FALSE(cube::vision::read_side_explained(prepared, 9, attempt).has_value());
     CHECK(attempt.refusal == cube::vision::LatticeRefusal::too_many_blobs);
 }
 
