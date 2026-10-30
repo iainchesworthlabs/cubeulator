@@ -1,0 +1,11 @@
+# A fuzz harness is handed raw bytes by the engine and has to look at them as
+# bytes, text or pixels, so the pointer checks and the byte casts that the rest of
+# the code keeps do not apply to it. The entry point has the name libFuzzer looks
+# for. Everything else is the root's.
+InheritParentConfig: true
+Checks: >-
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -bugprone-exception-escape
+CheckOptions:
+  readability-identifier-naming.FunctionIgnoredRegexp: '^LLVMFuzzerTestOneInput$'

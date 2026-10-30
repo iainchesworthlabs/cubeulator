@@ -236,6 +236,13 @@ jobs:
         if: ${{ needs.plan.outputs.code == 'true' }}
         run: cmake --build --preset linux-gcc-debug
 
+      # fuzz-regress (docs/testing.md, "Fuzz tests"): every harness of src/lib/fuzz over its
+      # seeds and its regressions, once, in the build this job already has, which is the
+      # Debug preset's AddressSanitizer and UndefinedBehaviorSanitizer. Seconds.
+      - name: Replay the fuzz seeds and regressions
+        if: ${{ needs.plan.outputs.code == 'true' }}
+        run: ctest --preset linux-gcc-debug -L fuzz
+
       # .clang-tidy itself leaves WarningsAsErrors empty (local/IDE use stays
       # advisory-only, matching CountdownSolver's convention), so
       # --warnings-as-errors is passed explicitly here to make this a real
