@@ -526,6 +526,19 @@ jobs:
           modules: "qtquick3d qtshadertools"
           cache: true
 
+      # ccache for the project's own compiles on Linux and macOS (vcpkg's ports have
+      # their own binary cache). It sets CMAKE_CXX_COMPILER_LAUNCHER in the environment,
+      # which the configure below picks up. The cache is restored from the newest entry
+      # of this leg (a pull request reads the one `develop` saved) and saved only by a push
+      # to develop, one entry per commit; ci/prune-actions-cache.sh keeps the newest.
+      # Windows is left out: MSVC caches only with embedded debug information (/Z7),
+      # which the Windows presets do not use (docs/ci.md, "ccache").
+      - name: Set up ccache (Linux, macOS)
+        if: ${{ needs.plan.outputs.code == 'true' && runner.os != 'Windows' }}
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-ccache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        with:
+          key: ${{ matrix.leg }}
+
       - name: Configure
         if: ${{ needs.plan.outputs.code == 'true' }}
         shell: bash
@@ -538,6 +551,25 @@ jobs:
         if: ${{ needs.plan.outputs.code == 'true' }}
         id: build
         run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: ccache statistics (Linux, macOS)
+        if: ${{ needs.plan.outputs.code == 'true' && runner.os != 'Windows' && !cancelled() }}
+        shell: bash
+        run: |
+          {
+            echo "### ccache (${{ matrix.name }})"
+            echo
+            echo '```'
+            ccache --show-stats
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save ccache (Linux, macOS)
+        if: ${{ needs.plan.outputs.code == 'true' && runner.os != 'Windows' && !cancelled() && github.event_name == 'push' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ env.CCACHE_SAVE_KEY }}
 
       # The system tests (tests/system, label "system") draw the real app
       # and need a display; they have their own legs below.

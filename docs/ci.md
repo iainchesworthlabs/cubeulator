@@ -252,6 +252,24 @@ Things worth knowing:
   leg is the macOS build), 4-5 h for the sanitizer jobs, one matrix entry at
   a time.
 
+## ccache
+
+The Linux and macOS legs of `ci.yml` compile the project's own sources through
+ccache, set up by the shared `setup-ccache` action (it installs ccache if the image
+lacks it, points `CMAKE_CXX_COMPILER_LAUNCHER` at it, and restores the newest cache of
+the leg). A push to `develop` saves the cache under a key of its own commit; a pull
+request restores the newest one `develop` saved and saves nothing, so a branch cannot
+plant what the next run restores. Every run writes `ccache --show-stats` to its job
+summary, which is how to tell whether it is working: a leg whose "Hits" stays near zero
+is not using the cache.
+
+vcpkg's ports are not compiled through ccache; they have the binary cache below. The
+Windows leg has no ccache: MSVC caches only with embedded debug information (`/Z7`,
+`CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded`), and the Windows presets use the
+default, so it would be a change of the build's debug format to make. The entries are of
+the family `ccache-<leg>-<OS>-<ARCH>-<sha>`, which `ci/prune-actions-cache.sh` keeps one
+of per ref ([Cache hygiene](#the-vcpkg-binary-cache)).
+
 ## The vcpkg binary cache
 
 A cold vcpkg install is the longest thing CI does: with ONNX Runtime still in
