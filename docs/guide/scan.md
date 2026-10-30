@@ -110,10 +110,14 @@ edge-on. Holding one corner and then the corner across from it can read all
 six sides, and it is how a cube that six flat sides leave in doubt is
 settled.
 
+A corner is marked as a side is, with a dot on each sticker the scan found,
+but in a colour to each side (blue, violet and pink) instead of the yellow
+and green of a side held square. If you see them, the scan has found the
+sides of the corner.
+
 It is the newer of the two ways and the less proven: showing one side square
-to the camera at a time is still the reliable one. No dots are drawn on a
-corner view, and the screen's words still say *this side*; watch the chips
-fill. In poor light the third side of a corner is often missed, and the scan
+to the camera at a time is still the reliable one. The screen's words still
+say *this side* for a corner; watch the chips fill. In poor light the third side of a corner is often missed, and the scan
 carries on with the sides it did read.
 
 ## How it tells the sides apart

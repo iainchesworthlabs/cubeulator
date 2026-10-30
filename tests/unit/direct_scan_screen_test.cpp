@@ -21,6 +21,7 @@
 
 #include "camera_preview_support.hpp"
 #include "cube_view_reading.hpp"
+#include "drawn_corner.hpp"
 #include "drawn_cube.hpp"
 #include "qml_test_app.hpp"
 
@@ -114,6 +115,34 @@ TEST_CASE("the scan screen follows the camera on whether its picture is mirrored
     Screen screen;
 
     REQUIRE(screen.mirrored() == cube::test::app_controllers().camera.previewMirrored());
+}
+
+TEST_CASE("the scan screen marks a corner with a dot on each sticker of each side it shows",
+          "[qml][direct-scan]") {
+    cube::app::DirectScan& camera = cube::test::app_controllers().directScan;
+    camera.restart();
+    Screen screen;
+
+    const Cube cube = cube::test::scramble(3);
+    const cv::Mat corner = cube::test::draw_corner3({cube::test::outside_view(cube, Face::U),
+                                                     cube::test::outside_view(cube, Face::R),
+                                                     cube::test::outside_view(cube, Face::F)});
+    for (std::size_t i = 0; i < cube::vision::SideScan::kMinReads - 1; ++i) {
+        camera.processFrame(corner);
+    }
+    REQUIRE(camera.stickerPoints().isEmpty());
+    REQUIRE(camera.cornerPoints().size() == 3);
+
+    // The yellow and green dots are a side square to the camera's; a corner has its own.
+    const std::vector<QQuickItem*> side_dots = screen.all("scan.dot");
+    CHECK(std::none_of(side_dots.begin(), side_dots.end(),
+                       [](const QQuickItem* dot) { return dot->isVisible(); }));
+    const std::vector<QQuickItem*> corner_dots = screen.all("scan.cornerDot");
+    REQUIRE(corner_dots.size() == 27);
+    CHECK(std::all_of(corner_dots.begin(), corner_dots.end(),
+                      [](const QQuickItem* dot) { return dot->isVisible(); }));
+
+    camera.restart();
 }
 
 TEST_CASE("the scan screen's picture and its dots flip together, and nothing else does",

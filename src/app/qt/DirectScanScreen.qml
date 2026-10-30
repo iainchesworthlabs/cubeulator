@@ -143,6 +143,34 @@ Item {
                 border.color: "#141312"; border.width: 2
             }
         }
+
+        // Two or three sides seen at an angle, which no side square to the camera
+        // is among: a dot on each sticker of each, one colour to a side, so that a
+        // corner is marked as a side is. They are not the yellow and green of a side
+        // square to the camera, so that a corner is told from one at a glance.
+        Repeater {
+            model: root.cubeInView ? [] : DirectScan.cornerPoints
+            delegate: Item {
+                id: cornerSide
+                required property int index
+                required property var modelData
+                readonly property color tint: ["#4CC9F0", "#C39BFF", "#FF8FD0"][index % 3]
+
+                Repeater {
+                    model: cornerSide.modelData.length
+                    delegate: Rectangle {
+                        required property int index
+                        objectName: "scan.cornerDot"
+                        readonly property point at: cornerSide.modelData[index]
+                        width: Math.round(Math.max(8, 42 / root.size)); height: width; radius: width / 2
+                        x: root.frameLeft + at.x * root.frameScale - width / 2
+                        y: root.frameTop + at.y * root.frameScale - height / 2
+                        color: cornerSide.tint
+                        border.color: "#141312"; border.width: 2
+                    }
+                }
+            }
+        }
     }
 
     // Status, top left.

@@ -203,6 +203,18 @@ QVariantList DirectScan::stickerPoints() const {
     return points;
 }
 
+QVariantList DirectScan::cornerPoints() const {
+    QVariantList sides;
+    for (const std::vector<cv::Point2f>& side : corner_points_) {
+        QVariantList points;
+        for (const cv::Point2f& centre : side) {
+            points.append(QPointF(static_cast<double>(centre.x), static_cast<double>(centre.y)));
+        }
+        sides.append(QVariant(points));
+    }
+    return sides;
+}
+
 std::optional<Reading> DirectScan::reviewReading() const {
     if (!reviewable()) {
         return std::nullopt;
@@ -488,6 +500,7 @@ void DirectScan::setWatching(bool watching) {
         finishRecording();
     }
     read_.reset();
+    corner_points_.clear();
     reading_ = false;
     capture_progress_ = 0.0;
     emit runningChanged();
@@ -560,6 +573,7 @@ void DirectScan::stop() {
     awaiting_lock_ = false;
     finishRecording();
     read_.reset();
+    corner_points_.clear();
     reading_ = false;
     {
         // The next scan must not open on this one's last frame.
@@ -577,6 +591,7 @@ void DirectScan::restart() {
     scan_.reset();
     previous_frame_ms_.reset();
     read_.reset();
+    corner_points_.clear();
     reading_ = false;
     capture_progress_ = 0.0;
     sides_.clear();
@@ -632,6 +647,7 @@ void DirectScan::processFrame(const cv::Mat& bgr, std::int64_t t_ms) {
     frame_width_ = bgr.cols;
     frame_height_ = bgr.rows;
     ++frame_seq_;
+    corner_points_.clear();
     // How long since the frame before, for the scan's rule that a side must
     // have held still: a camera that settles at 20 frames a second or less, or
     // a frame the page was late for, moves a side further between frames that
@@ -688,6 +704,11 @@ void DirectScan::processFrame(const cv::Mat& bgr, std::int64_t t_ms) {
             prepared.has_value() ? cube::vision::read_corner(*prepared, size_) : std::nullopt;
         scan_.add_corner(corner, interval_ms);
         corner_added = corner.has_value();
+        if (corner.has_value()) {
+            for (const cube::vision::ObliqueSide& side : corner->sides) {
+                corner_points_.push_back(side.centres);
+            }
+        }
     }
 
     std::vector<cube::vision::SideScan::Side> sides = scan_.sides();
@@ -713,6 +734,7 @@ void DirectScan::processFrame(const cv::Mat& bgr, std::int64_t t_ms) {
     ambiguous_ = !cube.has_value() && cube.error() == cube::CubeError::ambiguous_scan;
     if (cube.has_value()) {
         // Nothing more is read, so nothing is marked on the picture.
+        corner_points_.clear();
         scanned_n_ = *cube;
         if (size_ == 3) {
             if (auto three = cube->cube.to_cube3_as_held(); three.has_value()) {
