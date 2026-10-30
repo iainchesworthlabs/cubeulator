@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The developer diagnostics channel's serialisation (docs/diagnostics.md): the
 // JSON value, the record envelope, the JSON Lines file, and the descriptions
 // of the library's result structs. Nothing here needs a camera, a window or

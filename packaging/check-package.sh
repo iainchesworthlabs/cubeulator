@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Looks inside the package CPack just wrote and fails if it is not one a person
 # could install. Used by CI (build-and-test) and by the release workflow, so
 # that what is checked before a release is what is checked on every push.

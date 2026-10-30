@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The translation catalogues, read as the files a translator edits.
 //
 // These are the family's translation gates (ICL Forge's test_translations.cpp:

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Make the Qt Linguist catalogues from docs/design/strings.json, and hold them to it.
 
 strings.json is the only place a string's English, its id and its note for

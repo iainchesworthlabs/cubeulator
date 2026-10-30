@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Condense the SPDX SBOMs that ship inside a Qt install into qt-modules.json.
 
 Qt 6.8+ installs carry <prefix>/sbom/<repo>-<version>.spdx.json: one package per

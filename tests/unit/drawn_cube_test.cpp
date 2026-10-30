@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The test helpers that draw a cube (drawn_cube.hpp), for a cube of any size:
 // that a drawing has every sticker where the pose says it is and in the colour
 // it was given, that the camera's view of a side is the side the cube has at

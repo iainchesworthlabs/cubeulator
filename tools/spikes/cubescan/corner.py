@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Spike for recovery plan R5(b): two or three sides in one view.
 
 A cube turned corner-on shows three sides at once, each a sheared 3x3 lattice,

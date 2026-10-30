@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Instructional Glow for CubeNView: toon.frag, with the colour read from the
 // mesh instead of a uniform. The N x N cube is one mesh whose vertices carry
 // the colour of the sticker (or of the plastic) they belong to, so the shading

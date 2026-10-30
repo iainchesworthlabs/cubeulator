@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The design's Latin faces are compiled into the app and registered at
 // start-up (kit/bundled_fonts.hpp, src/app/qt/fonts/), so that Theme.qml's
 // Archivo and IBM Plex Mono are what is drawn whether or not the machine has

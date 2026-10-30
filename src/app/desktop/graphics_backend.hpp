@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
 // The window's graphics API: chosen at launch, and guarded so that the choice

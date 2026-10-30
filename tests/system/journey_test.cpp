@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The journey: launch, scan, solve, and the ways out of it that the app has
 // today. Everything is done through the window - presses sent to controls
 // found by objectName - and every observation is of what a person sees.

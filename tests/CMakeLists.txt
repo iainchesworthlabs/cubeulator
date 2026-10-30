@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # Test suites. Catch2 provides both the framework and CTest integration.
 # ---------------------------------------------------------------------------

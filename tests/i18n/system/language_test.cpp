@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Language: switched live, in the real window, from English to the
 // pseudo-locale to Hebrew and back.
 //

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # iOS: makes <target> an iPhone application bundle with its Info.plist, icon and
 # (when given a team and a profile) its code signature.
 #

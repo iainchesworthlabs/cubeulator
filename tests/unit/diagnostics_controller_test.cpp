@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The developer diagnostics channel in the app (docs/diagnostics.md): that it
 // is off and silent until switched on, that it can be switched on and off
 // while the controllers run, what the scan, the camera, the camera's hold

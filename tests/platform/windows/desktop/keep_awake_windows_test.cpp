@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // KeepAwake on Windows (SetThreadExecutionState): the request is always
 // granted, with nothing to ask the person and no session to be missing, so a
 // request is held at once and let go of at once.

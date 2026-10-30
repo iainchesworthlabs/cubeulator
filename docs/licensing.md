@@ -280,7 +280,7 @@ Four independent sources agree:
 3. **The 6.8.3 source headers.** 59 of the 60 headers in `include/QtQuick3D`
    and every header of `QtQuick3DRuntimeRender`, `QtQuick3DUtils`,
    `QtQuick3DAssetUtils` and `QtQuick3DHelpers` carry
-   `SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only`; the one
+   an SPDX licence identifier of `LicenseRef-Qt-Commercial OR GPL-3.0-only`; the one
    exception in each is the generated `*exports.h` (for example
    `qtquick3dexports.h`), which carries the LGPL-set identifier because it is
    boilerplate. Checked with `grep -rho` over

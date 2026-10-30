@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Post-processing pass for Borderlands Cel-Shading: a halftone dot overlay
 // plus a light desaturation/contrast push, giving the comic-ink look the
 // hard-banded cel material and inverted-hull outline alone don't cover.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // nxn_bench: what the N x N library finds, and what solving costs, per size.
 //
 //   nxn_bench library [size]        cycle library statistics

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Script-mode CTest case (cmake -P): cmake/icl/IclVcpkgRoot.cmake picks the
 # vcpkg root the way its header says it does.
 #

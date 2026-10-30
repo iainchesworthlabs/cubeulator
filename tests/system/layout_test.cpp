@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The two layouts either side of Theme.wideBreakpoint, and whether what each
 // shows fits where it is shown.
 

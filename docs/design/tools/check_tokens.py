@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Measure every colour pairing in docs/design/tokens.json.
 
 Prints the tables that docs/design/system.md and accessibility.md quote, and

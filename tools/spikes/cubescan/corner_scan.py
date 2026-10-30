@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """How often does a recorded session show two or three sides at once?
 
 Runs corner.py's oblique lattice finder over every frame of a session and

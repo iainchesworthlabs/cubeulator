@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Says how a nightly run went: a table in the job summary, and one standing
 # issue (label "nightly") that is opened or commented on when something that
 # gates is red, and closed once a night is green again. Nothing here can fail

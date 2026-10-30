@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The side and corner readers (cube::vision::read_side and read_corner) on any picture. The
 // first three bytes pick the width, the height and the cube's size; the rest are pixels, read
 // as 8-bit BGR and repeated to fill the frame. A camera frame is the input a person does not

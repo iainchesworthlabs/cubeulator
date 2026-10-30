@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Runs the fuzz harnesses over files, with no fuzzing engine: each argument is a file or a
 // directory of files, and every file is handed to LLVMFuzzerTestOneInput once. It is what the
 // harnesses link to in a build without libFuzzer, so that the seeds and the regressions are

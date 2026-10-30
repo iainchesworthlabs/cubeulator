@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Settings, as a person changes them: through the controls, and read back from
 // the app's own state and from what it shows.
 import { mkdirSync, writeFileSync } from 'node:fs';

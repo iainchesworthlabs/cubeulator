@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
 // Can a Vulkan instance be created, and does it see a GPU? Asked through the

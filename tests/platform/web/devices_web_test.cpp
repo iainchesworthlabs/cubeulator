@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test cases only the web build can run: what the cameras a browser lists
 // become in the list the app shows (platform/web/devices_web.hpp). Compiled
 // into cube_integration_tests only for the web platform (tests/CMakeLists.txt

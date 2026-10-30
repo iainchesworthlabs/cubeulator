@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Every id the code asks for must be in docs/design/strings.json.
 
 An id that is in the code and not in the catalogue is a string the English

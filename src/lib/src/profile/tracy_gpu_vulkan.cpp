@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Vulkan GPU context for cube::profiling::GpuContext: Tracy's per-queue VkCtx
 // behind the same interface as the OpenGL and Direct3D ones. Built into cube::lib
 // when Tracy is on and the platform's fragment says it has Vulkan

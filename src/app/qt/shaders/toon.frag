@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Fragment snippet for Instructional Glow: quantised diffuse bands plus a
 // rim highlight, instead of PBR shading, with an additive emissive boost for
 // stickers in the active-layer highlight. See

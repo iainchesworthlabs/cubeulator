@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test cases only Windows can run: where the per-user directories are, which
 // paths_windows.cpp decides. Compiled into cube_integration_tests only on
 // Windows (tests/CMakeLists.txt picks tests/platform/<platform name>/), so

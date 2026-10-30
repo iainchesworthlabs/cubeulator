@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # cube3d_prototype: the layer-lift renderer for a cube of any size, measured against
 # the way the 3x3's view would scale if it were built larger. README.md says what it
 # is for and how to run it.

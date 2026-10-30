@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // What a person would see: the compiled catalogues, installed the way the app
 // installs them, asked for every id in every language.
 //

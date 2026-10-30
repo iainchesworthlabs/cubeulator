@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Installs the pinned prebuilt Qt via aqtinstall for local Windows development.
 # Mirrors what jurplel/install-qt-action does in CI.
 #

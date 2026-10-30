@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The translation tests need the application object the language manager
 // takes (a QGuiApplication), and a settings store of their own: the manager
 // reads and writes language/code, which must not be the developer's.

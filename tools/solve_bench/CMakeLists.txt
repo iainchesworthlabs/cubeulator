@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # cube_solve_bench: solves a seeded corpus of scrambles with one method and
 # reports what each solve cost, plus a digest of every solution so a change
 # that claims to keep the solutions byte-identical can say so in one line.

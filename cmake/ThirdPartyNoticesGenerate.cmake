@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # ThirdPartyNoticesGenerate.cmake - script mode (cmake -P), run at build time
 # by the cube_third_party_notices target (cmake/ThirdPartyNotices.cmake).

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # vcpkg triplet for the threaded WebAssembly build (preset web-emscripten-*).
 #
 # vcpkg's own wasm32-emscripten is single-threaded. The app is built against

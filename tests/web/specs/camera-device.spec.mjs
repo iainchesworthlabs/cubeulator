@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The browser's own camera path, with Chromium's built-in fake device in place
 // of a webcam (--use-fake-device-for-media-stream): a real getUserMedia() and
 // enumerateDevices(), a real MediaStream and <video> element, frames the

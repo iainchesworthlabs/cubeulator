@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # macOS: makes <target> Cubeulator.app, with its Info.plist and icon, and
 # declares the install rules the .dmg packages.
 #

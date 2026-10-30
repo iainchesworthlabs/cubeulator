@@ -1,0 +1,5 @@
+These files reproduce the licence texts and notices of the third-party components that
+Cubeulator is built with. They are kept so that the app can show them and the packages can
+carry them. Each text is distributed under the terms it states, and applies to the component
+it belongs to, not to Cubeulator. Which component each belongs to is in
+third_party/notices/manifest.json.

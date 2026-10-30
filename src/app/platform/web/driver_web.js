@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The page's half of the test driver (driver_web.cpp is the other).
 //
 // An Emscripten JS library (--js-library), linked only into the diagnostics

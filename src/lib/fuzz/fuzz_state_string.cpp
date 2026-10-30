@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The state-string oracle (cube::vision::recording::state_string_problem) on any text and any
 // size: the check that a pasted or recorded cube is one before anything is built from it. The
 // first byte picks the size, including ones outside 2 to 9.

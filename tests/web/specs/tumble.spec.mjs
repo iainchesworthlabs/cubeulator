@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A cube turned about one axis and then another, played to the page's camera at
 // the frame times it was recorded with, and what the scan made of it.
 //

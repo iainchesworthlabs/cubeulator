@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The screenshot tour: a picture of every screen - and of the states of the
 // scan and solve screens - in the narrow and wide layouts, light and dark.
 //

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "qsg_log_bridge.hpp"
 
 #include <cube/profile/qsg_timing.hpp>

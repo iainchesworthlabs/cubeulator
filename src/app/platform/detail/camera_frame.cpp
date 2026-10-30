@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "platform/detail/camera_frame.hpp"
 
 #include <opencv2/imgproc.hpp>

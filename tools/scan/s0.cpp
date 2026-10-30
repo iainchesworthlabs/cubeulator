@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // cube_scan_s0: gate S0 of docs/nxn-app-plan.md. How well the direct-scan
 // reader does on a cube of N x N, measured offline on cubes that are drawn
 // (tests/unit/drawn_cube.hpp) because no recording of one exists yet.

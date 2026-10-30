@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Check that an iOS application (a built .app, or an exported .ipa) is complete.
 #
 #   packaging/ios/verify_ipa.sh <Cubeulator.app | package.ipa> [--version <x.y.z>] [--signed [--store]]

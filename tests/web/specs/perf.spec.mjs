@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // How the app performs in the browser, read from its own recorder
 // (window.cubeulatorProfile, src/lib/include/cube/profile/recorder.hpp): the
 // same zones Tracy shows on a desktop, taken from inside the page, for journeys

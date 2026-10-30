@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The move notation parser (cube::nxn::parse) on any text and any size. The first byte picks
 // the size, including ones the library does not build; the rest is the text. A text that parses
 // must print as notation that parses back to a text that prints the same.

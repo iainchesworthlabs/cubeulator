@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The release's SBOM: what is inside each package, from the build's own inventory.
 
 A scan of an installer sees an installer. What a person (or a scanner of

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A recording's manifest.json (cube::vision::recording::read_manifest) on any bytes. The bytes
 // are written to a file in a directory of the harness's own, because the reader takes a
 // directory.

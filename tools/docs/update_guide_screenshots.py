@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Refresh the pictures in the user guide (docs/guide/img) from the screenshot tour.
 
 The user guide shows the real app, and the app changes. The pictures are not

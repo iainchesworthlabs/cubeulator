@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // About and the Licences screen under it, in the real window (docs/design/screens/
 // about.md and licences.md): reached from Settings, the way to the notices the app
 // owes to what it is built from, with every component that ships - the bundled

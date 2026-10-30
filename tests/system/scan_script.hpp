@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
 // Scripts for the fake camera: what the person at the desk would show it.

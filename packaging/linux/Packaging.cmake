@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # The Linux CPack generators: a .tar.gz, and a .deb and an .rpm where their
 # tools are installed.
 #

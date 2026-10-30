@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Windows: makes <target> Cubeulator.exe with its version resource and icon,
 # and declares the install rules the NSIS installer packages.
 #

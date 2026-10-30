@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Runs the prototype on a phone (or emulator) over adb, size by size and renderer by
 renderer, and prints what each frame cost.
 

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Linux: makes <target> the `cubeulator` executable that finds the Qt it
 # carries, and declares the install rules the .deb, .rpm and .tar.gz package:
 # a private directory, a launcher, the desktop entry, AppStream metadata and

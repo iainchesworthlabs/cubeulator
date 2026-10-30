@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The app in a page, for a test: the browser counterpart of tests/system/app.hpp.
 //
 // A test drives the app the way a person does - real pointer and key events to

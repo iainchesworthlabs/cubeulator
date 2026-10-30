@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The journey, through the browser: launch, scan a cube held to the camera,
 // follow the solution to the end. The camera is a canvas the test draws the six
 // sides of a scrambled cube on (support/fake_camera.js), so everything from the

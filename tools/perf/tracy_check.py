@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Hold the per-zone cost of a profiling build to a checked-in baseline.
 
 The optional, local-or-nightly half of the performance tier (docs/testing.md,

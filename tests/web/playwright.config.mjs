@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Playwright's configuration for the browser tests of Cubeulator's web build.
 //
 // The site under test is a *diagnostics* build (cmake --preset

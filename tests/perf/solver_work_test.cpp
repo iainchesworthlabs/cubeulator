@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Work budgets for the solver: how many nodes its searches visit, over a fixed
 // corpus of scrambles, per stage and per solve, for each of the three methods.
 // Nothing here is timed. The counts are the same on every machine, compiler and

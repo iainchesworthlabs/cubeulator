@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Linux: Vulkan is asked through libvulkan.so.1; every other backend (OpenGL
 // finds Mesa's software rasteriser when there is no GPU) is reported usable.
 #include "interfaces/graphics_probe.hpp"

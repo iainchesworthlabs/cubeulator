@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "controllers/scan_reading.hpp"
 
 #include <cube/model/facelet.hpp>

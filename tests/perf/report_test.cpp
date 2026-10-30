@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // What every performance metric measures right now, beside its budget - the
 // tool for setting or moving one (docs/testing.md, "Performance tests"). These
 // cases assert nothing and are hidden, so no test run selects them:

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
 // Reading a Cube3DView back out of its scene, for the tests that hold what is

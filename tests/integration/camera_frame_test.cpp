@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The frame adapter between a phone's camera callback and the scan pipeline
 // (platform/detail/camera_frame.hpp). It is plain C++ and runs on every
 // platform, so that what an iPhone does to a frame - the channel order, the

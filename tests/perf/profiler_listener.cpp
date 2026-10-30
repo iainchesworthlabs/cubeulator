@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Time for a profiler to attach before the work starts and to drain after it
 // ends, for tools/perf/tracy_check.py. Nothing happens unless the environment
 // asks, so a plain run - ctest, a developer's terminal, CI - is unchanged.

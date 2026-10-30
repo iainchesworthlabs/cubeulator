@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Windows: Vulkan through vulkan-1.dll (installed by the GPU's driver), and
 // Direct3D 12 and 11 by creating a device on the default adapter and throwing
 // it away. Software rendering (Direct3D 11 on WARP) is always there.

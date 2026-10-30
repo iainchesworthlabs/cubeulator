@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The index.csv of a recording (cube::vision::recording::read_index and parse_index_line) on
 // any bytes: a recording cut off mid-write, or a file that was never one.
 

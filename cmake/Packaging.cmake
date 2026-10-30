@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # CPack packaging. Included once, from the top-level CMakeLists.txt, after
 # every target's install() rules have been declared.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The About screen and the Licences screen under it (AboutScreen.qml,
 // LicencesScreen.qml; docs/design/screens/about.md and licences.md), loaded for
 // real behind the app's own controllers, with the notices the build generated.

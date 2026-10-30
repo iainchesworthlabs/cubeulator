@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The lint's own tests: it must fail on what it exists to catch, and pass on
 what a converted file looks like. Run as a CTest case (i18n_lint_selftest).
 """

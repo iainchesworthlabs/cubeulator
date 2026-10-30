@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # cube_scan: the direct-scan scoreboard (docs/recovery-plan.md). Replays
 # recorded sessions through the reader and reports the cube against the
 # session's known state. A desktop instrument, never shipped.

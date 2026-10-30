@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Windows. Included by cmake/Platform.cmake; the contract it fills in is
 # described at the top of that file.
 

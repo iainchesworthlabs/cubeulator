@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # The tool that makes src/app/qt/lightprobe/sky.ktx (README.md says how to run it).
 #
 # A project of its own, not part of the application's build: it needs Qt's

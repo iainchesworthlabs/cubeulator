@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // What the cube's light probe costs the first frame of a screen with a cube.
 //
 // Qt Quick 3D prefilters a scene's light probe on the first frame of every

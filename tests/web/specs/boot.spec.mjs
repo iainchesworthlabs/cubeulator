@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The page and its start-up: what has to be true before the app can be used at
 // all. The app's own behaviour is in the other files.
 import { test, expect } from '../support/fixtures.mjs';

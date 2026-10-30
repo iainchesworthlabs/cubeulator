@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The Vulkan objects Tracy's GPU context needs, found the way Qt hands them
 // out: QSGRendererInterface resources of the window being rendered, and the
 // loader's two entry points through its QVulkanInstance. Built only on the

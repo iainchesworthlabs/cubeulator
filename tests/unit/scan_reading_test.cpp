@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // What the camera read, handed to the review (scan_reading.hpp): the cube's stickers,
 // and the ones the colour naming was not sure of marked on the right sticker however
 // the camera had the side turned.

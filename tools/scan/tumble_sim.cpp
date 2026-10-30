@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // cube_tumble_sim: a cube turned about one axis and then another in front of a
 // camera, drawn as a recorded session - the frames, index.csv, layout.txt - so
 // that cube_scan can replay a tumble whose pose is known to the degree and that

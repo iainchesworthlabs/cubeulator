@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # PlatformContract.cmake - what a platform fragment
 # (src/app/platform/<name>/platform.cmake) has to declare, and the check that it

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Both layouts, on every screen: a phone held upright and a desktop-sized
 // window, either side of the app's breakpoint (Theme.wideBreakpoint). The
 // counterpart of tests/system/layout_test.cpp: what a person would call cut

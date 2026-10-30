@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A misread scan put right by hand: the camera is shown a cube (drawn, with one
 // sticker the wrong colour where the test wants a misread), the review is started
 // from what it read, and the person's corrections make the cube it should have

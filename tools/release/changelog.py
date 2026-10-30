@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Read, check and cut CHANGELOG.md.
 
 The file follows Keep a Changelog, with the conventions the other projects of

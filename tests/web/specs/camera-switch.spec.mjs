@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Which camera a phone's browser opens, and changing it. A phone has a front
 // camera and a back one; a cube is scanned with the back one, and the app opens
 // it unless it is told otherwise. The browser's side of this - what it lists,

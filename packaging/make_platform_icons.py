@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Turn the identity SVGs into the icon files each desktop platform wants.
 
     python packaging/make_platform_icons.py \\

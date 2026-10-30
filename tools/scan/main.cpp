@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // cube_scan: replay recorded scans through the direct-scan reader and score
 // them. This is the scoreboard of docs/recovery-plan.md - the only gate is a
 // real recorded session ending in the exact true cube.

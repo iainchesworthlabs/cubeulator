@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // GPU (render-thread) profiling: the OpenGL Tracy context behind
 // cube::profiling::GpuContext, built into cube::lib only when
 // CUBEULATOR_ENABLE_TRACY is on (see src/lib/CMakeLists.txt). The sibling

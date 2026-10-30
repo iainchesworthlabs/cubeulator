@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Recorder v2 (docs/recording-format.md): manifest oracle
 // validation, the shared analysis downscale, the async writer's integrity
 // contract, and check_recording's audit.

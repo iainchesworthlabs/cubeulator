@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Live direct-scan spike: hold the cube up and watch each side get read.
 
 Every frame of a session is saved in the corpus recording format (analysis

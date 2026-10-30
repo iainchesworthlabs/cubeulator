@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The helper that reads a view of a cube back out of its scene
 // (cube_view_reading.hpp), for a cube of any size: that the layout it restates
 // is the library's - every turn of every layer of every size from 2 to 9 moves

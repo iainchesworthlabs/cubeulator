@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Draw the app icon proposal into docs/design/identity/.
 
     python docs/design/tools/make_icon.py

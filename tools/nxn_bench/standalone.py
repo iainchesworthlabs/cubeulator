@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Builds cube_nxn_bench as a single executable for a target CMake does not build it for.
 
 The N x N library and the 3x3 solvers need nothing but the standard library and
