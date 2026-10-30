@@ -100,7 +100,9 @@ that check.
 ## Opening a pull request
 
 1. Push your work branch (`feature/*`, `bugfix/*`, ...) and open a PR against
-   `develop`.
+   `develop`. Open it as a **draft** while the work is unfinished: a draft runs
+   the quick checks (branch name, commit text, formatting) and skips the
+   builds. **Ready for review** starts the full run.
 2. Make sure the required checks are green — see
    [Branch protection and the merge queue](branch-protection.md) for which
    checks are required on `develop` today (the set grows as the build and

@@ -13,7 +13,8 @@ will also find it a short list of what the checks expect; [CONTRIBUTING](docs/CO
   footer and no co-author. The `Policy` check fails them.
 - Before pushing, commit and run `python3 tools/ci/precheck.py`. It runs the static checks of the pull request gate on
   your commits (it finds `icl-common-infra` beside this checkout, or in `ICL_COMMON_INFRA`).
-- Open pull requests against `develop`. Fill in the pull request template, and end the body with a sentence, not a
+- Open pull requests against `develop`, as drafts while the work is not complete: a draft runs the cheap checks and
+  skips the builds, and marking it ready for review starts the full run. Fill in the pull request template, and end the body with a sentence, not a
   `Word: value` line (the text policy reads that as a trailer). Squash merge through the merge queue is the only
   method: `gh pr merge <n>` queues a pull request whose checks are green. The required checks are `CI Status` and
   `Scan dependency diff` ([branch protection](docs/branch-protection.md)).
@@ -59,6 +60,7 @@ will also find it a short list of what the checks expect; [CONTRIBUTING](docs/CO
 | `release.yml`, a signing variable or a secret name | `docs/releasing.md` |
 | A dependency in `vcpkg.json` | `docs/licensing.md` when the set of shipped components changes; the baseline check and Dependabot cover the fork |
 | Test labels, or coverage | `docs/testing.md` |
+| A reader of input a person does not control (a file, a frame, a saved setting) | A fuzz harness in `src/lib/fuzz/` with a seed or two ([fuzz tests](docs/testing.md#fuzz-tests)) |
 | A platform file, or a `src/app/platform/` directory | `docs/platform-isolation.md` |
 | The Linux, Windows or macOS package files or their dependencies | `docs/packaging.md` |
 | A string the user sees | `docs/design/strings.json`, then `python tools/i18n/strings_to_ts.py --write` for the ten catalogues, then `python docs/design/tools/build.py` to refresh `content.md` and the prototype |
