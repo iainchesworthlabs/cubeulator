@@ -121,10 +121,8 @@ the same app as WebAssembly, running entirely on your device.
 
 Contributions are welcome — see
 [CONTRIBUTING.md](https://iainchesworthlabs.github.io/cubeulator/CONTRIBUTING/)
-for the branching model (this project follows
-[gitflow](https://nvie.com/posts/a-successful-git-branching-model/):
-`develop` for day-to-day work, `main` for tagged releases only) and how PRs
-get reviewed. Please also read the
+for the branching model (`develop` is the trunk every pull request targets
+and `main` holds tagged releases only) and how PRs get reviewed. Please also read the
 [Code of Conduct](https://iainchesworthlabs.github.io/cubeulator/CODE_OF_CONDUCT/).
 
 ## License

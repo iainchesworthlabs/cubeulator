@@ -16,22 +16,36 @@ not in an issue. Everyone taking part is held to the
 
 ## Branching model
 
-This project follows [gitflow](https://nvie.com/posts/a-successful-git-branching-model/):
+One shared trunk, and a branch that holds releases:
 
-- **`develop`** is the integration branch — target your PR here. It is
-  protected: nothing is pushed to it directly, and pull requests land
-  through a [merge queue](branch-protection.md) rather than by hand.
-- Pull requests are squashed into `develop`, one commit each.
-- **`main`** holds published releases. The release bot fast-forwards it after a
-  release; nobody opens a pull request into it.
-- Branch names start with `feature/`, `bugfix/`, `release/`, `hotfix/` or
-  `support/` (`chore/` and `docs/` are also accepted), followed by letters,
-  digits, `.`, `_` or `-`. The `branch-names` ruleset and the `Policy` check
-  enforce this.
+- **`develop`** is the trunk and the default branch: target your pull request
+  here. It is protected: nothing is pushed to it directly, and pull requests
+  land through a [merge queue](branch-protection.md) rather than by hand.
+- Pull requests are squashed into `develop`, one commit each, so its history is
+  linear.
+- **`main`** holds published releases only. A release is a `v*` tag on a
+  `develop` commit; when the release workflow succeeds it fast-forwards `main`
+  to that commit. Nobody opens a pull request into `main`, and there is no
+  promotion or sync-back, because `main` is always an ancestor of `develop`.
+- A fix for an old release goes on a `release/x.y` branch cut from its tag,
+  only when `develop` has moved on.
+- Work branches start with `feature/`, `bugfix/`, `docs/`, `chore/` or
+  `agent/` (`agent/` is for an automated contributor), followed by letters,
+  digits, `.`, `_` or `-`. `release/`, `hotfix/` and `support/` are also
+  accepted, for the maintainer. The `branch-names` ruleset and the `Policy`
+  check enforce this.
 - **`spike/<name>`** is for finding something out. It is pushed, tried (CI legs
   are dispatched at it by hand) and shown, and it is **never merged**. What it found goes in
   [a page under `docs/investigations/`](investigations/README.md); a spike left
   alone for 30 days is tagged `archive/spike-<name>` and its branch deleted.
+
+Commits carry a `Signed-off-by` line (`git commit -s`), which certifies the
+[Developer Certificate of Origin](https://developercertificate.org/). It is the
+only trailer the `Policy` check allows. Run `python3 tools/ci/precheck.py`
+before you push to see the checks it makes on your commits. Automated
+contributors also read
+[`AGENTS.md`](https://github.com/iainchesworthlabs/cubeulator/blob/develop/AGENTS.md),
+which lists, for each kind of change, what else to update.
 
 ## Set up your build
 
@@ -85,14 +99,14 @@ that check.
 
 ## Opening a pull request
 
-1. Push your `feature/*` or `bugfix/*` branch and open a PR against
+1. Push your work branch (`feature/*`, `bugfix/*`, ...) and open a PR against
    `develop`.
 2. Make sure the required checks are green — see
    [Branch protection and the merge queue](branch-protection.md) for which
    checks are required on `develop` today (the set grows as the build and
    analysis jobs go green).
-3. When it's ready, put it in the queue: `gh pr merge --auto --merge <n>`
-   (or **Merge when ready** on the PR). GitHub merges it onto the current
+3. When it's ready, put it in the queue: `gh pr merge <n>` (or **Merge when
+   ready** on the PR; the queue chooses the squash strategy). GitHub merges it onto the current
    `develop` tip, re-runs the required checks on that tree, and lands it —
    you don't rebase or re-merge `develop` yourself unless the PR conflicts.
    Your remote branch is deleted once it merges.
