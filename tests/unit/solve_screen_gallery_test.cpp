@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Pictures of the solve screen, for looking at rather than for checking.
 //
 // Hidden ("[.gallery]") and inert unless CUBE_GALLERY_DIR names a directory:

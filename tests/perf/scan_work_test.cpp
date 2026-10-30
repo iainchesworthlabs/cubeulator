@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Work budgets for the reader: how many pixel buffers a read of a drawn frame
 // allocates, and that a read of a bigger frame does not allocate more. Counted,
 // not timed, so a regression that adds a full-frame conversion, or a buffer per

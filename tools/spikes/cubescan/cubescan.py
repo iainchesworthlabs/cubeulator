@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Throwaway spike: read a Rubik's cube from a recorded session with a plain
 face-on 3x3 lattice reader. No 6-DoF pose, no tracker, no learned model.
 

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Working out how a cube of any size is held, from a side of it square to the camera:
 // cube::nxn::camera_view and the N x N overloads of cube::vision::read_hold, on drawn
 // colours (the camera's measurements stood in for by the session's own colours, pushed about

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The iPhone camera: AVFoundation capture behind interfaces/camera.hpp.
 //
 // A capture session feeds a video data output, and each frame its callback

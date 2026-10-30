@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Sensitivity of the spike on the retry session: is the success fragile?"""
 import sys, os, cv2, numpy as np
 import cubescan as fs

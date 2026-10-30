@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Prepare a release on develop: cut the changelog and set the version.
 
     prepare_release.py 0.1.0-beta.1                 # edits CHANGELOG.md, CMakeLists.txt, vcpkg.json

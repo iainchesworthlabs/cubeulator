@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The solve screen reached without a camera: ?demo=<seed>, which the page
 // documents (docs/web.md) as the way to see the app with none. It is also the
 // quick way here to a solution to walk, solve methods to switch between and a

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Render the body of a GitHub Release from CHANGELOG.md.
 
 The changelog is the one place the notes are written (changelog.py describes the

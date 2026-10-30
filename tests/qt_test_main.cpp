@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Catch2's usual Catch2::Catch2WithMain auto-generates main(), but Qt's
 // meta-object machinery (signals/slots, NOTIFY properties) needs a
 // QCoreApplication constructed first - so this target links plain

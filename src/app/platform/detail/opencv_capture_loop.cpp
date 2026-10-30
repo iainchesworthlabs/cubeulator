@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "platform/detail/opencv_capture_loop.hpp"
 
 #include "platform/detail/capture_thread_scope.hpp"

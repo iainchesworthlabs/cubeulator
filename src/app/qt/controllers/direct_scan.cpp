@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "controllers/direct_scan.hpp"
 
 #include "controllers/diagnostic_records.hpp"

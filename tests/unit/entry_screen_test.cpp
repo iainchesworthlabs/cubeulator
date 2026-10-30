@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The screen for a cube the camera does not read (EntryScreen.qml), and the way
 // to it from Home: the size chosen, a scramble typed, what is wrong with it said
 // and pointed at, and the solve begun with no camera.

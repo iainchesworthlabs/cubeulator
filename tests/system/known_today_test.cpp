@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // What the app does today that the experience plan says it should not.
 //
 // Each case asserts the behaviour as it IS. They are written to start failing

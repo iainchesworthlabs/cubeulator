@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Putting a cube right by hand (CubeEdit): the colours of a cube of any size edited a
 // sticker, a side or a stroke at a time, with undo, redo and a way back to the
 // reading it began as, and a plain answer to whether what is entered is a cube a

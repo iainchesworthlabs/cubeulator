@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Assembles the browser build's release package: one zip holding the site the
 # build wrote (the very directory docs.yml publishes under /app/), the licence,
 # the third-party notices and a short note on hosting it.

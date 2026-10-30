@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A cube that is not a 3x3, in the browser: ?demo=<seed>&size=<n> opens the solve
 // screen on one with no camera (docs/web.md), and the screens for typing a cube in
 // are reached from Home. What is held here is that the page runs the bigger cube's

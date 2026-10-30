@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "interfaces/camera.hpp"
 #include "platform/web/devices_web.hpp"
 #include "platform/web/photometry_web.hpp"

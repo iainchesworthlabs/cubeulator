@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The page's half of the web camera (camera_web.cpp is the other half).
 //
 // An Emscripten JS library (--js-library): the three functions at the bottom

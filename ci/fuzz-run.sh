@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Runs every fuzz harness (src/lib/fuzz) for a time, from its seeds, the regressions and
 # the corpus kept from earlier runs.
 #

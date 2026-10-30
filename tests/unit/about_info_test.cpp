@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // What the About and Licences screens show (controllers/about_info.hpp): the
 // generated third-party notices, read for the screens, and nothing made up.
 #include <catch2/catch_test_macros.hpp>

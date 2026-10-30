@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "app_runtime.hpp"
 #include "controllers/scan_reading.hpp"
 #include "desktop/desktop_integration.hpp"

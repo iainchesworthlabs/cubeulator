@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Input, the ways a browser delivers it: a mouse, a finger, a key. The counterpart
 // of tests/system/input_test.cpp.
 import { test, expect } from '../support/fixtures.mjs';

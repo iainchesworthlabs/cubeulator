@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The complete screen's stats card, and whether its figures can be read.
 //
 // CompleteScreen.qml loaded with the app's own controllers behind it, in each

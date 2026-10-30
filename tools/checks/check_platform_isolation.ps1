@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 #requires -Version 7.0
 #
 # Platform-isolation guard (docs/platform-isolation.md).

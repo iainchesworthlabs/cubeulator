@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Windows: a display-required execution state, and the AppUserModelID.
 //
 // SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED) keeps the

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // macOS: a no-display-sleep power assertion.
 //
 // IOPMAssertionCreateWithName(kIOPMAssertionTypeNoDisplaySleep) keeps the

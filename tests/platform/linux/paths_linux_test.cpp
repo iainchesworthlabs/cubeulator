@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test cases only Linux can run: its XDG directory conventions, which
 // paths_linux.cpp implements. Compiled into
 // cube_integration_tests only on Linux (tests/CMakeLists.txt picks

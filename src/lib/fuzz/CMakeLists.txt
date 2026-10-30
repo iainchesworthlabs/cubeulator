@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # Fuzz harnesses for the code that reads input a person does not control: a
 # move notation, a state string, a recording's index and manifest, a camera

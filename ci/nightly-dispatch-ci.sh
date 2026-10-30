@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Runs ci.yml by hand on a ref, with the legs named, and waits for it to end.
 # Used by nightly.yml, which wants the whole of CI plus the two wall-time legs
 # that a pull request leaves out, against the tip of develop.

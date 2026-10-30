@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include <cube/vision/sticker_colour.hpp>
 
 #include <opencv2/imgproc.hpp>

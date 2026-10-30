@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The screen where a cube is typed in a colour at a time (ColoursScreen.qml) behind
 // the app's own controllers: the sides named round the grid, what the person paints
 // arriving in the controller, the status that follows, the cube drawn beside it, and

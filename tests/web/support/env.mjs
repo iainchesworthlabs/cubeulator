@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Where the site under test is, shared by the configuration and the fixtures.
 import { resolve } from 'node:path';
 

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Does the 3D cube actually render?
 //
 // Qt Quick 3D needs a real render path - a GPU or a software rasteriser behind

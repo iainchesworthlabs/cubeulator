@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The solution screen itself: SolutionScreen.qml loaded with the app's own
 // controllers behind it, and stepped through a real solution by the same
 // functions its buttons and keys call.

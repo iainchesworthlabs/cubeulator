@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The recording format (cube/vision/frame_recording.hpp) is the contract
 // between two things that never run in the same process: the app's
 // CUBE_SCAN_RECORD_DIR recorder (DirectScan) and the offline `cube_scan`

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The scan screen's picture: DirectScanScreen.qml loaded with the app's own
 // controllers behind it and fed drawn camera frames.
 //

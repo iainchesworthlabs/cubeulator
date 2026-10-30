@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The same app, driven by other kinds of input: a finger, then a keyboard.
 
 #include "app.hpp"

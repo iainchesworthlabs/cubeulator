@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The language manager: what it does on start-up, what one call to
 // setLanguage() changes, and that it changes all of it before anything is
 // re-read. The family's tst_LanguageSwitching.qml is the model; this is the

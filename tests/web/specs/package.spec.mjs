@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A smoke test for any built copy of the site - the release zip unzipped, the
 // hosted /app/ directory, a local build - that needs nothing from the build but
 // what ships: no driver, no recorder. It is the one project that runs against

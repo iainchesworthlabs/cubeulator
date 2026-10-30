@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Every control on every screen, pressed, in both layouts.
 //
 // The journey cases press what the journey needs. These press the rest, so

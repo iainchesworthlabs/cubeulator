@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Installs a given LLVM major (clang, clang-tidy, clang-format) from
 # apt.llvm.org on an Ubuntu host - used by the clang-format and clang-tidy CI
 # jobs, and usable locally on Ubuntu.

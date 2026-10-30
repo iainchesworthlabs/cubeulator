@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Tests that load the app's own QML need a QGuiApplication, where the
 // controller tests get by on QCoreApplication (qt_test_main.cpp).
 //

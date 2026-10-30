@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # cube_generate_cfop_tables: writes src/lib/src/solver/cfop_case_words.inc,
 # the last-layer tables the intermediate (CFOP) solver reads. A developer
 # instrument, run by hand when the alphabet changes - never at build time,

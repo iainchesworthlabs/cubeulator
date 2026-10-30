@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # FindQt6.cmake - wrapper picked up automatically by find_package(Qt6 ...)
 # because cmake/ is on CMAKE_MODULE_PATH (CMake tries Module mode, i.e. a

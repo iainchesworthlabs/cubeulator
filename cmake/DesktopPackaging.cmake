@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # DesktopPackaging.cmake - what turns cube_app into something a person can
 # install on Windows, macOS or Linux (workstream E4a of

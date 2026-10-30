@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Fragment snippet for Borderlands Cel-Shading's sticker material: hard
 // 2-step diffuse banding (no soft gradient, no colour rim - the ink-outline
 // mesh alongside this material provides the silhouette line instead). See

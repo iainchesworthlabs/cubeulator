@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The camera interface, called the way the app calls it from a thread of its
 // own with no device behind it: a result, not an exception; an error, not a
 // crash; nothing to pop before a start.

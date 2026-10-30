@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # AppIdentity.cmake - the app's names, in one place. Included (not
 # include_guard'ed, so every including scope gets the variables) by

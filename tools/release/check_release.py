@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Is this tree, and this tag, a release the Release workflow may build?
 
     check_release.py                          # what version is this tree, and is its changelog ready?

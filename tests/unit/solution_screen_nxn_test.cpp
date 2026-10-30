@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The solution screen for a cube that is not a 3x3: SolutionScreen.qml loaded with
 // the app's own controllers behind it, a bigger cube solved in them, and the screen
 // stepped through the solution by the functions its buttons and keys call, as

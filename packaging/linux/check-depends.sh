@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Is every system library a .deb's own files need provided by what it declares?
 #
 #   packaging/linux/check-depends.sh <package.deb>

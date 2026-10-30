@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include <cube/nxn/cube.hpp>
 #include <cube/nxn/outside_view.hpp>
 #include <cube/profiling.hpp>

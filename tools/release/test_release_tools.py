@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The release tools' own tests (CTest case release_tools_selftest).
 
 They hold the changelog's shape, the cut, the notes' layout and the version edit

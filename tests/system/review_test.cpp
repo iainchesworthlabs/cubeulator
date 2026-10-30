@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Putting right what the camera misread, through the window: a scan that makes no cube is
 // looked over, corrected and left; a cube the scan read is looked over from the solve
 // screen and the way back is the solve it was opened from.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // History: the button on Home that used to do nothing, the list it opens, and
 // the two switches in Settings that go with it (docs/design/screens/history.md).
 //

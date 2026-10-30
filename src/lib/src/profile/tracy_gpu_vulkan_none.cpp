@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The no-Vulkan backend of cube::profiling::GpuContext, for every platform
 // whose platform.cmake does not set CUBEULATOR_PLATFORM_PROFILING_VULKAN (see
 // tracy_gpu_vulkan.cpp). create_vulkan cannot succeed where the application

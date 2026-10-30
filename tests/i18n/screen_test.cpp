@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The converted screens, switched live between languages.
 //
 // What the plan asks of E2b, on the screens it converted:

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Self-test for tracy_check.py: the parsing and the comparison, on a canned
 tracy-csvexport file, so the tool is held to its own rules without Tracy, a
 profiling build or a capture. Registered with CTest as perf_tracy_check_selftest.

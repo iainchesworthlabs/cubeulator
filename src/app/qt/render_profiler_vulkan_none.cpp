@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The no-Vulkan half of the render profiler, for every platform whose fragment
 // does not set CUBEULATOR_PLATFORM_PROFILING_VULKAN (or whose build has no
 // Tracy): see render_profiler_vulkan.cpp. A window on such a platform is never

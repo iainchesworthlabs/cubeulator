@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The no-OpenGL backend of cube::profiling::GpuContext, for every platform
 // whose platform.cmake does not set CUBEULATOR_PLATFORM_PROFILING_OPENGL (see
 // tracy_gpu.cpp, and why Apple is one). create_opengl cannot succeed where the

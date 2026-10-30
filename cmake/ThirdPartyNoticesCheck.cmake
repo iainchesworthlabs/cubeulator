@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # ThirdPartyNoticesCheck.cmake - the body of the third_party_notices_complete
 # CTest case (cmake -P). It fails when something that ships has no notice.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // cube_generate_cfop_tables: derives the last-layer tables the intermediate
 // (CFOP) solver reads, and writes them as C++ to stdout.
 //

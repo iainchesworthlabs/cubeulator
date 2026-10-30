@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The picture on the scan and solve screens is the camera's frame, painted
 // mirrored by QML when the camera faces the user. The mirror lives there and
 // nowhere else, so what the provider serves has to be the frame exactly as it

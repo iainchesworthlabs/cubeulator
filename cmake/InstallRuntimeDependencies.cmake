@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # InstallRuntimeDependencies.cmake - run at install time (install(SCRIPT ...)
 # from cmake/DesktopPackaging.cmake, Windows only).

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Build the click-through prototype and the generated parts of the docs.
 
     python docs/design/tools/build.py [--artifact PATH] [--unused]

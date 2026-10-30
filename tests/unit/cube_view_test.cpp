@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The 3D cube on the solve screen, held to the solver's own cube.
 //
 // Cube3DView.qml is loaded for real and its stickers are read back out of

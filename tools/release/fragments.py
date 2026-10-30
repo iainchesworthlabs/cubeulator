@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Changelog fragments: one file per change, assembled when a release is cut.
 
 Many pull requests open at once, from several agents and people, each wanting a

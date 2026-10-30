@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Settings: opening and closing the screen, and what the controls on it do.
 
 #include "app.hpp"

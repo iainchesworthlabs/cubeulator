@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // What it costs to arrive on each screen, and what a screen costs to leave on.
 //
 // For every screen a person can reach, the window is brought to it from another

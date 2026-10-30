@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A cube typed in by hand (ColourEntry): painted a sticker at a time as seen from
 // outside, at every size, and judged by the library - counted, then asked whether
 // it is a cube a person could hold, and if not what is wrong and where.

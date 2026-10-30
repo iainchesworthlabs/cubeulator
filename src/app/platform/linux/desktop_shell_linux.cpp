@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Linux: the session's inhibit interface, over D-Bus.
 //
 // Tried in this order, the first that answers wins:

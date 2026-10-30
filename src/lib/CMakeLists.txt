@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # ---------------------------------------------------------------------------
 # cube::lib - solver, vision and i18n, no GUI, no platform code.
 # ---------------------------------------------------------------------------

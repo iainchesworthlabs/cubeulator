@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A camera for the page to find in place of a real one.
 //
 // Injected before the app's own scripts (Playwright's addInitScript), it

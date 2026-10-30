@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Stamps a Windows shortcut (.lnk) with an AppUserModelID.
 #
 # The taskbar groups a window with the shortcut that launched it by matching

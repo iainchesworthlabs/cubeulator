@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "window_geometry.hpp"
 
 #include "interfaces/desktop_shell.hpp"

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Face turns on a 54-facelet URFDLB string, built from geometry rather than typed tables.
 
 Each facelet is a sticker at a position on the 3x3x3 with an outward normal;

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The no-Direct3D backend of cube::profiling::GpuContext, for every platform
 // whose platform.cmake does not name windows/tracy_gpu_d3d11_windows.cpp in
 // CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES. create_d3d11 cannot succeed where

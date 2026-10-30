@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Fail on a user-visible string literal that is not an id lookup.
 
 Everything a person reads in Cubeulator is `qsTrId("some.id")` in QML, and the

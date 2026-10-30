@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The history of solves (src/app/qt/controllers/solve_history*.{hpp,cpp}):
 // what is kept, how many, what happens to a file that cannot be read, and how a
 // solve is added to it, followed, finished and picked up again.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The looks that take their outlines from the colour channels of the working
 // frame (prepared_frame.hpp), against the same looks written with OpenCV's own
 // split, max and min. They are walked pixel by pixel in the library, for the

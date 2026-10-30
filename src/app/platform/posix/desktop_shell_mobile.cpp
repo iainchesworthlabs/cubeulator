@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Phones and the browser: the OS (or the browser) owns the window, the screen
 // and the process's identity, so there is nothing for the desktop shell to do.
 // Named by the Android, iOS and web fragments. The screens' request to keep

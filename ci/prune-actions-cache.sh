@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Prunes this repository's GitHub Actions caches so the 10 GB quota is spent on
 # entries something can still restore. Run by the cache-hygiene workflow and
 # usable by hand (needs `gh`, authenticated with actions:write, and `jq`).

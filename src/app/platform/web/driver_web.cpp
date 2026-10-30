@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include <cube/model/facelet.hpp>
 #include <cube/solver/cube.hpp>
 #include <cube/solver/scan_assembly.hpp>

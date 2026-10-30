@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The per-pixel channel kernels (cube/vision/detail/channel_kernels.hpp) against
 // OpenCV's own split, max, min and subtract. Whichever variant CMake built the
 // library with - 128-bit vectors where the target has them, scalar otherwise -

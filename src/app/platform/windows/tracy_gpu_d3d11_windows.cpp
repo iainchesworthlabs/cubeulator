@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Direct3D 11 GPU context for cube::profiling::GpuContext - the backend for
 // Windows. Windows' platform.cmake names it in
 // CUBEULATOR_PLATFORM_PROFILING_GPU_SOURCES and src/lib/CMakeLists.txt compiles

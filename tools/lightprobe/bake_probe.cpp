@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // bake_probe: makes the cube's light probe, src/app/qt/lightprobe/sky.ktx.
 //
 //   bake_probe <out.ktx> [face-size]        face-size: 128 (the default) ... 512

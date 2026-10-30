@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # The macOS CPack generator: a .dmg holding Cubeulator.app.
 #
 # Included by cube_platform_configure_packaging() in

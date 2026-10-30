@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Does the photometry lock actually hold the PIXELS still?
 //
 // The probe (camera_property_probe_test.cpp) answered "what will the driver

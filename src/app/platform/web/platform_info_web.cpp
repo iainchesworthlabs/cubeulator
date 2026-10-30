@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "interfaces/platform_info.hpp"
 
 namespace cube::platform::platform_info {

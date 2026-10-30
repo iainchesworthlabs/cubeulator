@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Iain Chesworth
+# SPDX-License-Identifier: GPL-3.0-or-later
 # cube_nxn_bench: what the N x N reduction library finds and what it costs,
 # per cube size - its cycle libraries, and move counts and times for solving
 # seeded scrambles from 2x2 up. A developer instrument, never shipped. See

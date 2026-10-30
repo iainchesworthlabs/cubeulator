@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Photometry-lock bookkeeping: everything about the lock that does NOT need
 // a camera. These run everywhere, in CI included - the hardware halves live
 // in camera_property_probe_test.cpp (capability probe) and

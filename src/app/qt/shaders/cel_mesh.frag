@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Borderlands Cel-Shading for CubeNView: cel.frag, with the colour read from the
 // mesh instead of a uniform (see toon_mesh.frag). Change one, change the other.
 

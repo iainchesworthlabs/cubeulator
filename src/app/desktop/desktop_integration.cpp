@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "desktop_integration.hpp"
 
 #include "interfaces/desktop_shell.hpp"

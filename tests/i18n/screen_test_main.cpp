@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The screens in more than one language, loaded with the app's own
 // controllers and the language manager behind them.
 //

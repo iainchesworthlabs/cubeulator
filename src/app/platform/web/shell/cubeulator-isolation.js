@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Cross-origin isolation for a host that cannot send the headers itself.
 //
 // The threaded WebAssembly build needs SharedArrayBuffer, which a browser only

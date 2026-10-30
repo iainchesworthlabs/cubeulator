@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The system tests need a QGuiApplication on a platform that can draw: the
 // whole point is that the real QML is rendered, 3D cube included. Where that
 // platform comes from is the environment's business - the desktop session on

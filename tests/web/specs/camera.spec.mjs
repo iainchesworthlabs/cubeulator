@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The camera, as a page gets one: refused, absent, busy, and then fine. The
 // browser's errors are the ones getUserMedia() rejects with, injected into the
 // page (support/fake_camera.js); the app is expected to turn each into a

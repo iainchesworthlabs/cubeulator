@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Iain Chesworth
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "controllers/platform_facts.hpp"
 
 #include "interfaces/platform_info.hpp"
