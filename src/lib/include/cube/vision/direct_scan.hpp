@@ -104,6 +104,9 @@ enum class LatticeRefusal : std::uint8_t {
     axis_cosine,
     // The blobs do not sit on the lattice closely enough.
     residual,
+    // More sticker-sized blobs than any side can show (Tuning::most_lattice_blobs): the look
+    // is tracing noise, and the fit, which grows steeply with the blobs, was not tried.
+    too_many_blobs,
 };
 
 [[nodiscard]] std::string_view to_string(LatticeRefusal refusal);
