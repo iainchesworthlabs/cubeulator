@@ -433,10 +433,18 @@ void scroll_into_view(QQuickItem* item) {
 void App::click(QQuickItem* item) {
     REQUIRE(item != nullptr);
     QQuickItem* target = click_target(item);
-    scroll_into_view(target);
-    pump(20);
-    const QPoint at =
-        target->mapToScene(QPointF(target->width() / 2, target->height() / 2)).toPoint();
+    // A list that has just grown (a row that appeared on the last edit) may not have its
+    // content height yet, and a Flickable puts contentY back inside it on the next frame; the
+    // control is scrolled to again until it is in the window, as a finger would keep going.
+    QPoint at;
+    for (int attempt = 0; attempt < 4; ++attempt) {
+        scroll_into_view(target);
+        pump(attempt == 0 ? 20 : 60);
+        at = target->mapToScene(QPointF(target->width() / 2, target->height() / 2)).toPoint();
+        if (QRect(QPoint(0, 0), window_->size()).contains(at)) {
+            break;
+        }
+    }
     INFO("click on " << control_key(item).toStdString() << " at " << at.x() << "," << at.y());
     REQUIRE(QRect(QPoint(0, 0), window_->size()).contains(at));
     reach_->activated(control_key(item), layout());
