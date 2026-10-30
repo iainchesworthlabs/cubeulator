@@ -13,6 +13,14 @@ taken, see below.**
 > becomes a goal. It is the only reason a Qt commercial licence (Option B)
 > would be needed.
 
+> **Decision (the maintainer, 2026-10-30): the source is GPL-3.0-or-later, the
+> binaries are GPL-3.0-only.** Qt Quick 3D, which the app links, is available
+> only under GPL-3.0-only or a commercial licence (point 1 of the summary), so
+> a program built with it is distributed under version 3 only. The source files
+> keep "or later", which is the licence anyone who builds without Qt Quick 3D
+> would have. The About screen, the RPM's licence field and
+> [`LICENSE-NOTE.md`](https://github.com/iainchesworthlabs/cubeulator/blob/main/LICENSE-NOTE.md) say so. Qt Quick 3D stays.
+
 This is an engineering inventory and a decision paper. It is not legal advice,
 it does not change Cubeulator's licence (GPL-3.0-or-later), and it does not
 settle the question [`LICENSE-NOTE.md`](https://github.com/iainchesworthlabs/cubeulator/blob/main/LICENSE-NOTE.md) leaves open. That

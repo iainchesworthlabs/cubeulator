@@ -2122,10 +2122,10 @@ In deinen Händen.</translation>
         <extracomment>%1 is the author's name.</extracomment>
         <translation>Gemacht von %1.</translation>
     </message>
-    <message id="about.licence">
-        <source>Free software under the GNU General Public License, version 3 or later.</source>
-        <extracomment>Do not translate the licence's name.</extracomment>
-        <translation>Freie Software unter der GNU General Public License, Version 3 oder neuer.</translation>
+    <message id="about.licence.binary">
+        <source>Free software under the GNU General Public License, version 3. Its source code may also be used under any later version.</source>
+        <extracomment>Do not translate the licence's name. The program is distributed under version 3 only, because it includes Qt Quick 3D; the source code is version 3 or later.</extracomment>
+        <translation>Freie Software unter der GNU General Public License, Version 3. Der Quellcode darf auch unter jeder späteren Version genutzt werden.</translation>
     </message>
     <message id="about.source">
         <source>Source code</source>

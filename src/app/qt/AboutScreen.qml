@@ -129,7 +129,7 @@ Rectangle {
                 Text {
                     objectName: "about.licence"
                     width: parent.width
-                    text: qsTrId("about.licence")
+                    text: qsTrId("about.licence.binary")
                     wrapMode: Text.Wrap
                     font.family: Theme.fontHeading; font.pixelSize: 15
                     color: Theme.inkMuted(0.7)

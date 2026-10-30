@@ -52,7 +52,9 @@ endif()
 find_program(CUBEULATOR_RPMBUILD_EXECUTABLE rpmbuild)
 if(CUBEULATOR_RPMBUILD_EXECUTABLE)
     list(APPEND CPACK_GENERATOR "RPM")
-    set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
+    # The binaries include Qt Quick 3D, which Qt offers under GPL-3.0-only or a
+    # commercial licence (docs/licensing.md); the source is "or later".
+    set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-only")
     set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
     # Bundled libraries must not satisfy, or be required of, the distribution:
     # no automatic requires or provides, and an explicit list instead.

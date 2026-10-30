@@ -278,7 +278,7 @@ screens.about = {
   render() {
     return `<div class="screen">${topbar(t('about.title'))}<div class="page" data-scroll="about"><div class="col">
       <div class="lockup"><span class="appicon" aria-hidden="true">${IDENTITY.icon || ''}</span><div><h1 class="t-title">${t('app.name')}</h1><div class="mono t-sec">${t('about.version', '1.0.0')}</div><div class="mono t-sec" dir="ltr">${t('about.build', 'windows-x64', 'a1b2c3d4')}</div>${btn(t('about.copyBuild'), 'noop', {v: 'ghost'})}</div></div>
-      <div class="prose"><p>${t('about.what')}</p><p>${t('about.author', 'Iain Chesworth Labs')}</p><p class="t-sec">${t('about.licence')}</p></div>
+      <div class="prose"><p>${t('about.what')}</p><p>${t('about.author', 'Iain Chesworth Labs')}</p><p class="t-sec">${t('about.licence.binary')}</p></div>
       <div class="rows">${row(t('about.licences'), 'go', 'licences')}${row(t('about.privacy'), 'go', 'privacy')}${row(t('about.source'), 'noop', '', {val: 'github.com/iainchesworthlabs/cubeulator'})}${row(t('about.copyDetails'), 'noop', '', {sub: t('about.copyDetails.note')})}</div>
       <p class="note">${t('about.trademark')}</p></div></div></div>`;
   }
