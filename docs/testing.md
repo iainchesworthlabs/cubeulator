@@ -941,7 +941,12 @@ This is the list, and it is the list the [security policy](SECURITY.md) names
 | `fuzz_state_string` | `state_string_problem`: a 6 × size² letter state, for any size | |
 | `fuzz_recording_index` | `read_index` and `parse_index_line`: a recording's `index.csv` | |
 | `fuzz_manifest` | `read_manifest`: a recording's `manifest.json` | |
-| `fuzz_frame` | `read_side` and `read_corner`: a camera frame of any size up to 160 × 160 and any size of cube | |
+| `fuzz_frame` | `read_side` and `read_corner`: a camera frame up to 48 × 48 and any size of cube | |
+
+The frame is held to 48 × 48 because `read_side` takes tens of seconds on a noisy
+115 × 112 frame for a 9 × 9 cube, which this harness found
+([issue 276](https://github.com/iainchesworthlabs/cubeulator/issues/276)); the limit
+(`kLargest` in `fuzz_frame.cpp`) goes when that is fixed.
 
 The settings and history files are read by Qt code in `src/app`
 (`SolveHistoryStore`, `LanguageManager`), which the library harnesses do not
