@@ -327,7 +327,7 @@ TEST_CASE("a frame of noise is refused before the lattice fit, not after tens of
         "\xff\xff\xff\xff\xff\xff\xff"
         "\x1f"
         "789 ABCDEF abcdef";
-    std::vector<std::uint8_t> pixels(112U * 115U * 3U);
+    std::vector<std::uint8_t> pixels(std::size_t{112} * std::size_t{115} * std::size_t{3});
     for (std::size_t i = 0; i < pixels.size(); ++i) {
         pixels.at(i) = static_cast<std::uint8_t>(text.at(i % text.size()));
     }
