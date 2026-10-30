@@ -943,6 +943,10 @@ This is the list, and it is the list the [security policy](SECURITY.md) names
 | `fuzz_manifest` | `read_manifest`: a recording's `manifest.json` | |
 | `fuzz_frame` | `read_side` and `read_corner`: a camera frame up to 48 × 48 and any size of cube | |
 
+The harnesses are not built for the browser: they read their seeds from the host's
+directories, which a WebAssembly program under Node does not see (the
+`web-emscripten-tests` preset turns `CUBEULATOR_BUILD_FUZZERS` off).
+
 The frame is held to 48 × 48 because `read_side` takes tens of seconds on a noisy
 115 × 112 frame for a 9 × 9 cube, which this harness found
 ([issue 276](https://github.com/iainchesworthlabs/cubeulator/issues/276)); the limit

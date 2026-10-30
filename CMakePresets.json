@@ -289,6 +289,7 @@
       "inherits": ["web-emscripten-base", "release"],
       "cacheVariables": {
         "CUBEULATOR_BUILD_TESTS": "ON",
+        "CUBEULATOR_BUILD_FUZZERS": "OFF",
         "CUBEULATOR_BUILD_APP": "OFF",
         "CUBEULATOR_ENABLE_PROFILE_RECORDER": "ON"
       }
