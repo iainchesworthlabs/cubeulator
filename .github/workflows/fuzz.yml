@@ -7,6 +7,10 @@ name: Fuzz
 #
 #   fuzz-short    on a push to develop: every harness for 60 seconds, from its seeds and
 #                 the corpus of the last night.
+#   fuzz-pr       on a pull request that changes the harnesses, this workflow or the preset:
+#                 20 seconds each, so that the libFuzzer build proves itself before it
+#                 merges (a workflow that is not on the default branch cannot be started by
+#                 hand). Nothing is saved from it.
 #   fuzz-nightly  once a day: every harness for 10 minutes (more by dispatch), from the
 #                 corpus the night before, which the Actions cache carries on. Opens or
 #                 comments on the `nightly-analysis` issue when a harness finds a crash.
@@ -27,6 +31,13 @@ on:
       - "CMakePresets.json"
       - "vcpkg.json"
       - ".github/workflows/fuzz.yml"
+  pull_request:
+    branches: [develop]
+    paths:
+      - "src/lib/fuzz/**"
+      - "ci/fuzz-run.sh"
+      - "CMakePresets.json"
+      - ".github/workflows/fuzz.yml"
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
@@ -43,12 +54,12 @@ on:
 permissions: {}
 
 concurrency:
-  group: fuzz-${{ github.event_name }}
-  cancel-in-progress: ${{ github.event_name == 'push' }}
+  group: fuzz-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || 'develop' }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 jobs:
   fuzz:
-    name: ${{ github.event_name == 'push' && 'fuzz-short' || 'fuzz-nightly' }}
+    name: ${{ github.event_name == 'push' && 'fuzz-short' || github.event_name == 'pull_request' && 'fuzz-pr' || 'fuzz-nightly' }}
     runs-on: ubuntu-26.04
     timeout-minutes: 120
     permissions:
@@ -56,7 +67,7 @@ jobs:
       issues: write # report-nightly-failure
     env:
       VCPKG_MAX_CONCURRENCY: "2"
-      SECONDS_PER_TARGET: ${{ github.event_name == 'push' && '60' || inputs.seconds_per_target || '600' }}
+      SECONDS_PER_TARGET: ${{ github.event_name == 'push' && '60' || github.event_name == 'pull_request' && '20' || inputs.seconds_per_target || '600' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -108,7 +119,7 @@ jobs:
         run: bash ci/fuzz-run.sh build/linux-clang-fuzz/bin build/fuzz-corpus "$SECONDS_PER_TARGET"
 
       - name: Save the corpus
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.event_name != 'pull_request' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/fuzz-corpus
