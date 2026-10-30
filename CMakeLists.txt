@@ -117,6 +117,10 @@ cube_configure_mobile_dependencies()
 # ---------------------------------------------------------------------------
 option(CUBEULATOR_BUILD_APP "Build the Qt6 GUI application" ON)
 option(CUBEULATOR_BUILD_TESTS "Build the unit and integration test suites" ON)
+# The fuzz harnesses of src/lib/fuzz. Their seeds and regressions are replayed by
+# ctest (label `fuzz`), so they are built wherever the tests are; the
+# linux-clang-fuzz preset builds them without the tests and with libFuzzer.
+option(CUBEULATOR_BUILD_FUZZERS "Build the fuzz harnesses (src/lib/fuzz)" ${CUBEULATOR_BUILD_TESTS})
 
 # ---------------------------------------------------------------------------
 # Targets
@@ -136,9 +140,16 @@ add_subdirectory(src/app)
 # docs/recovery-plan.md); gated per-platform inside.
 add_subdirectory(tools)
 
-if(CUBEULATOR_BUILD_TESTS)
+if(CUBEULATOR_BUILD_TESTS OR CUBEULATOR_BUILD_FUZZERS)
     enable_testing()
+endif()
+
+if(CUBEULATOR_BUILD_TESTS)
     add_subdirectory(tests)
+endif()
+
+if(CUBEULATOR_BUILD_FUZZERS)
+    add_subdirectory(src/lib/fuzz)
 endif()
 
 include(Packaging)
@@ -146,6 +157,7 @@ include(Packaging)
 message(STATUS "Cubeulator ${CUBEULATOR_VERSION_FULL}")
 message(STATUS "  Build app   : ${CUBEULATOR_BUILD_APP}")
 message(STATUS "  Build tests : ${CUBEULATOR_BUILD_TESTS}")
+message(STATUS "  Fuzzers     : ${CUBEULATOR_BUILD_FUZZERS}")
 message(STATUS "  Tracy       : ${CUBEULATOR_ENABLE_TRACY}")
 message(STATUS "  SIMD kernels: ${CUBEULATOR_SIMD_RESOLVED}")
 message(STATUS "  Recorder    : ${CUBEULATOR_ENABLE_PROFILE_RECORDER}")

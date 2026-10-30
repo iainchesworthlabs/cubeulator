@@ -124,6 +124,29 @@
       }
     },
     {
+      "name": "linux-clang-fuzz",
+      "displayName": "Linux (Clang, libFuzzer)",
+      "description": "The fuzz harnesses of src/lib/fuzz with libFuzzer, over a library built with its instrumentation, ASan and UBSan. Run one with: build/linux-clang-fuzz/bin/fuzz_<name> <corpus dir> src/lib/fuzz/seeds/<name> -max_total_time=60 (docs/testing.md, Fuzzing).",
+      "inherits": ["base", "fastdebug"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "CUBEULATOR_BUILD_APP": "OFF",
+        "CUBEULATOR_BUILD_TESTS": "OFF",
+        "CUBEULATOR_BUILD_FUZZERS": "ON",
+        "CUBEULATOR_FUZZ_LIBFUZZER": "ON",
+        "CUBEULATOR_ENABLE_SANITIZERS": "OFF",
+        "CUBEULATOR_ENABLE_TRACY": "OFF",
+        "CMAKE_CXX_FLAGS": "-fsanitize=fuzzer-no-link,address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    },
+    {
       "name": "macos-clang-base",
       "hidden": true,
       "inherits": ["base"],
@@ -291,6 +314,7 @@
     { "name": "linux-gcc-fastdebug", "configurePreset": "linux-gcc-fastdebug" },
     { "name": "linux-gcc-profiling", "configurePreset": "linux-gcc-profiling" },
     { "name": "linux-gcc-coverage", "configurePreset": "linux-gcc-coverage" },
+    { "name": "linux-clang-fuzz", "configurePreset": "linux-clang-fuzz" },
     { "name": "macos-clang-debug", "configurePreset": "macos-clang-debug" },
     { "name": "macos-clang-release", "configurePreset": "macos-clang-release" },
     { "name": "macos-clang-fastdebug", "configurePreset": "macos-clang-fastdebug" },
@@ -344,6 +368,7 @@
     { "name": "linux-gcc-fastdebug", "inherits": "base", "configurePreset": "linux-gcc-fastdebug" },
     { "name": "linux-gcc-profiling", "inherits": "base", "configurePreset": "linux-gcc-profiling" },
     { "name": "linux-gcc-coverage", "inherits": "base", "configurePreset": "linux-gcc-coverage" },
+    { "name": "linux-clang-fuzz", "inherits": "base", "configurePreset": "linux-clang-fuzz" },
     { "name": "macos-clang-debug", "inherits": "base", "configurePreset": "macos-clang-debug" },
     { "name": "macos-clang-release", "inherits": "base", "configurePreset": "macos-clang-release" },
     { "name": "macos-clang-fastdebug", "inherits": "base", "configurePreset": "macos-clang-fastdebug" },

@@ -25,6 +25,9 @@ Four layers, all Catch2 (a few script gates sit beside them, listed below):
 - **`tests/web/`** — the app in a browser, through its own page, with
   Playwright; and the unit, integration and performance binaries again as
   WebAssembly under Node. See [Browser tests](#browser-tests).
+- **`src/lib/fuzz/`** — a harness for each reader of input a person does not
+  control, replayed over its seeds in every test run and mutated by libFuzzer
+  on a schedule. See [Fuzz tests](#fuzz-tests).
 
 Tests do not ask which OS they are on (see
 [Platform isolation](platform-isolation.md)): what differs per platform comes
@@ -924,6 +927,56 @@ no calibration workload in a process can stand in for.
   runs` is the other half: it notices the chain `solve()` runs changing.)
 - **Phones.** The counts are the same there; the milliseconds are not, and no
   ratio taken on a desktop says what a phone does.
+
+## Fuzz tests
+
+The code that reads input a person does not control has a fuzz harness in
+`src/lib/fuzz/`: one function, `LLVMFuzzerTestOneInput`, in `fuzz_<name>.cpp`.
+This is the list, and it is the list the [security policy](SECURITY.md) names
+(a crafted camera frame, settings file or history file):
+
+| Harness | Reads | Checks besides not crashing |
+| --- | --- | --- |
+| `fuzz_notation` | `cube::nxn::parse`: move notation, for any size from 0 to 11 | text that parses prints as notation that parses back to the same text |
+| `fuzz_state_string` | `state_string_problem`: a 6 × size² letter state, for any size | |
+| `fuzz_recording_index` | `read_index` and `parse_index_line`: a recording's `index.csv` | |
+| `fuzz_manifest` | `read_manifest`: a recording's `manifest.json` | |
+| `fuzz_frame` | `read_side` and `read_corner`: a camera frame of any size up to 160 × 160 and any size of cube | |
+
+The settings and history files are read by Qt code in `src/app`
+(`SolveHistoryStore`, `LanguageManager`), which the library harnesses do not
+link; they are not covered yet.
+
+Each harness has a seed corpus in `seeds/<name>/` (small, readable inputs) and a
+`regressions/<name>/` directory for the inputs that once crashed it, kept as
+libFuzzer wrote them. Two ways to run one:
+
+- **Replay.** Every harness is also a ctest test, `fuzz.<name>`, label `fuzz`,
+  which runs it over the seeds and the regressions once, with no fuzzing engine
+  (`replay_main.cpp`). It is built wherever the tests are, runs under the
+  sanitizers of the preset, takes seconds, and is part of every pull request:
+  the `clang-tidy` leg of `ci.yml` builds the Debug preset (ASan and UBSan) and
+  runs `ctest -L fuzz` over it. `ctest --preset <name> -L fuzz` does the same
+  locally.
+- **Mutate.** The `linux-clang-fuzz` preset builds the harnesses with libFuzzer
+  over a library compiled with its instrumentation, ASan and UBSan:
+
+  ```sh
+  cmake --preset linux-clang-fuzz -DCMAKE_CXX_COMPILER=clang++-23
+  cmake --build --preset linux-clang-fuzz
+  mkdir -p build/corpus/notation
+  build/linux-clang-fuzz/bin/fuzz_notation build/corpus/notation       src/lib/fuzz/seeds/notation -max_total_time=60
+  ```
+
+  `fuzz.yml` does this for every harness: 60 seconds each on a push to
+  `develop`, 10 minutes each every night with the corpus carried on in the
+  Actions cache (`ci/fuzz-run.sh`). A crash is uploaded as an artifact and, from
+  the nightly run, opens or comments on the `nightly-analysis` issue.
+
+When a harness finds a crash: fix the code, and put the input libFuzzer wrote
+(`crash-<hash>`) in `regressions/<name>/` in the same pull request, so that the
+replay catches it if it returns. A new reader of untrusted input comes with a
+harness, a seed or two, and a row in the table above.
 
 ## Browser tests
 
