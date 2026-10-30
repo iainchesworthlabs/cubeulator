@@ -43,6 +43,17 @@ constexpr float kMaxSizeRatio = 1.4F;
 constexpr float kReachInSides = 3.4F;
 constexpr float kMaxCellResidual = 0.3F;
 
+// The most blobs a look may hand to the lattice fit, per cell of the side: three
+// sides of a cube seen corner-on are three times the cells, so six leaves room
+// for those and as many strays again. The fit grows steeply with the blobs (a
+// 115 x 112 frame of noise made 693 for a 9 x 9 and took tens of seconds, issue
+// 276), so a look past this is tracing noise and is refused before it. The
+// floor keeps a 2x2's cap above the strays of a busy room. Chosen without
+// recorded sessions to check against: raise it if a frame that should read
+// reports `crowd`.
+constexpr std::size_t kMostBlobsPerCell = 6;
+constexpr std::size_t kLeastMostLatticeBlobs = 96;
+
 // Square-on test: the lattice's two axes must be near-equal and near
 // perpendicular, and the blobs must sit on it.
 constexpr float kMinAxisRatio = 0.85F;
@@ -168,6 +179,8 @@ struct Tuning {
     // Fewest blobs that make a lattice: two thirds of the stickers, rounded up
     // (six of nine), which is enough to span the side's rows and columns.
     std::size_t min_lattice_blobs = 6;
+    // Most blobs a look may hand to the lattice fit: see kMostBlobsPerCell.
+    std::size_t most_lattice_blobs = 96;
     // Fewest blobs on a lattice placed through its own fit: eight of nine, or
     // that share of the stickers (see kMinPlacedBlobs' note below).
     std::size_t min_placed_blobs = 8;
@@ -198,6 +211,7 @@ struct Tuning {
     tuning.max_blob_area = kMaxBlobArea * shrink;
     tuning.reach = kReachInSides * static_cast<float>(size - 1) / 2.0F;
     tuning.min_lattice_blobs = ((2 * n * n) + 2) / 3;
+    tuning.most_lattice_blobs = std::max(kMostBlobsPerCell * n * n, kLeastMostLatticeBlobs);
     tuning.min_placed_blobs = ((8 * n * n) + 8) / 9;
     tuning.most_cells_away = 2 * size;
     return tuning;
@@ -1828,7 +1842,8 @@ void rename_into_standard_scheme(std::vector<nxn::NCube>& candidates, SessionCol
 
 // How far a look got, for the funnel: a lattice refused by one of the gate's
 // tests went further than one that could not be made at all, which went further
-// than a frame with too few stickers to try.
+// than a frame with too few stickers to try. A frame with too many blobs is of the
+// middle kind: a look that found them and would not fit them.
 [[nodiscard]] int reach_of(LatticeRefusal refusal) {
     switch (refusal) {
         case LatticeRefusal::none:
@@ -1838,6 +1853,7 @@ void rename_into_standard_scheme(std::vector<nxn::NCube>& candidates, SessionCol
         case LatticeRefusal::residual:
             return 3;
         case LatticeRefusal::no_lattice:
+        case LatticeRefusal::too_many_blobs:
             return 2;
         case LatticeRefusal::too_few_blobs:
             return 1;
@@ -1902,6 +1918,10 @@ void rename_into_standard_scheme(std::vector<nxn::NCube>& candidates, SessionCol
     };
     if (blobs.size() < tuning.min_lattice_blobs) {
         record(LatticeRefusal::too_few_blobs, nullptr);
+        return std::nullopt;
+    }
+    if (blobs.size() > tuning.most_lattice_blobs) {
+        record(LatticeRefusal::too_many_blobs, nullptr);
         return std::nullopt;
     }
     // The first try is a square grid, which is all a side held square needs.
@@ -2217,6 +2237,8 @@ std::string_view to_string(LatticeRefusal refusal) {
             return "cosine";
         case LatticeRefusal::residual:
             return "residual";
+        case LatticeRefusal::too_many_blobs:
+            return "crowd";
     }
     return "?";
 }

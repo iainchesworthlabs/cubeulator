@@ -1741,7 +1741,7 @@ int run_read(const fs::path& session, bool verbose) {
     using cube::vision::FrameLook;
     using cube::vision::LatticeRefusal;
     constexpr auto kLooks = static_cast<std::size_t>(FrameLook::count);
-    constexpr auto kRefusals = 6;
+    constexpr auto kRefusals = 7;
 
     std::array<std::size_t, kLooks> by_look{};
     std::array<std::size_t, kRefusals> by_refusal{};
@@ -1777,6 +1777,7 @@ int run_read(const fs::path& session, bool verbose) {
             by_refusal.at(static_cast<std::size_t>(attempt.refusal)) += 1;
         }
         if (attempt.refusal != LatticeRefusal::too_few_blobs &&
+            attempt.refusal != LatticeRefusal::too_many_blobs &&
             attempt.refusal != LatticeRefusal::no_lattice) {
             rms.push_back(attempt.lattice_rms);
             ratios.push_back(attempt.lattice_ratio);

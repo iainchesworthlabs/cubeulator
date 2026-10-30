@@ -318,6 +318,26 @@ TEST_CASE("frames without a whole square-on side give no read", "[direct-scan]")
     }
 }
 
+TEST_CASE("a frame of noise is refused before the lattice fit, not after tens of seconds",
+          "[direct-scan]") {
+    // Issue 276: 115 x 112 pixels of these bytes, read for a 9 x 9, make about 700 sticker-sized
+    // blobs at the pitch look, and the fit over them took tens of seconds.
+    constexpr std::array<std::uint8_t, 51> text{0x31, 0x20, 0x71, 0x75, 0x69, 0x63, 0x6b, 0x20, 0x62, 0x72, 0x6f, 0x77, 0x6e, 0x20, 0x66, 0x6f, 0x78, 0x20, 0x6a, 0x75, 0x6d, 0x70, 0x73, 0x20, 0x6f, 0x76, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1f, 0x37, 0x38, 0x39, 0x20, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x20, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66};
+    cv::Mat frame(112, 115, CV_8UC3);
+    std::size_t next = 0;
+    for (int row = 0; row < frame.rows; ++row) {
+        auto* line = frame.ptr<std::uint8_t>(row);
+        for (int i = 0; i < frame.cols * 3; ++i) {
+            line[i] = text.at(next++ % text.size());
+        }
+    }
+    const auto prepared = prepare_frame(frame, 9);
+    REQUIRE(prepared.has_value());
+    cube::vision::SideAttempt attempt;
+    CHECK_FALSE(cube::vision::read_side_explained(*prepared, 9, attempt).has_value());
+    CHECK(attempt.refusal == cube::vision::LatticeRefusal::too_many_blobs);
+}
+
 TEST_CASE("a side counts once it has been held still", "[direct-scan]") {
     SideScan scan;
     const cv::Mat frame = draw_side(kMixed, Pose{});
