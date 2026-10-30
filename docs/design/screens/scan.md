@@ -57,6 +57,7 @@ top leading corner and the chips and buttons centred at the bottom.
 |---|---|---|---|
 | Camera picture | An image filling the screen. Role: graphic. No marks are drawn on it | `scan.a11y.preview` | `scan.picture` |
 | Sticker dots | Nine markers on the side in view. A hollow ring while the side is seen; a filled disc in `overlay.ok` while it counts. Each has a dark edge so it shows on any sticker. Ignored by screen readers | - | `scan.dots` |
+| Corner dots | Nine markers on each side of a corner the camera sees at an angle, shown only when no side is square to the camera. One colour to a side (`#4CC9F0`, `#C39BFF`, `#FF8FD0`), not the side dots' yellow and green, so that a corner is told from a side square to the camera at a glance. Same size and dark edge as the sticker dots. Ignored by screen readers | - | `scan.cornerDot` |
 | Status panel | status panel; a polite live region | `scan.title.*`, `scan.guide.*`, `scan.camera.*`, `scan.solveFailed.title`, `scan.solveFailed.body` | `scan.status` |
 | Hint | An overlay panel with a bold line and a sentence | `scan.stuck.title`, `scan.stuck.body` | `scan.hint` |
 | Chip 1-6 | side chip. Stickers are the measured colours; each carries the mark of the colour the reader took it for | `scan.a11y.chipEmpty`, `scan.a11y.chipRead`, `scan.a11y.chipInView`, `colourSide.*` | `scan.chip1` ... `scan.chip6` |

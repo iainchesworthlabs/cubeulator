@@ -66,6 +66,12 @@ class DirectScan : public QObject {
     // The nine sticker centres found in the current frame, in frame pixels,
     // row-major as the camera sees them. Empty when no side is in view.
     Q_PROPERTY(QVariantList stickerPoints READ stickerPoints NOTIFY frameUpdated)
+    // The sticker centres of each side found in the current frame when it shows two or three
+    // sides at an angle (a corner, or a cube turned between sides) and no side square to the
+    // camera: a list of sides, each a list of centres in frame pixels, row-major in the side's
+    // own axes. Empty when a side is square to the camera (stickerPoints has it), when nothing
+    // is read, and once the scan is finished.
+    Q_PROPERTY(QVariantList cornerPoints READ cornerPoints NOTIFY frameUpdated)
     // True when the side in view is being held still enough to count.
     Q_PROPERTY(bool reading READ reading NOTIFY frameUpdated)
     // 0..1 while a side that has not been captured yet is being held still:
@@ -164,6 +170,7 @@ public:
     [[nodiscard]] int frameWidth() const noexcept { return frame_width_; }
     [[nodiscard]] int frameHeight() const noexcept { return frame_height_; }
     [[nodiscard]] QVariantList stickerPoints() const;
+    [[nodiscard]] QVariantList cornerPoints() const;
     [[nodiscard]] bool reading() const noexcept { return reading_; }
     [[nodiscard]] qreal captureProgress() const noexcept { return capture_progress_; }
     [[nodiscard]] bool settingUp() const noexcept { return awaiting_lock_; }
@@ -333,6 +340,8 @@ private:
     void adoptSize(int size);
     cube::vision::SideScan scan_;
     std::optional<cube::vision::SideRead> read_;
+    // The sides of the corner the current frame showed, as cornerPoints gives them.
+    std::vector<std::vector<cv::Point2f>> corner_points_;
     bool reading_ = false;
     qreal capture_progress_ = 0.0;
     std::vector<cube::vision::SideScan::Side> sides_;

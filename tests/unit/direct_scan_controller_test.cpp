@@ -143,6 +143,11 @@ TEST_CASE("a cube held on two corners is read three sides at a time and finishes
     // nothing is marked on the picture, but it is three sides being read.
     hold(scan, corner(Face::U, Face::R, Face::F), kFramesToCapture - 1);
     CHECK(scan.stickerPoints().isEmpty());
+    // The three sides are marked, a dot on each of their stickers.
+    REQUIRE(scan.cornerPoints().size() == 3);
+    for (const QVariant& side : scan.cornerPoints()) {
+        CHECK(side.toList().size() == 9);
+    }
     CHECK(scan.sidesRead() == 0);
     CHECK(scan.reading());
     CHECK(scan.captureProgress() > 0.0);
@@ -164,6 +169,8 @@ TEST_CASE("a cube held on two corners is read three sides at a time and finishes
     REQUIRE(scan.cube().has_value());
     CHECK(*scan.cube() == cube);
     CHECK(scan.sidesRead() == 6);
+    // Nothing more is read, so nothing is marked.
+    CHECK(scan.cornerPoints().isEmpty());
 }
 
 TEST_CASE("a side being held fills towards counting", "[qt][controllers][direct-scan]") {
