@@ -7,3 +7,5 @@
 77ef2f328ace916618b6f0c05e54b7e6b6443053
 # Format with clang-format 22, and pin the CI leg to it (136 files)
 ea6e87b86acf1b9f64a1633205d098791574a2e4
+# Add SPDX headers to the source files and REUSE.toml (567 files)
+43ab71c7487c4b34b612daf55fb1371fe27d6693
