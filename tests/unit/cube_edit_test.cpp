@@ -11,6 +11,7 @@
 #include <cube/nxn/strategy.hpp>
 #include <cube/solver/cube.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -435,4 +436,120 @@ TEST_CASE("a reading the wrong length is read as blank", "[cube_edit]") {
     edit.load(reading);
     CHECK(edit.status().state == EditState::Empty);
     CHECK(edit.size() == 3);
+}
+
+namespace {
+
+// A cube of `size` the way a person could hold it, with the sides in `turns` then
+// turned in place by hand, as a person might hold one the wrong way up.
+CubeEdit entered_with_turned_sides(int size, unsigned seed,
+                                   const std::vector<cube::app::SideTurn>& turns) {
+    CubeEdit edit;
+    edit.load(reading_of(scrambled(size, seed)));
+    REQUIRE(edit.status().state == EditState::Valid);
+    for (const auto& turn : turns) {
+        REQUIRE(edit.rotate_side(turn.face, turn.quarter_turns));
+    }
+    return edit;
+}
+
+}  // namespace
+
+TEST_CASE("one side held the wrong way up is found, and turning it back puts it right",
+          "[cube_edit][turn_fixes]") {
+    for (const int size : {2, 3, 4, 5, 6, 7}) {
+        for (const Face face : cube::solver::kAllFaces) {
+            for (int turns = 1; turns <= 3; ++turns) {
+                INFO("size " << size << " face " << static_cast<int>(face) << " turns " << turns);
+                CubeEdit edit = entered_with_turned_sides(size, 11, {{face, turns}});
+                if (edit.status().state != EditState::Impossible) {
+                    continue;  // a turn can by chance leave a cube a cube
+                }
+                const auto found = edit.turn_fixes();
+                REQUIRE_FALSE(found.fixes.empty());
+                // The fewest sides: one.
+                for (const auto& fix : found.fixes) {
+                    CHECK(fix.turns.size() == 1);
+                }
+                // Turning back is one of them, unless there are more than are listed.
+                const bool back = std::ranges::any_of(found.fixes, [&](const auto& fix) {
+                    return fix.turns.front().face == face &&
+                           fix.turns.front().quarter_turns == 4 - turns;
+                });
+                CHECK((back || found.more));
+                // Whichever is chosen, the cube is then one, in one step of undo.
+                CHECK(edit.apply_turns(found.fixes.front().turns));
+                CHECK(edit.status().state == EditState::Valid);
+                CHECK(edit.undo());
+                CHECK(edit.status().state == EditState::Impossible);
+            }
+        }
+    }
+}
+
+TEST_CASE("two sides held wrong are found when one is not enough, and no more sides than needed",
+          "[cube_edit][turn_fixes]") {
+    CubeEdit edit = entered_with_turned_sides(3, 5, {{Face::R, 1}, {Face::D, 2}});
+    REQUIRE(edit.status().state == EditState::Impossible);
+    const auto found = edit.turn_fixes();
+    REQUIRE_FALSE(found.fixes.empty());
+    const std::size_t sides = found.fixes.front().turns.size();
+    CHECK(sides <= 2);
+    for (const auto& fix : found.fixes) {
+        CHECK(fix.turns.size() == sides);
+    }
+    CHECK(edit.apply_turns(found.fixes.front().turns));
+    CHECK(edit.status().state == EditState::Valid);
+    // Asked to try only one side, it says there is nothing, rather than turning more.
+    CubeEdit again = entered_with_turned_sides(3, 5, {{Face::R, 1}, {Face::D, 2}});
+    if (sides == 2) {
+        CHECK(again.turn_fixes(1).fixes.empty());
+    }
+}
+
+TEST_CASE("nothing is offered when turning a side cannot help", "[cube_edit][turn_fixes]") {
+    SECTION("a cube that is one, a part-painted cube and a miscounted one") {
+        CubeEdit valid;
+        valid.load(reading_of(scrambled(3, 3)));
+        CHECK(valid.turn_fixes().fixes.empty());
+        CubeEdit blank(3);
+        CHECK(blank.turn_fixes().fixes.empty());
+        blank.paint(Face::U, 0, 1);
+        CHECK(blank.turn_fixes().fixes.empty());
+        CubeEdit counted;
+        counted.load(reading_of(scrambled(3, 3)));
+        counted.paint(Face::U, 1, counted.colour(Face::U, 0) == 0 ? 1 : 0);
+        REQUIRE(counted.status().state == EditState::Miscount);
+        CHECK(counted.turn_fixes().fixes.empty());
+    }
+    SECTION("two stickers swapped between sides") {
+        CubeEdit edit;
+        edit.load(reading_of(scrambled(3, 9)));
+        // The first sticker of the top and of the front that differ in colour.
+        int at = 0;
+        while (at < 9 && edit.colour(Face::U, 1) == edit.colour(Face::F, at)) {
+            ++at;
+        }
+        REQUIRE(at < 9);
+        const std::int8_t a = edit.colour(Face::U, 1);
+        const std::int8_t b = edit.colour(Face::F, at);
+        edit.paint(Face::U, 1, b);
+        edit.paint(Face::F, at, a);
+        REQUIRE(edit.status().state == EditState::Impossible);
+        CHECK(edit.turn_fixes().fixes.empty());
+    }
+}
+
+TEST_CASE("a fix applied while a stroke is open joins that step", "[cube_edit][turn_fixes]") {
+    CubeEdit edit = entered_with_turned_sides(3, 11, {{Face::F, 1}});
+    if (edit.status().state != EditState::Impossible) {
+        SKIP("this turn leaves a cube");
+    }
+    const auto fixes = edit.turn_fixes();
+    REQUIRE_FALSE(fixes.fixes.empty());
+    edit.begin_stroke();
+    CHECK(edit.apply_turns(fixes.fixes.front().turns));
+    edit.end_stroke();
+    CHECK(edit.undo());
+    CHECK(edit.status().state == EditState::Impossible);
 }

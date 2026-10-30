@@ -229,6 +229,21 @@ void ColourEntry::rotateSide(const QString& side, int quarterTurns) {
     }
 }
 
+void ColourEntry::applyTurns(const QVariantList& turns) {
+    std::vector<SideTurn> asked;
+    for (const QVariant& item : turns) {
+        const QVariantMap turn = item.toMap();
+        const std::optional<Face> face = face_of(turn.value(QStringLiteral("side")).toString());
+        const int quarter = turn.value(QStringLiteral("quarterTurns")).toInt();
+        if (face.has_value()) {
+            asked.push_back({.face = *face, .quarter_turns = quarter});
+        }
+    }
+    if (edit_.apply_turns(asked)) {
+        emit changed();
+    }
+}
+
 void ColourEntry::beginStroke() {
     edit_.begin_stroke();
 }
@@ -324,6 +339,26 @@ QVariantMap ColourEntry::status() const {
                                QString::fromLatin1(letter_of(now.suspect->face)));
                 suspect.insert(QStringLiteral("index"), now.suspect->index);
                 out.insert(QStringLiteral("suspect"), suspect);
+            }
+            {
+                // A side held the wrong way up is the likeliest thing a person does
+                // wrong, and turning it back is what puts it right: each way of doing
+                // so is a list of { side, quarterTurns }.
+                const TurnFixes found = edit_.turn_fixes();
+                QVariantList fixes;
+                for (const TurnFix& fix : found.fixes) {
+                    QVariantList turns;
+                    for (const SideTurn& turn : fix.turns) {
+                        QVariantMap one;
+                        one.insert(QStringLiteral("side"),
+                                   QString::fromLatin1(letter_of(turn.face)));
+                        one.insert(QStringLiteral("quarterTurns"), turn.quarter_turns);
+                        turns.append(one);
+                    }
+                    fixes.append(QVariant(turns));
+                }
+                out.insert(QStringLiteral("turnFixes"), fixes);
+                out.insert(QStringLiteral("moreTurnFixes"), found.more);
             }
             break;
         case EditState::Valid:

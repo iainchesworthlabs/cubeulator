@@ -157,6 +157,25 @@ Rectangle {
     readonly property string headline: headlineOf(status.state)
     readonly property string detail: detailOf(status.state)
 
+    // When the cube is not one but turning sides in place would make it one (a side
+    // held the wrong way up): the ways to do it, the fewest sides first, each a list
+    // of { side, quarterTurns } (ColourEntry.status.turnFixes).
+    readonly property var fixes: status.state === "impossible" && status.turnFixes !== undefined
+                                 ? status.turnFixes : []
+    readonly property int fixSides: fixes.length > 0 ? fixes[0].length : 0
+    function turnWords(turn) {
+        var words = turn.quarterTurns === 2 ? qsTrId("review.fix.half")
+                  : (turn.quarterTurns === 3 ? qsTrId("review.fix.quarterBack")
+                                             : qsTrId("review.fix.quarter"));
+        return words.arg(sideName(turn.side));
+    }
+    function fixWords(turns) {
+        var parts = [];
+        for (var i = 0; i < turns.length; i++)
+            parts.push(turnWords(turns[i]));
+        return parts.join(", ");
+    }
+
     // The sticker to look at first when the cube is not one, where there is one.
     readonly property var suspect: status.state === "impossible" && status.suspect !== undefined
                                    ? status.suspect : null
@@ -776,6 +795,45 @@ Rectangle {
                     wrapMode: Text.WordWrap
                     font.family: Theme.fontHeading; font.pixelSize: 12
                     color: Theme.inkMuted(0.75)
+                }
+                // A side held the wrong way up: say so, and offer to turn it. Turning is
+                // one step, which Undo takes back.
+                Column {
+                    objectName: "colours.fix"
+                    width: parent.width
+                    visible: root.fixes.length > 0
+                    topPadding: Theme.space2
+                    spacing: Theme.space2
+                    Text {
+                        objectName: "colours.fix.intro"
+                        width: parent.width
+                        text: qsTrId("review.fix.intro", root.fixSides)
+                        wrapMode: Text.WordWrap
+                        font.family: Theme.fontHeading; font.weight: Font.DemiBold; font.pixelSize: 13
+                        color: Theme.ink
+                    }
+                    Text {
+                        objectName: "colours.fix.several"
+                        width: parent.width
+                        visible: root.fixes.length > 1 || root.status.moreTurnFixes === true
+                        text: qsTrId("review.fix.several")
+                        wrapMode: Text.WordWrap
+                        font.family: Theme.fontHeading; font.pixelSize: 12
+                        color: Theme.inkMuted(0.75)
+                    }
+                    Repeater {
+                        model: root.fixes
+                        delegate: AppButton {
+                            required property var modelData
+                            required property int index
+                            objectName: "colours.fix." + index
+                            width: parent.width
+                            block: true
+                            variant: "secondary"
+                            text: root.fixWords(modelData)
+                            onClicked: ColourEntry.applyTurns(modelData)
+                        }
+                    }
                 }
             }
 

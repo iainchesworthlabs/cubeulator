@@ -111,6 +111,29 @@ struct SideText {
 // The letter a colour is typed as, for the screen to show beside it.
 [[nodiscard]] char colour_letter(std::int8_t colour) noexcept;
 
+// A side turned in place, as CubeEdit::rotate_side does: `quarter_turns` (1 to 3)
+// clockwise as seen from outside.
+struct SideTurn {
+    cube::solver::Face face = cube::solver::Face::U;
+    int quarter_turns = 1;
+};
+
+// Sides turned together that make a cube a person could hold of one that is not.
+struct TurnFix {
+    std::vector<SideTurn> turns;
+};
+
+// What turning sides in place could do for a cube that is not one. A person who
+// enters or reads a cube a side at a time can hold a side the wrong way up, and the
+// cube then cannot be one; turning that side puts it right.
+struct TurnFixes {
+    // The ways to turn the fewest sides that work, in a fixed order. Empty when the
+    // cube is not one that turning could mend, or is not impossible at all.
+    std::vector<TurnFix> fixes;
+    // There are more of that many sides than `fixes` holds.
+    bool more = false;
+};
+
 class CubeEdit {
 public:
     explicit CubeEdit(int size = 3);
@@ -167,6 +190,17 @@ public:
     bool rotate_side(cube::solver::Face face, int quarter_turns);
     // Every sticker unpainted.
     bool clear_all();
+
+    // Whether turning sides in place, three at the most, would make this a cube a
+    // person could hold, and how. It tries every way of turning one side, and only if
+    // none works every way of turning two, then three, so what it finds is the least
+    // that has to be turned: the more sides a fix turns, the likelier it is a cube that
+    // only looks right. Turns that leave the stickers as another fix did (a side that
+    // looks the same turned) are one fix. At most `limit` are returned.
+    [[nodiscard]] TurnFixes turn_fixes(int max_sides = 3, std::size_t limit = 4) const;
+    // Makes those turns, as one step that undo takes back. False when none changes
+    // anything.
+    bool apply_turns(const std::vector<SideTurn>& turns);
 
     // Edits between begin_stroke and end_stroke are one step (a finger dragged over
     // several stickers undoes in one go). Opening one while one is open does

@@ -180,7 +180,7 @@ Review the solution.
 ## String inventory
 
 <!-- strings:begin -->
-474 strings. Generated from `strings.json` by `tools/build.py`; edit that file, not this table.
+480 strings. Generated from `strings.json` by `tools/build.py`; edit that file, not this table.
 
 
 #### `app`
@@ -362,7 +362,6 @@ Review the solution.
 | `entry.size.label` | Size | Small heading above the buttons that choose the size of the cube: 2×2, 3×3 and so on. |
 | `entry.size.option` | %1×%1 | A size of cube on a button: the side length twice, as in 5×5. %1 is the number in the reader's own digits. |
 | `entry.size.camera` | The camera reads this cube. Scan it, or type its scramble here. | Under the size buttons: the camera reads every size offered. |
-
 | `entry.scramble.label` | Its scramble | Small heading above the box where the scramble is typed. A scramble is the list of moves that mixed the cube up, as a timer or a puzzle site shows it. |
 | `entry.scramble.placeholder` | Type or paste the moves, such as R U R' U' F2 2R Rw | Grey text in the empty scramble box, showing what a scramble looks like. The moves are cubing notation and are not translated. |
 | `entry.scramble.help` | Write the moves with a space between them. U' turns the other way and F2 is a half turn. 2R is the second layer in from R, and Rw turns two layers together. | Under the scramble box. The letters and marks are notation and stay as they are. |
@@ -509,6 +508,11 @@ Review the solution.
 | `review.redo` | Redo | Button on the colours screen. Puts back the change that Undo took back. |
 | `review.revert` | Back to the scan | Button on the check screen. Puts every sticker back as the camera read it, taking back all the corrections made here. Undo can bring them back. |
 | `review.turnSide` | Turn this side | Button on the colours screen. Turns the side being edited a quarter turn clockwise, as seen from outside, in the picture only: for a side the camera read the wrong way up. It does not turn the cube. |
+| `review.fix.intro` | *one:* One side may be the wrong way round. Turning it would make this a cube.<br>*other:* %n sides may be the wrong way round. Turning them would make this a cube. | Shown on the colours screen under the message that the cube cannot be one, when turning sides in place would make it one. %n is how many sides the fix turns. |
+| `review.fix.several` | There is more than one way. Choose the one that matches how your cube is held. Undo takes it back. | Shown under review.fix.intro when there are several ways to turn sides, each a button. Undo is the Undo button. |
+| `review.fix.quarter` | %1: a quarter turn clockwise | Part of a button on the colours screen that turns a side in place. %1 is a side name (a colourSide or side string); the turn is as seen from outside. A fix that turns several sides lists them with commas on one button. |
+| `review.fix.half` | %1: a half turn | Part of a button on the colours screen that turns a side in place. %1 is a side name (a colourSide or side string). A half turn is the same either way. |
+| `review.fix.quarterBack` | %1: a quarter turn anticlockwise | Part of a button on the colours screen that turns a side in place. %1 is a side name (a colourSide or side string); the turn is as seen from outside. |
 | `review.describe.open` | Describe this side | Button on the colours screen. Opens a box to type the colours of the whole side as letters instead of tapping each sticker. |
 | `review.describe.help` | Type the colours of this side (%1) as you see it on your cube, left to right, a row at a time: W white, Y yellow, G green, B blue, O orange, R red. Use ? for a sticker you cannot tell. Spaces and slashes are ignored. | Instruction above the box where a side is described in letters. %1 is the side's name (colourSide.red, side.top and the like). The letters W Y G B O R are fixed, like the letters of a move, and are not translated; say in the language which colour each stands for, naming the colours as in colour.*. |
 | `review.describe.field` | Colours of this side, as letters | Screen-reader name of the box where a side is described in letters. |

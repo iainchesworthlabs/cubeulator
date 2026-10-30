@@ -98,6 +98,22 @@ TEST_CASE("a scan that made no cube is looked over, put right and left", "[syste
         app.click("colours.revert");
         CHECK_FALSE(colours.touched());
 
+        // The sides can be turned into a cube, and each way of doing it is offered: any
+        // one makes a cube, in a step that Undo takes back.
+        REQUIRE(app.find("colours.fix.0") != nullptr);
+        for (int fix = 0; app.find(QString("colours.fix.%1").arg(fix)) != nullptr; ++fix) {
+            INFO("fix " << fix);
+            app.click(QString("colours.fix.%1").arg(fix));
+            app.pump(40);
+            CHECK(colours.edit().status().state == cube::app::EditState::Valid);
+            CHECK(colours.touched());
+            CHECK(app.find("colours.fix.0") == nullptr);
+            app.click("colours.undo");
+            app.pump(40);
+            CHECK(colours.edit().status().state != cube::app::EditState::Valid);
+            CHECK_FALSE(colours.touched());
+        }
+
         // A side described in letters: the box opens with the side as it is, takes
         // it as it is (nothing changes), and can be closed without.
         app.click("colours.describe");
