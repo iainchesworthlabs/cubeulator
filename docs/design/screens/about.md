@@ -39,7 +39,7 @@ from medium up. A top bar: back and the title.
 | Version | `numeral`, `inkSecondary`. From the build, the same string the installer and the store show | `about.version` | `about.version` |
 | What | `body` | `about.what` | `about.what` |
 | Author | `body` | `about.author` | `about.author` |
-| Licence | `body`, `inkSecondary` | `about.licence` | `about.licence` |
+| Licence | `body`, `inkSecondary` | `about.licence.binary` | `about.licence` |
 | Licences | list row | `about.licences` | `about.licences` |
 | Privacy | list row | `about.privacy` | `about.privacy` |
 | Source code | list row; its value is the address, shown in full so that it can be read and typed. Role: link | `about.source` | `about.source` |

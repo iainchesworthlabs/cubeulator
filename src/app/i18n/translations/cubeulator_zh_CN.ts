@@ -2113,10 +2113,10 @@ In your hands.</source>
         <extracomment>%1 is the author's name.</extracomment>
         <translation>作者：%1。</translation>
     </message>
-    <message id="about.licence">
-        <source>Free software under the GNU General Public License, version 3 or later.</source>
-        <extracomment>Do not translate the licence's name.</extracomment>
-        <translation>自由软件，依据 GNU General Public License 第 3 版或更高版本发布。</translation>
+    <message id="about.licence.binary">
+        <source>Free software under the GNU General Public License, version 3. Its source code may also be used under any later version.</source>
+        <extracomment>Do not translate the licence's name. The program is distributed under version 3 only, because it includes Qt Quick 3D; the source code is version 3 or later.</extracomment>
+        <translation>自由软件，依据 GNU General Public License 第 3 版发布。其源代码也可依据任何更高版本使用。</translation>
     </message>
     <message id="about.source">
         <source>Source code</source>

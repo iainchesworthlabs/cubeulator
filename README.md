@@ -129,7 +129,8 @@ get reviewed. Please also read the
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE) — and
+The source is GPL-3.0-or-later; the binaries, which include Qt Quick 3D, are
+GPL-3.0-only. See [LICENSE](LICENSE) — and
 [LICENSE-NOTE.md](LICENSE-NOTE.md) for the question of app store
 distribution: the Apple stores are deferred, and it is settled before any
 Apple submission.

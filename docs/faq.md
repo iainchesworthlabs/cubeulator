@@ -53,7 +53,9 @@ change method at any time and it carries on from where the cube stands. See
 [Solve methods](solver-methods.md).
 
 **Why GPL-3.0-or-later, if this is meant to reach app stores?**
-That tension is written down, not resolved, in
+The source is GPL-3.0-or-later and the binaries are GPL-3.0-only (they include
+Qt Quick 3D, which Qt offers only under GPL-3.0-only or a commercial licence).
+The tension with the stores is written down, not resolved, in
 [LICENSE-NOTE.md](https://github.com/iainchesworthlabs/cubeulator/blob/main/LICENSE-NOTE.md):
 the Apple stores are deferred, and the question returns before any Apple
 submission. The inventory and the options are in [Licensing](licensing.md).

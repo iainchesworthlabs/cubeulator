@@ -66,3 +66,15 @@ GPL-3.0-or-later and ships elsewhere (desktop downloads, Linux
 packages, later Google Play and F-Droid). The Apple-store question above is
 deferred, not resolved: it returns before any Apple submission, and the
 options are in [docs/licensing.md](docs/licensing.md).
+
+**2026-10-30 - the licence of the source and of the binaries.** The source
+stays GPL-3.0-or-later, and every file that carries a licence identifier says
+so. A program built with Qt Quick 3D is a combined work whose Qt part is
+available only under GPL-3.0-only (or a commercial licence), so the **binaries
+are distributed under GPL-3.0-only**, and the project says so where a person
+looks: the About screen reads "version 3" and notes that the source code may
+also be used under any later version, the RPM's licence field is GPL-3.0-only,
+and [docs/licensing.md](docs/licensing.md) gives the reasoning. Qt Quick 3D
+stays; dropping it, or buying the commercial licence, is the Apple-store
+question above and is not decided here. This is recorded as decision (b) of
+[docs/migration.md](docs/migration.md).
