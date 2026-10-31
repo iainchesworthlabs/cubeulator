@@ -1,1 +1,0 @@
-**Entering colours: look round the cube, and tidier side tiles.** On a wide screen the cube beside the grid can now be dragged to look round it, and it comes back to the side being painted when you let go. The six side buttons are now tiles of one size, and the tick on a finished side sits inside its tile instead of pushing past the edge.

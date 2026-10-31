@@ -12,6 +12,29 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0-beta.2] - 2026-10-31
+
+The iPhone app now goes to TestFlight for the maintainer's internal testers, and the scan screen marks a corner when it sees one. The colours screen can turn a side that was read the wrong way up back for you, and looks round the cube on a wide screen. The Linux package starts again on Ubuntu 24.04 and Debian 13, the camera stays on a cube whose colours you corrected, and a noisy camera frame no longer stalls the scan. The About screen now says version 3 of the GPL.
+
+### Added
+
+- **A side held the wrong way up is found and turned back for you.** When the colours you typed in or scanned cannot be a cube, the colours screen now tries turning each side in place, one side first, then two, then three, and offers the fewest turns that make a cube. If there is more than one way, each is a button that says which sides turn and how; choosing one turns them in a single step that Undo takes back.
+- **The scan screen now marks a corner.** When you show the camera two or three sides at once, such as a cube held on a corner, the screen draws a dot on every sticker it found, a colour to each side (blue, violet and pink), the way it does for a side held square. Before, nothing was drawn and there was no sign that the corner had been seen. The dots are not the yellow and green of a side held square, so the two can be told apart at a glance.
+
+### Changed
+
+- **Entering colours: look round the cube, and tidier side tiles.** On a wide screen the cube beside the grid can now be dragged to look round it, and it comes back to the side being painted when you let go. The six side buttons are now tiles of one size, and the tick on a finished side sits inside its tile instead of pushing past the edge.
+- **The iPhone app goes to TestFlight.** A release no longer carries an iPhone file or an install page for registered devices. The app is sent to TestFlight for the maintainer's internal testers, who install it from the TestFlight app; there is nothing to download and no device to register. See [Installing on an iPhone](docs/ios-install.md).
+- **The About screen now says version 3 of the GPL.** Cubeulator's source code is under version 3 or any later version of the GNU General Public License, but the program you run includes Qt Quick 3D, which Qt offers only under version 3, so the About screen reads "version 3" and notes that the source code may also be used under any later version. The Linux RPM's licence field says GPL-3.0-only for the same reason. The reasoning is in [docs/licensing.md](docs/licensing.md).
+
+### Fixed
+
+- **The Linux package starts on Ubuntu 24.04 and Debian 13 again.** The first beta was built on a newer system and asked for `acosf`, `atan2f` and `sqrtf` from glibc 2.43, so it did not start on either. The package is now built on Ubuntu 24.04 and checked against glibc 2.39 and the libstdc++ of GCC 14 before it is released.
+- **A camera frame full of noise no longer stalls the scan.** A noisy frame could make the side reader take tens of seconds on a large cube, because it tried to fit a grid through hundreds of speckles. It now gives up on a frame with far more sticker-sized shapes than a side can show, and goes on to the next one.
+- **The camera stays on a cube whose colours you put right.** After *Check the colours*, correcting what the camera misread (red and orange the wrong way round, say) and pressing *Solve*, the camera preview in the corner of the solve screen no longer disappears, and the camera goes on following the cube in your hand as it does for a cube it read right. It is matched against the colours as you corrected them, not as it first named them. A cube you type in from nothing, or a solve carried on from the history, still has no camera. See [docs/design/screens/review.md](docs/design/screens/review.md).
+
+> **Pre-release.** The iPhone build has been built, signed and checked by Apple on a hosted Mac, and its camera has not yet run on a phone, so the first install is a test (see [Installing on an iPhone](docs/ios-install.md)). The dots that mark a corner have been checked on drawn frames, not on a camera, and their colours are untested by eye. The limit that stops a noisy frame stalling the scan was chosen without recorded sessions to check it against, so a frame that should read and does not is worth reporting. The other limits of the first beta stand: the camera is proven on a 3×3 and much less on the other sizes, the other eight languages are first drafts that no fluent reader has been through, and the packages are not signed with a Windows or Apple certificate, so SmartScreen and Gatekeeper will ask before they run; the GPG signatures, attestations and SBOMs are how to check them instead.
+
 ## [0.2.0-beta.1] - 2026-10-22
 
 Cubeulator now goes beyond the 3×3, and onto an iPhone. Choose *Another size of cube* and a 2×2 to 5×5 can be scanned with the camera, or typed in as a scramble or a colour at a time, then followed turn by turn on a 3D cube drawn at its size; the camera follows a bigger cube's turns as it does a 3×3, and the cube style in Settings applies at every size. What the camera misreads can be put right by hand on the colours screen, from the scan or from the solve screen, instead of scanning again. The scan finds a bigger cube's sides in more of the frames you show it, screens with the 3D cube come up about a third faster, the app carries its own type and has About and Licences screens, and the web version opens a phone's back camera and can switch cameras. There is a first build for an iPhone, outside the App Store, for the maintainer's registered devices. For developers, profiling can now be switched on in a shipped build without a recompile.
