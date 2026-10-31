@@ -70,6 +70,9 @@ concurrency:
 jobs:
   verify:
     name: Verify the release
+    # A tag the release bot pushed was made by a dispatched release (publish, below), which
+    # carries on in its own run: this one would build and upload everything a second time.
+    if: ${{ github.event_name != 'push' || github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-26.04
     permissions:
       # actions and checks: check_health.py reads the commit's workflow runs
@@ -843,7 +846,8 @@ jobs:
     permissions:
       # Make the tag (a dispatched release) and create the release. Nothing
       # else in this workflow can write to the repository, and this job holds
-      # neither the signing key nor the OIDC identity.
+      # neither the signing key nor the OIDC identity. It reads the release
+      # bot's key to make a token for the tag, which a dispatched release needs.
       contents: write
     steps:
       - name: Download the release files and notes
@@ -854,14 +858,27 @@ jobs:
 
       # A tag push already has its tag. A dispatched release makes it here, at
       # the end, on the commit that was built: a run that failed earlier leaves
-      # no tag behind. Made with the workflow's token, so it does not start a
-      # second run of this workflow.
+      # no tag behind. The `tags` ruleset lets only organisation admins and the
+      # release bot create a v* tag, so the workflow's own token cannot (HTTP 422,
+      # seen on the run for 0.2.0-beta.2), and the tag is made with a token of the
+      # release bot's, for this repository and the contents permission only. A tag
+      # that token pushes does start this workflow, and `verify` skips that run.
+      - name: Release bot token (dispatched release)
+        id: bot
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+
       - name: Make the tag (dispatched release)
         id: tag
         if: ${{ github.event_name == 'workflow_dispatch' }}
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot.outputs.token }}
           TAG: ${{ needs.verify.outputs.tag }}
           REPO: ${{ github.repository }}
         run: |

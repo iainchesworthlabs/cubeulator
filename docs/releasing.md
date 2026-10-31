@@ -283,7 +283,13 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
 
    or run the workflow by hand from `main` with `dry_run` unticked: it makes the
    tag itself, at the end, once everything has passed, so a failed run leaves
-   no tag behind. The workflow asks step 1's question again before it builds:
+   no tag behind. The `tags` ruleset lets only organisation admins and the
+   release bot create a `v*` tag, so the workflow makes it with a token of the
+   release bot's (the organisation secrets `RELEASE_BOT_APP_ID` and
+   `RELEASE_BOT_PRIVATE_KEY`, for this repository and the contents permission only).
+   A tag the bot pushes starts the workflow too, and `Verify the release` skips
+   that run, so the release is built and uploaded once. A pre-release may be run
+   by hand from `develop`; only a final release has to be on `main`. The workflow asks step 1's question again before it builds:
    of the `develop` tip the merge commit merged (its second parent: that is what
    was tested, and the merge commit's own runs have only just started).
 6. **Watch the `Release` workflow.** `Verify the release` is quick; the three
