@@ -3,3 +3,7 @@ mkdocs-material==9.7.7
 # Floor for a transitive dependency (mkdocs -> requests -> idna): the resolver
 # otherwise picks idna 3.9.0, which CVE-2026-45409 affects (fixed in 3.15).
 idna>=3.20
+# Floor for another transitive dependency (mkdocs -> requests -> certifi): the resolver
+# otherwise picks certifi 2026.7.22, which bundles emSign roots with compromised
+# intermediate CA keys (GHSA-6q48-6c7w-9gw2, PYSEC-2026-4320; fixed in 2026.10.18).
+certifi>=2026.10.18
