@@ -321,6 +321,7 @@ if(CUBEULATOR_BUILD_APP)
     add_executable(cube_qml_tests
         qml_test_main.cpp
         unit/bundled_fonts_test.cpp
+        unit/camera_permission_test.cpp
         unit/colours_screen_test.cpp
         unit/complete_screen_test.cpp
         unit/cube_view_reading_test.cpp

@@ -15,9 +15,20 @@ int CameraPermission::status() const {
     return status_;
 }
 
+int CameraPermission::statusOf(Qt::PermissionStatus status) {
+    switch (status) {
+        case Qt::PermissionStatus::Granted:
+            return kGranted;
+        case Qt::PermissionStatus::Denied:
+            return kDenied;
+        case Qt::PermissionStatus::Undetermined:
+            break;
+    }
+    return kUndetermined;
+}
+
 void CameraPermission::refreshStatus() {
-    const auto qt_status = qApp->checkPermission(QCameraPermission{});
-    const auto new_status = static_cast<int>(qt_status);
+    const auto new_status = statusOf(qApp->checkPermission(QCameraPermission{}));
     if (new_status != status_) {
         status_ = new_status;
         emit statusChanged();
@@ -26,7 +37,7 @@ void CameraPermission::refreshStatus() {
 
 void CameraPermission::request() {
     qApp->requestPermission(QCameraPermission{}, this, [this](const QPermission& permission) {
-        const auto new_status = static_cast<int>(permission.status());
+        const auto new_status = statusOf(permission.status());
         if (new_status != status_) {
             status_ = new_status;
             emit statusChanged();
