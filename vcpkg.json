@@ -20,20 +20,32 @@
         },
         "fs",
         "intrinsics",
-        "jpeg",
+        {
+          "name": "jpeg",
+          "platform": "!ios"
+        },
         {
           "name": "msmf",
           "platform": "windows & !uwp & !mingw"
         },
-        "png",
+        {
+          "name": "png",
+          "platform": "!ios"
+        },
         "quirc",
         "thread",
-        "tiff",
+        {
+          "name": "tiff",
+          "platform": "!ios"
+        },
         {
           "name": "v4l",
           "platform": "linux"
         },
-        "webp"
+        {
+          "name": "webp",
+          "platform": "!ios"
+        }
       ]
     },
     {
