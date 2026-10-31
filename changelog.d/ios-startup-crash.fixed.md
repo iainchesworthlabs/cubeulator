@@ -1,1 +1,0 @@
-**The iPhone app no longer closes as it opens.** The first TestFlight build crashed a moment after launch, when the 3D cube first drew: Qt and OpenCV each brought their own copy of the JPEG library into the app, and the two were mixed together. The iPhone app now uses only Qt's copy; OpenCV keeps its own image reading on iPhone and the other codecs it would add are left out.
