@@ -236,8 +236,13 @@ jobs:
             # A return address points after the call, so look one byte before it.
             args+=("$(printf '0x%x' $((0x100000000 + o - 1)))")
           done
-          xcrun atos -o "$bin" -arch arm64 -l 0x100000000 "${args[@]}" | paste -d' ' <(printf '%s
-' $OFFSETS) -
+          i=0
+          xcrun atos -o "$bin" -arch arm64 -l 0x100000000 "${args[@]}" | while IFS= read -r line; do
+            set -- $OFFSETS
+            shift "$i"
+            echo "$1 $line"
+            i=$((i + 1))
+          done
 
       # What the third-party inventory made of the link line (docs/licensing.md): the
       # components it found and what it could not place. The release's SBOM refuses a
