@@ -206,11 +206,11 @@ tools/tests only.
 | port | version | SPDX | ships | why / obligation |
 |---|---|---|---|---|
 | opencv4 | 4.14.0 | Apache-2.0 (port says `null`; the copyright file is Apache-2.0 plus SoftFloat and a CHI-table notice) | all (the browser build is smaller, see 2.5) | Apache: licence copy; keep the bundled notices in its copyright file. Features: calib3d, core, fs, intrinsics, jpeg, png, quirc, thread, tiff, webp, + dshow/msmf (W), v4l (L). `highgui`, `gtk` and `win32ui` are not requested (see the Linux-specific finding below) |
-| libjpeg-turbo | 3.2.0#1 | BSD-3-Clause (port); the file also carries the IJG licence | all | notice in docs |
-| libpng | 1.6.59 | libpng-2.0 | all | notice; no misrepresentation |
-| libspng | 0.7.4#1 | BSD-2-Clause | all | notice (OpenCV 4.14's PNG codec) |
-| tiff | 4.7.2 | libtiff | all | notice |
-| libwebp | 1.6.0#3 | BSD-3-Clause | all | notice |
+| libjpeg-turbo | 3.2.0#1 | BSD-3-Clause (port); the file also carries the IJG licence | all but iOS | notice in docs |
+| libpng | 1.6.59 | libpng-2.0 | all but iOS | notice; no misrepresentation |
+| libspng | 0.7.4#1 | BSD-2-Clause | all but iOS | notice (OpenCV 4.14's PNG codec) |
+| tiff | 4.7.2 | libtiff | all but iOS | notice |
+| libwebp | 1.6.0#3 | BSD-3-Clause | all but iOS | notice |
 | liblzma | 5.8.4 | 0BSD (liblzma) | all | none (0BSD); the copyright file notes LGPL getopt only for the CLI tools, which are not built |
 | zlib | 1.3.2#2 | Zlib | all | none for binaries beyond not misrepresenting |
 | quirc | 1.2 | ISC | all | notice |
@@ -254,7 +254,7 @@ Linux plan is now the table above: no GTK, GLib, Pango or X11 ports.
 | macOS | The `.dmg` (Apple Silicon) is built by CI and by the release workflow (`macos-clang-release`), and Qt's macOS SBOMs are read into the snapshot; the licence and `THIRD-PARTY-NOTICES.txt` are at the root of the disk image. Not run on a Mac by this paper. Mac App Store adds Apple's terms (section 4). |
 | Linux | No GTK3 chain: `opencv4[gtk]` is not requested (above). Qt is installed from `jurplel/install-qt-action` in CI, and the DEB and RPM carry it: the app, Qt, its plugins and QML modules and OpenCV sit in a private directory (`/usr/lib/cubeulator`), and the packages declare only system libraries as dependencies (`SHLIBDEPS` and `AUTOREQPROV` are off; `packaging/linux/Packaging.cmake`), so Qt's source and notice duty is the packager's, not a distribution's [I][L]. The licence and notices are in `/usr/share/doc/cubeulator/`. Qt's Linux SBOMs have not been read, so the Linux notices over-include. |
 | Android | Qt is shared (`.so` inside the APK/AAB) so LGPL relinking is mechanically possible [I]. The camera backend is a stub today. |
-| iOS | The app builds for an iPhone since 2026-10-21 (`docs/ios-signing.md`). Qt for iOS is normally linked statically [I - **not stated** in the Qt iOS documentation pages I read; Qt's own tracker has an open request to allow dynamic builds, QTBUG-85974]. |
+| iOS | The app builds for an iPhone since 2026-10-21 (`docs/ios-signing.md`). Qt for iOS is normally linked statically [I - **not stated** in the Qt iOS documentation pages I read; Qt's own tracker has an open request to allow dynamic builds, QTBUG-85974]. The app is linked with Qt's own libjpeg and libpng, which the Qt kit carries, and with none of vcpkg's image codecs: `vcpkg.json` leaves OpenCV's `jpeg`, `png`, `tiff` and `webp` features out on `ios`, because two copies of the same C library in one static link are mixed object by object, and the first TestFlight build crashed in `jpeg_start_decompress` when Qt's JPEG reader called into the other's structures. |
 | Web (WebAssembly) | One `.wasm` module with Qt linked in statically and nothing deployed beside it (no installer and no CPack package; a release ships the site as `Cubeulator-<version>-web.zip`, assembled by `packaging/web/make-package.sh` with `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt` beside it, and the script stops on an unresolved notice because no installer is there to refuse; the notices are also embedded in the module as a resource like every build's). From vcpkg it takes fmt and a smaller OpenCV: `vcpkg.json` asks for the `intrinsics` feature alone on `emscripten`, and `cmake/triplets/wasm32-emscripten-threads.cmake` builds only `core`, `imgproc`, `imgcodecs` and `videoio`, so none of the image-codec ports (libjpeg-turbo, libpng, tiff, libwebp, quirc, liblzma) is in it; zlib comes in as OpenCV's own dependency [V: `vcpkg.json`, port manifests]. It also carries the two Noto subsets (2.3) and, from Qt's WebAssembly kit, the DejaVu Fonts 2.37 face the browser build draws Latin, Hebrew and Arabic with (Bitstream-Vera licence [V: `QWasmIntegrationPlugin_Attribution_dejayvu` in the kit's `qtbase` SBOM]). That kit's SBOMs are in `qt-modules.json` (`web` is a verified platform), so the attribution is in the generated notices; see the known gaps in [section 6](#6-how-the-notices-are-produced). |
 
 ## 3. The Qt question
