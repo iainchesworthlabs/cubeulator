@@ -1,1 +1,0 @@
-**The Linux package starts on Ubuntu 24.04 and Debian 13 again.** The first beta was built on a newer system and asked for `acosf`, `atan2f` and `sqrtf` from glibc 2.43, so it did not start on either. The package is now built on Ubuntu 24.04 and checked against glibc 2.39 and the libstdc++ of GCC 14 before it is released.

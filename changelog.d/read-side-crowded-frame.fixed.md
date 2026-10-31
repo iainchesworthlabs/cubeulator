@@ -1,1 +1,0 @@
-**A camera frame full of noise no longer stalls the scan.** A noisy frame could make the side reader take tens of seconds on a large cube, because it tried to fit a grid through hundreds of speckles. It now gives up on a frame with far more sticker-sized shapes than a side can show, and goes on to the next one.
