@@ -19,12 +19,21 @@ class CameraPermission : public QObject {
     QML_ELEMENT
     QML_SINGLETON
 
-    // Mirrors Qt::PermissionStatus (Undetermined=0, Denied=1, Granted=2) so
-    // QML can compare against plain ints without importing anything extra.
+    // The answer as a plain int, so QML can compare without importing anything:
+    // 0 undetermined, 1 denied, 2 granted. These are this class's numbers, not
+    // Qt's: Qt::PermissionStatus counts Undetermined, Granted, Denied (0, 1, 2),
+    // so the two disagree on 1 and 2 and the value is made by statusOf().
     Q_PROPERTY(int status READ status NOTIFY statusChanged)
 
 public:
     explicit CameraPermission(QObject* parent = nullptr);
+
+    static constexpr int kUndetermined = 0;
+    static constexpr int kDenied = 1;
+    static constexpr int kGranted = 2;
+
+    // Qt's answer as the value `status` has for it.
+    [[nodiscard]] static int statusOf(Qt::PermissionStatus status);
 
     [[nodiscard]] int status() const;
 
