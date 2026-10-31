@@ -109,3 +109,26 @@ whatever happened.
 | The first step says the profile does not fit | Wrong App ID, expired, or it lists devices (it is an ad-hoc profile) |
 | Apple validation fails | The message is Apple's: the icon, the property list, the signature or a privacy declaration |
 | Apple refuses the upload because of the build number | A build with a higher number for this version already exists; run the release again |
+
+## Reading a TestFlight crash
+
+A crash log from a phone (Settings, Privacy & Security, Analytics & Improvements,
+Analytics Data, or Xcode's Organizer) names Apple's code and not this program's: the
+frames in the `Cubeulator` image are bare offsets, because the build that was uploaded
+keeps no symbols. To name them, rebuild the same commit and look the offsets up:
+
+```sh
+gh workflow run ios-device.yml --ref <branch or develop> -f offsets="17313132 15767592 ..."
+```
+
+The offsets are the `imageOffset` of the frames whose `imageIndex` is the `Cubeulator`
+image (`usedImages[0]`), in decimal, as the log has them. The run's step "Name the frames
+of a crash log" prints the UUID of its build, to compare with the log's `slice_uuid`, and one
+line per offset with the function. An equal UUID means the names are exact. A different one
+means the commit and branch stamped into the program differ: the code is the same, so the
+names are right for any frame in code that did not change, but check them against the
+source. Run it at the commit the crashed build was made from.
+
+An `EXC_BAD_ACCESS` in `_longjmp` is a `longjmp` through a jump buffer that was never set or
+was overwritten (libpng, libjpeg and Qt's rasterizer use them for errors): the frame that
+called it names which.

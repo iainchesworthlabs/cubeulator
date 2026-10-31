@@ -59,6 +59,14 @@ on:
       APPSTORE_API_PRIVATE_KEY:
         required: false
   workflow_dispatch:
+    inputs:
+      offsets:
+        description: >-
+          Image offsets (decimal, space separated) from a TestFlight crash log, frames of the
+          Cubeulator image: they are named from this build, and its UUID is shown to compare
+          with the crash's slice_uuid. Leave empty for an ordinary build.
+        type: string
+        default: ""
   # GitHub can dispatch a workflow only from the default branch, which a change to
   # this build reaches last, so a push to a branch of the iOS work runs it.
   # Branches with any other name do not cost a Mac.
@@ -208,6 +216,33 @@ jobs:
 
       - name: Build
         run: cmake --build --preset ios-device-release
+
+      # Names the frames of a crash log (docs/ios-signing.md, "Reading a TestFlight crash").
+      # A crash log of a build from the store has no symbol names for this program, and
+      # this build is the same code. The UUID has to equal the crash's slice_uuid for the
+      # offsets to be exact; when it does not, the names are still close, because the
+      # commit and branch name stamped in the program move data, not the code.
+      - name: Name the frames of a crash log
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.offsets != '' }}
+        env:
+          OFFSETS: ${{ inputs.offsets }}
+        run: |
+          set -euo pipefail
+          bin="build/ios-device-release/bin/Release/Cubeulator.app/Cubeulator"
+          [ -f "$bin" ] || { echo "::error::no $bin"; exit 1; }
+          echo "UUID of this build:"; xcrun dwarfdump --uuid "$bin"
+          args=()
+          for o in $OFFSETS; do
+            # A return address points after the call, so look one byte before it.
+            args+=("$(printf '0x%x' $((0x100000000 + o - 1)))")
+          done
+          i=0
+          xcrun atos -o "$bin" -arch arm64 -l 0x100000000 "${args[@]}" | while IFS= read -r line; do
+            set -- $OFFSETS
+            shift "$i"
+            echo "$1 $line"
+            i=$((i + 1))
+          done
 
       # What the third-party inventory made of the link line (docs/licensing.md): the
       # components it found and what it could not place. The release's SBOM refuses a
