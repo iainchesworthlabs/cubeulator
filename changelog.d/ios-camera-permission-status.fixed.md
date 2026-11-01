@@ -1,1 +1,0 @@
-**The iPhone app now goes on to scan once you allow the camera.** After you tapped Allow, the app kept saying "Camera access is off" with a Try again button, even though the camera was switched on in Settings: it read the answer the wrong way round. Allowing the camera now takes you to the scan, and refusing it shows the explanation.
