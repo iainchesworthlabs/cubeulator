@@ -16,9 +16,9 @@
 
 #include <QColor>
 #include <QPoint>
-#include <QRect>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QRect>
 #include <QSize>
 
 #include <algorithm>
