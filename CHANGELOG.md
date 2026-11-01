@@ -12,6 +12,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0-beta.4] - 2026-11-01
+
+Another build for the iPhone. With Borderlands Cel-Shading chosen, the 3D cube no longer sits on a pale square.
+
+### Fixed
+
+- **Borderlands Cel-Shading no longer draws a lighter square behind the cube.** With that look chosen, the 3D cube sat on a pale square with soft edges, in the home screen and wherever else the cube is shown, instead of on the page itself. The cube is now drawn on the page again, with the halftone dots and the dark edges still in place.
+
+> **Pre-release.** The iPhone build opens and takes you to the scan once the camera is allowed. The scan itself, the camera's colours and the 3D cube's other looks have not been tried on a phone by anyone but the author, and the cel-shading fix has been checked on a desktop and by tests, not yet on a phone, so the first scan is a test (see [Installing on an iPhone](docs/ios-install.md)). The packages are not signed with a Windows or Apple certificate, so SmartScreen and Gatekeeper will ask before they run; the GPG signatures, attestations and SBOMs are how to check them instead.
+
 ## [0.2.0-beta.3] - 2026-11-01
 
 A second build for the iPhone, after the first one on TestFlight closed as it opened and the next did not go on to scan once the camera was allowed. Allowing the camera now takes you to the scan.
