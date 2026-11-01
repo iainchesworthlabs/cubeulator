@@ -1,0 +1,1 @@
+**Borderlands Cel-Shading no longer draws a lighter square behind the cube.** With that look chosen, the 3D cube sat on a pale square with soft edges, in the home screen and wherever else the cube is shown, instead of on the page itself. The cube is now drawn on the page again, with the halftone dots and the dark edges still in place.

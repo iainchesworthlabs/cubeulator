@@ -612,13 +612,19 @@ Item {
         camera: camera
 
         environment: ExtendedSceneEnvironment {
-            backgroundMode: SceneEnvironment.Transparent
+            // Cleared to a transparent colour and not backgroundMode Transparent:
+            // with the cel style's post pass in the chain, Transparent left the
+            // whole view a lighter square of the page (a panel with soft edges
+            // behind the cube), and a clear to (0, 0, 0, 0) does not. The two
+            // draw the same without a post pass.
+            backgroundMode: SceneEnvironment.Color
+            clearColor: "transparent"
             antialiasingMode: SceneEnvironment.MSAA
             antialiasingQuality: SceneEnvironment.High
 
             // Physically-Based Realism's environment reflections: a small
-            // procedural sky used purely as a light probe (backgroundMode
-            // stays Transparent, so it's never actually painted as a visible
+            // procedural sky used purely as a light probe (the background
+            // stays transparent, so it's never actually painted as a visible
             // sky) - a real photographed HDRI would look better but there
             // isn't one in the repo's assets yet.
             //
@@ -643,6 +649,9 @@ Item {
             // even though the other two styles don't use either property.
             vignetteEnabled: root.shaderStyle === 2
             vignetteStrength: 10
+            // Black: the default is grey, which tinted the corners of the view over the
+            // page (nothing is drawn there) and darkens nothing.
+            vignetteColor: "black"
             effects: root.shaderStyle === 2 ? [celShadePost] : []
         }
 

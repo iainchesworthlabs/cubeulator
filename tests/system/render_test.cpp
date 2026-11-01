@@ -15,8 +15,10 @@
 #include <catch2/generators/catch_generators.hpp>
 
 #include <QColor>
+#include <QPoint>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QRect>
 #include <QSize>
 
 #include <algorithm>
@@ -25,6 +27,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -149,6 +152,50 @@ TEST_CASE("the 3D cube on the launch screen is drawn, in colour, and moves", "[s
         }
     }
     CHECK(moved > 100);
+}
+
+TEST_CASE("the page shows through round the 3D cube in every style", "[system][render]") {
+    // The cel style's post pass once made the whole box of the view a lighter square of the
+    // page, with soft edges, behind the cube. Inside the box, at the middle of each of its
+    // edges (where the cube is not), the page is what is just outside it.
+    const int style = GENERATE(0, 1, 2);
+    INFO("shaderStyleIndex " << style);
+    App& app = App::fresh(App::Start::launch, App::Scene3D::full);
+    app.settings_state().setProperty("shaderStyleIndex", style);
+    app.settings_state().setProperty("cubeAutoRotate", false);
+    app.settle();
+
+    QQuickItem* cube = find_cube(app);
+    REQUIRE(cube != nullptr);
+    const QImage image = app.grab();
+    const QRect box = device_box(image, cube);
+    REQUIRE(box.width() > 100);
+
+    constexpr int kIn = 4;
+    constexpr int kOut = 8;
+    constexpr int kTolerance = 12;
+    const QPoint centre = box.center();
+    // {inside, outside} at the middles of the top, bottom, left and right edges.
+    const std::vector<std::pair<QPoint, QPoint>> pairs = {
+        {{centre.x(), box.top() + kIn}, {centre.x(), box.top() - kOut}},
+        {{centre.x(), box.bottom() - kIn}, {centre.x(), box.bottom() + kOut}},
+        {{box.left() + kIn, centre.y()}, {box.left() - kOut, centre.y()}},
+        {{box.right() - kIn, centre.y()}, {box.right() + kOut, centre.y()}}};
+    int compared = 0;
+    for (const auto& [inside, outside] : pairs) {
+        if (!image.rect().contains(inside) || !image.rect().contains(outside)) {
+            continue;
+        }
+        ++compared;
+        const QColor in = image.pixelColor(inside);
+        const QColor out = image.pixelColor(outside);
+        const int delta = std::abs(in.red() - out.red()) + std::abs(in.green() - out.green()) +
+                          std::abs(in.blue() - out.blue());
+        INFO("at " << inside.x() << "," << inside.y() << ": inside " << in.name().toStdString()
+                   << ", outside " << out.name().toStdString());
+        CHECK(delta <= kTolerance);
+    }
+    CHECK(compared >= 2);
 }
 
 TEST_CASE("the 3D cube is drawn in the narrow layout and in the dark theme too",

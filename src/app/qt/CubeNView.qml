@@ -343,13 +343,16 @@ Item {
         }
         ExtendedSceneEnvironment {
             id: celEnvironment
-            backgroundMode: SceneEnvironment.Transparent
+            // Cleared to a transparent colour: Cube3DView.qml says why.
+            backgroundMode: SceneEnvironment.Color
+            clearColor: "transparent"
             antialiasingMode: SceneEnvironment.MSAA
             antialiasingQuality: SceneEnvironment.High
             lightProbe: sky
             probeExposure: root.evenLight ? 0.35 : 1.0
             vignetteEnabled: true
             vignetteStrength: 10
+            vignetteColor: "black"
             effects: [celShadePost]
         }
         Effect {
