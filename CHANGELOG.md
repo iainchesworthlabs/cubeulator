@@ -12,6 +12,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0-beta.3] - 2026-11-01
+
+A second build for the iPhone, after the first one on TestFlight closed as it opened and the next did not go on to scan once the camera was allowed. Allowing the camera now takes you to the scan.
+
+### Fixed
+
+- **The iPhone app now goes on to scan once you allow the camera.** After you tapped Allow, the app kept saying "Camera access is off" with a Try again button, even though the camera was switched on in Settings: it read the answer the wrong way round. Allowing the camera now takes you to the scan, and refusing it shows the explanation.
+
+> **Pre-release.** The iPhone build opens, and its camera has not yet been seen to run on a phone: the fix for the permission screen has been checked by tests and not on a phone, and the scan, the camera's colours and the 3D cube are untried there, so the first scan is a test (see [Installing on an iPhone](docs/ios-install.md)). The packages are not signed with a Windows or Apple certificate, so SmartScreen and Gatekeeper will ask before they run; the GPG signatures, attestations and SBOMs are how to check them instead.
+
 ## [0.2.0-beta.2] - 2026-10-31
 
 The iPhone app now goes to TestFlight for the maintainer's internal testers, and the scan screen marks a corner when it sees one. The colours screen can turn a side that was read the wrong way up back for you, and looks round the cube on a wide screen. The Linux package starts again on Ubuntu 24.04 and Debian 13, the camera stays on a cube whose colours you corrected, and a noisy camera frame no longer stalls the scan. The About screen now says version 3 of the GPL.
