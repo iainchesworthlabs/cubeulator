@@ -72,7 +72,7 @@ project(Cubeulator
 # named for the version - the packages, the version resource, version.hpp's
 # version_string - uses CUBEULATOR_VERSION_FULL, so a beta is never a package
 # called by the final's name.
-set(CUBEULATOR_VERSION_PRERELEASE "beta.3")
+set(CUBEULATOR_VERSION_PRERELEASE "beta.4")
 set(CUBEULATOR_VERSION_FULL "${PROJECT_VERSION}")
 if(NOT CUBEULATOR_VERSION_PRERELEASE STREQUAL "")
     if(NOT CUBEULATOR_VERSION_PRERELEASE MATCHES "^(alpha|beta|rc)\\.[1-9][0-9]*$")
