@@ -91,7 +91,7 @@ jobs:
       # ecosystem for /ci keeps the pin current. The wheel is ~1.5 MB and
       # needs no root.
       - name: Install uv
-        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       - name: Install clang-format (pinned)
         run: |
@@ -172,7 +172,7 @@ jobs:
 
       - name: Install CMake 4 + Ninja
         if: ${{ needs.plan.outputs.code == 'true' }}
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -406,7 +406,7 @@ jobs:
 
       - name: Install CMake 4 + Ninja
         if: ${{ needs.plan.outputs.code == 'true' }}
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -510,7 +510,7 @@ jobs:
       # compiling Qt from source. Sets QT_ROOT_DIR for find_package(Qt6).
       - name: Install Qt (prebuilt)
         if: ${{ needs.plan.outputs.code == 'true' }}
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.12.0"
           # Windows only. Qt 6.11+ moved the Windows kits into per-architecture
@@ -727,7 +727,7 @@ jobs:
           cache-key-suffix: arm64-android
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -742,7 +742,7 @@ jobs:
       # ONLY, which would otherwise hide both Qt kits and vcpkg's install
       # tree from find_package() (confirmed locally on windows-msvc/android).
       - name: Install Qt (prebuilt, Android)
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.12.0"
           target: android
@@ -1037,7 +1037,7 @@ jobs:
           cache-key-suffix: arm64-ios
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -1094,7 +1094,7 @@ jobs:
           cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -1120,7 +1120,7 @@ jobs:
       # The Qt the app ships on: the build legs' version and action pin, so the
       # system tests run the Qt that users run, and share the legs' Qt cache.
       - name: Install Qt (prebuilt)
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.12.0"
           modules: "qtquick3d qtshadertools"
@@ -1238,7 +1238,7 @@ jobs:
 
       - name: Install CMake 4 + Ninja
         if: ${{ needs.plan.outputs.code == 'true' }}
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -1351,7 +1351,7 @@ jobs:
           cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
