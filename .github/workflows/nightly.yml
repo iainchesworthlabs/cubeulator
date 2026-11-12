@@ -141,12 +141,12 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -201,7 +201,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
   sanitizers-app:
     name: Sanitizers - ASan + UBSan (app)
@@ -226,12 +226,12 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -249,7 +249,7 @@ jobs:
           libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxcb-xinput0
 
       - name: Install Qt (prebuilt)
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.12.0"
           modules: "qtquick3d qtshadertools"
@@ -298,7 +298,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
   clang-tidy-app:
     name: clang-tidy over the app
@@ -318,12 +318,12 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -340,7 +340,7 @@ jobs:
         run: bash ci/install-llvm.sh 23 clang-23 clang-tidy-23 libclang-rt-23-dev
 
       - name: Install Qt (prebuilt)
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.12.0"
           modules: "qtquick3d qtshadertools"
@@ -398,7 +398,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
   report:
     name: Report
