@@ -112,7 +112,7 @@ jobs:
       - name: Import the certificate and the provisioning profile
         id: signing
         if: env.SIGNED == 'true'
-        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           certificate-base64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
           certificate-password: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
@@ -156,12 +156,12 @@ jobs:
           echo "using $xcode"
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           cache-key-suffix: arm64-ios
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -171,7 +171,7 @@ jobs:
       # qmlcachegen, shader baking). The aqtinstall pin is the Windows leg's: the
       # last release predates the Qt 6.11+ repository layout.
       - name: Install Qt (iOS kit and macOS host kit)
-        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
+        uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
         with:
           version: "6.12.0"
           host: mac
@@ -274,7 +274,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() && (inputs.save_cache == true || github.workflow == 'iOS device build') }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
 
       # The built application, opened as a user's device would: identifier,
       # version, the camera text, the icon, arm64, nothing linked outside the
@@ -311,7 +311,7 @@ jobs:
       - name: Archive and export the IPA
         id: export
         if: env.SIGNED == 'true'
-        uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/export-ios-ipa@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           project: ${{ steps.ipa.outputs.project }}
           scheme: cube_app
@@ -332,7 +332,7 @@ jobs:
       # privacy declarations; and, for a release, the upload to TestFlight.
       - name: Validate with Apple, and upload to TestFlight
         if: env.SIGNED == 'true'
-        uses: iainchesworthlabs/icl-common-infra/actions/upload-testflight@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/upload-testflight@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           ipa: ${{ steps.export.outputs.ipa }}
           key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
@@ -370,6 +370,6 @@ jobs:
       # runner.
       - name: Remove the signing keychain and the provisioning profile
         if: ${{ always() && env.SIGNED == 'true' }}
-        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/import-ios-signing@c412e6a542644c2316d21db351ef4218fa3e185d # v0.1.19
         with:
           remove: "true"
