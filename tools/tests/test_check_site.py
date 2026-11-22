@@ -233,6 +233,11 @@ class PagesCheck(unittest.TestCase):
         self.assertEqual([p for p in problems if "has a <script>" in p or "example.org/x" in p], [])
         self.assertTrue(any("example.org/a.png" in p for p in problems))
 
+    def test_the_guide_must_not_carry_the_repository_widget(self) -> None:
+        (self.site / "guide" / "scan" / "index.html").write_text(
+            MATERIAL.format(body='<div data-md-component="source"></div>'), encoding="utf-8")
+        self.assertTrue(any("api.github.com" in p for p in pages_check.check_site(self.site, self.root)))
+
     def test_the_news_page_must_name_the_newest_release(self) -> None:
         (self.root / "CHANGELOG.md").write_text("## [Unreleased]\n\n## [1.2.3] - 2026-01-02\n\n## [1.2.2] - 2026-01-01\n", encoding="utf-8")
         self.assertEqual(pages_check.newest_release(self.root), "1.2.3")

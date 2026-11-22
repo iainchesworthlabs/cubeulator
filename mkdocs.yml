@@ -68,13 +68,10 @@ theme:
   name: material
   custom_dir: tools/docs/theme  # the Cubeulator pages (marketing.html) and the guide's colours; see tools/docs/site_shell_hook.py
   font: false  # no web font: the site loads nothing from other sites
-  # Light and dark follow the device (there is no switch); docs/assets/guide.css sets Material's colours from the palette
-  # in docs/theme.css. Two palettes, so that the guide's light and dark pictures (#only-light, #only-dark) both work.
+  # One palette. Dark follows the device through docs/assets/guide.css: with two palettes Material would remember the first
+  # one it chose and keep it when the device setting changed.
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
+    scheme: default
   features:
     - navigation.sections
     - navigation.footer  # previous and next page

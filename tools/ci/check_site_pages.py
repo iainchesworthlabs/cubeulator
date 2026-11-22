@@ -77,6 +77,7 @@ class Page(HTMLParser):
         self.ids: set[str] = set()
         self.refs: list[tuple[str, str, str]] = []  # (tag, attribute, value)
         self.scripts: list[str] = []  # the type of each <script>
+        self.source_widget = False
         self.styles = 0
         self.style_attrs = 0
         self.images: list[dict[str, str | None]] = []  # src, alt (None when absent), width, height of each <img>
@@ -100,6 +101,8 @@ class Page(HTMLParser):
             self.style_attrs += 1
         if "class" in a and "md-container" in a["class"].split():
             self.material = True
+        if a.get("data-md-component") == "source":
+            self.source_widget = True
         if "id" in a:
             self.ids.add(a["id"])
         if tag == "a" and a.get("name"):
@@ -253,6 +256,9 @@ def check_site(site: Path, root: Path) -> list[str]:
                     problems.append(f"{where}: has a <script>; the Cubeulator pages are script-free (a preview blocks scripts)")
             if page.styles or page.style_attrs:
                 problems.append(f"{where}: has <style> or a style= attribute; put it in docs/assets/cubeulator.css")
+        if page.material and page.source_widget:
+            problems.append(f"{where}: has Material's repository widget, whose script asks api.github.com for the stars; "
+                            "keep tools/docs/theme/partials/source.html empty")
         problems.extend(check_images(site, path, page))
         hosts = ALLOWED_HOSTS if ours else GUIDE_HOSTS
         for tag, attribute, value in page.refs:
