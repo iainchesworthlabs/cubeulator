@@ -2113,9 +2113,9 @@ In your hands.</source>
         <translation>װערסיע %1</translation>
     </message>
     <message id="about.what">
-        <source>A camera-driven solver for the 3x3 cube.</source>
+        <source>A camera-driven cube solver.</source>
         <extracomment>One-line description.</extracomment>
-        <translation>אַ קאַמערע־געטריבענער לײזער פֿאַר דער 3x3 קוביע.</translation>
+        <translation>אַ קאַמערע־געטריבענער לײזער פֿאַר קוביעס.</translation>
     </message>
     <message id="about.author">
         <source>Made by %1.</source>

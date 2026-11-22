@@ -2113,9 +2113,9 @@ En tus manos.</translation>
         <translation>Versión %1</translation>
     </message>
     <message id="about.what">
-        <source>A camera-driven solver for the 3x3 cube.</source>
+        <source>A camera-driven cube solver.</source>
         <extracomment>One-line description.</extracomment>
-        <translation>Un resolutor con cámara para el cubo 3x3.</translation>
+        <translation>Un resolutor con cámara para cubos.</translation>
     </message>
     <message id="about.author">
         <source>Made by %1.</source>

@@ -2149,9 +2149,9 @@ In your hands.</source>
         <translation>الإصدار %1</translation>
     </message>
     <message id="about.what">
-        <source>A camera-driven solver for the 3x3 cube.</source>
+        <source>A camera-driven cube solver.</source>
         <extracomment>One-line description.</extracomment>
-        <translation>حلّال للمكعب 3x3 يعمل بالكاميرا.</translation>
+        <translation>حلّال للمكعبات يعمل بالكاميرا.</translation>
     </message>
     <message id="about.author">
         <source>Made by %1.</source>
