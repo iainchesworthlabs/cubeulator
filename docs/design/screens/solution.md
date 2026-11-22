@@ -1,5 +1,15 @@
 # The solution
 
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Built, as `SolutionScreen.qml`, opened from
+> **Review the solution** on Complete and from a finished entry in History, for
+> a cube of any size from 2×2 to 5×5. Where it differs from this page is under
+> [Built](#built): two layout classes, not three; the cube is looked at and not
+> handled; and Esc and the back key go back. Reduced motion and notation are
+> properties of the screen that nothing sets, because the app has neither
+> setting, so the screen always plays at full motion and never shows notation.
+> Its `objectName`s are the table's.
+
 Lane: experience, drawing the solve lane's cube. This is what the
 **Review the solution** button opens (`SolutionScreen.qml`; what is built
 and what waits for another lane is under [Built](#built)).

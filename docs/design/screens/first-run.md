@@ -1,7 +1,10 @@
 # First run
 
-> **Status in 0.1.0-beta.1:** Not built. There is no first-run screen and no
-> setting that remembers one was shown: the app opens on Home every time.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Not built. There is no first-run screen and no
+> setting that remembers one was shown: the app opens on Home every time. The
+> `firstRun.*` strings are in `strings.json` and nothing in the QML asks for
+> them.
 
 Lane: experience. New.
 

@@ -1,13 +1,19 @@
 # Screen specs
 
-> **Status in 0.1.0-beta.1:** These are specifications, not descriptions of
-> the app. The app has six screens, all of them the legacy ones in
-> `src/app/qt`, not the kit's: Home, Permission, Scan, Solve, Complete and
-> Settings are each partly what their spec says, The solution and History are
-> built (`SolutionScreen.qml`, `HistoryScreen.qml`), and First run, Review and
-> hand entry, Licences, Privacy and Help are not built (About is a
-> placeholder dialog). Each page opens with its own status, and the table at
-> the foot says it at a glance.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** These are specifications, not descriptions of the
+> app. The app has twelve screens, all of them in `src/app/qt` (`Main.qml`
+> routes between them), and none of them built from the kit's components (see
+> [system.md](../system.md)). **Built:** the solution (`SolutionScreen.qml`),
+> History (`HistoryScreen.qml`), Licences (`LicencesScreen.qml`) and *Another
+> size of cube* (`EntryScreen.qml`, specified in
+> [review.md](review.md#a-cube-of-another-size), a screen of its own). **Partly
+> built:** Home, Permission, Scan, the colours screen (Review and hand entry),
+> Solve, Complete, Settings and About. **Not built:** First run, Privacy and
+> Help. Each page opens with its own status, and the table at the foot says it
+> at a glance. A screen's `objectName`s are the spec's only where its page says
+> so: Home's are `launch.*`, the colours screen's `colours.*`, and the scan and
+> solve screens have a few of theirs.
 
 One file per screen. Each follows the same order:
 
@@ -40,19 +46,20 @@ The prototype (`../prototype/cubeulator-prototype.html`) draws every state
 in every size class. Where the prototype and a spec disagree, the spec
 wins and the prototype is wrong.
 
-| screen | file | lane | in 0.1.0-beta.1 |
+| screen | file | lane | in 0.2.0-beta.4 |
 |---|---|---|---|
-| Home | [home.md](home.md) | experience | Partly: `LaunchScreen.qml` |
+| Home | [home.md](home.md) | experience | Partly: `LaunchScreen.qml` (`launch.*`). Scan a cube, Another size of cube, History, a language button and Settings; no Enter colours by hand, Help, unfinished-solve card or camera notices |
 | First run | [first-run.md](first-run.md) | experience | Not built |
-| Permission | [permission.md](permission.md) | experience | Partly: `PermissionScreen.qml`, phones only |
-| Scan | [scan.md](scan.md) | scan (proposal) | Partly: `DirectScanScreen.qml` |
-| Review and hand entry | [review.md](review.md) | scan (proposal) | Not built |
-| Solve | [solve.md](solve.md) | solve (proposal) | Partly: `SolveScreen.qml` |
-| Complete | [complete.md](complete.md) | solve; chrome by experience | Partly: `CompleteScreen.qml` |
-| The solution | [solution.md](solution.md) | experience | Built, as `SolutionScreen.qml` |
+| Permission | [permission.md](permission.md) | experience | Partly: `PermissionScreen.qml`, on phones only (an iPhone reaches a scan from it; Android has no camera backend yet). Desktops, macOS included, and the browser never show it |
+| Scan | [scan.md](scan.md) | scan (proposal) | Partly: `DirectScanScreen.qml`. Dots, corner dots, the status panel, six chips, size buttons, **Check the colours**, **Switch camera**, **Try again**; no dialogs, More sheet, camera picker, stuck hint or hand entry |
+| Review and hand entry | [review.md](review.md) | scan (proposal) | Partly: `ColoursScreen.qml` (`colours.*`), which is the colours screen of 2×2 to 5×5 by hand, and of a misread scan put right. The 3x3 sketch's own states (`review.working`, `review.solve-failed`), its keyboard map and the unfolded overview are not built |
+| Another size of cube | [review.md](review.md#a-cube-of-another-size) | experience | Built: `EntryScreen.qml` (`entry.*`), from Home; it has no state in [journey.md](../journey.md) |
+| Solve | [solve.md](solve.md) | solve (proposal) | Partly: `SolveScreen.qml`. Stepping, the three methods, the camera following the turns, **Check the colours**, **Out of step? Rescan**; no hold step, pause menu, stage check, timer mode or 96-high buttons |
+| Complete | [complete.md](complete.md) | solve; chrome by experience | Partly: `CompleteScreen.qml`. No Done, no **My cube is not solved** |
+| The solution | [solution.md](solution.md) | experience | Built, as `SolutionScreen.qml`, for a cube of any size from 2×2 to 5×5 |
 | History | [history.md](history.md) | experience | Built, as `HistoryScreen.qml` |
-| Settings | [settings.md](settings.md) | experience | Partly: `SettingsScreen.qml` |
-| About | [about.md](about.md) | experience | A placeholder dialog |
-| Licences | [licences.md](licences.md) | experience | Not built (the notices are generated and ship in the packages) |
+| Settings | [settings.md](settings.md) | experience | Partly: `SettingsScreen.qml`. Camera, method, theme, language, history, About (desktop and browser) and the developer rows; no marks, text size, motion, sound, notation or Help |
+| About | [about.md](about.md) | experience | Partly: `AboutScreen.qml`, on desktop and in the browser (not on phones). No icon, Privacy row, build line or Copy details |
+| Licences | [licences.md](licences.md) | experience | Built, as `LicencesScreen.qml`, from the notices the build generates |
 | Privacy | [privacy.md](privacy.md) | experience | Not built |
 | Help | [help.md](help.md) | experience | Not built |

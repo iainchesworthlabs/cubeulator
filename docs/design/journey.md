@@ -1,14 +1,24 @@
 # Journey
 
-> **Status in 0.1.0-beta.1:** This is the journey the design describes, not
-> the one the app has. The app has the six screens of `Main.qml`: launch,
-> permission (phones only), scan, solve, complete and settings, joined by
-> `AppState.qml`. First run, review, solution, history, about, licences,
-> privacy and help do not exist, so every arrow into them below is unbuilt,
-> as are the back stack and Esc, the interruption handling and
-> `home.resume`. What the app does have is a short loop: scan goes to solve
-> by itself, solve goes to complete on **Finish** or back to scan on
-> **Rescan**, and complete goes to scan again.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** This is the journey the design describes, not the
+> one the app has. The app has the twelve screens of `Main.qml`: launch, entry
+> (*Another size of cube*), colours, permission (phones only), scan, solve,
+> complete, solution, history, settings, about and licences, joined by
+> `AppState.qml`. First run, privacy and help do not exist, so every arrow into
+> them below is unbuilt, as are the back stack, `home.resume`, the hold step
+> (`solve.hold`) and the interruption handling (nothing reacts to the app going
+> to the background, and a solve is kept only in History). Hand entry has no
+> button of its own on Home: it is reached through *Another size of cube*, then
+> *Enter the colours*, at any size from 2×2 to 5×5. What the app does have: scan
+> goes to solve by itself, or to the colours screen to put right what the camera
+> misread; solve goes to complete on **Finish**, to the colours screen on
+> **Check the colours**, or back to scan on **Rescan**; complete goes to the
+> solution or to scan again; History opens a finished solve's solution, or
+> carries an unfinished one on at its turn. Back goes to a place each screen
+> knows (settings, about and the solution return to where they were opened
+> from), and Esc does the same on About, Licences, History, the solution, the
+> colours screen and *Another size of cube*, and on no other screen.
 
 Every screen, every state of it, how each is entered and left, and what
 "back" does. Each state has an id of the form `screen.state`. **The ids are
@@ -114,7 +124,7 @@ Lane: experience. Spec: `screens/home.md`.
 | `home.default` | A camera is available; nothing unfinished | **Scan a cube** > `permission.ask` or `scan.starting`. **Enter colours by hand** > `review.empty`. **History** > `history.*`. **Help** > `help.topics`. **Settings** > `settings.main` |
 | `home.finding-camera` | Desktop, at start-up, while cameras are being listed | As `home.default`; becomes `home.default` or `home.no-camera` by itself |
 | `home.no-camera` | Desktop; no camera was found | **Look again** > `home.finding-camera`. **Enter colours by hand** (now the primary action) > `review.empty`. Scan is shown disabled, with the reason |
-| `home.camera-unsupported` | This build cannot use this device's camera: every phone until mobile capture exists | **Enter colours by hand** is the primary action. No scan control is shown, because nothing the person does would enable it |
+| `home.camera-unsupported` | This build cannot use this device's camera: a phone whose build has no camera backend (an iPhone has one since 0.2.0-beta.1; Android does not yet) | **Enter colours by hand** is the primary action. No scan control is shown, because nothing the person does would enable it |
 | `home.resume` | An unfinished solve is stored. Combines with any state above | **Carry on** > `solve.hold-resume`. **Discard** > `home.confirm-discard` |
 | `home.confirm-discard` | Dialog over `home.resume` | **Keep it** > `home.resume`. **Discard** > the state beneath, without the card |
 

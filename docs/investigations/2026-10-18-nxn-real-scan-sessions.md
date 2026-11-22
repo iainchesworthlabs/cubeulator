@@ -10,6 +10,16 @@ next?
 (`src/app/qt/controllers/direct_scan.cpp`), read against every recorded session
 on the machine.
 
+> **Status at 0.2.0-beta.4**, read off the tree: R1's floor of
+> `max(1, (size * size) / 8)` was measured and not taken (the comment on
+> `most_stickers_unlike_in_one_side` in `src/lib/src/vision/direct_scan.cpp`
+> says it cost more verdicts than it won, and the function still returns
+> `(size * size) / 8`); R6 landed (the web camera's frame is 960 wide:
+> `MAX_FRAME_WIDTH` in `src/app/platform/web/camera_web.js` and `kFrameCapacity`
+> in `camera_web.cpp`); R0 has not (`kAnalysisWidth` in
+> `src/lib/include/cube/vision/recording_v2.hpp` is still 640). R2 to R5, R7 and
+> R8 were not checked. The line numbers below are as of 2026-10-18.
+
 ## The sessions
 
 65 sessions of a real cube, recorded on the evenings of 2026-10-17 and 2026-10-18

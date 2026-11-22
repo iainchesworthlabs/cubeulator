@@ -18,7 +18,7 @@ It is switched live, with no restart:
 | Where | What it does |
 | --- | --- |
 | **Settings > Developer > Write diagnostics to a file** | Starts and stops the channel. While it is on, every screen shows a strip at its lower left that says so, and where the file is. |
-| **Ctrl+Shift+D** (desktop) | The same switch, from any screen. |
+| **Ctrl+Shift+D** (desktop; on a Mac, where Qt maps Ctrl to Command, ⌘+Shift+D) | The same switch, from any screen. |
 | **Settings > Developer > Snapshot now**, **Ctrl+Shift+S** | Writes the whole current scan and solve as one record. See [Snapshot](#snapshot-now). |
 | `CUBE_DIAGNOSTICS=1` | Sets the state the app *starts* in (`1`, `true`, `on` or `yes`). After that the switch above is the one in charge: set to `1` and the app still stops writing when you turn it off. |
 
@@ -102,7 +102,8 @@ into a manifest.
 **`session`** - the channel's own events. `data.event` is `on`, `off`,
 `snapshot` (a snapshot taken with the channel off), `frames_on` or
 `frames_off`. `on` and `snapshot` also carry `pid`, `version`, `commit`,
-`build_target`, `directory` and `frames`, so a file says who wrote it.
+`build_target`, `directory` and `frames`, so a file says who wrote it;
+`frames_on` and `frames_off` carry `frames_root`, the folder frames go to.
 
 **`scan`** - one evaluation of the scan, written when its outcome *changed*
 (a new side captured, a different naming, a different assembly path, a
@@ -113,11 +114,12 @@ the evaluations that agreed with the one before. `trigger` is `sides_changed`,
 | Member | Meaning |
 | --- | --- |
 | `groups`, `captured`, `corner_reads` | Groups of reads so far (strays included), those with enough reads to be a side, and corner reads kept. |
+| `size` | The cube's side length. Written only when it is not 3, so a 3x3's record is what it always was; `result` is then the cube of that size. |
 | `sides` | The captured sides, at most six, in the order they were handed to colour naming (most reads first). Each: `first_seen` (its place in the order sides were first shown), `reads`, `lab` (nine fused colours, laid out as the side was *first* seen), `roll` (quarter-turns from that layout to how it was last shown), `in_view`. |
 | `white` | The light the sides were named in, read from the cube's own white centre: `side` (an index into `sides`), `cast` (that centre's chroma: 3 to 5 by daylight, about 18 under tungsten, 29 under a warm-white LED) and `gain` (the linear red, green, blue factors that took the light out; all 1 when the cast is under `kMinCorrectedCast`, 8). `null` until six sides are in and when none was plausibly white, in which case the colours were named as measured. |
 | `naming` | How the 54 colours were named - the next table. `null` until six sides are in; `{"error": ...}` if naming failed. |
 | `assembly` | How the cube was put together - the table after. `null` when there was no naming. |
-| `result` | `{"ok": true, "state", "colours"}` with the cube and what each colour measured in the session, or `{"ok": false, "error"}`. |
+| `result` | `{"ok": true, "state", "colours", "cast"}` with the cube, what each colour measured in the session and the white centre's chroma (`cast`, 0 when no white could be told), or `{"ok": false, "error"}`. |
 
 `naming`, from `resolve_colors_explained`:
 
@@ -146,9 +148,10 @@ lightness floor: `unknown`), `neutral_white`, `warm_cast_white` or `hue_band`.
 
 **`camera`** - the camera and its photometry lock. `data.event` is
 `opened_lock_requested`, `opened_lock_refused`, `lock_reported`,
-`lock_timed_out`, `open_failed` or `stopped`; each carries `device`,
-`frame_width`, `frame_height`, `awaiting_lock`, `photometry_control_supported`
-and `lock`: what the driver accepted, or `null` before it reported.
+`lock_timed_out`, `open_failed` or `stopped`; each carries `device`, `running`,
+`watching`, `frame_width`, `frame_height`, `awaiting_lock`,
+`photometry_control_supported` and `lock`: what the driver accepted, or `null`
+before it reported (and `error`, when the camera would not open).
 
 ```json
 {"platform_supported":true,"exposure_locked":true,"fully_applied":true,
@@ -181,16 +184,18 @@ the solution expects), `shown_hold` and `verdict_hold` (`up`, `front`), `seen`,
 `turned_instead`, `stickers_found`, the nine `found` flags and `lab` of the
 read, and `as_it_stood` / `after_move` - each the Lab `distance` of the side in
 view from the cube as it stood, and after the move, and how many stickers
-(`stickers_off`) plainly disagree.
+(`stickers_off`) plainly disagree. That is the 3x3's record. For a cube bigger
+than a 3x3 the record is shorter: `verdict`, `size`, `move_index`, `shown_hold`,
+`verdict_hold`, `seen`, `turned_instead` and `stickers_found`, with no `asked`,
+`found`, `lab`, `as_it_stood` or `after_move`.
 
 **`solve`** - when a solution lands (`event: "solution"`) and on every step
 (`event: "state"`): `method`, `size` (the cube's side length, 2 to 9), `is_solving`,
-`move_index`, `total_moves`, `current_move`, `moves` (the whole solution in
-standard notation, wide moves and all for a big cube), `cube` (the state now),
-`started_from`, `solved`, `stage`. `cube` and `started_from` are the state
-strings of [the recording manifest](recording-format.md#manifestjson): 54
-characters for a 3x3, `6 * size^2` for the other sizes, so one can be pasted into
-a manifest together with the `size`.
+`continuation` (a solve carried on from History), `move_index`, `total_moves`,
+`at_end`, `current_move`, `moves` (the whole solution in standard notation, wide
+moves and all for a big cube), `cube` (the state now), `started_from`, `solved`,
+`stage`. `cube` and `started_from` are state strings (see above), so one can
+be pasted into a manifest together with the `size`.
 
 **`snapshot`** - see below.
 
@@ -202,9 +207,9 @@ a bad result can be captured while it is on screen rather than reconstructed:
 
 | Member | Holds |
 | --- | --- |
-| `scan` | The scan controller: running, watching, complete, conflicted, ambiguous, the frame size, the device, `lock` (the photometry report), `scan` (a full `scan` record's `data`, from `SideScan::diagnose()`: sides with their read counts and rolls, naming, assembly, result), `scanned_state` and `session_colours` once complete, and `corrected_colours` once a person has put the cube right and solved it (what the camera is then matched against; `session_colours` stays the scan's own). |
+| `scan` | The scan controller: running, watching, awaiting the lock, complete, conflicted, ambiguous, `size`, `sides_read`, `frames_seen`, the frame size, the device, `recording_root`, `lock` (the photometry report), `scan` (a full `scan` record's `data`, from `SideScan::diagnose()`: sides with their read counts and rolls, naming, assembly, result), `scanned_state` and `session_colours` once complete, and `corrected_colours` once a person has put the cube right and solved it (what the camera is then matched against; `session_colours` stays the scan's own). |
 | `solve` | The solve controller, as a `solve` record: method, the cube now, the whole move list, the index. |
-| `held` | The camera's hold on the cube: `hold`, `seen`, `sight`, `wrong_side`. |
+| `held` | The camera's hold on the cube: `hold`, `seen`, `sight`, `wrong_side`, `streak`, `move_announced`, `matched_this_move`. |
 
 A snapshot works with the channel *off*: the file is opened for the one record
 (and a `session` header with `event: "snapshot"`) and closed again, and nothing

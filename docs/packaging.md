@@ -3,7 +3,10 @@
 How Cubeulator becomes something a person installs on Windows, macOS or
 Linux. This is workstream E4a of the [app experience plan](app-experience-plan.md);
 what each platform is supposed to do is specified in
-[design/platforms.md](design/platforms.md). Mobile is E4b and is not here.
+[design/platforms.md](design/platforms.md). The iPhone app is not packaged by CPack:
+Xcode archives and exports it and the release sends it to TestFlight, which
+[iPhone build, signing and releasing](ios-signing.md) describes. Android's APK is made
+by `androiddeployqt` and is not released ([Building & packaging](building.md)).
 
 ## What a build produces
 
@@ -29,22 +32,23 @@ table are published.
 
 CI builds each one on its own runner and uploads it as a build artifact
 (`.github/workflows/ci.yml`, job `build-and-test`). CI publishes nothing: a
-release is cut by tagging, through `.github/workflows/release.yml` (see
-[Cutting a release](releasing.md)).
+release is cut by the `Release` workflow, `.github/workflows/release.yml`, run
+from a version tag or by hand (see [Cutting a release](releasing.md)).
 
 ### Publishing
 
 The same packages, built from a version tag by the `Release` workflow, are
 checksummed (`SHA512SUMS`), signed with the project's GPG key, attested and
-attached to a draft GitHub Release with notes rendered from `CHANGELOG.md`. See
-[Cutting a release](releasing.md). Both CI and the release run
+attached to a draft GitHub Release with notes rendered from `CHANGELOG.md`; the
+same workflow builds the iPhone app and sends it to TestFlight (the `.ipa` is not a
+release file). See [Cutting a release](releasing.md). Both CI and the release run
 `packaging/check-package.sh` on what CPack wrote, which looks inside each package
 for Qt, the executable, the icon, the identifier and the notices.
 
-The package names carry the pre-release label (`Cubeulator-0.1.0-beta.1-...`):
+The package names carry the pre-release label (`Cubeulator-<x.y.z>-beta.<n>-...`):
 `cmake/Packaging.cmake` names them from `CUBEULATOR_VERSION_FULL`, and the Linux
-formats say it their own way (`0.1.0~beta.1`, rpm release `0.beta.1`) so that a
-beta sorts before its final release.
+formats say it their own way (`<x.y.z>~beta.<n>`, rpm release `0.beta.<n>`) so that
+a beta sorts before its final release.
 
 ### Building one locally
 
@@ -80,22 +84,26 @@ Needs, besides the build's own tools:
 | `src/app/platform/<os>/platform.cmake` | The platform's hooks into all of the above: `cube_platform_configure_packaging()`, `cube_platform_configure_desktop_app()`, `cube_platform_configure_desktop_shell()` (see [Platform isolation](platform-isolation.md)) |
 | `packaging/<os>/Packaging.cmake` | That platform's CPack generators and fields |
 | `packaging/<os>/ConfigureApp.cmake` | That platform's executable name, version resource or bundle, install rules and Qt deployment |
-| `packaging/make_platform_icons.py` | SVG to `.ico`, `.icns`, PNG and `hicolor` files |
+| `packaging/make_platform_icons.py` | SVG to `.ico`, `.icns`, PNG and `hicolor` files (and, with `--ios-assets`, the iPhone's asset catalogue) |
 | `packaging/windows/Cubeulator.rc.in` | Icon and version resource |
 | `packaging/windows/StampShortcut.ps1` | Puts the AppUserModelID on the Start menu shortcut |
 | `packaging/macos/Info.plist.in` | `Info.plist`, including the camera usage string |
 | `packaging/linux/*.in` | Desktop entry and AppStream metadata |
+| `packaging/check-package.sh` | Looks inside a finished package (CI and the release both run it) |
+| `packaging/linux/check-depends.sh`, `packaging/linux/check-libstdcxx-floor.sh` | The `.deb`'s `Depends` against its files, and its libstdc++ floor (below) |
+| `packaging/web/` | The browser build's zip and its check |
+| `packaging/ios/` | The iPhone app's `Info.plist`, bundle and IPA check ([iPhone build, signing and releasing](ios-signing.md)) |
 | `src/app/interfaces/desktop_shell.hpp` | What a platform supplies the shell: keep awake, process identity, window traits |
 | `src/app/platform/<os>/desktop_shell_<os>.cpp` | One implementation of it per platform |
-| `src/app/desktop/` | Window geometry, `KeepAwake` and the identity step, all platform-neutral |
-| `src/app/qt/DesktopShell.qml` | Shortcuts, the macOS menu bar, the placeholder About |
+| `src/app/desktop/` | Window geometry, `KeepAwake`, the identity step and the graphics-API guard ([Graphics API](graphics-api.md)), all platform-neutral |
+| `src/app/qt/DesktopShell.qml` | Shortcuts, the macOS menu bar and its way to the About screen |
 
 ### Identity
 
 | | value |
 |---|---|
 | Display name | Cubeulator |
-| Identifier | `com.iainchesworthlabs.cubeulator`, on every platform (the maintainer, 2026-10-13, after the repository moved to `iainchesworthlabs`; it follows the account; until then it had the `org` prefix and the old account): the macOS bundle id, the Linux app id and desktop file name, later the Android package and iOS bundle id |
+| Identifier | `com.iainchesworthlabs.cubeulator`, on every platform (the maintainer, 2026-10-13, after the repository moved to `iainchesworthlabs`; it follows the account; until then it had the `org` prefix and the old account): the macOS bundle id, the Linux app id and desktop file name, the Android package name and the iOS bundle id |
 | Publisher | `CUBEULATOR_PUBLISHER` in `cmake/AppIdentity.cmake`: "Iain Chesworth Labs", following the repository's account. One string in the Windows version resource, the AppStream developer and CPack's vendor and contact. The copyright line (`CUBEULATOR_COPYRIGHT_HOLDER`) stays in the maintainer's own name: "Copyright (C) 2026 Iain Chesworth" |
 | Windows AppUserModelID | `IainChesworthLabs.Cubeulator`, following the publisher |
 | Executable | `Cubeulator.exe`, `Cubeulator.app`, `cubeulator` |
@@ -112,6 +120,7 @@ Needs, besides the build's own tools:
 | `Cubeulator.icns` | macOS: 16 to 1024 px, the artwork at 80% on a rounded square of the paper colour |
 | `png/icon-<n>.png` | The window icon (Windows and Linux), embedded as a Qt resource |
 | `hicolor/...` | Linux: the scalable SVG and 48, 64, 128, 256 px PNGs |
+| `Assets.xcassets` | iPhone, with `--ios-assets` (and only then): the 1024 px `AppIcon` and the launch background colour |
 
 Nothing is drawn by hand. The rasteriser is stdlib-only Python and handles
 exactly the vocabulary `docs/design/tools/make_icon.py` emits (rect, polygon,
@@ -140,8 +149,9 @@ icons follow.
 
 ### macOS
 
-- `Info.plist`: identifier, version, category (Utilities), icon,
-  `NSCameraUsageDescription`. The camera string is `permission.system.camera`
+- `Info.plist`: identifier, version, category (Utilities), icon, the minimum
+  macOS (14.4, the floor of Qt 6.12; raise it with Qt), `NSCameraUsageDescription`.
+  The camera string is `permission.system.camera`
   in `docs/design/strings.json`, read at configure time, so the wording is
   in one place.
 - The menu bar is the one in `platforms.md`, built with Qt Quick Controls'
@@ -214,22 +224,25 @@ the platform says the window is the person's to keep
 
 ## Keyboard shortcuts
 
-`DesktopShell.qml`, from `accessibility.md` "Everywhere". Back (Esc,
-Alt+Left, Cmd+[) belongs to the navigation stack.
+`DesktopShell.qml`, from `accessibility.md` "Everywhere". Back is not here:
+each screen that has a way back handles Esc itself (history, solution, colours,
+entry, About, Licences, and a question asking before it deletes); Alt+Left and
+Cmd+[, which `accessibility.md` also lists, are not handled yet.
 
 | | Windows, Linux | macOS | Available |
 |---|---|---|---|
 | Settings | Ctrl+, | Cmd+, | Except on Settings |
-| Help | F1 | Cmd+? | When a Help screen exists (disabled until E3a) |
+| Help | F1 | Cmd+? | Disabled: there is no Help screen, so nothing sets `helpAvailable` |
 | New scan | Ctrl+N | Cmd+N | From Home and Complete |
-| Enter by hand | Shift+Ctrl+N | Shift+Cmd+N | From Home and Complete, when hand entry exists (disabled until R3) |
+| Enter by hand | Shift+Ctrl+N | Shift+Cmd+N | Disabled: nothing sets `handEntryAvailable`, although the screens that enter a cube by hand exist (*Another size of cube*, *Check the colours*) |
 | Full screen | F11 | Ctrl+Cmd+F | Always |
 | Quit | Ctrl+Q | Cmd+Q | Always |
 | Close window, Minimise | - | Cmd+W, Cmd+M | macOS only, in its menu bar |
+| Diagnostics on or off, snapshot | Ctrl+Shift+D, Ctrl+Shift+S | Cmd+Shift+D, Cmd+Shift+S | When the channel is available; no menu entry ([Diagnostics](diagnostics.md)) |
 
 Menu items and shortcuts call the navigation functions `AppState.qml` has
-today; E2a repoints them. An action with nothing to call yet is disabled, not
-absent.
+(`openSettings`, `beginScan`, `openAbout`). An action with nothing to call yet is
+disabled, not absent.
 
 ## Keep awake
 
@@ -250,7 +263,7 @@ KeepAwake.active = true     // the scan or solve screen is showing
 None asks the person for anything. The request is dropped while the app is
 not in front and taken up again when it returns, so a forgotten `active =
 false` cannot keep a laptop awake from the background. It is wired to nothing
-yet: the screens turn it on in E3.
+yet: no screen sets `active`.
 
 ## Signing
 
@@ -304,12 +317,10 @@ run them, because that build would fail by design. Raising a floor needs its rea
   `apt install` on a minimal system has not been done.
 - **Native Wayland**, as above.
 - **RPM distributions other than Fedora.**
-
 - **Screenshots in the AppStream metadata** come from the system tests'
-  screenshot tour (E0a, E6).
-- **Translated desktop-entry comments and `InfoPlist.strings`** come with the
-  languages (E5).
-- **A real About screen** is E3b. Until then About is a placeholder dialog with
-  the name and version, reached from the macOS menu and from a row at the end
-  of Settings.
+  screenshot tour (`docs/design/identity/README.md`); the metadata says why
+  there are none yet.
+- **Translated desktop-entry comments and `InfoPlist.strings`** (the camera
+  string in the other eight languages) for the desktop packages. The iPhone
+  build has its own (`packaging/ios/make_infoplist_strings.py`).
 - **Flatpak** is later (`platforms.md`).

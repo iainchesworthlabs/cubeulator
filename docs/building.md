@@ -14,37 +14,48 @@ Naming convention: `<os>-<compiler>-<config>`. A preset configures into
 | `windows-msvc-{debug,release}` | CI builds+tests `release` only |
 | `linux-gcc-{debug,release}` | CI builds+tests `release` only |
 | `linux-gcc-coverage` | Debug + gcov instrumentation, 80% line/branch gate |
-| `{windows-msvc,linux-gcc,macos-clang}-fastdebug` | RelWithDebInfo, so optimised with no sanitizers: the quick build for local iteration (see [Testing](testing.md#debug-is-slow-use-fastdebug-for-local-iteration)); not built by CI |
+| `linux-clang-fuzz` | Clang 23 with libFuzzer, ASan and UBSan, over the library only (`CUBEULATOR_BUILD_APP=OFF`, `CUBEULATOR_BUILD_TESTS=OFF`, `CUBEULATOR_BUILD_FUZZERS=ON`); built by `fuzz.yml`. See [Fuzz tests](testing.md#fuzz-tests) |
+| `{windows-msvc,linux-gcc,macos-clang}-fastdebug` | RelWithDebInfo, so optimised with no sanitizers: the quick build for local iteration (see [Testing](testing.md#debug-is-slow---use-fastdebug-for-local-iteration)); not built by the pull-request legs (the nightly ThreadSanitizer leg builds `linux-gcc-fastdebug`) |
 | `{windows-msvc,linux-gcc,macos-clang}-profiling` | RelWithDebInfo + [Tracy](profiling.md) (the client's command-line tools built, profiling on at launch, sanitizers off); not built by CI |
 | `macos-clang-{debug,release}` | CI builds+tests `release` only |
-| `android-clang-{debug,release}` | CI builds `release` only; builds the Qt/QML app via Qt for Android |
-| `ios-clang-{debug,release}` | Xcode generator, so macOS only; CI builds `release` only; build-only, unsigned, `CUBEULATOR_BUILD_APP=OFF` (no Qt) — Qt for iOS packaging not yet wired up, no Mac available to validate it here |
+| `android-clang-{debug,release}` | CI builds `release` only; builds the Qt/QML app via Qt for Android (arm64-v8a, API 28) |
+| `ios-clang-{debug,release}` | Xcode generator, so macOS only; CI (`ios-build`) builds `release` only; unsigned, `CUBEULATOR_BUILD_APP=OFF` (no Qt): the library and the platform layer for an iPhone (iOS 18 deployment target), which proves they compile and link there |
+| `ios-device-release` | Xcode generator, macOS only: the Qt app as an iPhone application, against Qt's iOS kit (`QT_ROOT_DIR`) and a desktop Qt of the same version for its host tools (`QT_HOST_PATH`). Unsigned unless `CUBEULATOR_IOS_SIGNING_TEAM` and `CUBEULATOR_IOS_SIGNING_PROFILE` are given. Built by `ios-device.yml`, which the Release workflow calls; see [iPhone build, signing and releasing](ios-signing.md) |
 | `web-emscripten-{debug,release}` | CI builds `release` only; the Qt/QML app as WebAssembly for a browser — see [WebAssembly (browser)](#webassembly-browser) |
 | `web-emscripten-diagnostics` | Release + the in-process recorder + the browser tests' read-only driver (`window.cubeulatorProfile`, `window.cubeulatorDriver`); built by the `web-test` and `web-perf` legs. For measuring and for `tests/web`, not for publishing |
 | `web-emscripten-tests` | The library and its unit, integration and performance binaries as WebAssembly, run under Node by `ctest` (`CUBEULATOR_BUILD_APP=OFF`); built by the `web-test` leg |
 
-**CI only builds the `release` preset per platform** — that's what would
-actually ship, and vcpkg builds both debug/release variants of every
+The test presets have the build presets' names: `ctest --preset <preset>` runs
+everything but the system tests and `<preset>-system` only those. The wall-time
+half of the performance tests has presets of its own, `windows-msvc-perf`,
+`linux-gcc-perf` and `macos-clang-perf`, which run against the `release` build
+([Performance tests](testing.md#performance-tests)).
+
+**CI's per-platform build legs only build the `release` preset** — that's what
+would actually ship, and vcpkg builds both debug/release variants of every
 dependency together in one pass regardless of which config our own project
 targets, so a routine Debug CI leg would mostly just re-verify the same
 dependency build under a different `CMAKE_BUILD_TYPE`. `debug` presets stay
 fully defined and buildable locally (`cmake --preset linux-gcc-debug`) for
 whenever you actually need an unoptimized/more-debuggable build, or define
 your own combination in a personal `CMakeUserPresets.json` — CI just doesn't
-babysit them on every push.
+babysit them on every push. The exceptions are `linux-gcc-debug` (the
+`clang-tidy` job configures it with Clang 23 and no app, and the nightly
+sanitizer legs build it with ASan and UBSan; see [CI & dependencies](ci.md)),
+`linux-gcc-coverage` (the coverage and system-test jobs) and `linux-clang-fuzz`.
 
 On Linux, CI compiles with GCC 16 (`-DCMAKE_CXX_COMPILER=g++-16`; the presets
 say plain `g++`, so pass it if yours is older) and installs the X11 and OpenGL
 development packages before the vcpkg build: `libx11-dev libgl1-mesa-dev
 libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev`.
 
-Android builds the Qt/QML shell like every other platform (see
-[Architecture](architecture.md)); iOS remains build-only,
-`CUBEULATOR_BUILD_APP=OFF`, until Qt-for-iOS packaging is wired up. vcpkg
-builds opencv4 on the mobile triplets too, the same way as
-desktop — see [Dependency strategy](dependency-strategy.md).
+Android and iOS (`ios-device-release`) build the Qt/QML shell like every other
+platform (see [Architecture](architecture.md)); `ios-clang-*` is the cheaper,
+library-only build for the same triplet. vcpkg builds opencv4 on the mobile
+triplets too, the same way as desktop — see
+[Dependency strategy](dependency-strategy.md).
 
-`android-clang-{debug,release}` set `CMAKE_CXX_SCAN_FOR_MODULES=OFF`: CMake's
+`android-clang-{debug,release}` (and the web presets) set `CMAKE_CXX_SCAN_FOR_MODULES=OFF`: CMake's
 Ninja generator auto-enables C++20 modules dependency scanning (needs
 `clang-scan-deps`), which the Android NDK's bundled LLVM toolchain doesn't
 expose in a way CMake can locate when chainloaded under vcpkg's toolchain
@@ -151,15 +162,23 @@ worker that adds the two headers and reloads the page once.
 
 - `CUBEULATOR_BUILD_APP` (default `ON`) — builds the Qt6 GUI shell. `OFF`
   needs no Qt at all; the library, the platform layer and the tests that need
-  no Qt are still built. The `ios-clang-*` presets set it `OFF`.
+  no Qt are still built. The `ios-clang-*`, `linux-clang-fuzz` and
+  `web-emscripten-tests` presets set it `OFF`.
 - `CUBEULATOR_BUILD_TESTS` (default `ON`) — builds the unit/integration test
-  suites. The Android, iOS and web presets set it `OFF`.
+  suites. The Android, iOS, fuzz and web app presets set it `OFF`;
+  `web-emscripten-tests` sets it `ON`.
+- `CUBEULATOR_BUILD_FUZZERS` (default: whatever `CUBEULATOR_BUILD_TESTS` is) —
+  builds the fuzz harnesses of `src/lib/fuzz`. Their seeds and regressions are
+  replayed by `ctest` (label `fuzz`), so they are built wherever the tests are.
+  `CUBEULATOR_FUZZ_LIBFUZZER` (which `linux-clang-fuzz` sets) links them with
+  libFuzzer instead. See [Fuzz tests](testing.md#fuzz-tests).
 - `CUBEULATOR_ENABLE_SANITIZERS` (default `ON`) — ASan+UBSan (GCC/Clang Debug)
   or ASan (real MSVC Debug); disabled automatically under clang-cl.
 - `CUBEULATOR_ENABLE_COVERAGE` (default `OFF`) — gcov instrumentation; only
   the `linux-gcc-coverage` preset turns this on.
-- `CUBEULATOR_ENABLE_TRACY` (default `ON`; the web, Android and iOS presets
-  and coverage builds set it `OFF`, and so must a Windows-on-ARM configure) — the Tracy profiler
+- `CUBEULATOR_ENABLE_TRACY` (default `ON`; the web, Android, iOS and fuzz presets
+  set it `OFF`, it defaults to `OFF` in coverage and recorder builds, and a
+  Windows-on-ARM configure has to set it `OFF`) — the Tracy profiler
   client and its instrumentation (`cmake/Tracy.cmake`). Adds the `profiling`
   vcpkg manifest feature (the `tracy` overlay port in
   `vcpkg-overlay-ports/`, and the Vulkan headers where Qt can render with
@@ -194,6 +213,13 @@ worker that adds the two headers and reloads the page once.
   driver (`window.cubeulatorDriver`) that `tests/web` reads the app through.
   The `web-emscripten-diagnostics` preset turns it on; the published build has
   none of it.
+- `CUBEULATOR_IOS_SIGNING_TEAM` and `CUBEULATOR_IOS_SIGNING_PROFILE` (default
+  empty, which is an unsigned build; give both or neither) and
+  `CUBEULATOR_IOS_BUILD_NUMBER` (default `1`, the `CFBundleVersion`) — the
+  iPhone app of `ios-device-release`. `ios-device.yml` passes them; see
+  [iPhone build, signing and releasing](ios-signing.md).
+- `CUBEULATOR_MACOS_CODESIGN_IDENTITY` (default `-`, an ad-hoc signature) — the
+  `codesign` identity of `Cubeulator.app`; see [Signing](packaging.md#signing).
 
 ## Hardening
 
@@ -213,5 +239,7 @@ its packaging tool is available: NSIS (Windows), DragNDrop (macOS), DEB/RPM
 (Linux). What goes in each, and what the tools need, is
 [Packaging the desktop app](packaging.md). On Android the APK is made by
 `androiddeployqt`, which the build runs itself (CI uploads the debug-signed
-one); iOS has no packaging yet, since its preset is build-only; the web build's
-output is the directory above.
+one); the iPhone app is archived and exported by Xcode in `ios-device.yml`, not
+by CPack ([iPhone build, signing and releasing](ios-signing.md)); the web build's
+output is the directory above (a release zips it as
+`Cubeulator-<version>-web.zip`, see [Packaging the desktop app](packaging.md)).

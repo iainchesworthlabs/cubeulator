@@ -18,8 +18,8 @@ calls is `src/lib/src/solver/scan_assembly.cpp`), driven by
 
 ```mermaid
 flowchart TD
-    CAM["Camera device<br/>(DirectShow / V4L2 / AVFoundation via OpenCV;<br/>getUserMedia in the browser)"] --> LOCK["PhotometryLock<br/>exposure + white balance held<br/>(Windows only)"]
-    LOCK --> LOOP["OpenCvCaptureLoop<br/>capture thread, mailbox of 1"]
+    CAM["Camera device<br/>(DirectShow / V4L2 / AVFoundation via OpenCV;<br/>AVFoundation direct on iOS;<br/>getUserMedia in the browser)"] --> LOCK["Photometry lock<br/>exposure + white balance held<br/>(Windows, iOS, browsers that offer it)"]
+    LOCK --> LOOP["Capture thread, mailbox of 1<br/>(OpenCvCaptureLoop on the desktops)"]
     LOOP -->|BGR frame| CTRL["DirectScan::processFrame<br/>GUI thread, poll timer"]
     CTRL --> PREP["prepare_frame<br/>working width, threshold, outlines - once"]
     PREP --> READ["read_side<br/>blobs -> lattice -> nine Lab samples"]
@@ -30,7 +30,7 @@ flowchart TD
     SCAN --> SIX{"six captured sides?"}
     SIX -->|no| CTRL
     SIX -->|yes| NAME["resolve_colors<br/>54 stickers -> 6 groups of 9"]
-    NAME --> ASM["assemble_scanned_faces<br/>4^6 per-side rolls"]
+    NAME --> ASM["assemble_scanned_faces<br/>4^6 per-side rolls<br/>(assemble_scanned_sides above 3x3)"]
     ASM --> VALID{"how many solvable cubes?"}
     VALID -->|none| REPAIR["naming repair:<br/>exchange two names"]
     REPAIR --> ASM
@@ -38,20 +38,23 @@ flowchart TD
     SCAN2 -.-> TIE
     TIE -->|one| SOLVE
     TIE -->|none or tied| AMBIG["ambiguous_scan:<br/>turn the cube so two sides show"]
-    VALID -->|yes| SOLVE["solver::solve<br/>on a worker thread"]
-    SOLVE --> STEP["SteppedSolution<br/>the solve screen steps through it"]
+    VALID -->|yes| SOLVE["nxn::solve_held<br/>on a worker thread"]
+    SOLVE --> STEP["SteppedPlan<br/>the solve screen steps through it"]
 ```
 
 ## The reader: `read_side`
 
-`cube::vision::read_side(const cv::Mat& bgr)` returns a `SideRead` or nothing.
-It needs a side held roughly square to the camera and relies on darker plastic
-between and around the stickers; a side seen at an angle, a lattice that does
-not span three rows and three columns, or no cube all return nothing.
+`cube::vision::read_side(const cv::Mat& bgr, int size = 3)` returns a `SideRead`
+or nothing. It needs a side held roughly square to the camera (for a cube of
+three or more, the face's own corners, below, add sides held at an angle) and
+relies on darker plastic between and around the stickers; a lattice that does
+not span three rows and three columns (N and N for a cube of size N), or no
+cube, return nothing.
 
 1. **Sticker blobs.** `prepare_frame` (`cube/vision/prepared_frame.hpp`)
-   reduces the frame to the working width (640 pixels), takes the maximum
-   channel as the value image, blurs it, thresholds it adaptively and traces
+   reduces the frame to the working width (640 pixels for a 2x2 or 3x3, more
+   for a bigger cube: see [a cube of another size](#a-cube-of-another-size)),
+   takes the maximum channel as the value image, blurs it, thresholds it adaptively and traces
    the outlines. It is done once per frame and handed to both readers,
    because it is most of what a read costs; contours that are roughly square
    and roughly sticker-sized survive `read_side`'s shape test.
@@ -96,6 +99,15 @@ not span three rows and three columns, or no cube all return nothing.
    dozen microseconds on a frame that has no side
    ([the investigation](investigations/2026-10-15-square-on-dead-band.md)).
 
+   A look with far more sticker-sized outlines than any side can show (six to a
+   cell of the side, and never fewer than 96: `Tuning::most_lattice_blobs`) is
+   tracing noise, and is refused before a lattice is fitted
+   (`LatticeRefusal::too_many_blobs`, which `cube_scan read` prints as `crowd`),
+   because the fit grows steeply with the blobs: a frame of speckle once held
+   the reader for tens of seconds at 9x9. The limit was chosen without recorded
+   sessions to check it against; a frame that should read and reports `crowd`
+   is the sign it is too low.
+
    The square grid had two ways of losing a side it had already found, both in
    how its cells were read. The grid's origin was the first blob in the
    neighbour set - whichever one the frame's order happened to put first, not
@@ -131,7 +143,8 @@ Nothing in the reader names a colour. It returns measured Lab.
 The three steps above are the reader's first look, and a frame it reads is read
 exactly as it was. A frame it does not read is looked at again, and each further
 look is paid for only when the frame shows a reason to take it (`FrameLook`,
-`prepared_frame.hpp`; the sequence is `read_side_explained`, `direct_scan.cpp`):
+`prepared_frame.hpp`; the sequence is `read_side_explained`, in
+`src/lib/src/vision/direct_scan.cpp`):
 
 - **Narrow block**, as before: a dark sticker beside a bright one is clipped by
   the wide block's mean. A lattice only this look finds must sit on plastic
@@ -154,8 +167,9 @@ look is paid for only when the frame shows a reason to take it (`FrameLook`,
   strongly coloured.
 - **The face's own corners** - see below.
 
-Two changes are in every look, and they are about what a contour is allowed to be
-rather than which pixels are bright. A contour bigger than the largest sticker is
+Two changes are in the looks after the narrow block (the pitch, glare and chroma
+looks), and they are about what a contour is allowed to be rather than which
+pixels are bright. A contour bigger than the largest sticker is
 **cut** on the sticker size the rest of the frame shows, and each cell of the cut
 is a blob (`BlobRules::split_oversized`): that is the merged-outline case above,
 recovered rather than dropped, and no more than four cells are taken from one
@@ -178,8 +192,9 @@ evidence for the side-joining rule to absorb more reads: they become more sides,
 and `SideScan::sides()` keeps the six with the most reads rather than the six that
 assemble. Until that is fixed a 2x2 reads with the two looks it always had, and
 the size-generic changes below are what it gets. Across all 65 recorded sessions
-the branch now reads 0.4% more 2x2 frames, 2.9% more 4x4 and 3.8% more 5x5, with
-every session's verdict unchanged.
+the reader as it ships reads 0.4% more 2x2 frames, 2.9% more 4x4 and 3.8% more 5x5
+than it did before these looks, with every session's verdict unchanged (the 4x4 and
+5x5 figures are the ones in the 0.2.0-beta.1 release notes).
 
 ### A side seen at an angle: the face's own corners
 
@@ -225,9 +240,9 @@ if the recordings show it.
 `SideScan::add` is fed every analysed frame, including frames with no read.
 
 - A read **counts** only if the lattice has held still: the centre sticker
-  moved less than `kSteadyFraction` (0.12) of a sticker spacing since the
-  previous frame. A moving side is blurred and its colours are not trusted.
-  That is a distance per frame, and what it guards against is a speed: a side
+  (at an even size, the middle of the four middle ones) moved less than
+  `kSteadyFraction` (0.12) of a sticker spacing since the previous frame. A
+  moving side is blurred and its colours are not trusted. That is a distance per frame, and what it guards against is a speed: a side
   turned about the cube's middle has its centre 1.5 spacings from the axis, so
   0.12 is 4.6 degrees a frame - 137 degrees a second at 30 frames a second, 100
   at 22 (what the recorded lamplight sessions ran at), 46 at 10. `add` is
@@ -239,11 +254,13 @@ if the recordings show it.
   centres are six distinct colours: a read whose centre is within
   `kSameColourLab` (10 Lab units, plain Lab with lightness at full weight) of
   a group's centre belongs to it, whatever a hand covers - up to
-  `kMostStickersAHandCovers` (4) of the other eight differing; more than that
-  is another side whose centre happens to read the same. Where the centre
-  cannot vouch, the other eight stickers must: every one within
-  `kSameColourLab` of the group's. Of the groups a read could join, the one
-  it fits best takes it. Groups that turn out to be one side, a side that was
+  `most_stickers_a_hand_covers` (4 at 3x3) of the other eight differing; more
+  than that is another side whose centre happens to read the same. Where the
+  centre cannot vouch, the other eight stickers must: every one within
+  `kSameColourLab` of the group's. An even size has no centre, so its stickers
+  alone say, and an eighth of them may differ (`most_stickers_unlike_in_one_side`:
+  two of a 4x4's sixteen, none of a 2x2's four). Of the groups a read could
+  join, the one it fits best takes it. Groups that turn out to be one side, a side that was
   begun on a noisy read or lit differently for a moment, are merged after each
   read, the earlier surviving. `kSameColourLab` sits just under
   `kMinCentreSeedSeparationLab` (12) on purpose: two centres `resolve_colors`
@@ -271,7 +288,9 @@ if the recordings show it.
 - A group is **captured** once it has `kMinReads` (8) reads, about a third of a
   second of holding still.
 - When more than six groups are captured (a stray lattice, a side re-captured
-  under changed light) the six with the most reads are used.
+  under changed light) the six with the most reads are used, a side that has
+  been read square-on ahead of one that only a corner view has shown
+  (`captured_by_support`).
 
 ## Naming and assembly
 
@@ -466,9 +485,9 @@ the flat reads lack.
    a side has `kMinReads` square-on reads of its own its colours come from
    those alone, because a side at an angle is lit a little differently. A
    side at an angle that fits no side, but is one of them lit differently
-   (`shaded_view_of`: nine colours within `kCornerFitDistance` of it under
-   `colour_distance`, the loose measure), starts none: it was a second group
-   of its own, reached `kMinReads`, took one of the six places, and made the
+   (`is_shaded_view_of_any`: nine colours within `kCornerFitDistance` of it, on
+   average, under `colour_distance`, the loose measure), starts none: it was a
+   second group of its own, reached `kMinReads`, took one of the six places, and made the
    scan "six sides that make no cube" - a verdict whose assembly costs up to
    100 ms (kept, not repeated: see above).
    `reads_in_view()` is the fewest among the sides in view, which is the one
@@ -559,11 +578,12 @@ recordings in more than one light before it is tuned.
 ## Camera photometry
 
 Colour is only comparable across frames if the camera stops adjusting itself.
-`PhotometryLock` (`src/app/platform/detail/photometry_lock.cpp`) holds white
-balance, exposure, brightness and saturation once the camera has settled, and
-reports what it did; the scan waits for that report (at most `kLockWaitFrames`,
-240 frames) before counting reads. Notes from the workstation webcam under
-DirectShow and OpenCV 4.12:
+The photometry lock (`apply_lock` in `src/app/platform/detail/photometry_lock.cpp`,
+asked for through `src/app/interfaces/camera.hpp`) holds white balance, exposure,
+brightness and saturation once the camera has settled, and reports what it did;
+the scan waits for that report (at most `kLockWaitFrames`, 240 frames, in
+`src/app/qt/controllers/direct_scan.cpp`) before counting reads. Notes from the
+workstation webcam under DirectShow and OpenCV 4.12:
 
 - White balance in kelvin is `CAP_PROP_WHITE_BALANCE_BLUE_U`;
   `CAP_PROP_WB_TEMPERATURE` does nothing.
@@ -577,9 +597,15 @@ DirectShow and OpenCV 4.12:
   ends the values the lock found are written back.
 
 A platform that cannot control photometry says so in the report rather than
-claiming a lock. Only the Windows backend (DirectShow) has been measured and
-tries; Linux (V4L2) and macOS (AVFoundation) report that they cannot, and the
-scan runs on the camera's own automatics.
+claiming a lock. Of the OpenCV backends only Windows (DirectShow) has been
+measured and tries; Linux (V4L2) and macOS (AVFoundation through OpenCV) report
+that they cannot, and the scan runs on the camera's own automatics.
+
+The iPhone has its own backend (`src/app/platform/ios/camera_ios.mm`, AVFoundation
+directly rather than through OpenCV). Its lock holds exposure and white balance
+where the automatics settled, reports what the device said for each, and says
+plainly that it has no brightness or saturation control. It has not yet run on a
+phone ([Installing on an iPhone](ios-install.md)).
 
 The browser asks the camera itself, and only where the camera offers it: a
 track that lists a manual exposure or white balance is asked
@@ -609,9 +635,12 @@ the scan while watching.
 
 - **Capture thread** (`OpenCvCaptureLoop`, on Windows, Linux and macOS) owns
   the device and publishes the newest frame into a one-deep mailbox. Old
-  frames are dropped, never queued. The browser build's camera is the page's
-  `getUserMedia` (`src/app/platform/web/camera_web.cpp`); Android and iOS have
-  no capture backend yet, so `start()` fails with `camera_not_found` there.
+  frames are dropped, never queued. The iPhone's capture session
+  (`src/app/platform/ios/camera_ios.mm`) fills a mailbox of the same kind, and
+  turns each frame upright for the way the phone is held. The browser build's
+  camera is the page's `getUserMedia` (`src/app/platform/web/camera_web.cpp`);
+  Android has no capture backend yet, so `start()` fails with `camera_not_found`
+  there.
 - **GUI thread** runs `DirectScan::processFrame`. A read is a few milliseconds,
   well inside the poll interval, so there is no analysis worker and no scan
   state to hand between threads. Only `latestFrame()` is called from elsewhere
@@ -650,18 +679,34 @@ the scan while watching.
   told them apart were never shown). No recorded scan is a tumble; what is
   missing is listed on the investigation page.
 - **Light.** Hard backlit or glare conditions are not proven; the measured
-  drift in a sticker can exceed the red/orange gap. The review screen is the
-  planned backstop.
+  drift in a sticker can exceed the red/orange gap. The *Check the colours*
+  screen is the backstop: it shows what the scan read, marks the stickers the
+  naming was unsure of, and lets a person put a misread right by hand.
 
 ## A cube of another size
 
 The reader, the scan and the colour naming are written for a cube of N x N x N,
 N from 2 to 9, and are a 3x3 when no size is said (`read_side(frame, size)`,
-`SideScan(size)`, `prepare_frame(frame, size)`). The size is **chosen, never
-inferred**: nothing here looks at a lattice and says "this is a 5x5". How far it
-is validated is in [the S0 investigation](investigations/2026-10-17-nxn-scan-s0.md);
-in short, every size from 2 to 9 is read, named and assembled end to end on drawn
-cubes, and nothing but a 3x3 has been read on a real cube.
+`SideScan(size)`, `prepare_frame(frame, size)`). In the library the size is
+**chosen, never inferred**: nothing in the reader looks at a lattice and says
+"this is a 5x5". How far it is validated is in
+[the S0 investigation](investigations/2026-10-17-nxn-scan-s0.md); in short, every
+size from 2 to 9 is read, named and assembled end to end on drawn cubes. On real
+cubes a 3x3 is the case that has been measured; the 65 recorded sessions of a real
+2x2, 4x4 and 5x5 (17 and 18 October) have no truth file, so they say whether a
+cube was made and not whether it is the right one
+([what they say](investigations/2026-10-18-nxn-real-scan-sessions.md)).
+
+The app finds the size for a person who has not chosen one (`DirectScan::detectedSize`,
+the **Auto** button on the scan screen, which is on unless a size is chosen, or
+`CUBE_SCAN_SIZE` names one other than 3). A reader of N x N also finds a smaller
+grid inside a bigger side and never a bigger one, so the cube's size is the largest
+of 2 to 5 at which the frame reads; it is taken once at least five of the last eight
+frames that read at any size read at it or at a larger one, and it stops being looked
+for as soon as a side is captured. Choosing a size on the screen turns that off, and
+`cube_scan detect-size <session>` says what it would find for a recording. The
+screens offer 2 to 5; 6 to 9 are read by the library and by a scan started with
+`CUBE_SCAN_SIZE`, and are not offered.
 
 - **A side is N^2 cells**, numbered row * N + column, row-major from the sticker
   nearest the image's top-left (`vision/side_grid.hpp`). `SideRead`,
@@ -706,9 +751,10 @@ cubes, and nothing but a 3x3 has been read on a real cube.
   five on any free face in any of four turns (5! x 4^5 = 122,880 at most), a branch stopping where a
   corner or wing shows a colour twice, and `validate` reads the colour scheme off the corners at the
   end; a 2x2's six flat sides make more than one cube one time in four (none of 85 4x4s and 6x6s). There is
-  corner reader above a 6x6 and none that names a corner to show: a scan whose flat sides make
+  no corner reader above a 6x6 and none that names a corner to show: a scan whose flat sides make
   more than one cube is `ambiguous_scan` until corner views settle it, and asks for "two sides at
-  once" (see below). `SideScan::scanned_n()` / `cube_n()` give the cube of any size (an `NCube`);
+  once" (see [a bigger cube's corner views](#a-bigger-cubes-corner-views)).
+  `SideScan::scanned_n()` / `cube_n()` give the cube of any size (an `NCube`);
   `scanned()` / `cube()` are the 3x3's.
 - **An even size's colour scheme is checked for its handedness** (`assemble_n`,
   `repaired_scheme`). Reading the scheme off the corners means `validate` accepts a cube
@@ -741,15 +787,12 @@ cubes, and nothing but a 3x3 has been read on a real cube.
 A scan that misnames a colour, a cube that will not assemble: the running app
 can be asked what it is reading and deciding without being restarted. The
 [live diagnostics channel](diagnostics.md) writes, as the scan happens, each
-captured side's fused nine Lab values with its read count and roll; the six
-cluster seeds and means, every sticker's cluster and assignment confidence, the
-palette matching, whether the hue names overrode it or fell back on a
-collision, and `classify_lab`'s hue and chroma for each mean; which path of the
-assembly step was taken (one candidate, several and how the corner reads
-chose, a direct failure, or the closest-centre name exchange and which pair);
-the camera's photometry lock as the driver accepted it; and the solve and the
-held-cube verdicts. It is off by default, switched live from Settings or with
-`Ctrl+Shift+D`, and costs a boolean test while off.
+captured side's fused Lab values, how the stickers were clustered and named
+(including whether the hue names overrode the palette matching), which path the
+assembly took and how the corner reads chose, the camera's photometry lock as
+the driver accepted it, and the solve and held-cube verdicts. It is off by
+default, switched live from Settings or with `Ctrl+Shift+D`, and costs a boolean
+test while off.
 
 The reading code is not logged into. `resolve_colors_explained` and
 `SideScan::diagnose` return the working the algorithms already hold as plain
@@ -770,6 +813,9 @@ says ([recording format](recording-format.md#truthtxt)).
 | Command | Does |
 | --- | --- |
 | `cube_scan replay <session-dir>` | One session: the cube and its solution |
+| `cube_scan diagnose <session-dir>` | What the scan made of a session, side by side, at the session's size: how each side was named, what the centres and clusters measured, and why the cube was or was not put together |
+| `cube_scan detect-size <session-dir>` | The size the app's **Auto** would find: for each frame, the largest size from 2 to 5 at which a side is read |
+| `cube_scan read <session-dir> [-v]` | The side reader's funnel (see above): where each frame was lost between the camera and a lattice |
 | `cube_scan board <root-dir>` | Every session under the root, against its `truth.txt` |
 | `cube_scan holds <session-dir>` | How the cube was held, frame by frame |
 | `cube_scan corners <session-dir> [max-distance]` | Frames showing two sides at once, and whether they fit the true cube (at the distance a side may sit from the cube's, the app's own unless given) |
@@ -780,7 +826,10 @@ says ([recording format](recording-format.md#truthtxt)).
 
 `cube_scan` reads each frame's capture time from the session's `index.csv`, so
 a replay of a recording made at 22 frames a second holds a side still as the
-app did. `cube_tumble_sim` draws a tumble as a session of this kind.
+app did. `cube_tumble_sim` draws a tumble as a session of this kind. Two more
+commands, `digest` and `glare-cost`, are narrow developer checks (a hash of every
+frame's read, to show a change left them alone; what the glare look costs) and are
+not in the tool's usage text.
 
 The only gate is a real recorded session ending in the exact true cube.
 `truth.txt` is six words of nine letters from `WYROGB`, one per side, each side

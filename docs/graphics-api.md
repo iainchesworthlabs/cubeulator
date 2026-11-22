@@ -68,8 +68,9 @@ below are reproduced on more than one machine. To use Vulkan:
   `automatic_graphics_backends` in
   `src/app/platform/windows/platform_info_windows.cpp`
   (`{"vulkan", "d3d11", "software"}`; Direct3D 12 is best left out, see
-  [below](#vulkan-against-direct3d-11-measured)). The same line in
-  `platform_info_linux.cpp` does it for Linux.
+  [below](#vulkan-against-direct3d-11-measured)). Linux has no chain today
+  (`automatic_graphics_backends` in `platform_info_linux.cpp` is empty, so Qt
+  chooses); filling it in is what would make the guard apply there.
 
 ## The guard
 

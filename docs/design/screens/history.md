@@ -1,9 +1,13 @@
 # History
 
-> **Status in 0.1.0-beta.1:** Built, as `HistoryScreen.qml` and
-> `SolveHistory`: the **History** button on Home opens the list, and Settings
-> has **Keep a history of solves** and **Clear history**. What is not yet is
-> under **Status: built** below.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Built, as `HistoryScreen.qml` and `SolveHistory`:
+> the **History** button on Home opens the list, a solve of any size from 2×2 to
+> 5×5 is listed with its size, a finished one opens its solution, an unfinished
+> one is carried on, and Settings has **Keep a history of solves** and **Clear
+> history**. Esc and the back key go back. What is not yet is under **Status:
+> built** below; there is no unfinished-solve card on Home, so History is the
+> only way to carry on.
 
 Lane: experience. New. In the first release by the maintainer's decision of
 2026-10-13; the "Solve history" button on Home did nothing before.

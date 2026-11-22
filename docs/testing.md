@@ -1,6 +1,8 @@
 # Testing & coverage
 
-Four layers, all Catch2 (a few script gates sit beside them, listed below):
+Six layers. Most are Catch2; the browser tests are Playwright, and the fuzz
+harnesses are libFuzzer functions that ctest replays (a few script gates sit
+beside them, listed after the layers):
 
 - **`tests/unit/`** — fast, isolated, one behaviour each. Currently exercises
   `cube::error` (`Result<T>`/`CubeError`), `cube::version`, the solver, the
@@ -41,9 +43,11 @@ The other ctest entries that are scripts rather than Catch2 cases: the `i18n_*`
 gates (label `i18n`, [Translation tests](#translation-tests)),
 `perf_tracy_check_selftest` (label `perf`, [Tracy](#tracy-per-zone-local-and-nightly-optional)),
 `release_tools_selftest` (label `release`: the changelog and release tooling,
-see [Cutting a release](releasing.md)) and `third_party_notices_complete` (label
-`licensing`: fails when something that ships has no notice, see
-[Licensing](licensing.md)). The last needs the app build.
+see [Cutting a release](releasing.md)), `notices_static_qt_selftest` and
+`third_party_notices_complete` (label `licensing`: the second fails when
+something that ships has no notice, see [Licensing](licensing.md)) and
+`vcpkg_root_selection` (no label: which vcpkg checkout a configure picks). The
+`i18n_*` gates and `third_party_notices_complete` need the app build.
 
 Run them with `ctest --preset <preset>` after building. Tests are
 independent Catch2 cases, so parallel runs are safe - pass `-j <n>` (or set
@@ -60,9 +64,9 @@ matching `<preset>-system` preset.
 
 A plain `Debug` build (`windows-msvc-debug`/`linux-gcc-debug`/`macos-clang-debug`)
 compiles unoptimized *and* enables ASan/UBSan (see
-[Sanitizers.cmake](https://github.com/iainchesworthlabs/cubeulator/blob/main/cmake/Sanitizers.cmake)). The solver's first-two-layer
+[Sanitizers.cmake](../cmake/Sanitizers.cmake)). The solver's first-two-layer
 searches (`cube::solver::detail::piece_search`, see
-[piece_search.hpp](https://github.com/iainchesworthlabs/cubeulator/blob/main/src/lib/src/solver/piece_search.hpp)) visit up to
+[piece_search.hpp](../src/lib/src/solver/piece_search.hpp)) visit up to
 hundreds of thousands of nodes per stage, and an unoptimized build alone -
 independent of the sanitizers - is well over an order of magnitude slower
 there than Release, turning a fast Release corpus run into many Debug
@@ -75,6 +79,14 @@ optimizations on (`RelWithDebInfo`), sanitizers and iterator-debug checks off
 present for breakpoints/stepping. Reach for a true `*-debug` preset only when
 you actually want ASan/UBSan coverage.
 
+No pull-request leg runs the test suite under a sanitizer (the `clang-tidy` leg
+builds the Debug preset and replays only the fuzz seeds in it). `nightly.yml`
+does, once a day against the tip of `develop`: the library and platform layer
+under ASan and UBSan (the Debug preset, at `-O1`) and under TSan
+(`linux-gcc-fastdebug`, without the slow tests), and the Qt app under ASan and
+UBSan with its other tests and its system tests. The [Nightly](ci.md#nightly)
+section of the CI page says how the run is reported.
+
 ## Slow tests
 
 The solver's corpus tests (`solve_cross`, `solve_corners`,
@@ -84,7 +96,7 @@ it replaced, and the `SteppedSolution` tests (each of the latter runs a full
 solve) are tagged `[slow]` - every one drives one or more random scrambles
 through the searched first-two-layer stages. (The last layer itself is
 fixed-algorithm and takes
-milliseconds - see [last_layer.hpp](https://github.com/iainchesworthlabs/cubeulator/blob/main/src/lib/src/solver/last_layer.hpp) -
+milliseconds - see [last_layer.hpp](../src/lib/src/solver/last_layer.hpp) -
 so the corpus cost is the cross/corners/middle-edges searches.) The
 intermediate and advanced solvers' corpus tests (`cfop_test.cpp`,
 `two_phase_test.cpp`) carry the same tag, though they are far faster - tens of
@@ -99,9 +111,10 @@ ctest --preset <preset> -L slow    # just the slow solver corpus tests
 
 ## QML tests (the solve screen)
 
-`cube_qml_tests` loads the app's own QML - `Cube3DView.qml`, `SolveScreen.qml`
-and `DirectScanScreen.qml`, with the app's own controllers behind them - and
-reads the 3D cube back out of its scene: where each sticker sits and which way
+`cube_qml_tests` loads the app's own QML - the cube views (`Cube3DView.qml`,
+`CubeNView.qml`) and the solve, scan, solution, complete, entry, colours and
+licences screens, with the app's own controllers behind them - and reads the
+3D cube back out of its scene: where each sticker sits and which way
 it faces, taken from the nodes' transforms. That is held to
 `cube::solver::Cube`, so the direction of every animated turn is checked
 against `Cube::apply` on what is actually drawn. The camera previews on the
@@ -118,12 +131,12 @@ so it asserts structure and ids; what the screen says, and the direction words
 against the turn sentences, are the system tests'.
 
 Camera frames in these and the controller tests are drawn
-([drawn_cube.hpp](https://github.com/iainchesworthlabs/cubeulator/blob/main/tests/unit/drawn_cube.hpp)), never recorded: a
+([drawn_cube.hpp](../tests/unit/drawn_cube.hpp)), never recorded: a
 recording shows whoever was holding the cube.
 
 The same suite holds the complete screen's stats card to the design system's
 contrast in both themes and both layouts
-([complete_screen_test.cpp](https://github.com/iainchesworthlabs/cubeulator/blob/main/tests/unit/complete_screen_test.cpp)):
+([complete_screen_test.cpp](../tests/unit/complete_screen_test.cpp)):
 what each piece of text in the card is drawn over is read from the Rectangles
 it sits in, which needs no GPU. A Rectangle with no `color` is opaque white, so
 a card left unfilled reads fine in the light theme and is near-white ink on
@@ -141,11 +154,13 @@ cube_qml_tests "[.gallery]"
 ```
 
 The shot names are in
-[solve_screen_gallery_test.cpp](https://github.com/iainchesworthlabs/cubeulator/blob/main/tests/unit/solve_screen_gallery_test.cpp).
+[solve_screen_gallery_test.cpp](../tests/unit/solve_screen_gallery_test.cpp).
 It needs a GPU, so `ctest` never selects it. The scan screen has a hidden case
 of its own under the same tag and directory variable (`scan-mirrored.png` and
 `scan-unmirrored.png`, in `direct_scan_screen_test.cpp`; `"[.gallery][direct-scan]"`
-runs it alone), so the command above writes those too.
+runs it alone), so the command above writes those too, and so do the hidden
+gallery cases of the colours screen and the review screen
+(`colours_screen_test.cpp`) and of the N x N cube view (`cube_n_view_test.cpp`).
 
 To *use* the solve screen without scanning a cube first, start the app with
 `CUBE_SOLVE_DEMO=<seed>`: it opens on the solve screen with a cube scrambled
@@ -180,7 +195,7 @@ set CUBE_CAMERA_LOCK_TEST=1  && cube_integration_tests "[.camera-lock]"
   but leaves the image alone is a common DirectShow trap, and the report
   distinguishes the two.
 - `[.camera-lock]` verifies the photometry lock (see
-  [`interfaces/camera.hpp`](https://github.com/iainchesworthlabs/cubeulator/blob/main/src/app/interfaces/camera.hpp)) on real
+  [`interfaces/camera.hpp`](../src/app/interfaces/camera.hpp)) on real
   hardware: frame-to-frame drift of mean L/chroma with the automatics
   running versus locked, the explicit-override path, that `stop()` puts the
   driver's settings back, and open+first-frame latency before and after.
@@ -319,8 +334,9 @@ on Windows); the whole macOS step is about 28 minutes.
   `tests/system/CMakeLists.txt`: `tests/i18n/system/language_test.cpp` (the
   language switched live in the real window; see
   [Translation tests](#translation-tests)). It is in the walk like any other
-  case. (The desktop shell's placeholder About had one too, until About became
-  a screen: `tests/system/licences_test.cpp`.)
+  case. (The desktop shell's placeholder About had one too; since About became
+  a screen its test, `licences_test.cpp`, is listed in `tests/system/CMakeLists.txt`
+  with the rest.)
 - **Nothing of a person's is read or written.** The settings store is a
   temporary directory (`QSettings::setPath`), and so is the app's data folder,
   where the history of solves is kept: `system_test_main.cpp` points
@@ -451,8 +467,9 @@ look like test bugs and are not:
 makes the QML the harness: `QUICK_TEST_MAIN` creates its own engine, the
 controllers would have to be injected from a setup hook, and its runner does
 not know `catch_discover_tests`, labels or the repo's reporters. This app is
-composed in C++ - five controllers constructed and registered by `main()` -
-so the harness has to be C++ to share that wiring. Catch2 +
+composed in C++ - the controllers (`AppControllers`) are constructed and
+registered by `AppRuntime`, which `main()` runs - so the harness has to be C++
+to share that wiring. Catch2 +
 `QTest::mouseClick(window, ...)` on the real `QQuickWindow` costs one helper
 (`App`) and sends the same synthetic input a `TestCase` would, and the
 assertions can read the C++ controllers directly.
@@ -592,21 +609,22 @@ to turn a layer in, so a box that is clear is a cube that is clear at any angle.
 ### Known today
 
 `known_today_test.cpp` asserts, as they are, the behaviours the
-[experience plan](app-experience-plan.md) lists as defects: a button does
-nothing (**Review the solution**, which the solution-review branch builds),
-there is no back or keyboard focus on the settings screen, and two settings
-drive a controller no screen uses. (**Solve history** did nothing until the
-history screen was built; it is a journey step now, `history_test.cpp`.) Each is tagged `[known-today]`,
-cites its plan line and owner, and is written to **fail the day it is
-fixed** - that is the prompt to turn it into a journey step. Nothing in the
-suite fixes them.
+[experience plan](app-experience-plan.md) lists as defects. Two are left: the
+launch screen's language button is a picker with one language and opens
+Settings, and there is no back handling (Escape, the Back key) and no control
+that takes keyboard focus on the settings screen. Each is tagged
+`[known-today]`, cites its plan line and owner, and is written to **fail the
+day it is fixed** - that is the prompt to turn it into a journey step. Nothing
+in the suite fixes them.
 
-Three used to be here and are journey steps now: the last step of the solution
+Others used to be here and are journey steps now: the last step of the solution
 is **Finish** and leads to the complete screen, **Rescan** is the way out of the
-solve screen, and **Review the solution** on the complete screen opens the
-solution, which is stepped through and left again (`journey_test.cpp`). The solve screen keeps the camera running to watch how
-the cube is held; the fake camera serves it too, so the journey asserts the
-camera is still on there and let go of when the screen is left.
+solve screen, **Review the solution** on the complete screen opens the
+solution, which is stepped through and left again (`journey_test.cpp`), and
+**Solve history** opens the list of solves (`history_test.cpp`). The solve
+screen keeps the camera running to watch how the cube is held; the fake camera
+serves it too, so the journey asserts the camera is still on there and let go
+of when the screen is left.
 
 ### Seams wanted from the other lanes
 
@@ -632,7 +650,8 @@ owns them:
 
 ### Carrying this into the new experience
 
-The suite is written against today's six screens, but what it is built from
+The suite was written against the six screens the app had then (the ten in
+`layout_test.cpp`'s `kScreens` are what it covers today), but what it is built from
 does not depend on them, and `docs/design/journey.md` (E1) was written to be
 its inventory: state ids of the form `screen.state`, "a state nobody visits
 fails the reach check". The hand-off, per screen as E2/E3 rebuild it:
@@ -657,7 +676,7 @@ A change that makes the app meaningfully slower fails a test, the same way a
 change that makes it wrong fails a unit test. `cube_perf_tests` is that tier:
 its own binary, linked against `cube::lib` alone (no Qt, no window), with every
 number it holds the app to in one file,
-[`tests/perf/budgets.hpp`](https://github.com/iainchesworthlabs/cubeulator/blob/main/tests/perf/budgets.hpp).
+[`tests/perf/budgets.hpp`](../tests/perf/budgets.hpp).
 
 It has two halves, and the split is the design:
 
@@ -739,7 +758,7 @@ loose part.
 4), so the cases are visible in a run and cannot be mistaken for passes. Which
 build is which is decided by CMake and passed in as `CUBE_PERF_OPTIMISED` /
 `CUBE_PERF_INSTRUMENTED`, read as `constexpr bool`s in
-[`perf_build.hpp`](https://github.com/iainchesworthlabs/cubeulator/blob/main/tests/perf/perf_build.hpp); nothing uses the preprocessor
+[`perf_build.hpp`](../tests/perf/perf_build.hpp); nothing uses the preprocessor
 (the platform-isolation job holds that for all of `tests/`).
 
 The wall-time checks are opt-in because they are the one test that can fail
@@ -941,16 +960,20 @@ This is the list, and it is the list the [security policy](SECURITY.md) names
 | `fuzz_state_string` | `state_string_problem`: a 6 × size² letter state, for any size | |
 | `fuzz_recording_index` | `read_index` and `parse_index_line`: a recording's `index.csv` | |
 | `fuzz_manifest` | `read_manifest`: a recording's `manifest.json` | |
-| `fuzz_frame` | `read_side` and `read_corner`: a camera frame up to 48 × 48 and any size of cube | |
+| `fuzz_frame` | `read_side` and `read_corner`: a camera frame up to 128 × 128 and any size of cube | |
 
 The harnesses are not built for the browser: they read their seeds from the host's
 directories, which a WebAssembly program under Node does not see (the
 `web-emscripten-tests` preset turns `CUBEULATOR_BUILD_FUZZERS` off).
 
-The frame is held to 48 × 48 because `read_side` takes tens of seconds on a noisy
-115 × 112 frame for a 9 × 9 cube, which this harness found
-([issue 276](https://github.com/iainchesworthlabs/cubeulator/issues/276)); the limit
-(`kLargest` in `fuzz_frame.cpp`) goes when that is fixed.
+The frame is held to 128 × 128 (`kLargest` in `fuzz_frame.cpp`): a larger one
+only repeats the same pixels for more time a run. The limit was 48 × 48 until
+`read_side` stopped taking tens of seconds on a noisy 115 × 112 frame for a
+9 × 9 cube, which this harness found
+([issue 276](https://github.com/iainchesworthlabs/cubeulator/issues/276)); the
+reader now gives up on a frame with far more sticker-sized shapes than a side
+can show (0.2.0-beta.2 in the changelog), and that frame is in
+`regressions/frame/`.
 
 The settings and history files are read by Qt code in `src/app`
 (`SolveHistoryStore`, `LanguageManager`), which the library harnesses do not
@@ -979,8 +1002,10 @@ libFuzzer wrote them. Two ways to run one:
 
   `fuzz.yml` does this for every harness: 60 seconds each on a push to
   `develop`, 10 minutes each every night with the corpus carried on in the
-  Actions cache (`ci/fuzz-run.sh`). A crash is uploaded as an artifact and, from
-  the nightly run, opens or comments on the `nightly-analysis` issue.
+  Actions cache (`ci/fuzz-run.sh`), and 20 seconds each on a pull request that
+  changes the harnesses, the script or the preset. A crash is uploaded as an
+  artifact and, from the nightly run, opens or comments on the `nightly-analysis`
+  issue.
 
 When a harness finds a crash: fix the code, and put the input libFuzzer wrote
 (`crash-<hash>`) in `regressions/<name>/` in the same pull request, so that the
@@ -1023,7 +1048,8 @@ ctest --test-dir build/web-emscripten-tests -j 8 -LE slow
 (A personal `CMakeUserPresets.json` preset that inherits
 `web-emscripten-tests` moves the build tree and the vcpkg cache; see
 [Building](building.md#webassembly-browser).) About 215 cases run in about a
-minute. What does not:
+minute. (CI runs the same tree with `-j 4` and without `-LE slow`.) What does
+not:
 
 | Left out | Why |
 |---|---|
@@ -1084,7 +1110,9 @@ the two cross-origin-isolation headers the app's threads need.
 | `journey.spec.mjs` | launch, scan a scrambled cube, solve it, walk the solution to the end; abandon, start over and rescan |
 | `camera.spec.mjs` | a camera that is refused, absent or busy, and the recovery; the camera is let go of; the exposure and white balance lock: held and given back, a camera or browser without the controls, one that refuses, one that is silently skipped, one that takes manual at a value of its own, one that never answers |
 | `camera-device.spec.mjs` | the browser's own path, with Chromium's built-in fake device: a real `getUserMedia()` and `enumerateDevices()`, frames the browser makes, and the lock the real track makes of its controls |
+| `camera-switch.spec.mjs` | which camera a phone's browser opens first (the back one, however the browser lists them), and the **Switch camera** button to the other; a laptop with one webcam has nothing to switch to |
 | `demo.spec.mjs` | `?demo=<seed>&move=<n>`: stepping, switching method, the completion screen |
+| `sizes.spec.mjs` | a cube that is not a 3x3: `?demo=<seed>&size=<n>` (a 5x5 five moves in, a 2x2, a size that is no size) and a scramble typed for a 4x4 from Home, solved with no camera |
 | `tumble.spec.mjs` | a cube turned about one axis and then another, drawn by `cube_tumble_sim` and played to the camera at its recorded frame times; skipped unless `TUMBLE_SESSION` names the session (see [the investigation](investigations/2026-10-14-scan-tumble.md)) |
 | `input.spec.mjs` | a mouse drag of the cube, a finger, the keyboard |
 | `package.spec.mjs` | the `package` project: any built copy of the site, the release zip unzipped included, starts, is isolated, draws and is quiet (it needs nothing the diagnostics build adds) |
@@ -1140,6 +1168,8 @@ happened back from it. As in `tests/perf`, two kinds of check:
 - **how long it took**: budgets well above what a software-rendered runner
   measures, so an order of magnitude fails and noise does not. Only run when
   `CUBEULATOR_WEB_PERF_TIMING=1`, as `CUBE_PERF_TIMING` gates the native ones.
+  `CUBEULATOR_WEB_CPU_THROTTLE=4` slows the page's main thread four times for
+  the scan-frame journeys below.
 
 Either way each journey leaves `reports/perf/<journey>.json` (the summary, the
 renderer string and the heap), `<journey>.trace.json` (open it in the DevTools
@@ -1235,8 +1265,11 @@ camera's 33 ms is one the page does not draw:
   (`tools/scan`), and whether a real webcam's exposure and white balance can be
   held, and what they do when they are not, is the probe's (above).
 - **The published site.** These test the diagnostics build, which differs from
-  `web-emscripten-release` by the recorder and the driver only; whether the
-  deployed copy is served with the right headers is the docs workflow's check.
+  `web-emscripten-release` by the recorder and the driver only. The `package`
+  project is a smoke test of any built copy, the release zip unzipped included,
+  served by `support/serve.mjs`; no CI leg runs it (`ci.yml` runs the `app`
+  project, and the `perf` project when asked), so whether the deployed site is
+  served with the right headers is not checked in CI.
 
 ## Translation tests
 

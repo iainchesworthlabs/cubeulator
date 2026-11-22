@@ -12,6 +12,19 @@ A release is a deliberate human step (see [Branch protection](branch-protection.
 The workflow does everything up to a **draft** release; making it public is the
 click that is yours.
 
+> [!IMPORTANT]
+> This page was written for the earlier branch model: a release pull request
+> from `develop` into `main`, a tag on its merge commit, and a back-merge. Since
+> 2026-10-29 only the release bot can update `main` and nobody opens a pull
+> request into it ([Branch protection](branch-protection.md) and the
+> [migration plan](migration.md)), and `release.yml` and `release-check.yml` have
+> not been rewritten for that yet. What works today: a pre-release (`-alpha.N`, `-beta.N`
+> or `-rc.N`) is tagged on a `develop` commit, which is how 0.2.0-beta.2 to
+> 0.2.0-beta.4 were made. A final release is refused unless its commit is on
+> `main` (`Check where the release is cut from` in `release.yml`), and the
+> workflow does not move `main`, so how a final release gets there is the
+> owner's to decide. Steps 4, 5, 9 and 10 below say where they differ.
+
 ## The shape of a release
 
 ```text
@@ -19,25 +32,25 @@ feature/* bugfix/* ──PR──▶ merge queue ──▶ develop
                                               │
         release/<version> ──PR──▶ develop     │   1. cut the changelog, set the version
                                               ▼
-                     develop ──release PR (merge commit)──▶ main      2. the release decision
-                                                             │
-                                          tag v<version> ────┘        3. the Release workflow
-                                                             ▼
-                                        draft GitHub Release ──click──▶ published   4.
-                                                             │
-                                         main ──back-merge PR──▶ develop            5.
+                    tag v<version> on that develop commit        2. the Release workflow
+                                              ▼
+                      draft GitHub Release ──click──▶ published   3.
+                                              │
+                        the release bot fast-forwards main        4. (planned)
 ```
 
-- **Releases go from `develop` into `main`.** The release PR is merged with a
-  *merge commit* (never squash or rebase, or the two branches diverge and the
-  next release PR re-lists every commit).
+- **Releases are cut from `develop`.** The version is set and the changelog cut
+  in a pull request into `develop` that goes through the merge queue like any
+  other, from a `release/<version>` branch (0.2.0-beta.4 was `release/0.2`).
 - **The changelog is cut on `develop`**, in the PR that sets the version, so
-  that what `main` receives is already the release.
-- **The tag is the build.** A tag on `main` (or a dispatch, below) runs the
+  that the commit that is tagged is already the release.
+- **The tag is the build.** A tag on that commit (or a dispatch, below) runs the
   Release workflow, which builds, checks, signs and attests the packages, renders
   the notes from `CHANGELOG.md` and leaves a draft release.
-- **`main` is back-merged into `develop`** afterwards, so that `develop` contains
-  the release's merge commit and the next release PR lists only what is new.
+- **`main` is to follow the release.** The release bot fast-forwards it to the
+  released commit, so that it is always an ancestor of `develop` and there is no
+  back-merge. `release.yml` has no step that does it yet: `main` still stands at
+  `v0.2.0-beta.1`.
 
 ## What a release holds
 
@@ -87,8 +100,8 @@ the first release the project is willing to call stable.
 The version lives in **two lines of the top-level `CMakeLists.txt`**:
 
 ```cmake
-project(Cubeulator VERSION 0.1.0 ...)
-set(CUBEULATOR_VERSION_PRERELEASE "beta.1")     # "" for a final release
+project(Cubeulator VERSION 0.2.0 ...)
+set(CUBEULATOR_VERSION_PRERELEASE "beta.4")     # "" for a final release
 ```
 
 `tools/release/prepare_release.py` sets both, and the manifest's own `"version"`
@@ -188,9 +201,10 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    python tools/release/check_health.py        # develop's tip; needs an authenticated gh
    ```
 
-   names the workflow that is red, still running or has not run. The badges on
-   `main` are those workflows' latest runs there, so a release that arrives with
-   one red is a red front page. Two things make "green" take longer than the
+   names the workflow that is red, still running or has not run. The README's
+   badges show those workflows' latest runs on the default branch (`develop`), so
+   a release made from a red commit is a red front page. Two things make "green"
+   take longer than the
    pull request's checks suggest. `ci.yml`'s push run on `develop` is hours, and
    a push that arrives while an earlier push's run is still *waiting* replaces
    it (the replaced run reads `cancelled`), so once the PR that prepares the
@@ -250,71 +264,63 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
 
    It adds every fragment still in `changelog.d/` to that version's section
    (which must be the newest) and deletes them; it does not touch the version.
-   Do it in a PR before the release PR is opened, not after.
-4. **Open the release PR**: `develop` → `main`, merge commit. The `Release
-   readiness` check puts the rendered notes in its summary: read them there.
-   `Commit is green` asks step 1's question of the PR's head commit and puts the
-   table in its summary. It waits (up to three hours) for a workflow that has
-   not finished and fails at once on a red workflow or check run. It is a
-   **required check on `main`**, so a release (or a hotfix) cannot merge from a
-   red commit without someone choosing to bypass it.
-
-   If it goes red for a reason that has nothing to do with the change (a flaky
-   scheduled leg, a runner that died), re-run what is red, which the table in
-   its summary names (`gh run rerun <id> --failed`), and then re-run this check
-   the same way; a push to the PR would restart every check instead. Merge
-   with it red (`gh pr merge --admin`: the admin role bypasses through a pull
-   request only, see [Branch protection](branch-protection.md)) only when the
-   red is real and known not to matter for the change, such as a hotfix that
-   has to go out while an unrelated leg is broken, and say why in the PR.
-
-   `main`'s ruleset is in [Branch protection](branch-protection.md). It asks
-   for "up to date", so anything that reaches `main` after the release PR's
-   last green run (a hotfix, a back-merge) starts every check again, and the
-   full matrix is hours on hosted runners: keep the release PR the last thing
-   that touches `main`, and do the back-merge (step 9) after the tag.
-5. **Tag the merge commit on `main`:**
+   Do it in a PR that has merged before you tag, not after.
+4. **Read the notes and the commit once more.** There is no release PR into
+   `main` now, so `Release readiness` and `Commit is green` (`release-check.yml`,
+   which run only on a pull request into `main`) do not run. The Release
+   workflow's own `Verify the release` job asks the same two questions before it
+   builds anything: `check_release.py` of the changelog section, and
+   `check_health.py` (step 1's question) of the commit being released, which
+   fails the run at once on a red workflow or check run and on one that has not
+   finished. Preview the notes with `render_release_notes.py` (above) or read
+   them in a dry run's summary. If something is red for a reason that has
+   nothing to do with the change (a flaky scheduled leg, a runner that died),
+   re-run what is red (`gh run rerun <id> --failed`) and tag after it is green.
+5. **Tag the release commit on `develop`:**
 
    ```sh
-   git switch main && git pull
+   git switch develop && git pull
    git tag -a v0.1.0-beta.1 -m "Cubeulator 0.1.0-beta.1"
    git push origin v0.1.0-beta.1
    ```
 
-   or run the workflow by hand from `main` with `dry_run` unticked: it makes the
+   or run the workflow by hand from `develop` with `dry_run` unticked: it makes the
    tag itself, at the end, once everything has passed, so a failed run leaves
    no tag behind. The `tags` ruleset lets only organisation admins and the
    release bot create a `v*` tag, so the workflow makes it with a token of the
    release bot's (the organisation secrets `RELEASE_BOT_APP_ID` and
    `RELEASE_BOT_PRIVATE_KEY`, for this repository and the contents permission only).
    A tag the bot pushes starts the workflow too, and `Verify the release` skips
-   that run, so the release is built and uploaded once. A pre-release may be run
-   by hand from `develop`; only a final release has to be on `main`. The workflow asks step 1's question again before it builds:
-   of the `develop` tip the merge commit merged (its second parent: that is what
-   was tested, and the merge commit's own runs have only just started).
+   that run, so the release is built and uploaded once. A pre-release may be cut
+   from any branch; only a final release has to be on `main` (see the note at
+   the top). The workflow asks step 1's question again before it builds, of the
+   commit being released (if that is a merge commit, of the `develop` tip it
+   merged: its second parent).
 6. **Watch the `Release` workflow.** `Verify the release` is quick; the three
-   desktop `Build` jobs and `Build the web app` are the long ones (a cold vcpkg
+   desktop `Build` jobs, `Build the web app` and `Build the iOS app` are the long ones (a cold vcpkg
    cache is hours on Windows and macOS and for WebAssembly; the cache CI keeps
    makes it much less: the web leg's is `wasm32-emscripten-threads`). If a
    platform fails, fix it and tag again, or re-run the failed jobs.
 7. **Review the draft** under Releases: the notes, the five packages, the
    checksums and signatures. Edit the notes if you want to.
 8. **Publish it.**
-9. **Back-merge**: a PR from a `support/back-merge-<version>` branch cut from
-   `main`, into `develop`, so `develop` has the release.
-10. **Look at the front page.** The README's badges on `main` show the runs the
-    merge started, which are hours from done; the OpenSSF Scorecard badge reads
+9. **No back-merge.** `main` is an ancestor of `develop` and is only
+   fast-forwarded to a release (see the note at the top), so there is nothing to
+   merge back.
+10. **Look at the front page.** The README's badges show the latest runs of
+    their workflows on the default branch. The OpenSSF Scorecard badge reads
     "invalid repo path" (red) until Scorecard has published a result, and it
-    publishes only from a run on the default branch, so the merge into `main`
-    is what produces the first one: `scorecard.yml` runs on that push and the
-    badge turns to a score within minutes. Check:
+    publishes only from a run on the default branch. `scorecard.yml` still
+    triggers on a push to `main` (and on Mondays), and `main` is moved only by
+    the release bot's fast-forward, which `release.yml` does not make yet, so
+    the badge may stay red until the owner settles that. Check:
 
     ```sh
     python tools/release/check_health.py --scorecard
     ```
 
-    If it still reports no result a quarter of an hour after the merge, open
-    the `OSSF Scorecard` run on `main`: a rejected result is a warning
+    If it still reports no result a quarter of an hour after a push to `main`,
+    open the `OSSF Scorecard` run on `main`: a rejected result is a warning
     annotation on the *Run Scorecard analysis* step, with the API's reason
     (usually a step or setting added to `scorecard.yml` that its publishing
     rules do not allow; they are listed in that file).
@@ -343,8 +349,8 @@ run's signatures verify against the `cubeulator-signing-key.asc` in the same
 artifact, and against nothing else.
 
 It can be run from any branch that has the workflow file, without a tag, and so
-before the first release PR has merged (checked on 2026-10-14, from a scratch
-branch):
+before the pull request that prepares the release has merged (checked on
+2026-10-14, from a scratch branch):
 
 ```sh
 gh workflow run release.yml --ref <branch> -f dry_run=true
@@ -395,6 +401,13 @@ validate it. The IPA is not a release file, so the release carries no device
 identifiers.
 
 ## The signing key
+
+> [!NOTE]
+> [The migration plan](migration.md) ("Signing key") moves releases to the
+> organisation's key and deletes the repository secrets; releases up to
+> v0.2.0-beta.1 were signed with the project key described here. `release.yml`
+> still reads the two secret names below, and which key signs the next release
+> is the owner's to confirm.
 
 The release is signed with the project's GPG key, held as two repository
 secrets (the same names the other projects of the family use):
@@ -453,8 +466,8 @@ The workflow refuses, with the reason in the log, when:
 | `CHANGELOG.md` has no dated `## [version]` section, or it is not the newest | the notes are rendered from it and nothing else |
 | The section has no summary, an item without a bold lead-in, or (pre-release) no closing caveat | the same rules `check_release.py` states |
 | `changelog.d/` still holds fragments | they are not in the section, so the notes would miss them: run `prepare_release.py` |
-| A final release is not on `main` | it is tagged on `main`, after the release PR; a pre-release may be cut from a `release/*` branch to be tried first |
-| The commit (for a merge commit on `main`, the `develop` tip it merged) is not green on CI, CodeQL, OSV-Scanner and Zizmor, or has a red check run | [step 1](#preparing-the-release); a dry run reports it and goes on |
+| A final release is not on `main` | `Check where the release is cut from`: `main` is the release branch, and nothing moves it yet (see the note at the top); a pre-release may be cut from any branch |
+| The commit (for a merge commit, the `develop` tip it merged) is not green on CI, CodeQL, OSV-Scanner and Zizmor, or has a red check run | [step 1](#preparing-the-release); a dry run reports it and goes on |
 | A dispatched release names a tag that exists | |
 | A package fails `packaging/check-package.sh` | Qt, the executable, the icon, the identifier, the camera string, the notices: the same checks `ci.yml` makes on every push |
 | A platform produces no package, or two | |

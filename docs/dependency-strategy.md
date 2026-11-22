@@ -1,7 +1,9 @@
 # Dependency strategy: vcpkg on every platform
 
-Cubeulator uses [vcpkg](https://github.com/iainchesworthlabs/vcpkg) (the labs fork of microsoft/vcpkg: it tracks upstream and carries our ports until they are merged there) in manifest mode (`vcpkg.json`, pinned by its `builtin-baseline`, a commit of the fork) for its C++ dependencies: Catch2,
-fmt and OpenCV. Where the checkout comes from is in [Getting started](getting-started.md#vcpkg). Qt is a separate prebuilt install
+Cubeulator uses [vcpkg](https://github.com/iainchesworthlabs/vcpkg) (the labs fork of microsoft/vcpkg: it tracks upstream and carries our ports until they are merged there) in manifest mode (`vcpkg.json`, pinned by its `builtin-baseline`, a commit of the fork) for its C++ dependencies: fmt and
+OpenCV, Catch2 for the tests (the `tests` feature) and Tracy for profiling (see
+[Opt-in features](#opt-in-features)). Where the checkout comes from is in
+[Getting started](getting-started.md#vcpkg). Qt is a separate prebuilt install
 (aqtinstall / `jurplel/install-qt-action`), not a vcpkg dependency, for the
 same reasons CountdownSolver keeps it out of vcpkg (build size, Windows
 `MAX_PATH`).
@@ -10,11 +12,13 @@ OpenCV has one entry in `vcpkg.json` for every triplet but the browser's
 (`"platform": "!emscripten"`; the browser has an entry of its own, see
 [WebAssembly](#webassembly)): it resolves the same way on every triplet vcpkg
 supports, `arm64-android`/`arm64-ios` included (`opencv4` pins an explicit
-feature list rather than taking the port's defaults, but carries no mobile
-restriction of its own). The
-`android-clang-*`/`ios-clang-*` presets chainload vcpkg's toolchain on top of
-the NDK/iOS toolchain (`VCPKG_CHAINLOAD_TOOLCHAIN_FILE`) so every dependency
-resolves the same way everywhere.
+feature list rather than taking the port's defaults, and carries no mobile
+restriction of its own; its `jpeg`, `png`, `tiff` and `webp` features are left
+out on iOS, where Qt's own JPEG library is the only one in the app). The
+`android-clang-*`, `ios-device-*` and `web-emscripten-*` presets have vcpkg's
+toolchain chainload the NDK's, Qt's iOS or Qt's WebAssembly toolchain
+(`VCPKG_CHAINLOAD_TOOLCHAIN_FILE`), so every dependency resolves the same way
+everywhere.
 `cube::lib`'s `version.cpp` uses `fmt::format` rather than `std::format`
 because the Android NDK's `libc++` didn't implement `<format>` when this was
 written (NDK r26b; it needs locale support the NDK's minimal libc doesn't
@@ -44,7 +48,7 @@ Tracy is the one dependency that is **not** in the base list: it is the
 `VCPKG_MANIFEST_FEATURES` before `project()` (the way it already does for
 `tests`) whenever `CUBEULATOR_ENABLE_TRACY` is on - and it is on by default on
 the desktop, off for the browser, Android and iOS, where `-DCUBEULATOR_ENABLE_TRACY=OFF`
-resolves none of it. The client ships in the desktop applications, dormant until
+resolves none of it (a coverage build defaults to off too). The client ships in the desktop applications, dormant until
 the application is asked to profile (see [Profiling](profiling.md)).
 
 The `profiling` feature asks for `tracy[manual-lifetime,on-demand,only-localhost]`
@@ -119,15 +123,19 @@ vcpkg on mobile triplets:
 So the original exclusion was a defensive call based on adjacent evidence,
 not something vcpkg itself enforces. The strategy is to let vcpkg build
 OpenCV the same way on every platform rather than pre-committing to a
-heavier, platform-specific fallback before testing the simpler path.
+heavier, platform-specific fallback before testing the simpler path. The
+simpler path has been tested since: CI's Android and iOS jobs build OpenCV
+through vcpkg for `arm64-android` and `arm64-ios`, and the iPhone app that goes
+to TestFlight links it.
 
 ## WebAssembly
 
 The browser build ([Try it in your browser](web.md)) takes its two libraries
 from vcpkg the same way, on the `wasm32-emscripten-threads` triplet
-(`cmake/triplets/`): vcpkg's own `wasm32-emscripten` with `-pthread`, because
-Qt's multithreaded WebAssembly kit is built with atomics and shared memory and
-the linker refuses an object that was not. Where it differs from the rest:
+(`cmake/triplets/`): vcpkg's own `wasm32-emscripten` with `-pthread` (and `-fexceptions`, the mode
+Qt's kit uses), because Qt's multithreaded WebAssembly kit is built with atomics
+and shared memory and the linker refuses an object that was not. It builds the
+release variant of every port only. Where it differs from the rest:
 
 - **OpenCV is its own, smaller, entry in `vcpkg.json`**, selected by
   `"platform": "emscripten"` (the desktop and mobile entry carries
@@ -150,7 +158,8 @@ the linker refuses an object that was not. Where it differs from the rest:
 ## What this means for CI
 
 `ci.yml`'s `android-build` and `ios-build` jobs build opencv4 for
-`arm64-android`/`arm64-ios` through vcpkg. Both cap `VCPKG_MAX_CONCURRENCY`
+`arm64-android`/`arm64-ios` through vcpkg, and so does `ios-device.yml`, which
+builds the whole iPhone app. All cap `VCPKG_MAX_CONCURRENCY`
 at 2, mirroring the desktop jobs' mitigation - the dependency builds are
 large, and the cap was set when ONNX Runtime, now gone, made them larger.
 The `web-build` job does the same for `wasm32-emscripten-threads` (its cap
@@ -158,8 +167,8 @@ is 4). See [CI & dependencies](ci.md) for which legs are required.
 
 ## Fallback: native SDKs per platform
 
-If vcpkg's mobile build of OpenCV turns out not to actually work, the
-fallback is to consume its own official mobile distribution instead,
+Had vcpkg's mobile build of OpenCV not worked, the
+fallback would have been to consume its own official mobile distribution instead,
 wrapped as a CMake `IMPORTED` target behind the same interface name
 (`cube::opencv`) so vision code still never branches on how the dependency
 was acquired:
@@ -168,6 +177,6 @@ was acquired:
   / `OpenCV-android-sdk` (Android, `OpenCV_DIR=.../sdk/native/jni` +
   `find_package(OpenCV)`).
 
-This fallback is not currently pursued - `cmake/MobileDependencies.cmake`
-sources OpenCV via vcpkg on every platform. It stays documented here so it
-isn't lost if CI shows it genuinely doesn't work out.
+This fallback is not needed - `cmake/MobileDependencies.cmake` sources OpenCV
+via vcpkg on every platform, and CI shows it working. It stays documented here
+in case a later OpenCV or port update breaks a mobile triplet.

@@ -1,16 +1,57 @@
 # N x N in the app plan
 
-> **Status:** 0.1.0-beta.1 solved a 3x3 and nothing else. On `develop` now the
-> app follows a cube of 2 to 5 (more, in the library) from a typed scramble or
-> hand-entered colours, draws it, reviews it and keeps it in History
-> ([Progress](#progress)); the camera in the app still reads only a 3x3. The
-> library reads, names and assembles any odd size from drawn cubes
-> ([Gate S0](#gate-s0), offline half passed); no real cube but a 3x3 has been read.
-> The rest of the page is the plan as accepted.
+> [!NOTE]
+> **Status at 0.2.0-beta.4, checked 2026-11-22: shipped in 0.2.0-beta.1
+> (2026-10-22), with four loose ends.** 0.1.0-beta.1 solved a 3x3 and nothing
+> else. Since 0.2.0-beta.1 the app follows a cube of 2 to 5 from a typed
+> scramble, hand-entered colours or the camera, draws it, reviews it and keeps it
+> in History, and the camera follows a bigger cube's turns. The library goes up to
+> 9. The rest of the page is the plan as accepted, with its progress marked.
+>
+> **Done**
+>
+> - **P0 Foundations**, every slice: the oracle, notation, the stepped plan, the
+>   solve controller on `NCube`, history v2, budgets, the 3D prototype, sizes in
+>   recordings, N-generic test helpers (#164 to #172).
+> - **P1 Solve and follow any size**, every slice (#173 to #180): the size picker
+>   (*Another size of cube*, 2×2 to 5×5), scramble entry, hand entry, the new 3D
+>   view (`CubeNView.qml`), layer words, the stage list, Review and History at any
+>   size, the translation drafts, the layout checks. The guide page
+>   [other-sizes.md](guide/other-sizes.md) and its pictures exist.
+> - **P2 and P3 Scanning**, for sizes 2 to 5, odd and even: the assembly, the
+>   reader and the naming (#190, #191, #193), the scan screen and controller
+>   (#192), the size choice and *Auto* (#200), the rescan (#201), and the camera
+>   following a bigger cube (#207, #216). The plan expected a 5x5 scan only "if S0
+>   passes in time" and even sizes only "unless it surprises"; both shipped.
+> - **Real recordings** (the third item of [Gate S0](#gate-s0)): 65 real sessions
+>   of a 2x2, 4x4 and 5x5, recorded on 2026-10-17 and 18 ([investigation](investigations/2026-10-18-nxn-real-scan-sessions.md)).
+> - The four **open decisions** at the end are answered.
+>
+> **Left**
+>
+> - **A phone.** The P1 gate asks for a 5x5 solved on a phone-class device inside
+>   the time budget; it was waived on 2026-10-17 and never run, and
+>   [Performance](performance.md) still says a phone has not been measured. The
+>   iPhone build exists, and the changelog says its scan has not been seen to
+>   work on a phone.
+> - **Sizes 6 and 7** are not offered (`EntryScreen.qml` lists 2 to 5); decision 3
+>   waits on that phone measurement. 8 and 9 stay in the library.
+> - **A real bigger cube in a hand.** The camera has been tried on drawn cubes and
+>   on recorded sessions, not on many real cubes being turned; no 7x7 was ever
+>   recorded.
+> - **Old code.** `SteppedSolution` still exists as the reference the stepped-plan
+>   tests are held against, and the 3x3's own view `Cube3DView.qml` still exists
+>   beside `CubeNView.qml`, where the plan said it would go once the new one beat
+>   it.
+> - **P4** (budgets in CI, store text, accessibility of the layer words) was not
+>   checked here.
+>
+> **Dropped:** nothing.
 
-Written 2026-10-15. Status: **decisions accepted 2026-10-15; P0 done and P1
-built 2026-10-16 to 17** ([Progress](#progress)). This is the basis for 0.2.0-beta.1 and
-began once 0.1.0-beta.1 was out ([Release shape](#release-shape)).
+Written 2026-10-15. Status: **decisions accepted 2026-10-15; P0 to P3 built
+2026-10-16 to 18 and released in 0.2.0-beta.1** ([Progress](#progress)). This was
+the basis for 0.2.0-beta.1 and began once 0.1.0-beta.1 was out
+([Release shape](#release-shape)).
 
 This is the app half of the N x N work. The library half is done and described
 in [nxn-solver.md](nxn-solver.md); the camera half is described in
@@ -39,7 +80,8 @@ release does not wait for it.
 
 ## What was found
 
-Read from `develop` at the merge of pull request 148.
+Read from `develop` at the merge of pull request 148, before the work began. The
+[Progress](#progress) table says what became of each row.
 
 | area | today | where |
 |---|---|---|
@@ -162,7 +204,7 @@ The prototype is the first thing built after the foundations, because decision
 view is now, on a phone-class GPU and in the browser, before any screen is
 rebuilt on it.
 
-**Result (2026-10-16, [tools/cube3d_prototype](https://github.com/iainchesworthlabs/cubeulator/blob/main/tools/cube3d_prototype/README.md)).**
+**Result (2026-10-16, [tools/cube3d_prototype](../tools/cube3d_prototype/README.md)).**
 Built and measured against the same view scaled up the way `Cube3DView.qml` would
 scale (one model per cubie and per sticker, a material bound to each). The lift
 renderer draws a cube of any size as three scene objects: on the development
@@ -272,6 +314,11 @@ offline as well**: named from their corners and put together by trying where eac
 4x4 and a 6x6 read and assemble as the odd sizes do, and a 2x2's six flat sides make more than
 one cube one time in five, which only the review can settle.
 
+*Since (2026-11-22): item 3 was done in part. 65 real sessions of a 2x2 (43), a 4x4 (15)
+and a 5x5 (7) were recorded on 2026-10-17 and 18 and replayed
+([the investigation](investigations/2026-10-18-nxn-real-scan-sessions.md)); a 7x7 was not
+recorded, and those sessions have no truth to score against.*
+
 ## Phases
 
 | phase | scope | exit gate |
@@ -304,14 +351,15 @@ top. Updated as slices land.
 | Home's *Another size of cube*; size 2 to 5; scramble entry; demo size | P1 | merged (#176) |
 | Typing a cube in a colour at a time, with the validity oracle | P1 | merged (#177) |
 | Review and History for any size; the kept solution carries its stages | P1 | merged (#178) |
-| Translation drafts for the new strings in eight languages | P1 | open (#179) |
-| Layout checks hold the new screens in the pseudo-locale and the RTL drafts | P1 | open (#180) |
-| User guide page and pictures | P1 | not started |
+| Translation drafts for the new strings in eight languages | P1 | merged (#179) |
+| Layout checks hold the new screens in the pseudo-locale and the RTL drafts | P1 | merged (#180) |
+| User guide page and pictures | P1 | done: [other-sizes.md](guide/other-sizes.md) and its pictures, added on 2026-10-17 |
 | Assembling six scanned sides of any odd size (`cube::nxn::assemble_scanned_sides`, on the oracle) | P2 | merged (#190) |
 | The reader, the scan and the naming for any size; gate S0 offline (`cube_scan_s0`) | S0, P2 | merged (#191); **drawn cubes only** |
-| The scan screen and controller for any odd size: `DirectScan.size`, N^2 dots and chips, the review at its size; recorded at its size; `CUBE_SCAN_SIZE`; **not offered on the entry screen** | P2 | merged (#192) |
+| The scan screen and controller for any odd size: `DirectScan.size`, N^2 dots and chips, the review at its size; recorded at its size; `CUBE_SCAN_SIZE`; **not offered on the entry screen** (it is, since #200) | P2 | merged (#192) |
 | Even sizes: colours named from the corners, sides put on the cube by trying (`resolve_colors`, `assemble_scanned_sides`), `DirectScan` takes 2 to 9 | P3 | merged (#193); **drawn cubes only** |
-| Real recordings of a 5x5 (`CUBE_SCAN_SIZE=5 CUBE_SCAN_RECORD_DIR=...`) and a 4x4, then offering the camera for 5 (and 4) on the entry screen (with its words) | S0, P2, P3 | not started; needs a 5x5 and a 4x4 in the hand |
+| Real recordings of a 5x5 (`CUBE_SCAN_SIZE=5 CUBE_SCAN_RECORD_DIR=...`) and a 4x4, then offering the camera for 5 (and 4) on the entry screen (with its words) | S0, P2, P3 | done: 65 real sessions of a 2x2, 4x4 and 5x5 on 2026-10-17 and 18, and the camera is offered at every size from 2 to 5 (#200, #201) |
+| The camera follows a bigger cube's turns; the solve screen's camera at every size; the cube styles at every size | P2, P3 (added) | merged (#207, #216, #220); [3x3 and N x N: where the screens differ](nxn-ui-parity.md) |
 
 **What P1 found.** Wide moves are rare: grouping adjacent layers turned together
 saves under 1% of the moves (2,634 to 2,618 at 4x4, 8,297 to 8,264 at 7x7), so a
@@ -331,9 +379,11 @@ covered by tests (the system walk, the Playwright spec `sizes.spec.mjs`); the
 phone timing was not run (it needs a phone and was waived on 2026-10-17), so a
 phone's cost for `solve()` at 5x5 is unknown. `SteppedSolution` is not deleted
 yet: it is still the reference the 3x3 stepped-plan tests are held against.
+*(Both still hold at 0.2.0-beta.4.)*
 
 P0 and P1 are the milestone. A person can solve and learn any size from 2 to 5
 (then 7) from a hand-entered or demo cube; scanning arrives size by size.
+*(Scanning has arrived at 2 to 5; 7 is not offered.)*
 
 Branches follow gitflow (`feature/nxn-app-<topic>`) and each phase lands as
 several small pull requests to `develop`; none enables auto-merge unless
@@ -342,7 +392,7 @@ asked.
 ## Release shape
 
 0.2.0-beta.1, in [releasing.md](releasing.md)'s numbering (a minor for a
-feature, a counter within a pre-release line), is proposed to be:
+feature, a counter within a pre-release line), was proposed to be:
 
 - **In:** P0 and P1 for sizes 2 to 5, and 6 and 7 if the 3D prototype clears
   its gate. Enter a cube, enter a scramble, demo, follow, history.
@@ -350,6 +400,10 @@ feature, a counter within a pre-release line), is proposed to be:
   ships in 0.2.0-beta.2 or later, and the beta says so on the scan screen for
   N > 3.
 - **Out:** even-size scanning (P3) unless it surprises, 8x8 and 9x9.
+
+*What shipped (0.2.0-beta.1, 2026-10-22):* P0 and P1 for sizes 2 to 5, with 6 and 7 not
+offered; scanning at every size from 2 to 5, odd and even, with the colours screen as the
+check; no 8x8 or 9x9. The camera side went further than this proposal.
 
 Each user-visible pull request carries a `changelog.d` fragment; foundation
 work with no visible change is `no-changelog`. 0.1.0-beta.1 itself is handled
@@ -369,6 +423,12 @@ through the library) is in it.
 | **Test helpers are 6x9 throughout.** | `drawn_cube.hpp`, `cube_view_reading.hpp`, the system walks and the picture goldens. | P0 makes them N-generic with N = 3 as the default so every existing test stays itself; this is the largest single cost |
 | **Real cubes.** | Gate S0 and the even-size problem both need physical cubes and light. | Iain: a 5x5 and a 4x4 at least, a session each |
 | **Lanes.** | The work crosses the scan, kit and screens, solve and translation lanes. | It starts after 0.1.0-beta.1 so none of their beta work is disturbed, and each phase names the lane its pull requests land in |
+
+*Where the risks stand (2026-11-22).* Retired: the test helpers (N-generic, #172), history
+re-deriving solutions (v2 stores the moves, #168), and even sizes having no fixed centres (a
+side is named by position). Still live: the phone and wasm timings (the browser is measured, a
+phone is not), scanning bigger real cubes in a hand, and the 700-move solutions' experience.
+The 3D view at 7x7 and above is proved on a desktop and in a browser, and unproven on a phone.
 
 ## Order
 
@@ -394,15 +454,22 @@ P1.
 
 ## Open decisions
 
-For Iain, none of which block P0:
+For Iain, none of which block P0 (all four are now answered):
 
 1. The release cut above, in particular whether 0.2.0-beta.1 waits for
-   scanning a 5x5 or ships without it.
+   scanning a 5x5 or ships without it. *(Answered: it shipped with scanning at every
+   size from 2 to 5.)*
 2. What a "move" is on screen: wide moves as one (the WCA count, shorter) or
    layer turns (the number the library reports). Proposed: wide moves as one,
-   with the layer turns in the detail.
+   with the layer turns in the detail. *(Answered as proposed: the count a person is
+   shown is the wide-move count and the stored solution holds the layer turns, see
+   [nxn-solver.md](nxn-solver.md).)*
 3. Whether an "enter a scramble" path is a first-class screen or an advanced
-   option under hand entry.
+   option under hand entry. *(Answered: first-class. The *Another size of cube* screen
+   has the scramble field, with the buttons for entering the colours and for scanning
+   below it, `EntryScreen.qml`.)*
 4. Whether 2x2 is in the first release at all. It needs no reduction, its
    solver is a different algorithm, and it is the hardest to scan; it is
-   cheapest as "enter by hand" in 0.2.0-beta.1.
+   cheapest as "enter by hand" in 0.2.0-beta.1. *(Answered: it is in, with a
+   camera scan too; the 2x2's six flat sides fit more than one cube about one time
+   in five, so it may ask for a corner view or for the colours to be checked.)*

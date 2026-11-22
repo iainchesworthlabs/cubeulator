@@ -1,17 +1,29 @@
 # Solve
 
-> **Status in 0.1.0-beta.1:** Partly built, as `SolveScreen.qml`: the cube in
-> 3D with the layer to turn nudging the way it goes, the hold line, the three
-> solve methods (`solve.method`), the stage list on the wide layout,
-> **Previous** and **Next** (Right arrow, Space and Enter also step), **Finish**
-> to Complete, **Out of step? Rescan**, and a camera view that steps the
-> solution on by itself and says when the cube and the picture part. Not
-> built: the hold step, the pause menu and its sheets, the stage check, timer
-> mode, the 96-high buttons, the three-line instruction block, notation,
-> sound, carrying on after leaving, and keeping the screen awake. Where it
-> differs from this page: the cube can be dragged, and the camera follows the
-> turns, which the spec lists as later. Most of its words are English
-> literals.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Partly built, as `SolveScreen.qml`, for a cube of
+> any size from 2×2 to 5×5: the cube in 3D with the layer to turn nudging the
+> way it goes (a layer inside a big cube is named in words, `solve.move`), the
+> hold line, the solve methods (`solve.method`; not shown for a 2×2, which has
+> one way to be solved), the stage list on the wide layout, **Skip to the 3x3 stage**
+> on a cube of 4 or more (`solve.skip`), **Previous** and **Next turn** (Right
+> arrow, Space and Enter also step; Left arrow steps back), **Finish** to
+> Complete, **Check the colours** (for a cube that came from a scan; it opens
+> the colours screen, `solve.checkColours`), **Out of step? Rescan**, and a
+> camera view that steps the solution on by itself, says which turn was made
+> wrong, and says when the cube and the picture part (the camera follows a
+> bigger cube's turns too, but cannot see a layer behind the side in view, and
+> then waits for **Next turn**). Not built: the hold step, the pause menu and
+> its sheets, the stage check, timer mode, the 96-high buttons, the three-line
+> instruction block, notation, sound, carrying on after leaving (a solve carried
+> on from History goes straight to its turn, with no camera), and keeping the
+> screen awake. Where it differs from this page: the cube can be dragged, and
+> the camera follows the turns, which the spec lists as later. Many of its words
+> are still English literals (the camera's, the stage list's, **Previous**,
+> **Out of step? Rescan**), and the stage names of stages 4 and 5 are "Orient
+> last layer" and "Permute last layer", not the design's "Yellow top" and "Top
+> layer in order" (`stage.4.title`, `stage.5.title`, which the solution screen
+> does use).
 
 Lane: **solve** (`feature/solve-guidance`). This is a proposal for the
 chrome round the cube view and for the states of `SolveScreen.qml`. The
@@ -23,7 +35,7 @@ length. So: two targets a knuckle can hit, type twice the usual size, a
 screen that stays awake, and nothing small anywhere.
 
 Entered from: `scan.complete`, `review.working`, **Carry on** on Home or
-in History.
+in History (the app has it in History only).
 
 ## Advancing a turn with both hands full
 
@@ -306,6 +318,13 @@ The cube and the picture disagree. A sheet: `solve.lost.title`,
   the cube's view do not.
 
 ## If the camera follows (later)
+
+**Built since** (0.1.0-beta.1, and at every size from 0.2.0-beta.1): the camera
+view is in the screen (`solve.camera`, with a dot on each sticker found, mirrored
+like the scan screen), it presses **Next turn** when it sees the turn made, and
+it says when it cannot. For a layer that the side in view does not show it says
+`solve.camera.layerHidden` and waits for **Next turn**. The paragraph below is the
+original proposal.
 
 When turns can be seen by the camera, the expanded layout's trailing pane
 and the compact layout's hold-reminder line are where a small camera

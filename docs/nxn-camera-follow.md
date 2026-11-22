@@ -2,10 +2,11 @@
 
 The solve screen of a 3x3 watches the cube in the person's hands: it works out how the cube is held
 (and turns the cube on screen to match), sees the move that was asked for being made and steps on
-by itself, and names a wrong turn. A 2x2, 4x4, 5x5 or 6x6 showed the camera's picture but followed
-nothing ([`nxn-ui-parity.md`](nxn-ui-parity.md), gap 6): the person pressed **Next turn** after every
-move. This page is the design for closing that gap, and the record of what is known about it and what
-is not. The code is `HeldCube` (`src/app/qt/controllers/held_cube.cpp`, `judge_n` for a cube that is
+by itself, and names a wrong turn. Until 0.2.0-beta.1 a 2x2, 4x4, 5x5 or 6x6 showed the camera's
+picture but followed nothing ([`nxn-ui-parity.md`](nxn-ui-parity.md), gap 6): the person pressed
+**Next turn** after every move. This page is the design that closed that gap, and the record of what
+is known about it and what is not. What it describes has shipped since 0.2.0-beta.1 and is the
+behaviour of 0.2.0-beta.4. The code is `HeldCube` (`src/app/qt/controllers/held_cube.cpp`, `judge_n` for a cube that is
 not a 3x3) and `cube::vision::read_hold` (`src/lib/include/cube/vision/held_cube.hpp`); the 3x3 half
 is described in [`recovery-plan.md`](recovery-plan.md) and is not changed by any of this.
 
@@ -94,7 +95,7 @@ argument, not by measurement**:
   needs the cells that decide it, not the whole side. A mistake is said only of a whole side.
 
 What is **measured**: a real recorded scan of a 2x2, 4x4 and 5x5 has steady reads of each side of a real
-cube (`E:\cb\nxn-real-scans`, kept off the repository: it shows a person). Replayed against the cube the
+cube (the 65 sessions of 17 and 18 October, kept off the repository: they show a person). Replayed against the cube the
 scan made, they give the first real numbers for the fit of a read to the hold it shows, by size
 ([Measured](#measured)). They say nothing about moves: nobody has recorded a bigger
 cube being turned in front of the camera.
@@ -108,9 +109,9 @@ the solution, and nothing the camera says can step it except a move it has seen 
 |---|---|---|
 | no side square to it | how to hold the cube (as the 3x3's) | **Next turn** |
 | a side that fits one hold | nothing wrong; the cube on screen turns to the hold seen | made and seen: stepped on |
-| a move whose layer is hidden from this hold | "matched: the camera cannot see this layer from here, press Next turn after this move" | **Next turn** |
+| a move whose layer is hidden from this hold | "Matched. The camera cannot see this layer from here: press Next turn after this move." (`solve.camera.layerHidden`) | **Next turn** |
 | a move that changes fewer than two cells | the same words | **Next turn** |
-| a side that looks the same turned | "show another side to tell which way up" | **Next turn** |
+| a side that looks the same turned | "That side looks the same turned. Show another to tell which way up." | **Next turn** |
 | not the move asked for | "that was not the move": the side, if one turn explains it | **Next turn** or undo it |
 | fits nothing | "not the side that was expected" | **Next turn**, or rescan |
 
@@ -132,7 +133,7 @@ Rescan (`solve.rescan`) and Check colours stay where they are for every size.
 
 ## Measured
 
-`cube_scan holds <session>` now takes a recording of any size. Replayed over the 65 sessions of real 2x2, 4x4 and 5x5 cubes recorded on 17 and 18 October (which show a person and are not in the repository), today's scan makes a cube from seven of them; for the steady reads of each, against the cube it made:
+`cube_scan holds <session>` takes a recording of any size. Replayed over the 65 sessions of real 2x2, 4x4 and 5x5 cubes recorded on 17 and 18 October (which show a person and are not in the repository), the scan as it was when this was measured made a cube from seven of them; for the steady reads of each, against the cube it made. A recording is downscaled to 640 pixels wide ([recording format](recording-format.md#frames)), so a 4x4 or 5x5 replayed from one is read with less than the app has live ([finding 0 of the investigation](investigations/2026-10-18-nxn-real-scan-sessions.md)):
 
 | session (size) | steady reads | read shows a hold | median distance to the hold shown | 90% | next different hold is at least |
 |---|---|---|---|---|---|

@@ -8,9 +8,13 @@ of the cube being solved had gone from the solve screen of a bigger cube. It had
 preview off for any other size, which was true until the camera learned to scan every size
 and was not changed when it did.
 
-"Fixed" means fixed in the pull request that added this page. "By design" is a gap that
+"Fixed" means fixed and shipped: every row marked so went out in 0.2.0-beta.1 (2026-10-22),
+except row 11, which went out in 0.2.0-beta.2 (2026-10-31). "By design" is a gap that
 cannot be closed for a bigger cube, or should not be, with the reason. "Open" is real work
 left, and why it was not done here.
+
+Status in 0.2.0-beta.4: no row is open. Rows 8 and 9 stand as by design, and the checks
+under [Not verified](#not-verified) are still not done.
 
 ## Gaps
 
@@ -22,11 +26,11 @@ left, and why it was not done here.
 | 4 | Scan instead / Scan again on the colours screen | offered | button hidden; and Scan again, or back out of a checked scan, began a 3x3 scan at the default size | `ColoursScreen` hid it above 3x3; `AppState.closeColours` and the discard dialog called `beginScan()` without a size | **Fixed.** Offered at every size, and the scan begins at the size of the cube on the screen (`AppState.beginScanAtSize`) |
 | 5 | Choosing a method (Beginner, Intermediate, Advanced) | three buttons | on a 2x2 the same three buttons did nothing | a 2x2 is one search for its corners; the method is for the 3x3 stage, which a 2x2 does not have | **Fixed.** Left off a 2x2 |
 | 6 | The camera follows the cube: which way it is held, the move seen and stepped on, the wrong move named, the cube on screen turning to match | yes | **yes** (was no) | `HeldCube`, `cube::vision::read_hold` and `cube::solver::Hold` matched nine stickers against a `solver::Cube` | **Fixed**, by `docs/nxn-camera-follow.md` (#215 the library, then `HeldCube::judge_n`): a cube of any size is followed, a wrong read never steps the solution, and what the camera cannot see (a layer behind the front one, a move that changes fewer than two cells) falls back to Next turn. Validated on drawn frames and on real holds of a 2x2, 4x4 and 5x5; **not** on a real cube being turned |
-| 7 | Shader styles (Realism, Instructional Glow, Cel shading) from Settings | all three | the default look only | `CubeNView` is one mesh per part with no per-sticker shader or post effect; the setting reached `Cube3DView` alone | **Fixed** (`feature/nxn-shader-styles`). The solve and solution screens hand the setting to `CubeNView` at every size, 2x2 to 9x9. The mesh already carries each sticker's colour per vertex, so Glow and Cel-Shading are materials that read it (`toon_mesh.frag`, `cel_mesh.frag`) and Borderlands' ink is the whole mesh drawn again inside out: still three scene objects at every size, and no frame costs more in the default look ([docs/performance.md](performance.md#the-3d-view-of-a-cube-of-any-size)). The colours screen's preview is still the default look at every size, 3x3 included |
+| 7 | Shader styles (Realism, Instructional Glow, Cel shading) from Settings | all three | the default look only | `CubeNView` is one mesh per part with no per-sticker shader or post effect; the setting reached `Cube3DView` alone | **Fixed** (#220). The solve and solution screens hand the setting to `CubeNView` at every size, 2x2 to 9x9. The mesh already carries each sticker's colour per vertex, so Glow and Cel-Shading are materials that read it (`toon_mesh.frag`, `cel_mesh.frag`) and Borderlands' ink is the whole mesh drawn again inside out: still three scene objects at every size, and no frame costs more in the default look ([docs/performance.md](performance.md#the-3d-view-of-a-cube-of-any-size)). The colours screen's preview is still the default look at every size, 3x3 included |
 | 8 | Scanning with edge views and corner views | yes | sizes 2 to 5 on screen | the corner reader goes to 6x6 (`kMaxCornerSize`); 6x6 to 9x9 are solved by the library but the entry and scan screens offer 2 to 5 | **By design** (the plan adds a size to the screens once its measurements are in) |
 | 9 | Resume a solve from History without a camera | no camera (no scan to match) | no camera | a solve carried on from History has no scan | **By design**, the same at every size |
 | 10 | The user guide said the camera reads only a 3x3 | | | text not updated when scanning other sizes landed | **Fixed** (`docs/guide/other-sizes.md`) |
-| 11 | Camera preview and following after the colours were corrected (Check the colours, put right, Solve) | gone | gone | `AppState.solveColours` turned `solveCamera` off for every cube it solved, "a typed cube from then on"; and the camera's colours were still filed under the names the scan gave, which is the wrong way round for exactly what is corrected (red and orange traded) | **Fixed**, at every size. A cube that began as a finished scan keeps the camera (`ColourEntry.solve` answers `camera`), and `DirectScan.putRight` files what the camera measured under the names the person gave. The solve screen no longer offers to look the scan over again, as it is not the cube. Held by drawn frames of a 4x4 with red and orange traded; **not** seen with a real cube |
+| 11 | Camera preview and following after the colours were corrected (Check the colours, put right, Solve) | gone | gone | `AppState.solveColours` turned `solveCamera` off for every cube it solved, "a typed cube from then on"; and the camera's colours were still filed under the names the scan gave, which is the wrong way round for exactly what is corrected (red and orange traded) | **Fixed** in 0.2.0-beta.2, at every size. A cube that began as a finished scan keeps the camera (`ColourEntry.solve` answers `camera`), and `DirectScan.putRight` files what the camera measured under the names the person gave. The solve screen no longer offers to look the scan over again, as it is not the cube. Held by drawn frames of a 4x4 with red and orange traded; **not** seen with a real cube |
 
 ## Features checked and level
 
@@ -34,8 +38,9 @@ Scan (flat sides, the size choice, size x size dots and chips), rescan during a 
 next and previous turn, the layer a move names, the stage list, skip to the 3x3 stage
 (a 4x4 and up; a 2x2 has nothing to skip), the solution review, the history list and
 resume, hand entry and the review screen, the complete screen, drag to look round the cube,
-the narrow and wide layouts (held by `layout.overlap` in all nine languages and the
-pseudo-locale), right to left, and the web build (the same controllers and QML; the web
+the narrow and wide layouts (held by the translation screen tests, `tests/i18n/screen_test.cpp`,
+in all nine languages and the pseudo-locale, and for the solve screen's panel on phones at a 3x3
+and a 5x5), right to left, and the web build (the same controllers and QML; the web
 camera is asked for the width a bigger cube needs).
 
 ## Not verified

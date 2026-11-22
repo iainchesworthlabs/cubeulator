@@ -1,8 +1,11 @@
 # Help
 
-> **Status in 0.1.0-beta.1:** Not built. The desktop shell has a Help action
-> bound to F1 and to the macOS Help menu, and it is disabled until a Help
-> screen exists.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Not built. The desktop shell has a Help action
+> bound to F1 and to the macOS Help menu, and it is disabled until a Help screen
+> exists. None of the Help buttons the other specs name (Home, Settings, the
+> scan screen's More sheet, the solve menu) is in the app, and the `help.*`
+> strings are in `strings.json` and nothing in the QML asks for them.
 
 Lane: experience. New (E3a). In the first release by the maintainer's decision.
 
