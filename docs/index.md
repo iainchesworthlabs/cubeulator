@@ -21,7 +21,7 @@ description: "Hold each side of a scrambled Rubik's Cube up to the camera. Cubeu
 <p class="icl-hero__meta">No account &middot; Nothing uploaded &middot; Works offline on a computer &middot; English, with eight more languages in draft</p>
 </div>
 <div class="cu-shots">
-<figure class="cu-window"><picture><source srcset="guide/img/solve-middle-wide-dark.webp" media="(prefers-color-scheme: dark)"><img src="guide/img/solve-middle-wide-light.webp" width="900" height="640" alt="The solve screen on a computer: a 3D cube with the layer to turn nudged, the line Hold yellow on top, green facing you, the five stages of the Beginner method listed on the right and a Next move button."></picture></figure>
+<figure class="cu-window"><picture><source srcset="guide/img/solve-middle-wide-dark.webp" media="(prefers-color-scheme: dark)"><img src="guide/img/solve-middle-wide-light.webp" width="900" height="640" alt="The solve screen on a computer: a 3D cube with the layer to turn nudged, the line Hold yellow on top, green facing you, the five stages of the Beginner method listed on the right and a Next turn button."></picture></figure>
 <figure class="icl-device"><img src="guide/img/solve-middle-narrow-light.webp" width="390" height="844" alt="The same screen in the narrow layout that a phone gets: the 3D cube above, then the method buttons, the current stage and the Previous and Next turn buttons."></figure>
 </div>
 </div></div></section>

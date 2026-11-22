@@ -80,6 +80,11 @@ solves the corrected cube from the first turn, with the camera still on it: the
 preview stays in the corner and the solution still steps on by itself when you
 make the move. (A cube you typed in has no scan, so it has no camera.)
 
+<figure markdown="span">
+  ![The Check the colours screen over a cube the camera read, with two stickers marked with a question mark and a note that the camera was not sure of 2 stickers.](img/colours-doubt-wide-light.webp){ loading=lazy }
+  <figcaption>Two stickers the camera was not sure of are marked with a question mark.</figcaption>
+</figure>
+
 - **A "?" on a sticker** is one the camera was not sure of. Look at that sticker
   on your cube first. Painting it, with the colour you can see, clears the mark.
 - **Pick a colour, then tap or drag over the stickers** that have it. Under the
@@ -96,6 +101,11 @@ make the move. (A cube you typed in has no scan, so it has no camera.)
   colour used too many or too few times, or pieces that cannot go together) and
   which piece looks wrong. **Solve** is only available for a cube that can exist,
   so a mistake here is found before the solve rather than after it.
+
+<figure markdown="span">
+  ![The Check the colours screen for a cube that cannot be real: 'Two pieces look swapped', and buttons offering a half turn of the Yellow, White, Green or Blue side.](img/colours-turn-wide-light.webp){ loading=lazy }
+  <figcaption>A cube that cannot be real. The screen says what looks wrong and offers the turns of a side that would make it one.</figcaption>
+</figure>
 
 ### What the colours screen says about the cube
 
@@ -128,6 +138,11 @@ looks like.
 *Turn the cube slowly to show the corner where Yellow, Green and Red meet.*
 or *These six sides fit together in more than one way. Turn the cube slowly so
 that two sides show at once.*
+
+<figure markdown="span">
+  ![The scan screen with all six chips filled, saying: Turn the cube slowly to show the corner where Yellow, Green and Red meet; Cancel, Check the colours and Start over below.](img/scan-ambiguous-wide-light.webp){ loading=lazy }
+  <figcaption>All six sides are read, and the cube could be either of two. The screen names the corner to show.</figcaption>
+</figure>
 
 About one scrambled cube in eighty looks the same from six flat sides in two
 different ways, and a perfect read cannot choose between them. Turn the cube

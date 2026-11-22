@@ -39,7 +39,13 @@ on a Mac) names the app and its version, says who made it, that it is free
 software under the GNU General Public License, and gives the address of its
 source code, which opens in your browser when you press it. **Back**, or
 <kbd>Esc</kbd>, returns to where you opened it. It is not offered in the middle
-of a scan or a solve, where leaving would lose your place.
+of a scan or a solve, where leaving would lose your place. It is not offered on a phone.
+
+<figure markdown="span">
+  ![The About screen: Cubeulator, Version 0.2.0-beta.4, who made it, the GNU General Public License notice, a Licences row and the source code address.](img/about-wide-light.webp#only-light){ loading=lazy }
+  ![The About screen: Cubeulator, Version 0.2.0-beta.4, who made it, the GNU General Public License notice, a Licences row and the source code address.](img/about-wide-dark.webp#only-dark){ loading=lazy }
+  <figcaption>About. The version is the one on your screen; this picture is of 0.2.0-beta.4.</figcaption>
+</figure>
 
 **Licences** lists Cubeulator itself and every third-party component that is in
 this build, by name, each with the licence it is used under: the libraries, the
@@ -49,6 +55,12 @@ the words their authors chose, in every language, left to right; you can scroll
 them with the arrow and page keys and select and copy them. <kbd>Esc</kbd> goes
 back one step at a time: from the text to the list, from the list to About. The
 same notices are in the installed package, in `THIRD-PARTY-NOTICES.txt`.
+
+<figure markdown="span">
+  ![The Licences screen: Cubeulator and its components listed with the licence each is used under, such as aglfn, Archivo and blake2.](img/licences-wide-light.webp#only-light){ loading=lazy }
+  ![The Licences screen: Cubeulator and its components listed with the licence each is used under, such as aglfn, Archivo and blake2.](img/licences-wide-dark.webp#only-dark){ loading=lazy }
+  <figcaption>Licences: every component in your build, with the licence it is used under. Press a row to read the notice.</figcaption>
+</figure>
 
 ## Language
 

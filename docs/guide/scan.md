@@ -115,6 +115,11 @@ but in a colour to each side (blue, violet and pink) instead of the yellow
 and green of a side held square. If you see them, the scan has found the
 sides of the corner.
 
+<figure markdown="span">
+  ![The scan screen with a cube held on a corner: a blue, violet or pink dot on every sticker of the three sides in view, and three of the six chips filled.](img/scan-corner-wide-light.webp){ loading=lazy }
+  <figcaption>A cube held on a corner. A dot, in a colour for each side (blue, violet or pink), marks every sticker the scan found.</figcaption>
+</figure>
+
 It is the newer of the two ways and the less proven: showing one side square
 to the camera at a time is still the reliable one. The screen's words still
 say *this side* for a corner; watch the chips fill. In poor light the third side of a corner is often missed, and the scan
