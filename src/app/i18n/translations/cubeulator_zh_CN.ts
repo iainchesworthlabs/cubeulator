@@ -2104,9 +2104,9 @@ In your hands.</source>
         <translation>版本 %1</translation>
     </message>
     <message id="about.what">
-        <source>A camera-driven solver for the 3x3 cube.</source>
+        <source>A camera-driven cube solver.</source>
         <extracomment>One-line description.</extracomment>
-        <translation>一款用摄像头读取并还原 3x3 魔方的工具。</translation>
+        <translation>一款用摄像头读取并还原魔方的工具。</translation>
     </message>
     <message id="about.author">
         <source>Made by %1.</source>
