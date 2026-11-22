@@ -7,7 +7,7 @@ body:
       value: |
         For anything more than a small tweak, opening an issue first (like
         this one) before sinking time into a PR avoids duplicated effort —
-        see [Contributing](https://iainchesworthlabs.github.io/cubeulator/CONTRIBUTING/).
+        see [Contributing](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/CONTRIBUTING.md).
 
   - type: textarea
     id: problem

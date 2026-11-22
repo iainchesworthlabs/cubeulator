@@ -1,0 +1,52 @@
+{
+  "name": "branch-names",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "~ALL"
+      ],
+      "exclude": [
+        "refs/heads/main",
+        "refs/heads/develop",
+        "refs/heads/site",
+        "refs/heads/quality-history",
+        "refs/heads/gh-pages",
+        "refs/heads/feature/*",
+        "refs/heads/feature/*/*",
+        "refs/heads/feature/*/*/*",
+        "refs/heads/bugfix/*",
+        "refs/heads/bugfix/*/*",
+        "refs/heads/bugfix/*/*/*",
+        "refs/heads/docs/*",
+        "refs/heads/docs/*/*",
+        "refs/heads/docs/*/*/*",
+        "refs/heads/chore/*",
+        "refs/heads/chore/*/*",
+        "refs/heads/chore/*/*/*",
+        "refs/heads/agent/*",
+        "refs/heads/agent/*/*",
+        "refs/heads/agent/*/*/*",
+        "refs/heads/release/*",
+        "refs/heads/release/*/*",
+        "refs/heads/release/*/*/*",
+        "refs/heads/dependabot/*",
+        "refs/heads/dependabot/*/*",
+        "refs/heads/dependabot/*/*/*",
+        "refs/heads/dependabot/*/*/*/*",
+        "refs/heads/dependabot/*/*/*/*/*",
+        "refs/heads/gh-readonly-queue/*",
+        "refs/heads/gh-readonly-queue/*/*",
+        "refs/heads/gh-readonly-queue/*/*/*",
+        "refs/heads/gh-readonly-queue/*/*/*/*"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "creation"
+    }
+  ],
+  "bypass_actors": []
+}

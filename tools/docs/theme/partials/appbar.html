@@ -1,0 +1,11 @@
+{#- SPDX-FileCopyrightText: 2026 Iain Chesworth
+    SPDX-License-Identifier: GPL-3.0-or-later #}
+{%- import "partials/links.html" as links -%}
+<div class="icl-appbar"><div class="icl-wrap">
+  <a class="icl-appbar__name" href="{{ base_url }}/"{% if page.is_homepage %} aria-current="page"{% endif %}><img class="icl-appbar__icon" src="{{ base_url }}/assets/img/icon.svg" width="32" height="32" alt="">Cubeulator</a>
+  <nav aria-label="Cubeulator">{% for path, label in links.bar %}<a href="{{ base_url }}/{{ path }}"{% if page.url == path %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+  <details class="cu-menu">
+    <summary>Menu</summary>
+    <ul>{% for path, label in links.bar %}<li><a href="{{ base_url }}/{{ path }}"{% if page.url == path %} aria-current="page"{% endif %}>{{ label }}</a></li>{% endfor %}</ul>
+  </details>
+</div></div>

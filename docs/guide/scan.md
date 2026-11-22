@@ -128,7 +128,8 @@ sides, and the colours around them say how they are placed. The six sides are
 then tried in every way up until exactly one cube that can exist is left; that
 check is also what tells red from orange under a warm bulb, where their hue
 alone is only a few degrees apart. The details are in the
-[Vision pipeline](../vision-pipeline.md).
+[How it works](how-it-works.md), and the
+[vision pipeline](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/vision-pipeline.md) on GitHub for the detail.
 
 ## Next
 

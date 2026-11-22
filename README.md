@@ -5,7 +5,7 @@
 [![OSV-Scanner](https://github.com/iainchesworthlabs/cubeulator/actions/workflows/osv-scanner.yml/badge.svg)](https://github.com/iainchesworthlabs/cubeulator/actions/workflows/osv-scanner.yml)
 [![Zizmor](https://github.com/iainchesworthlabs/cubeulator/actions/workflows/zizmor.yml/badge.svg)](https://github.com/iainchesworthlabs/cubeulator/actions/workflows/zizmor.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/iainchesworthlabs/cubeulator/badge)](https://scorecard.dev/viewer/?uri=github.com/iainchesworthlabs/cubeulator)
-[![Docs](https://img.shields.io/badge/docs-published-2f7d7b)](https://iainchesworthlabs.github.io/cubeulator/)
+[![Docs](https://img.shields.io/badge/docs-published-2f7d7b)](https://iainchesworthlabs.com/cubeulator/)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-blue)](docs/architecture.md)
 [![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 
@@ -13,16 +13,15 @@ A camera-driven, on-device Rubik's Cube solver: hold each side of a scrambled
 cube up to the camera, and Cubeulator works out the cube, solves it, and shows
 you the solution turn by turn on a 3D cube.
 
-> **Status: pre-release.** For Windows, macOS and Linux, and in a browser. The scan has been
-> checked on recorded sessions and a webcam, not yet across cameras, rooms and
-> cubes; a sticker read wrongly is put right by hand on the colours screen.
+> **Status: pre-release.** For Windows, macOS and Linux, and in a browser; an iPhone app is on
+> TestFlight for invited testers. The scan has been checked on recorded sessions and a webcam, not
+> yet across cameras, rooms and cubes; a sticker read wrongly is put right by hand on the colours
+> screen.
 > [CHANGELOG.md](CHANGELOG.md) says
 > what each release does and what is not yet proven.
 
-Full docs, including a
-[user guide](https://iainchesworthlabs.github.io/cubeulator/guide/) with
-pictures of every screen, live at
-**[iainchesworthlabs.github.io/cubeulator](https://iainchesworthlabs.github.io/cubeulator/)**.
+The pages, with a [user guide](https://iainchesworthlabs.com/cubeulator/guide/) that has pictures of every screen, are at
+**[iainchesworthlabs.com/cubeulator](https://iainchesworthlabs.com/cubeulator/)**.
 
 <p align="center">
   <img src="docs/guide/img/solve-middle-wide-light.webp" alt="The solve screen: a 3D cube with the layer to turn nudged, the stage list, and Next turn." width="720">
@@ -41,7 +40,8 @@ You need a camera; a webcam is enough.
 | macOS 14.4 and later, Apple Silicon | `Cubeulator-<version>-macos-arm64.dmg` | Drag it to Applications; right-click it and choose *Open* (it is not notarised) |
 | Debian, Ubuntu | `Cubeulator-<version>-linux-x64.deb` | `sudo apt install ./Cubeulator-<version>-linux-x64.deb` |
 | Fedora | `Cubeulator-<version>-linux-x64.rpm` | `sudo dnf install ./Cubeulator-<version>-linux-x64.rpm` |
-| A current browser | nothing to install: [open it online](https://iainchesworthlabs.github.io/cubeulator/app/), or host `Cubeulator-<version>-web.zip` yourself | needs https (or localhost) for the camera; [how it works and what it needs](docs/web.md) |
+| A current browser | nothing to install: [open it online](https://iainchesworthlabs.com/cubeulator/app/), or host `Cubeulator-<version>-web.zip` yourself | needs https (or localhost) for the camera; [what it needs and how it differs](https://iainchesworthlabs.com/cubeulator/guide/web/) |
+| iPhone, iOS 18 and later | TestFlight, for testers the author has invited; there is no public link | [the iPhone build](https://iainchesworthlabs.com/cubeulator/guide/iphone/) |
 
 The packages are **not signed with a Windows (Authenticode) or Apple
 (Developer ID) certificate** in this release, which is why Windows
@@ -50,8 +50,9 @@ The packages are **not signed with a Windows (Authenticode) or Apple
 with the file, but you do not have to take that on trust. Every release carries
 a SHA-512 manifest with GPG signatures from the project's key, a
 build-provenance attestation for every file (which repository, workflow and
-commit built it), and SPDX and CycloneDX bills of materials. The
-[security policy](docs/SECURITY.md#verifying-build-authenticity) has the
+commit built it), and SPDX and CycloneDX bills of materials.
+[Verifying a download](https://iainchesworthlabs.com/cubeulator/guide/verify/) (and the
+[security policy](docs/SECURITY.md#verifying-build-authenticity)) has the
 commands to check each, and the key's fingerprint to check it against.
 
 ## Using it
@@ -74,8 +75,8 @@ scanning again. For a 2×2 up to a 5×5, choose **Another size of cube** on the
 start screen and scan it, or type the scramble or the colours in. The camera is proven on a 3×3 and
 much less on the other sizes.
 
-The [user guide](https://iainchesworthlabs.github.io/cubeulator/guide/) goes
-through each screen, and says what to do when a side will not read.
+The [user guide](https://iainchesworthlabs.com/cubeulator/guide/) goes through each screen, and says what to do when
+a side will not read.
 
 ## Build from source
 
@@ -96,34 +97,39 @@ cmake --build --preset linux-gcc-debug
 ctest --preset linux-gcc-debug
 ```
 
-See [Getting started](https://iainchesworthlabs.github.io/cubeulator/getting-started/)
-for every platform's preset, including Windows/macOS, the Android/iOS targets
-(build-only: neither can scan with a camera yet) and WebAssembly.
+See [Getting started](docs/getting-started.md) for every platform's preset, including
+Windows and macOS, the iOS target (the TestFlight build) and the Android one (it builds,
+but its camera is not written yet, so it cannot scan) and WebAssembly.
 
 **Try it without building anything:**
-[open Cubeulator in your browser](https://iainchesworthlabs.github.io/cubeulator/web/) -
-the same app as WebAssembly, running entirely on your device.
+[open Cubeulator in your browser](https://iainchesworthlabs.com/cubeulator/app/) - the same app as WebAssembly,
+running entirely on your device.
 
 ## Documentation
 
+The user documentation is published at [iainchesworthlabs.com/cubeulator](https://iainchesworthlabs.com/cubeulator/). The developer
+documentation stays in this repository, where GitHub shows it.
+
 | | |
 | --- | --- |
-| [User guide](https://iainchesworthlabs.github.io/cubeulator/guide/) | Installing, scanning, following the solution, settings, privacy, troubleshooting |
-| [Try it in your browser](https://iainchesworthlabs.github.io/cubeulator/web/) | The app as WebAssembly: what it needs, how it differs, how it works |
-| [Getting started](https://iainchesworthlabs.github.io/cubeulator/getting-started/) | Building from source: requirements, cloning, first build |
-| [Building & packaging](https://iainchesworthlabs.github.io/cubeulator/building/) | Every preset, sanitizers, `cpack` |
-| [Testing & coverage](https://iainchesworthlabs.github.io/cubeulator/testing/) | TDD, test layers, the 80% coverage gate |
-| [Architecture](https://iainchesworthlabs.github.io/cubeulator/architecture/) | C++23 highlights, source layout |
-| [Dependency strategy](https://iainchesworthlabs.github.io/cubeulator/dependency-strategy/) | vcpkg on desktop, mobile and WebAssembly |
-| [Contributing](https://iainchesworthlabs.github.io/cubeulator/CONTRIBUTING/) | Branching model, code style, PR process |
+| [User guide](https://iainchesworthlabs.com/cubeulator/guide/) | Installing, scanning, following the solution, settings, privacy, troubleshooting |
+| [Try it in your browser](https://iainchesworthlabs.com/cubeulator/guide/web/) | The app as WebAssembly: what it needs, how it differs |
+| [Getting started](docs/getting-started.md) | Building from source: requirements, cloning, first build |
+| [Building & packaging](docs/building.md) | Every preset, sanitizers, `cpack` |
+| [Testing & coverage](docs/testing.md) | TDD, test layers, the 80% coverage gate |
+| [Architecture](docs/architecture.md) | C++23 highlights, source layout |
+| [How the scan works](docs/vision-pipeline.md), [the solvers](docs/solver-methods.md) | The vision pipeline and the three solve methods |
+| [Dependency strategy](docs/dependency-strategy.md) | vcpkg on desktop, mobile and WebAssembly |
+| [CI & the site](docs/ci.md) | The workflows, and how the pages are built and published |
+| [Contributing](docs/CONTRIBUTING.md) | Branching model, code style, PR process |
 
 ## Contributing
 
 Contributions are welcome — see
-[CONTRIBUTING.md](https://iainchesworthlabs.github.io/cubeulator/CONTRIBUTING/)
+[CONTRIBUTING.md](docs/CONTRIBUTING.md)
 for the branching model (`develop` is the trunk every pull request targets
 and `main` holds tagged releases only) and how PRs get reviewed. Please also read the
-[Code of Conduct](https://iainchesworthlabs.github.io/cubeulator/CODE_OF_CONDUCT/).
+[Code of Conduct](docs/CODE_OF_CONDUCT.md).
 
 ## License
 

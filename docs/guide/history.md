@@ -54,7 +54,7 @@ one you were following, even if a newer version of Cubeulator would now find a
 shorter way. The newest 100 are kept.
 
 It is a file on your device (`solve-history.json`, in the app's data folder:
-[Privacy](privacy.md#what-is-kept) says where), and nothing is sent anywhere.
+[Privacy](../privacy.md#what-is-kept) says where), and nothing is sent anywhere.
 
 ## Next
 

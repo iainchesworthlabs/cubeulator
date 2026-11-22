@@ -1,7 +1,7 @@
 # iPhone build: signing and releasing
 
 How the iPhone build is made, signed and sent to TestFlight, and the Apple steps behind
-it. The page for the person installing it is [Installing on an iPhone](ios-install.md).
+it. The page for the person installing it is [The iPhone build](guide/iphone.md); the list of what to check on a first install is [First run on an iPhone](ios-install.md).
 
 The iPhone build is an **App Store** build, sent to **TestFlight** for internal testers.
 It is made by `.github/workflows/ios-device.yml`, which the Release workflow calls

@@ -16,11 +16,11 @@ the first one listed). `<version>` below is the release's number, for example
 | Debian, Ubuntu | `Cubeulator-<version>-linux-x64.deb` | 64-bit x86, X11 or XWayland |
 | Fedora | `Cubeulator-<version>-linux-x64.rpm` | 64-bit x86, X11 or XWayland |
 
-An iPhone build also exists for phones registered by the maintainer: see
-[Installing on an iPhone](../ios-install.md).
+The iPhone app goes to TestFlight for testers the author has invited: see
+[the iPhone build](iphone.md).
 
 Every release also carries a `SHA512SUMS` file and GPG signatures. You do not
-need them to use the app; [Verifying build authenticity](../SECURITY.md#verifying-build-authenticity)
+need them to use the app; [Verifying a download](verify.md)
 shows how to check that a download is the one this project built.
 
 ## First run
@@ -88,10 +88,10 @@ on Fedora).
 
 ## In a browser
 
-No install: [open Cubeulator in your browser](../web.md). It is the same app,
+No install: [open Cubeulator in your browser](web.md). It is the same app,
 running on your device, and needs a current browser and a secure page for the
 camera. Each release also carries the same site as `Cubeulator-<version>-web.zip`,
-if you would rather host it yourself ([how](../web.md#hosting-it-yourself)).
+if you would rather host it yourself ([how](web.md#hosting-it-yourself)).
 
 ## Updating
 

@@ -1,34 +1,10 @@
-# Installing on an iPhone
+# First run on an iPhone: what to check
 
-Cubeulator is not in the App Store. The iPhone build goes to **TestFlight**, Apple's
-own beta service, for the maintainer's internal testers. There is no file to download
-and no device to register: you install the TestFlight app, and the build appears in it.
+The steps for a tester to install the app, and the table of what goes wrong when it does not install, are in the user guide:
+[The iPhone build](guide/iphone.md). This page is the list of things to check on the first install of a new build, because
+nothing about the camera had been seen on a real phone when it was written.
 
-!!! warning "Read this first"
-    - **Internal testers only.** Internal testing is for people the maintainer has
-      added to the App Store Connect team, up to 100. There is no public test link and
-      no external testing. If you are not on the list, use the [web version](web.md) or a
-      desktop.
-    - **iOS 18 or later.**
-    - **Unproven on a phone.** The build is checked on a hosted Mac, and Apple checks it
-      again when it is uploaded. The install, the launch and the camera are what the first
-      person to try it finds out ([what to check](#first-run-what-to-check-on-the-phone)).
-
-## Install
-
-1. Ask the maintainer to add your Apple ID to the TestFlight test group (an invitation
-   arrives by email).
-2. On the iPhone, install **TestFlight** from the App Store and sign in with that Apple
-   ID.
-3. Open the invitation, or open TestFlight, and tap **Install** next to Cubeulator.
-4. Open Cubeulator. The first time you scan, iOS asks whether it may use the camera;
-   allow it. If you said no, *Settings, Cubeulator, Camera* turns it back on.
-
-A new release appears in TestFlight as soon as Apple has processed it, usually within
-half an hour. TestFlight offers the update, and iOS replaces the app and keeps its data.
-A TestFlight build expires after 90 days; install a newer one before then.
-
-## First run: what to check on the phone
+## What to check
 
 Nothing about the camera has been seen on a real phone, so the first install is a test.
 Go through these and say which fail (a photo of the screen helps):
@@ -55,14 +31,6 @@ Go through these and say which fail (a photo of the screen helps):
 8. **Away and back.** Press the side button during a scan, or switch to another app, and
    come back: the preview resumes.
 
-## If it does not install
-
-| What happens | Likely cause |
-| --- | --- |
-| No invitation arrives | Your Apple ID is not in the test group yet; ask the maintainer, and check the spam folder |
-| TestFlight does not list Cubeulator | The invitation was not accepted, or the build is still processing |
-| "This beta is no longer accepting testers" or the build is greyed out | The build is more than 90 days old; install a newer one |
-| It will not open on your phone | iOS is older than 18 |
 
 How the build is made, signed and uploaded is
 [iPhone build: signing and releasing](ios-signing.md).

@@ -1,34 +1,49 @@
 name: Docs
 
+# The Cubeulator pages, the user guide and the web app, at https://iainchesworthlabs.com/cubeulator/ (docs/ci.md, "The
+# Cubeulator pages"). A pull request builds the pages and, from this repository, puts a preview at
+# https://iainchesworthlabs.com/_preview/cubeulator/pr-<n>/ (the pages only: a preview blocks every script, so the web app
+# is not built for it). A push to the branch `site` builds the pages and the web app, and publishes both.
+#
+# The branch `site` is moved only by publish-site.yml, by hand, to the tip of develop. A merge to develop does not publish.
+
 on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [develop]
     paths:
       - "docs/**"
       - "mkdocs.yml"
+      - "tools/docs/**"
       - ".github/workflows/docs.yml"
-      # The site carries the web app (docs/web.md), so what builds it
-      # republishes the site as well.
-      - ".github/actions/web-build/**"
-      - "src/**"
-      - "cmake/**"
-      - "CMakeLists.txt"
-      - "CMakePresets.json"
-      - "vcpkg.json"
-  workflow_dispatch:
+  # A push to `site` runs this workflow and no other, because ci.yml runs for pull requests, the merge queue and develop.
+  # There is no path filter: `site` moves only when someone has asked for the site to go up.
+  push:
+    branches: [site]
 
-permissions:
-  contents: read
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+permissions: {}
 
 jobs:
-  # The browser build is its own job: it is the slow one (vcpkg builds OpenCV
-  # for WebAssembly), and the documentation does not need it to render.
+  # A pull request: the pages, built with --strict. The shared workflow uploads them as the artifact the preview publishes.
+  build:
+    name: Build site
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    permissions:
+      contents: read
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs.yml@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
+    with:
+      requirements: docs/requirements.txt
+      site-artifact: docs-site
+
+  # A push to `site`. The browser build is its own job: it is the slow one (vcpkg builds OpenCV for WebAssembly), and the
+  # pages do not need it to render.
   web:
+    name: Build the web app
+    if: github.event_name == 'push'
     runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
     env:
       VCPKG_MAX_CONCURRENCY: "4"
     steps:
@@ -51,57 +66,140 @@ jobs:
           name: cubeulator-web
           path: build/web-emscripten-release/bin
           if-no-files-found: error
+          retention-days: 7
 
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
         uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
 
-  build:
+  # The pages and the web app as one site. The app goes under app/, which is where the pages link. It is static files; the
+  # edge serves .wasm as application/wasm. The app cannot get the response headers its threads need from the edge, so it brings
+  # its own service worker for that (cubeulator-isolation.js), and because that worker's scope is the directory it is served
+  # from, it affects nothing outside app/.
+  assemble:
+    name: Build site for the domain
     needs: web
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.x"
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
 
-      - name: Install mkdocs-material
-        run: pip install -r docs/requirements.txt
+      - name: Install the docs tooling
+        run: python3 -m pip install --quiet -r docs/requirements.txt
 
-      - name: Build site
-        run: mkdocs build --strict
+      - name: Build the pages
+        run: mkdocs build --strict --site-dir site
 
-      # The app goes under /app/ of the site, which is where docs/web.md links.
-      # It is static files; GitHub Pages serves .wasm as application/wasm. The
-      # app cannot get the response headers threads need from Pages, so it
-      # brings its own service worker for that (cubeulator-isolation.js) - and
-      # because that worker's scope is the directory it is served from, it
-      # affects nothing outside /app/.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cubeulator-web
           path: site/app
 
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Check the app is there
+        run: |
+          set -euo pipefail
+          [ -f site/app/index.html ] || { echo "::error::the web app has no index.html: was it built?"; exit 1; }
+          [ -f site/index.html ] || { echo "::error::the pages have no index.html"; exit 1; }
 
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
+          name: docs-site
           path: site
+          if-no-files-found: error
+          retention-days: 7
 
+  # Production: https://iainchesworthlabs.com/cubeulator/, from the branch site. The role, bucket and distribution come from
+  # the repository secrets DOCS_ROLE_ARN, DOCS_BUCKET and DOCS_DISTRIBUTION_ID (set by the owner). The role's trust policy
+  # allows a push to refs/heads/site of this repository (publishRef 'site' for cubeulator in icl-site). To publish the same
+  # commit again, re-run the run of that push.
   deploy:
-    needs: build
-    runs-on: ubuntu-latest
+    name: Deploy site
+    needs: assemble
+    if: github.event_name == 'push'
     permissions:
-      pages: write
+      contents: read
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      pull-requests: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
+    with:
+      prefix: cubeulator
+      production-ref: refs/heads/site
+    secrets:
+      DOCS_ROLE_ARN: ${{ secrets.DOCS_ROLE_ARN }}
+      DOCS_PREVIEW_ROLE_ARN: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
+      DOCS_BUCKET: ${{ secrets.DOCS_BUCKET }}
+      DOCS_DISTRIBUTION_ID: ${{ secrets.DOCS_DISTRIBUTION_ID }}
+
+  # A denied role assumption would otherwise be one red step among many. Say what it means and what to do.
+  deploy-failed:
+    name: Explain a failed deploy
+    needs: deploy
+    if: failure() && needs.deploy.result == 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - name: Say what to check
+        shell: bash
+        run: |
+          set -euo pipefail
+          message="The production docs deploy failed. If the step 'Assume the production role' says the web identity token cannot be assumed or the action is not authorized, the deploy role's trust policy does not allow a push to refs/heads/site of this repository: check that the cubeulator entry of icl-site (infra/lib/apps.ts) has publishRef site and has been deployed (the deploy-infra workflow of icl-site), that this repository's OIDC subject claim is customised the way the other apps' are (keys repo, context, event_name), and that the secrets DOCS_ROLE_ARN, DOCS_PREVIEW_ROLE_ARN, DOCS_BUCKET and DOCS_DISTRIBUTION_ID are set on this repository. Then re-run this run (Actions, Docs, the run of the push to site, Re-run all jobs). If another step failed, read its log. The site stays at its last good version."
+          echo "::error title=Docs deploy failed::$message"
+          echo "$message" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+  # Preview of a pull request from this repository, at https://iainchesworthlabs.com/_preview/cubeulator/pr-<n>/.
+  preview:
+    name: Deploy preview
+    needs: build
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
+    with:
+      prefix: cubeulator
+      preview: true
+      pr-number: ${{ github.event.pull_request.number }}
+    secrets:
+      DOCS_ROLE_ARN: ${{ secrets.DOCS_ROLE_ARN }}
+      DOCS_PREVIEW_ROLE_ARN: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
+      DOCS_BUCKET: ${{ secrets.DOCS_BUCKET }}
+      DOCS_DISTRIBUTION_ID: ${{ secrets.DOCS_DISTRIBUTION_ID }}
+
+  remove-preview:
+    name: Remove preview
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/docs-deploy-aws.yml@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
+    with:
+      mode: remove-preview
+      prefix: cubeulator
+      pr-number: ${{ github.event.pull_request.number }}
+    secrets:
+      DOCS_ROLE_ARN: ${{ secrets.DOCS_ROLE_ARN }}
+      DOCS_PREVIEW_ROLE_ARN: ${{ secrets.DOCS_PREVIEW_ROLE_ARN }}
+      DOCS_BUCKET: ${{ secrets.DOCS_BUCKET }}
+      DOCS_DISTRIBUTION_ID: ${{ secrets.DOCS_DISTRIBUTION_ID }}

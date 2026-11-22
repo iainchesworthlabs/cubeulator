@@ -1,0 +1,52 @@
+{#- SPDX-FileCopyrightText: 2026 Iain Chesworth
+    SPDX-License-Identifier: GPL-3.0-or-later
+    The page template of the Cubeulator pages. It does not extend Material and ships no script. The company shell
+    (icl.css and the kit's header and footer) is the pinned copy in tools/docs/site-kit/v1/ (tools/docs/site_shell_hook.py).
+    Every link is relative, so the pages work under a preview address. The shell's own links (/, /support/ ...) are the
+    company site's and are written root-absolute, as the kit asks. -#}
+{%- set title = page.meta.title_tag or (page.title ~ ": Cubeulator") -%}
+{%- set description = page.meta.description or config.site_description -%}
+<!doctype html>
+<html lang="en-AU" data-app="cubeulator">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1217" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="{{ page.canonical_url }}">
+<meta property="og:url" content="{{ page.canonical_url }}">
+<meta property="og:site_name" content="Iain Chesworth Labs">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/assets/v1/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{ base_url }}/assets/icl.css">
+<link rel="stylesheet" href="{{ base_url }}/theme.css">
+<link rel="stylesheet" href="{{ base_url }}/assets/cubeulator.css">
+{%- if page.is_homepage %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Cubeulator","description":"A camera-driven Rubik's Cube solver. Hold each side of the cube up to the camera and follow the solution turn by turn on a 3D cube.","applicationCategory":"UtilitiesApplication","url":"{{ config.site_url }}","operatingSystem":"Windows, macOS, Linux, web browser","license":"https://www.gnu.org/licenses/gpl-3.0.html","publisher":{"@type":"Organization","name":"Iain Chesworth Labs","url":"https://iainchesworthlabs.com/"}}
+</script>
+{%- endif %}
+</head>
+<body>
+<a class="icl-skip" href="#main">Skip to content</a>
+{% include "icl-kit/header.html" %}
+{% include "partials/appbar.html" %}
+<main id="main">
+{%- if page.meta.layout == "prose" %}
+<div class="icl-prose">
+{{ page.content }}
+</div>
+{%- else %}
+{{ page.content }}
+{%- endif %}
+</main>
+{% include "partials/more.html" %}
+{% include "icl-kit/footer.html" %}
+</body>
+</html>

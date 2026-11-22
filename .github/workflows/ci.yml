@@ -131,6 +131,43 @@ jobs:
       - name: Check the toolchain pins agree
         run: python3 -I tools/ci/check_toolchain_versions.py
 
+  # The company site's pages of Cubeulator (docs/ci.md, "The Cubeulator pages"): the kit copy and the palette, the checks'
+  # own tests, and the site built with --strict and checked. Seconds of work, and it needs no build, so it runs on drafts
+  # and on a change to documentation alone. Not in the merge queue (nothing there can change it that the pull request
+  # did not run) and not on a manual run, which runs the legs it names.
+  site:
+    name: Site
+    if: ${{ github.event_name != 'merge_group' && github.event_name != 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+
+      - name: Install the docs tooling
+        run: python3 -m pip install --quiet -r docs/requirements.txt
+
+      - name: Test the site checks
+        env:
+          CUBEULATOR_SITE_TESTS_STRICT: "1" # Node and jinja2 must be here: a skipped test would hide a broken check
+        run: python3 -m unittest discover -s tools/tests -v
+
+      - name: Check the site kit and the Cubeulator palette
+        run: python3 tools/ci/check_site_kit.py
+
+      - name: Build the site and check the Cubeulator pages
+        run: python3 tools/ci/check_site_pages.py
+
   clang-tidy:
     name: ${{ github.event_name == 'workflow_dispatch' && 'dispatch - clang-tidy' || 'clang-tidy' }}
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.legs == 'all' || contains(format(',{0},', inputs.legs), ',clang-tidy,') }}
@@ -1398,6 +1435,7 @@ jobs:
       - policy
       - clang-format
       - platform-isolation
+      - site
       - clang-tidy
       - plan
       - build-and-test
@@ -1426,6 +1464,7 @@ jobs:
             {
             "policy": ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }},
             "platform-isolation": ${{ github.event_name != 'merge_group' }},
+            "site": ${{ github.event_name != 'merge_group' }},
             "android-build": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
             "web-build": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},
             "web-test": ${{ needs.plan.outputs.code == 'true' && github.event_name != 'merge_group' }},

@@ -1,0 +1,137 @@
+/* Cubeulator's own layout on top of the company shell (assets/icl.css). Colours come only from the shell's variables and
+   the palette in theme.css. No web font, no image from another site, no inline style anywhere.
+   The look follows the app's own (docs/design/system.md): flat fills, square corners, ink rules, one red accent. */
+
+/* Menu for narrow screens: the shell hides the app bar's links below 40rem, so a native <details> carries them. */
+.cu-menu { position: relative; }
+.cu-menu summary { cursor: pointer; list-style: none; min-height: 2.75rem; display: inline-flex; align-items: center; padding-inline: var(--icl-space-3); font-weight: 650; border: 1px solid var(--icl-border); }
+.cu-menu summary::-webkit-details-marker { display: none; }
+.cu-menu ul { position: absolute; right: 0; top: 100%; z-index: 5; min-width: 12rem; margin: var(--icl-space-2) 0 0; padding: var(--icl-space-2); list-style: none; background: var(--icl-surface); border: 1px solid var(--icl-border); }
+.cu-menu li a { display: block; padding: var(--icl-space-3); color: var(--icl-fg); text-decoration: none; font-weight: 560; }
+.cu-menu li a:hover, .cu-menu li a[aria-current] { text-decoration: underline; }
+@media (min-width: 40rem) { .cu-menu { display: none; } }
+
+/* Hero: the words on the left, the pictures on the right. */
+.icl-hero--app a { color: var(--app-on-gradient); }
+.icl-hero--app .icl-button { background: var(--app-on-gradient); color: var(--app-gradient-from); border-color: var(--app-on-gradient); border-radius: 0; }
+.icl-hero--app .icl-button:hover { text-decoration: underline; }
+.icl-hero--app .icl-button--ghost { background: transparent; color: var(--app-on-gradient); border-color: var(--app-on-gradient); }
+.icl-hero--app h1 { max-width: 18ch; font-size: var(--icl-step-4); }
+.icl-hero--app .icl-lead { max-width: 46ch; }
+.icl-hero--app .icl-hero__meta { max-width: 46ch; }
+.icl-hero__icon { width: 5rem; height: 5rem; }
+@media (min-width: 52rem) { .icl-hero--app .icl-hero__grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); } }
+.icl-hero--app .icl-hero__grid > div { min-width: 0; }
+
+/* The ways to run it, in the hero: one line each, with what is true of it. */
+.cu-platforms { display: grid; gap: var(--icl-space-2); max-width: 34rem; margin: var(--icl-space-5) 0 0; padding: 0; list-style: none; }
+.cu-platforms li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--icl-space-3); padding: var(--icl-space-2) var(--icl-space-4); border: 2px solid currentColor; }
+.cu-platforms strong { font-weight: 720; }
+.cu-platforms span { font-size: var(--icl-step--1); }
+
+/* A computer window around a picture of the app. */
+.cu-window { --cu-edge: var(--icl-fg); margin: 0; background: var(--cu-edge); border: 2px solid var(--cu-edge); border-top: 0.4rem solid var(--app-accent); overflow: hidden; }
+.cu-window img { display: block; width: 100%; height: auto; }
+.icl-hero--app .cu-window { --cu-edge: var(--app-on-gradient); }
+
+/* The pictures of the hero: the computer window, with the narrow layout in front of it at the bottom right. */
+.cu-shots { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: end; padding-bottom: var(--icl-space-5); }
+.cu-shots .cu-window { grid-column: 1 / 11; grid-row: 1; align-self: center; }
+.cu-shots .icl-device { grid-column: 9 / 13; grid-row: 1; width: 100%; box-sizing: border-box; }
+@media (min-width: 52rem) { .cu-shots .icl-device { grid-column: 10 / 13; transform: translateY(var(--icl-space-5)); } }
+
+/* Pages that are not the home page start with a plain heading */
+.cu-head { padding-block: clamp(var(--icl-space-6), 6vw, var(--icl-space-8)) var(--icl-space-5); }
+.cu-head h1 { font-size: var(--icl-step-4); max-width: 22ch; }
+.cu-head .icl-lead { max-width: 52ch; }
+.cu-head h1::after, .icl-prose h1::after { content: ""; display: block; width: 4rem; height: 0.4rem; margin-top: var(--icl-space-4); background: var(--app-accent); }
+
+/* Facts, steps */
+.cu-facts { display: grid; gap: var(--icl-space-4); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.cu-facts li { padding: var(--icl-space-4) var(--icl-space-5); background: var(--icl-surface-2); border: 1px solid var(--icl-border); border-left: 0.4rem solid var(--app-accent); }
+.cu-facts h3 { margin-bottom: var(--icl-space-1); }
+.cu-facts p { margin: 0; color: var(--icl-fg-muted); }
+.cu-steps { display: grid; gap: var(--icl-space-5); grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.cu-steps li { counter-increment: step; }
+.cu-steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; margin-bottom: var(--icl-space-3); background: var(--app-primary); color: var(--app-on-primary); font-weight: 750; }
+.cu-steps p { margin: 0; color: var(--icl-fg-muted); }
+.cu-cards { display: grid; gap: var(--icl-space-4); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.cu-cards li { padding: var(--icl-space-4) var(--icl-space-5); border: 1px solid var(--icl-border); border-top: 0.3rem solid var(--app-accent); }
+.cu-cards a { font-weight: 650; }
+.cu-cards p { margin: var(--icl-space-1) 0 0; color: var(--icl-fg-muted); font-size: var(--icl-step--1); }
+
+/* Feature rows: words and a picture side by side. */
+.cu-row { display: grid; gap: var(--icl-space-6); align-items: center; padding-block: var(--icl-space-6); }
+.cu-row > div { min-width: 0; }
+.cu-row p { color: var(--icl-fg-muted); max-width: 50ch; }
+@media (min-width: 52rem) {
+  .cu-row { grid-template-columns: 1fr 1fr; gap: var(--icl-space-8); }
+  .cu-row--flip .cu-window, .cu-row--flip .icl-device { order: -1; }
+}
+
+/* Text pages */
+.cu-text { width: min(100% - 2 * var(--icl-gutter), 46rem); margin-inline: max(var(--icl-gutter), calc((100% - var(--icl-wide)) / 2)) auto; padding-bottom: var(--icl-space-8); }
+.cu-text h2 { font-size: var(--icl-step-2); margin-top: var(--icl-space-7); }
+.cu-text h3 { margin-top: var(--icl-space-5); }
+.cu-text ul, .cu-text ol { padding-left: 1.25rem; }
+.cu-text li { margin-bottom: var(--icl-space-2); }
+.cu-text .cu-window { margin-block: var(--icl-space-5); }
+.cu-caption { margin-top: var(--icl-space-3); color: var(--icl-fg-muted); font-size: var(--icl-step--1); }
+
+/* Markdown pages inside .icl-prose (Privacy, Support, FAQ, What's new, Accessibility) */
+.icl-prose table { border-collapse: collapse; display: block; max-width: 100%; overflow-x: auto; }
+.icl-prose th, .icl-prose td { border: 1px solid var(--icl-border); padding: var(--icl-space-2) var(--icl-space-3); text-align: left; vertical-align: top; }
+.icl-prose th { background: var(--app-tint); }
+.icl-prose ul, .icl-prose ol { padding-left: 1.25rem; }
+.icl-prose li { margin-bottom: var(--icl-space-2); }
+.icl-prose h2 { margin-top: var(--icl-space-7); }
+.icl-prose pre, .icl-prose code { font-family: var(--icl-font-mono); font-size: var(--icl-step--1); }
+.icl-prose pre { margin: var(--icl-space-4) 0; padding: var(--icl-space-4) var(--icl-space-5); background: var(--icl-surface-2); border: 1px solid var(--icl-border); overflow-x: auto; }
+.icl-prose dt { margin-top: var(--icl-space-5); font-weight: 680; }
+.icl-prose dd { margin: var(--icl-space-1) 0 0; padding-left: var(--icl-space-4); border-left: 4px solid var(--app-accent); color: var(--icl-fg-muted); }
+.icl-prose .cu-note { margin: var(--icl-space-5) 0; padding: var(--icl-space-4) var(--icl-space-5); background: var(--app-tint); border-left: 0.4rem solid var(--app-accent); }
+.icl-prose .cu-note p { margin: 0; }
+.icl-prose .cu-note p + p { margin-top: var(--icl-space-3); }
+
+/* The gallery: pictures with their captions */
+.cu-gallery { display: grid; gap: var(--icl-space-7) var(--icl-space-6); align-items: start; margin-top: var(--icl-space-4); }
+.cu-gallery figure { margin: 0; }
+.cu-gallery figcaption { margin-top: var(--icl-space-3); color: var(--icl-fg-muted); font-size: var(--icl-step--1); }
+.cu-gallery--wide { grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.cu-gallery--phone { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.cu-gallery--phone .icl-device { width: min(100%, 14rem); }
+.cu-gallery--phone figure { justify-self: center; }
+.cu-gallery--phone figcaption { max-width: 14rem; }
+.cu-gallery__title { margin: var(--icl-space-6) 0 0; }
+.cu-note { max-width: var(--icl-measure); }
+
+/* Where to get it */
+.cu-platform-cards { display: grid; gap: var(--icl-space-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); margin: var(--icl-space-5) 0; padding: 0; list-style: none; }
+.cu-platform-cards li { display: flex; flex-direction: column; align-items: flex-start; padding: var(--icl-space-5); background: var(--icl-surface); border: 2px solid var(--icl-fg); border-top: 0.4rem solid var(--app-accent); }
+.cu-platform-cards h3 { margin-bottom: var(--icl-space-2); }
+.cu-platform-cards p { color: var(--icl-fg-muted); }
+.cu-platform-cards .cu-state { margin: 0 0 var(--icl-space-3); padding: 0.125rem var(--icl-space-3); background: var(--app-primary); color: var(--app-on-primary); font-size: var(--icl-step--1); font-weight: 700; }
+.cu-platform-cards .icl-button, .cu-platform-cards .cu-get { margin-top: auto; }
+.cu-get { display: inline-block; padding: var(--icl-space-3) var(--icl-space-5); border: 2px solid currentColor; font-weight: 680; }
+.cu-platform-cards + p { margin-top: var(--icl-space-5); }
+
+/* The points of the feature lists */
+.icl-points { gap: var(--icl-space-5); }
+.icl-points li { padding: var(--icl-space-4) var(--icl-space-5); background: var(--icl-surface); border: 1px solid var(--icl-border); border-top: 0.3rem solid var(--app-accent); }
+.icl-section--tint .icl-points li { background: var(--icl-surface); }
+.icl-points + p { margin-top: var(--icl-space-5); }
+
+/* Keep the FAQ and body text on the left edge of the page, with a readable line length */
+.icl-section .icl-faq { margin-inline: 0; }
+.icl-section > .icl-wrap > p { max-width: var(--icl-measure); }
+
+/* The row of links above the company footer */
+.cu-more { padding-block: var(--icl-space-6); border-top: 1px solid var(--icl-border); font-size: var(--icl-step--1); }
+.cu-more p { margin: 0 0 var(--icl-space-3); color: var(--icl-fg-muted); }
+.cu-more ul { display: flex; flex-wrap: wrap; gap: var(--icl-space-1) var(--icl-space-5); margin: 0; padding: 0; list-style: none; }
+.cu-more a { display: inline-block; padding: var(--icl-space-2) 0; }
+
+/* The app icon on the Press page */
+.cu-icons { display: flex; flex-wrap: wrap; gap: var(--icl-space-5); margin: var(--icl-space-4) 0; padding: 0; list-style: none; }
+.cu-icons li { margin: 0; text-align: center; }
+.cu-icons img { display: block; width: 8rem; height: 8rem; margin-bottom: var(--icl-space-2); border: 1px solid var(--icl-border); }

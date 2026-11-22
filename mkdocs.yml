@@ -1,95 +1,103 @@
 site_name: Cubeulator
-site_description: A camera-driven, on-device Rubik's Cube solver.
-site_url: https://iainchesworthlabs.github.io/cubeulator/
+site_description: A camera-driven Rubik's Cube solver for Windows, macOS, Linux and the browser. Nothing is uploaded.
 repo_url: https://github.com/iainchesworthlabs/cubeulator
 repo_name: iainchesworthlabs/cubeulator
-edit_uri: edit/develop/docs/
-
-theme:
-  name: material
-  palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: teal
-      accent: teal
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: teal
-      accent: teal
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
-  features:
-    - navigation.instant
-    - navigation.tracking
-    - navigation.top
-    - content.code.copy
-    - content.action.edit
-
+# The one place that holds the site's address. Pages write {{ site_url }} where they need it. The web app is served under
+# app/ of this address (docs/ci.md, "The Cubeulator pages").
+site_url: https://iainchesworthlabs.com/cubeulator/
+docs_dir: docs
+# Not published. These are for the people who work on Cubeulator and stay in the repository only, where GitHub shows them.
+# A new developer page goes in this list. The pictures, the key and the design files used by the pages are published.
+exclude_docs: |
+  app-experience-plan.md
+  architecture.md
+  branch-protection.md
+  building.md
+  ci.md
+  CODE_OF_CONDUCT.md
+  CONTRIBUTING.md
+  dependency-strategy.md
+  design/
+  diagnostics.md
+  getting-started.md
+  graphics-api.md
+  i18n-lanes.md
+  i18n.md
+  investigations/
+  ios-install.md
+  ios-signing.md
+  licensing.md
+  migration.md
+  nxn-app-plan.md
+  nxn-camera-follow.md
+  nxn-solver.md
+  nxn-ui-parity.md
+  packaging.md
+  performance.md
+  platform-isolation.md
+  profiling.md
+  recording-format.md
+  recovery-plan.md
+  releasing.md
+  requirements.txt
+  SECURITY.md
+  signing-key.asc
+  solver-methods.md
+  testing.md
+  vision-pipeline.md
+  /web.md
+strict: true
+validation:
+  anchors: warn
+hooks:
+  - tools/docs/site_shell_hook.py
+  - tools/docs/site_assets_hook.py
 markdown_extensions:
-  - admonition
-  - attr_list
-  - md_in_html
+  - admonition  # the Note and Warning boxes of the guide
+  - attr_list  # the width of a picture, lazy loading, a button
+  - def_list  # the questions and answers of the FAQ page
+  - md_in_html  # <figure markdown="span"> around the guide's pictures
   - tables
   - toc:
       permalink: true
   - pymdownx.highlight
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.superfences
   - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.snippets:
-      base_path: ["."]
-      check_paths: true
-
+      alternate_style: true  # the Windows, macOS and Linux tabs of Installing
+theme:
+  name: material
+  custom_dir: tools/docs/theme  # the Cubeulator pages (marketing.html) and the guide's colours; see tools/docs/site_shell_hook.py
+  font: false  # no web font: the site loads nothing from other sites
+  # Light and dark follow the device (there is no switch); docs/assets/guide.css sets Material's colours from the palette
+  # in docs/theme.css. Two palettes, so that the guide's light and dark pictures (#only-light, #only-dark) both work.
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+  features:
+    - navigation.sections
+    - navigation.footer  # previous and next page
+    - toc.follow
+    - content.code.copy
+# The Cubeulator pages (marketing.html) are not in the guide's menu. The menu holds the guide only.
 nav:
-  - Home: index.md
-  - User guide:
-      - Overview: guide/index.md
-      - Installing: guide/install.md
-      - Installing on an iPhone: ios-install.md
-      - Scanning a cube: guide/scan.md
-      - Following the solution: guide/solve.md
-      - Another size of cube: guide/other-sizes.md
-      - Past solves: guide/history.md
-      - Settings and shortcuts: guide/settings.md
-      - Privacy: guide/privacy.md
-      - Troubleshooting: guide/troubleshooting.md
-      - In your browser: web.md
-  - FAQ: faq.md
-  - Build and contribute:
-      - Getting started: getting-started.md
-      - Building & packaging: building.md
-      - iPhone build, signing and releasing: ios-signing.md
-      - Testing & coverage: testing.md
-      - Profiling: profiling.md
-      - Performance: performance.md
-      - Graphics API: graphics-api.md
-      - Translations: i18n.md
-      - Contributing: CONTRIBUTING.md
-      - Alignment with the ICL standard: migration.md
-      - Code of conduct: CODE_OF_CONDUCT.md
-  - How it works:
-      - Architecture: architecture.md
-      - Vision pipeline: vision-pipeline.md
-      - Solve methods: solver-methods.md
-      - Cubes of any size: nxn-solver.md
-      - Recording format: recording-format.md
-      - Live diagnostics: diagnostics.md
-      - Platform isolation: platform-isolation.md
-      - Dependency strategy: dependency-strategy.md
-  - Project:
-      - Licensing: licensing.md
-      - Security policy: SECURITY.md
-  - For maintainers:
-      - CI & dependencies: ci.md
-      - Packaging the desktop app: packaging.md
-      - Cutting a release: releasing.md
-      - Branch protection: branch-protection.md
-      - Investigations: investigations/README.md
+  - Guide:
+      - Guide contents: guide/index.md
+      - Start:
+          - Installing: guide/install.md
+          - In your browser: guide/web.md
+          - The iPhone build: guide/iphone.md
+          - Verifying a download: guide/verify.md
+      - Use:
+          - Scanning a cube: guide/scan.md
+          - Following the solution: guide/solve.md
+          - Another size of cube: guide/other-sizes.md
+          - Past solves: guide/history.md
+      - Reference:
+          - Settings and shortcuts: guide/settings.md
+          - How it works: guide/how-it-works.md
+          - Privacy: privacy.md
+      - Help:
+          - Troubleshooting: guide/troubleshooting.md
+          - Questions and answers: faq.md

@@ -66,4 +66,6 @@ will also find it a short list of what the checks expect; [CONTRIBUTING](docs/CO
 | A string the user sees | `docs/design/strings.json`, then `python tools/i18n/strings_to_ts.py --write` for the ten catalogues, then `python docs/design/tools/build.py` to refresh `content.md` and the prototype |
 | A language | `docs/i18n.md` and `docs/i18n-lanes.md` |
 | The wording or layout of a screen | `docs/design/screens/<screen>.md`, and the guide page under `docs/guide/` when a person would follow it |
+| A page of the company site (`docs/index.md` and the other pages, `docs/guide/`, the theme or palette under `tools/docs/` and `docs/theme.css`) | Run `python3 tools/ci/check_site_pages.py` and `python3 tools/ci/check_site_kit.py`; the Site job runs them. A new developer page goes in `exclude_docs` of `mkdocs.yml`. [CI](docs/ci.md#the-cubeulator-pages) has the rest |
+| A release | `docs/whats-new.md` names the new release and says what it changed in plain words (the Site job fails until it does) |
 | Who may report a vulnerability, or the signing key | `SECURITY.md` and `docs/SECURITY.md` |
