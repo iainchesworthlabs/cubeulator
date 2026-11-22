@@ -1,7 +1,8 @@
 # Another size of cube
 
-For a 2x2, 4x4 or 5x5 you tell Cubeulator the cube, by typing its scramble or
-painting its colours, and it works out the solution and walks you through it
+For a 2x2, 4x4 or 5x5 (or a 3x3 you would rather type in than scan) you tell
+Cubeulator the cube, by typing its scramble or painting its colours, and it
+works out the solution and walks you through it
 the same way: a 3D cube at the right size, the layer to turn nudging, one move
 at a time. The camera can read these sizes too (below), but it is far better
 tried on a 3x3.
@@ -25,7 +26,9 @@ Choose **Another size of cube** on the start screen, then a size from 2x2 to
   from the left, `2-3R` the second and third together), `w` for a wide turn
   (`Rw`, `3Rw`), and `x y z` for turning the whole cube. If something in it is
   not a move, or names a layer the cube does not have, the screen says so and
-  selects it. It will not take a scramble that leaves the cube solved.
+  selects it. If the box is empty it says *Type the scramble first.* It will not
+  take a scramble that leaves the cube solved: it says *Those moves leave the
+  cube as it was.*
 - **Enter the colours.** For a cube you have no scramble for, choose **Enter colours by
   hand**. You paint one side at a time, as you see it looking straight at
   it, and the screen names the six sides by where they are on the cube. It
@@ -41,7 +44,7 @@ Choose **Another size of cube** on the start screen, then a size from 2x2 to
 
 **Scan it instead** is there at every size. The camera has only been tried on
 bigger cubes drawn on a screen so far, not on cubes in a hand, so if it
-misreads yours, **Check colours** puts right what it got wrong.
+misreads yours, **Check the colours** puts right what it got wrong.
 
 ## Following it
 

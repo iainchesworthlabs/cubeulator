@@ -36,7 +36,9 @@ jobs:
       site-artifact: docs-site
 
   # A push to `site`. The browser build is its own job: it is the slow one (vcpkg builds OpenCV for WebAssembly), and the
-  # pages do not need it to render.
+  # pages do not need it to render. It is built only when something it is built from has changed since the last publish:
+  # a change to the pages alone (the usual publish) finds the app of the last publish in the cache and finishes in a minute
+  # or two. The key is the hash of every file the browser build reads, so a cache hit is exactly the app this source makes.
   web:
     name: Build the web app
     if: github.event_name == 'push'
@@ -53,13 +55,41 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Restores the built app on a hit, and saves it when the job succeeds after a miss. The caches of the branch `site`
+      # are the ones this job can read, so a build on a pull request or on develop is not mixed in.
+      - name: Look for the web app of this source
+        id: cached
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/web-emscripten-release/bin
+          key: cubeulator-web-app-${{ hashFiles('src/**', 'cmake/**', 'third_party/**', 'vcpkg-overlay-ports/**', 'packaging/web/**', 'docs/design/identity/**', 'CMakeLists.txt', 'CMakePresets.json', 'vcpkg.json', '.github/actions/web-build/**') }}
+
+      - name: Say which
+        shell: bash
+        env:
+          HIT: ${{ steps.cached.outputs.cache-hit }}
+        run: |
+          if [ "$HIT" = true ]; then
+            echo "The web app is unchanged since the last publish: reusing it, with no build." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "The web app has changed, or nothing is cached: building it (this takes a while)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Set up vcpkg
+        if: steps.cached.outputs.cache-hit != 'true'
         uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
       - name: Build the web app
+        if: steps.cached.outputs.cache-hit != 'true'
         uses: $/.github/actions/web-build
+
+      - name: Check the app is there
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f build/web-emscripten-release/bin/index.html ] || { echo "::error::the web app has no index.html: was it built, or was the cache empty?"; exit 1; }
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -69,7 +99,7 @@ jobs:
           retention-days: 7
 
       - name: Save vcpkg binaries
-        if: ${{ always() }}
+        if: ${{ always() && steps.cached.outputs.cache-hit != 'true' }}
         continue-on-error: true
         uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
 

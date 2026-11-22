@@ -22,8 +22,10 @@ solution, and shows you the turns one at a time on a 3D cube.
   exposure and colour balance for the scan; light that changes while you scan
   still makes red and orange hard to tell apart.
 - **A computer to run it on:** Windows 10 or later (64-bit), macOS on a Mac
-  with Apple silicon, or Linux (Debian, Ubuntu, Fedora) - or
-  [a browser](web.md), with nothing to install.
+  with Apple silicon on macOS 14.4 or later, or Linux (Debian 13 or later,
+  Ubuntu 24.04 or later, Fedora) - or [a browser](web.md), with nothing to
+  install. There is an iPhone app too, for invited testers
+  ([the iPhone build](iphone.md)), and no Android app yet.
 
 ## The short version
 

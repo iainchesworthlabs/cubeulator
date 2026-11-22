@@ -15,7 +15,7 @@
 | `osv-scanner.yml` | Scans `vcpkg.json` against the OSV database | No (visible only) | No |
 | `zizmor.yml` | Lints the workflow YAML itself | No (visible only) | No |
 | `scorecard.yml` | OpenSSF Scorecard supply-chain health score. Publishes only from a run on `main` (push, weekly, or a branch-protection change), so the README badge reads "invalid repo path" until the first release has merged ([Cutting a release](releasing.md#preparing-the-release), step 10) | No (badge/score) | No |
-| `docs.yml` | The company site's pages of Cubeulator, <https://iainchesworthlabs.com/cubeulator/> ([The Cubeulator pages](#the-cubeulator-pages)). A pull request builds the pages with `--strict` and puts a preview at `_preview/cubeulator/pr-<n>/`, removed when the pull request closes. A push to the branch `site` builds the pages and the web app (`.github/actions/web-build`, the same one `ci.yml`'s Web leg uses), and publishes both: the app under `/cubeulator/app/` | N/A (pull requests and pushes to `site`) | No |
+| `docs.yml` | The company site's pages of Cubeulator, <https://iainchesworthlabs.com/cubeulator/> ([The Cubeulator pages](#the-cubeulator-pages)). A pull request builds the pages with `--strict` and puts a preview at `_preview/cubeulator/pr-<n>/`, removed when the pull request closes. A push to the branch `site` builds the pages, takes the web app (built with `.github/actions/web-build`, the same action `ci.yml`'s Web leg uses, only when something it is built from changed) and publishes both: the app under `/cubeulator/app/` | N/A (pull requests and pushes to `site`) | No |
 | `publish-site.yml` | By hand, on `develop`: moves the branch `site` to the tip of `develop`, which starts the publication of `docs.yml` ([Publishing the site](#publishing-the-site)) | N/A (manual runs) | No |
 | `dependabot-auto-merge.yml` | Enables auto-merge on Dependabot's minor/patch PRs for GitHub Actions and pip | No (acts on Dependabot PRs only) | No |
 | `cache-hygiene.yml` | Prunes the Actions cache quota: closed PRs' and deleted branches' entries, superseded vcpkg and Qt generations ([below](#the-vcpkg-binary-cache)) | No (acts on the cache only) | No |
@@ -277,8 +277,17 @@ gh workflow run publish-site.yml --ref develop
 
 The workflow fast-forwards `site` to the tip of `develop` with the release bot's App token (a push made with `GITHUB_TOKEN` does not start
 workflows), and refuses to run on any other branch or to move `site` backwards. The push starts `docs.yml` and nothing else. What `develop`
-holds has been through the merge queue already, and a change to pages alone builds nothing there. The web app is built from that commit, so
-it is the app the pages describe, not the last release's. To publish the same commit again, re-run the Docs run of the last push to `site`.
+holds has been through the merge queue already, and a change to pages alone builds nothing there.
+
+**A change to the pages goes up without a full CI.** A pull request that touches only pages, the guide, the theme, the site's checks or its
+two workflows is a documentation change to `changed-code`: the build, test and analysis jobs report success without building, and `Site` (a
+minute) is the check that matters. Merged, it publishes by hand with `gh workflow run publish-site.yml --ref develop` and no CI runs for
+the push to `site`. The web app is the slow part of `docs.yml` (vcpkg builds OpenCV for WebAssembly), so it is built only when a file it is
+built from changed: the `web` job keys the built app in the Actions cache by the hash of `src/`, `cmake/`, `third_party/`,
+`vcpkg-overlay-ports/`, `packaging/web/`, `docs/design/identity/`, `CMakeLists.txt`, `CMakePresets.json`, `vcpkg.json` and the build action,
+and on a hit uses it as it is (the job summary says which). A publish after a change to the app's code builds it, so the app on the site is
+the app of the commit published, not the last release's. A cache entry unused for seven days is evicted, and the next publish then builds the
+app again, which is slow and correct. To publish the same commit again, re-run the Docs run of the last push to `site`.
 
 The `site-publish-only` ruleset (`.github/rulesets/`) lets the release bot, and nothing else, create or move `site`, with no deletion and no
 force push, because the company site's deploy role trusts a push to that branch. `branch-names` lets the name `site` exist.
