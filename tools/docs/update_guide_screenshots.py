@@ -13,7 +13,9 @@ is about a tenth the size of the PNGs and reads the same.
        tour"):
            cmake --build <build> --target cube_system_tests
            ctest --test-dir <build> -R system.tour
-       It writes <build>/system-test-output/tour/{narrow,wide}/screens/*.png.
+       (or `ctest --preset <name>-system -R system.tour`: the plain preset leaves
+       the system tests out). It writes
+       <build>/system-test-output/tour/{narrow,wide}/screens/*.png.
     2. python tools/docs/update_guide_screenshots.py <build>/system-test-output
     3. Look at them, then commit docs/guide/img.
 
@@ -28,8 +30,10 @@ Notes for whoever does step 2:
   unit tests want the clutter.
 * The tour runs at 900x640 (wide) and 390x844 (narrow), light and dark. The
   guide's Settings pictures were taken with the window made about twice as
-  tall for that one shot (a scratch edit in tour_test.cpp, like the other two),
-  and the wide one is then cropped (CROP_HEIGHT below).
+  tall for that one shot (a scratch edit in tour_test.cpp, like the other two:
+  `app.resize` to 900x1280 wide or 390x1688 narrow and `app.settle()` before
+  `tour.shoot("settings")`, then `app.resize(variant.size)` after it), and
+  both are then cropped (CROP_HEIGHT below).
 * A scratch run for the pictures also renames the fake camera in
   tests/system/fake_camera.cpp to something a person would own ("Integrated
   Webcam"), because "Test camera (drawn frames)" is not what a user sees.
@@ -49,12 +53,14 @@ from pathlib import Path
 # (the scan screen sits over the camera picture) needs only one.
 USED = [
     ("launch", "wide", ("light", "dark")),
-    ("launch", "narrow", ("light",)),
+    ("launch", "narrow", ("light", "dark")),
     ("scan-camera-unavailable", "wide", ("light",)),
     ("scan-looking", "wide", ("light",)),
+    ("scan-corner", "wide", ("light",)),
     ("scan-reading", "wide", ("light",)),
     ("scan-three-sides", "wide", ("light",)),
     ("scan-cube-read", "wide", ("light",)),
+    ("scan-ambiguous", "wide", ("light",)),
     ("solve-start", "wide", ("light", "dark")),
     ("solve-middle", "wide", ("light", "dark")),
     ("solve-end", "wide", ("light", "dark")),
@@ -64,19 +70,28 @@ USED = [
     ("history", "wide", ("light", "dark")),
     ("history-empty", "wide", ("light",)),
     ("entry", "wide", ("light", "dark")),
+    ("entry-error", "wide", ("light", "dark")),
     ("colours", "wide", ("light",)),
+    ("colours-turn", "wide", ("light",)),
+    ("colours-doubt", "wide", ("light",)),
     ("solve-big-middle", "wide", ("light", "dark")),
     ("solution-big-middle", "wide", ("light", "dark")),
     ("settings", "wide", ("light", "dark")),
     ("settings", "narrow", ("light",)),
+    ("about", "wide", ("light", "dark")),
+    ("licences", "wide", ("light", "dark")),
 ]
 
 
 # Pictures cut to a height, so that one does not end on a heading with nothing
 # under it: Settings in the wide tour is taller than the tour's window made for
-# it, and stops part-way down the Rendering section. The narrow one is whole.
+# it, and stops part-way down the Rendering section. The narrow one runs to the
+# end of the Developer section and is cut just under "Snapshot now": the line
+# below it names the folder the diagnostics go to, which in a tour run is a
+# temporary folder of the machine it ran on, and must not be in a picture.
 CROP_HEIGHT = {
     ("settings", "wide"): 1115,
+    ("settings", "narrow"): 1597,
 }
 
 

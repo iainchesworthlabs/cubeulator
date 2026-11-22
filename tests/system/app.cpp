@@ -461,6 +461,20 @@ void App::click(const QString& object_name) {
     click(item);
 }
 
+void App::reveal(const QString& object_name) {
+    QQuickItem* item = find(object_name);
+    INFO("no visible control named " << object_name.toStdString());
+    REQUIRE(item != nullptr);
+    scroll_into_view(item);
+    pump(60);
+}
+
+void App::park_pointer() {
+    // Not (0, 0): QTest takes a null position to mean the middle of the window.
+    QTest::mouseMove(window_, QPoint(1, 1));
+    pump(20);
+}
+
 void App::click_button(const QString& label) {
     QQuickItem* item = find_button(label);
     INFO("no visible button labelled " << label.toStdString());

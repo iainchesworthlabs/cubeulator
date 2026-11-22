@@ -22,6 +22,7 @@
 #include <cube/nxn/cube.hpp>
 #include <cube/solver/solver.hpp>
 
+#include <QColor>
 #include <QFileInfo>
 #include <QImage>
 #include <QMetaObject>
@@ -29,6 +30,8 @@
 #include <QQuickWindow>
 #include <QVariant>
 
+#include <cstddef>
+#include <cstdint>
 #include <set>
 #include <string>
 #include <vector>
@@ -57,6 +60,7 @@ struct Tour {
     std::vector<QString> written;
 
     void shoot(const QString& name) {
+        app.park_pointer();
         app.settle();
         written.push_back(app.shot(
             QString("%1-%2-%3")
@@ -88,6 +92,9 @@ void tour_layout(const std::string& layout) {
         INFO("variant " << variant.layout << " " << variant.theme);
         app.go("launch");
         FakeCamera::instance().reset();
+        // The history starts empty in every variant: what the last one left (the 5x5's
+        // solve) would be a third row in this one's picture.
+        app.runtime().history().clear();
         app.resize(variant.size);
         app.set_theme(QString::fromUtf8(variant.theme));
         Tour tour{app, variant, {}};
@@ -99,6 +106,19 @@ void tour_layout(const std::string& layout) {
         app.click("launch.settings");
         REQUIRE(app.wait_for([&]() { return app.screen() == "settings"; }));
         tour.shoot("settings");
+
+        // About, from the end of the settings, and the licences it leads to; then
+        // back out the way they were entered.
+        app.click("settings.about");
+        REQUIRE(app.wait_for([&]() { return app.screen() == "about"; }));
+        tour.shoot("about");
+        app.click("about.licences");
+        REQUIRE(app.wait_for([&]() { return app.screen() == "licences"; }));
+        tour.shoot("licences");
+        app.click("licences.back");
+        REQUIRE(app.wait_for([&]() { return app.screen() == "about"; }));
+        app.click("about.back");
+        REQUIRE(app.wait_for([&]() { return app.screen() == "settings"; }));
         app.click("settings.back");
         REQUIRE(app.wait_for([&]() { return app.screen() == "launch"; }));
 
@@ -123,7 +143,23 @@ void tour_layout(const std::string& layout) {
         REQUIRE(app.wait_for([&]() { return !scan.settingUp(); }));
         tour.shoot("scan-looking");
 
-        cube::systest::show_side(cube::test::outside_view(cube, cube::solver::kAllFaces[0]), 1);
+        // A cube held on a corner: a dot on each sticker of the sides in view, one
+        // colour to a side. Then the room again and a fresh start, so that the walk
+        // below begins with no side read, as it did.
+        cube::systest::show_corner(cube);
+        REQUIRE(app.wait_for([&]() { return scan.cornerPoints().size() == 3; }));
+        tour.shoot("scan-corner");
+        cube::systest::show_empty_room();
+        REQUIRE(app.wait_for([&]() { return scan.cornerPoints().isEmpty(); }));
+        if (scan.sidesRead() > 0) {
+            app.click_button("Start over");
+            REQUIRE(app.wait_for([&]() { return scan.sidesRead() == 0 && !scan.settingUp(); }));
+        }
+
+        // Held a little smaller and higher than the default pose, so that the whole side
+        // shows above the size buttons and the chips.
+        cube::systest::show_side(cube::test::outside_view(cube, cube::solver::kAllFaces[0]), 1,
+                                 cube::test::Pose{.centre = {320.0F, 150.0F}, .pitch = 36.0F});
         REQUIRE(app.wait_for([&]() { return scan.reading() || scan.sidesRead() == 1; }, 30'000));
         tour.shoot("scan-reading");
 
@@ -139,7 +175,16 @@ void tour_layout(const std::string& layout) {
             cube::systest::show_empty_room();
         }
         REQUIRE(app.wait_for([&]() { return scan.complete(); }, 60'000));
-        // The beat before the solution is short; this picture is taken in it.
+        // The headline and the chips' outlines turn green over a fifth of a second, and
+        // the beat before the solution is over a second: the picture is taken in the beat,
+        // once they have.
+        CHECK(app.wait_for(
+            [&]() {
+                const QQuickItem* headline = app.find_text(QStringLiteral("Cube read"));
+                return headline != nullptr &&
+                       headline->property("color").value<QColor>() == QColor("#3FE05A");
+            },
+            1000));
         tour.written.push_back(app.shot(
             QString("scan-cube-read-%1-%2")
                 .arg(QString::fromUtf8(variant.layout), QString::fromUtf8(variant.theme))));
@@ -206,6 +251,61 @@ void tour_layout(const std::string& layout) {
         app.click("history.back");
         REQUIRE(app.wait_for([&]() { return app.screen() == "launch"; }));
 
+        // A scan that cannot settle: six sides that fit together two ways. What the
+        // scan says, the colours screen that Check the colours leads to (with the
+        // ways to turn a side that make a cube), and the same screen over a cube the
+        // camera read with two stickers it was unsure of.
+        const auto patterned = cube::test::patterned_cube();
+        REQUIRE(patterned.has_value());
+        app.click("launch.startScan");
+        REQUIRE(app.wait_for([&]() { return scan.running(); }));
+        cube::systest::show_cube(*patterned);
+        REQUIRE(app.wait_for([&]() { return scan.conflicted(); }, 60'000));
+        REQUIRE(app.wait_for([&]() { return app.find("scan.checkColours") != nullptr; }));
+        app.pump(120);
+        tour.shoot("scan-ambiguous");
+        app.click("scan.checkColours");
+        REQUIRE(app.wait_for([&]() { return app.screen() == "colours"; }));
+        app.pump(80);
+        REQUIRE(app.find("colours.fix.0") != nullptr);
+        // The ways to turn a side are under the colours: scrolled to, as a finger would.
+        int last_fix = 0;
+        while (app.find(QString("colours.fix.%1").arg(last_fix + 1)) != nullptr) {
+            ++last_fix;
+        }
+        app.reveal(QString("colours.fix.%1").arg(last_fix));
+        tour.shoot("colours-turn");
+
+        const cube::nxn::NCube read =
+            cube::nxn::random_scramble({.size = 3, .seed = 6, .moves = 40});
+        cube::app::Reading doubtful;
+        doubtful.size = 3;
+        for (const cube::solver::Color colour : read.facelets()) {
+            doubtful.stickers.push_back(static_cast<std::int8_t>(colour));
+        }
+        doubtful.doubtful.assign(doubtful.stickers.size(), 0);
+        const std::size_t front = static_cast<std::size_t>(cube::solver::Face::F) * 9;
+        doubtful.doubtful.at(front) = 1;
+        doubtful.doubtful.at(front + 7) = 1;
+        app.runtime().controllers().colours.loadReading(doubtful);
+        app.pump(80);
+        app.click("colours.side.F");
+        tour.shoot("colours-doubt");
+
+        app.click("colours.back");
+        app.pump(80);
+        if (app.screen() == "colours") {
+            app.click("colours.discard.confirm");
+        }
+        REQUIRE(app.wait_for([&]() { return app.screen() == "scan"; }));
+        // Wait for the camera to be open before leaving: a Cancel pressed while it is still
+        // opening can lose its stop to the end of the start (see the report), and this is
+        // the walk's own order everywhere else (review_test.cpp does the same).
+        REQUIRE(app.wait_for([&]() { return scan.running(); }));
+        app.click_button("Cancel");
+        REQUIRE(app.wait_for([&]() { return app.screen() == "launch"; }));
+        REQUIRE(app.wait_for([&]() { return !scan.running() && !scan.starting(); }));
+
         // Another size of cube: the entry screen with a 5x5's scramble typed in,
         // the colours screen with the top and front of a 4x4 painted, and the
         // 5x5's solve and review at the first turn of a layer inside the cube.
@@ -221,6 +321,14 @@ void tour_layout(const std::string& layout) {
         app.click("entry.size.5");
         type_scramble(five);
         tour.shoot("entry");
+
+        // A move that is not one: the screen says so, and selects it.
+        type_scramble(QStringLiteral("R U 2R' F2 3Rw Q Uw' L2 2D B'"));
+        app.click("entry.solve");
+        REQUIRE(app.wait_for([&]() { return app.find("entry.error") != nullptr; }));
+        tour.shoot("entry-error");
+        type_scramble(five);
+        REQUIRE(app.find("entry.error") == nullptr);
 
         app.click("entry.size.4");
         app.click("entry.colours");
@@ -238,6 +346,8 @@ void tour_layout(const std::string& layout) {
             }
         }
         app.click("colours.side.F");
+        // The count of what is still to paint, and Solve, are under the colours.
+        app.reveal("colours.solve");
         tour.shoot("colours");
         app.click("colours.back");
         app.click("colours.discard.confirm");
@@ -290,9 +400,9 @@ void tour_layout(const std::string& layout) {
         }
     }
 
-    // Twenty-one pictures a variant, two variants a layout.
+    // Twenty-eight pictures a variant, two variants a layout.
     CHECK(variants == 2);
-    CHECK(all.size() == 21 * variants);
+    CHECK(all.size() == 28 * variants);
 }
 
 }  // namespace
