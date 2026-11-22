@@ -21,6 +21,9 @@ in it.
 4. Open Cubeulator. The first time you scan, iOS asks whether it may use the camera; allow it. If you said no,
    *Settings*, *Cubeulator*, *Camera* turns it back on.
 
+If you said no, Cubeulator says *Camera access is off* and offers to open the phone's
+settings, where *Camera* can be turned back on. It cannot scan without the camera.
+
 A new release appears in TestFlight as soon as Apple has processed it, usually within half an hour. TestFlight offers the
 update, and iOS replaces the app and keeps its data. A TestFlight build expires after 90 days, so install a newer one
 before then.

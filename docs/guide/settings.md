@@ -92,7 +92,9 @@ carries its own). On Linux, install a CJK font such as Noto Sans CJK.
 | Diagnostics on or off, snapshot | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> | <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd> | Anywhere ([Privacy](../privacy.md#developer-recording-and-diagnostics)) |
 
 *Esc* goes back on the history, solution, About and Licences screens; elsewhere use the
-**Back**, **Cancel** and **Finish** buttons.
+**Back**, **Cancel** and **Finish** buttons. In Hebrew, Arabic and Yiddish the layout
+is mirrored, and on the solution screen so are the arrow keys: <kbd>←</kbd> goes
+forward and <kbd>→</kbd> goes back, the way the buttons are laid out.
 
 On a Mac the same actions are in the menu bar (File, View, Window, Help). The
 Help item is greyed out: there is no help screen in this release.

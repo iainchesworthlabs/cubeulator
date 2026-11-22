@@ -97,6 +97,32 @@ make the move. (A cube you typed in has no scan, so it has no camera.)
   which piece looks wrong. **Solve** is only available for a cube that can exist,
   so a mistake here is found before the solve rather than after it.
 
+### What the colours screen says about the cube
+
+The line under the colours says whether what is painted can be a real cube. It is one of:
+
+| It says | What it means |
+| --- | --- |
+| *The colours do not add up* | A colour is used too many or too few times. The screen says which. Each colour must be on exactly nine stickers of a 3x3. |
+| *This cannot be a real cube* | The colours add up, but no turns could have made this cube. The screen says what looks wrong and outlines a sticker of that piece: |
+| *This is a valid cube* | **Solve** is offered. |
+
+The fault it names is one of: *A corner looks turned in place*, *An edge looks flipped*,
+*Two pieces look swapped*, *A piece shows colours that no piece of a cube has*, *Two pieces show
+the same colours, so another piece is missing*, or *The middle stickers of a side do not hold
+each colour equally often*. Look at that piece on your cube first: it is nearly always one
+sticker painted the wrong colour, or two stickers that were swapped. If the whole cube was
+taken apart and put back together wrongly, there is no solution.
+
+## "No solution found"
+
+*The cube was read, but Cubeulator could not work out how to solve it. Check the colours, or
+scan again.* Go through **Check the colours** against your cube, one sticker at a time:
+a sticker painted the wrong colour can still make a cube that looks possible. Or scan it
+again. If it keeps saying so with the colours right, please
+[open an issue](https://github.com/iainchesworthlabs/cubeulator/issues) and say what the cube
+looks like.
+
 ## "…fit together in more than one way"
 
 *Turn the cube slowly to show the corner where Yellow, Green and Red meet.*

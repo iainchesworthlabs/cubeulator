@@ -12,8 +12,8 @@ the first one listed). `<version>` below is the release's number, for example
 | System | File | Needs |
 | --- | --- | --- |
 | Windows | `Cubeulator-<version>-windows-x64.exe` | Windows 10 or later, 64-bit |
-| macOS | `Cubeulator-<version>-macos-arm64.dmg` | A Mac with Apple silicon (M1 or later) |
-| Debian, Ubuntu | `Cubeulator-<version>-linux-x64.deb` | 64-bit x86, X11 or XWayland |
+| macOS | `Cubeulator-<version>-macos-arm64.dmg` | macOS 14.4 or later, on a Mac with Apple silicon (M1 or later) |
+| Debian, Ubuntu | `Cubeulator-<version>-linux-x64.deb` | Debian 13 or later, or Ubuntu 24.04 or later; 64-bit x86, X11 or XWayland |
 | Fedora | `Cubeulator-<version>-linux-x64.rpm` | 64-bit x86, X11 or XWayland |
 
 The iPhone app goes to TestFlight for testers the author has invited: see
