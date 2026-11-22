@@ -2,9 +2,18 @@
 
 This is the design of `cube::nxn`, the library that solves a cube of any size
 from 2x2x2 up (tested to 9x9x9) and reuses the 3x3 solvers for the last
-stage. It is a library with tests and a benchmark, with no scanning and no UI
-for sizes above 3 yet. Everything below is checked by
-`tests/unit/nxn`; the numbers are from `cube_nxn_bench`.
+stage. Everything below is checked by `tests/unit/nxn`; the numbers are from
+`cube_nxn_bench`.
+
+Where it stands in 0.2.0-beta.4: the app solves every cube through this library,
+the 3x3 included ([the app's 3x3](#the-apps-3x3)). The entry, scan, colours,
+solve, solution and history screens take a cube of 2x2 to 5x5, scanned by the
+camera or typed in, and follow it on a 3D cube drawn at its size; 6x6 to 9x9 are
+solved and tested by the library and are not offered on any screen
+([where the screens differ](nxn-ui-parity.md)). Scanning is described in
+[the vision pipeline](vision-pipeline.md#a-cube-of-another-size) and the camera
+following a bigger cube's turns in [nxn-camera-follow.md](nxn-camera-follow.md).
+The plan this grew from is [nxn-app-plan.md](nxn-app-plan.md).
 
 ## The idea in one paragraph
 
@@ -30,12 +39,15 @@ per-size algorithm tables, and no parity algorithms.
 | State | `cube.hpp` | `NCube`: 6 N^2 colours, turned by table; reduced check; `to_cube3()` |
 | Concepts and views | `state.hpp` | `FaceletState`, range algorithms, the zero-copy virtual 3x3 |
 | Commutator engine | `commutator.hpp` | `CycleLibrary` of pure 3-cycles; `arrange()` sorts by them (the edges stage) |
-| Centre search | `src/nxn/centres.cpp` | Greedy search over short words for the centres stage |
+| Centre search | `src/lib/src/nxn/centres.cpp` | Greedy search over short words for the centres stage |
 | Strategy | `strategy.hpp` | Stages as values; `default_strategy(size)`; target policies; parity handler |
 | Notation | `notation.hpp` | WCA names for a layer turn: print, parse, and gathering turns into wide moves for display |
 | Stepping | `stepped_plan.hpp`, `stage.hpp` | `SteppedPlan`: a solution to follow one move at a time, with the cube at every position; `StageId`: the stage a person is told about |
 | Result | `solution.hpp` | `Step`, `Solution`, merging of turns |
 | Validity | `validate.hpp` | `validate()`: is this a cube a person could hold, and if not, why |
+| Scan assembly | `scan_assembly.hpp` | Six scanned sides of any size put together into the cubes they make |
+| Views | `outside_view.hpp`, `mesh.hpp` | A side as a camera sees it (`outside_view`, `camera_view`); the cube's mesh for the 3D view |
+| The app's entry | `cube3.hpp` | `solve_held`, `solve_3x3`, `prepare`: what the app calls |
 
 ## The model
 
@@ -229,9 +241,11 @@ equal rather than argue it:
 corner that is the mirror image of a real one (two of its stickers swapped)
 passes `is_physically_valid()` and `is_solvable()`, which do not look at the
 chirality of a corner, and the solver then refuses it. About 0.5% of the damaged
-3x3s in the test are of this kind. The scan assembly leans on `is_solvable()`
-today; moving it to the oracle (phase P2 of [nxn-app-plan.md](nxn-app-plan.md))
-can only remove false accepts.
+3x3s in the test are of this kind. The 3x3's scan assembly
+(`cube::solver::assemble_scanned_faces`) still leans on `is_solvable()`; the
+assembly for every other size (`cube::nxn::assemble_scanned_sides`) already asks
+the oracle (phase P2 of [nxn-app-plan.md](nxn-app-plan.md)), and moving the 3x3
+to it can only remove false accepts.
 
 It reads each sticker a constant number of times (no allocation after the size's
 tables are built, which `Geometry::of(size)` does once), so it is cheap enough
@@ -321,17 +335,20 @@ blocks is the move count a person is shown (a wide move is one); what is stored
 and replayed is the layer turns, and a person who follows the grouped moves
 arrives where the originals arrive (checked over random runs at every size and
 over the library's own solutions). Not yet: the middle-slice letters `M` `E` `S`,
-which mean different layers at different sizes, and the words ("the second layer
-from the right") the screens will pair with the letters.
+which mean different layers at different sizes. The screens say a layer in words
+beside the letters (`solve.move.layer`: "Right side · layer 2 · upwards").
 
 ## Following a solution
 
 `SteppedPlan` (`stepped_plan.hpp`) is what a screen steps through: a solution
 flattened into moves, `next()` and `previous()`, the cube cached at every
 position (`current_cube()`, `cube_at(i)`), and one span of moves per stage. It is
-what the app's `SteppedSolution` is for a 3x3, written for a cube of any size:
-the state is an `NCube`, a move is a `WideMove`, and a stage is a `StageId`.
-Nothing in it knows about Qt or the screens.
+what `solver::SteppedSolution` is for a 3x3, written for a cube of any size: the
+state is an `NCube`, a move is a `WideMove`, and a stage is a `StageId`. The app
+steps through a `SteppedPlan` at every size, a 3x3 included
+(`SolveController`, `src/app/qt/solve_controller.cpp`); `SteppedSolution` stays in
+the library as what the plan is tested against. Nothing in it knows about Qt or the
+screens.
 
 * **What a move is** is the caller's choice (`Display`). `Layers` is one move per
   turn of one layer, the library's solution as it is. `Wide` gathers adjacent
@@ -344,8 +361,8 @@ Nothing in it knows about Qt or the screens.
   6x6 and 8,297 into 8,264 at 7x7, under 1%: the solver rarely turns two adjacent
   layers one after the other. The app shows wide moves for a cube of 4 or more,
   but a person following a 5x5 meets mostly single layers, and the way to say
-  which one ("2R", "the second layer from the right") matters more than the
-  grouping.
+  which one matters more than the grouping (the screens say "Right side · layer 2
+  · upwards", `solve.move.layer`).
 * **Where a person is** is `current_index()`, set by `next()`, `previous()` or
   `seek(i)` (any position, clamped), and `core_start()` is the move at which the
   3x3 stages begin (0 for a 3x3, `move_count()` for a 2x2): the place "skip ahead
@@ -360,10 +377,12 @@ Nothing in it knows about Qt or the screens.
   `is_core(id)` says whether the stage is the 3x3 solver's, which is how a
   screen knows where "skip ahead to the 3x3 stage" lands.
 * **`solve_held`** (`cube3.hpp`) is the app's way to solve a cube of any size:
-  the library's `solve()` above 3, and at 3 the as-held reading described below.
+  the library's `solve()` above 3, and at 3 the as-held reading described
+  [below](#the-apps-3x3). The solve controller calls it, and steps through the
+  plan it makes.
 
 `tests/unit/nxn/stepped_plan_test.cpp` holds a plan of a 3x3 equal to the
-`SteppedSolution` the app has always used, for all three methods: the same
+`SteppedSolution` the app used before it, for all three methods: the same
 moves, the same stage spans, the same cube at every position, stepped both ways.
 
 ## One state concept, a virtual 3x3
@@ -383,12 +402,13 @@ cube this *is* the cube's 3x3; before reduction it is a sample of stickers.
 
 ## The app's 3x3
 
-The app solves through this library at size 3: `cube::nxn::solve_3x3()` and
+The app solves through this library at size 3: `cube::nxn::solve_held()` and
 `cube::nxn::prepare()` (`cube/nxn/cube3.hpp`) are the two calls the solve
 controller and the startup path make, in place of `cube::solver::solve()` and
-`cube::solver::prepare()`. They take and return the 3x3 types the app is
-written in (`Cube`, `Solution`), so nothing above them - the stepped solution,
-the history, the review - changed.
+`cube::solver::prepare()`. `solve_3x3()` is the same solve in the 3x3 types
+(`Cube`, `Solution`) the app was written in before it took any size, and what
+`tests/unit/nxn/cube3_test.cpp` holds equal to the 3x3 solver; the app itself
+now calls `solve_held()` on an `NCube`.
 
 What they promise is the 3x3 solver's contract exactly: the same stages in the
 same order with the same moves, or the same error. Three details make that
@@ -453,7 +473,10 @@ size and per process.
   measured on a phone and they grow faster than N. Symmetry would cut them
   (build one cycle per rotation class and rotate), and they are built for the
   sizes asked for only.
-* **Scanning and a UI.** None exist for sizes above 3.
+* **6x6 to 9x9 on the screens.** The library solves them and the scan reader reads
+  them on drawn cubes, but the entry and scan screens offer 2 to 5. A size is
+  added to the screens once its measurements are in
+  ([nxn-ui-parity.md](nxn-ui-parity.md), gap 8).
 * **A compiler other than g++-16 snapshot, MSVC and Clang 23** has not been
   built with; the platform legs (Android, macOS, web) need `<mdspan>`, which
   their libc++ has.

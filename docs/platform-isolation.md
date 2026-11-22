@@ -21,15 +21,18 @@ turns the `platform-isolation` check red.
 ```
 src/app/
   interfaces/        what the shell needs from a platform: one header each
-    camera.hpp  paths.hpp
-    platform_info.hpp  crash_handler.hpp  desktop_shell.hpp
+    camera.hpp  paths.hpp  platform_info.hpp
+    crash_handler.hpp  desktop_shell.hpp  graphics_probe.hpp
   platform/
     windows/ macos/ linux/ android/ ios/ web/
                      one implementation per interface, plus platform.cmake
     posix/           implementations shared by several platforms (the crash
                      handler and capture scope of every non-Windows one; the
-                     do-nothing desktop shell of Android, iOS and web)
-    detail/          helpers every platform links (an OpenCV capture loop, ...)
+                     do-nothing desktop shell of Android, iOS and web; the
+                     graphics probe and Tracy Direct3D stub of where there is
+                     nothing to ask)
+    detail/          helpers every platform links (an OpenCV capture loop, the
+                     photometry lock, the Vulkan probe, ...)
 tests/platform/<name>/   test cases only that platform can run
 ```
 
@@ -64,6 +67,8 @@ platform's fragment. Every other CMake file reads what the fragment declared:
 | What a test binary has to be told at link time (the browser: threads, stack, memory, Node) | `CUBEULATOR_PLATFORM_TEST_LINK_OPTIONS` | `tests/` (`cube_test_platform`) |
 | Whether the camera is a native device the test program can open from its own thread (the camera cases under `tests/integration`) | `CUBEULATOR_PLATFORM_TEST_NATIVE_CAMERA` | `tests/CMakeLists.txt` |
 | Whether the app carries Archivo and IBM Plex Mono and registers them at start-up (every platform but the browser) | `CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS` | `src/app/CMakeLists.txt` |
+| Whether the platform has the protections of `cmake/Hardening.cmake` to ask for (every platform but the browser) | `CUBEULATOR_PLATFORM_HARDENING` | `cmake/Hardening.cmake` |
+| Which session variables a test that draws the real app needs (`DISPLAY WAYLAND_DISPLAY` on Linux), and the advice when none is set | `CUBEULATOR_PLATFORM_TEST_DISPLAY_VARIABLES` / `_TEST_DISPLAY_HELP` | `tests/`, through `cube_test_platform_facts.hpp` |
 | Work before packages are found | `cube_platform_prepare_dependencies()` | `cmake/MobileDependencies.cmake` |
 | Qt runtime next to the app (windeployqt) | `cube_platform_deploy_qt_runtime()` | `src/app/CMakeLists.txt` |
 | One more Qt library next to a binary (QtTest, for the system tests) | `cube_platform_deploy_qt_library()` | `tests/system/CMakeLists.txt` |
@@ -72,8 +77,9 @@ platform's fragment. Every other CMake file reads what the fragment declared:
 | The app as an installable program (file name, version resource or bundle, install rules, Qt deployment) | `cube_platform_configure_desktop_app()`, which includes `packaging/<name>/ConfigureApp.cmake` | `cmake/DesktopPackaging.cmake` |
 | Where the licence and notices install | `CUBEULATOR_PLATFORM_NOTICES_DIR` | `cmake/ThirdPartyNotices.cmake` |
 
-The full contract is the header comment of `cmake/Platform.cmake`; a fragment
-that forgets part of it fails configure by name, not three files away.
+The full contract is the header comment of `cmake/Platform.cmake`, and
+`cmake/PlatformContract.cmake` lists its variables and hooks; a fragment that
+forgets part of it fails configure by name, not three files away.
 
 Compiler concerns (`/W4` versus `-Wall`, sanitizer flags) are a separate
 axis and stay in `cmake/CompilerWarnings.cmake`, `Sanitizers.cmake`,
@@ -83,9 +89,9 @@ axis and stay in `cmake/CompilerWarnings.cmake`, `Sanitizers.cmake`,
 
 1. Create `src/app/platform/<name>/` with one implementation of each
    interface (`camera_<name>.cpp`,
-   `paths_<name>.cpp`, `platform_info_<name>.cpp`, a crash handler and the
-   capture-thread scope, which the `posix/` files give where nothing is
-   needed; the desktop shell comes through
+   `paths_<name>.cpp`, `platform_info_<name>.cpp`, a crash handler, the
+   capture-thread scope and a graphics probe, which the `posix/` files give
+   where nothing is needed; the desktop shell comes through
    `cube_platform_configure_desktop_shell()`)
    and `platform.cmake`. Copy the closest existing platform's and change what
    differs; use `posix/` files where the implementation is the same.
@@ -97,11 +103,13 @@ axis and stay in `cmake/CompilerWarnings.cmake`, `Sanitizers.cmake`,
 That is the source tree. Four things outside it still carry platform names,
 because their formats cannot read a CMake variable: the `platform` expressions
 in `vcpkg.json` (which OpenCV camera backends are built: DirectShow and Media
-Foundation on Windows, V4L on Linux, and a reduced OpenCV for `emscripten`),
+Foundation on Windows, V4L on Linux; no image codecs on iOS; and a reduced
+OpenCV for `emscripten`),
 the configure/build/test presets in `CMakePresets.json`, the vcpkg triplets in
 `cmake/triplets/` (a triplet *is* a platform's name and flags; only a platform
-that needs one of its own has one) and the CI legs in
-`.github/workflows/ci.yml`. Add the platform to those as a build target would.
+that needs one of its own has one: today the browser's) and the CI legs in
+`.github/workflows/ci.yml` (and the release's, in `release.yml`). Add the
+platform to those as a build target would.
 
 `tools/checks/check_platform_isolation.ps1` will tell you if a file in the
 directory is not named by a `platform.cmake`, and the
@@ -203,9 +211,10 @@ Automate (`scripts/check-os-macros.ps1`).
 
 ## The preprocessor check
 
-`check_no_preprocessor.py` from icl-common-infra runs beside the isolation check
-(`python3 <infra>/scripts/check_no_preprocessor.py --root .`; `tools/ci/precheck.py` runs
-it). It has two levels:
+`check_no_preprocessor.py` from icl-common-infra runs beside the isolation check, as
+part of the `Policy` job of `ci.yml` (`python3 tools/ci/precheck.py` runs the same checks
+locally, and `python3 <infra>/scripts/check_no_preprocessor.py --root .` this one alone).
+It has two levels:
 
 - A conditional that tests a platform, operating system, architecture, compiler or
   standard-library version fails, wherever it is. There is no exemption.
@@ -216,7 +225,9 @@ it). It has two levels:
   `#include`, `#pragma` and `#error` are free.
 
 `tools/preprocessor-allowlist.txt` exempts a path from the second level only, with a reason
-on the same line. Today it holds the three Tracy profiling files, where a macro is the only
-way to capture the source location of a zone or to stand in for a function the header calls
-by name. The one remaining count in the baseline is the `SKIP` wrapper in
+on the same line. Today it holds three entries, all Tracy profiling code: the zone-macro
+headers (`src/lib/variants/profiling-*/cube/profiling.hpp`) and the two GPU files
+(`tracy_gpu.cpp`, `tracy_gpu_vulkan.cpp`), where a macro is the only way to capture the
+source location of a zone or to stand in for a function the Tracy header calls by name.
+The one remaining count in the baseline is the `CUBE_SKIP_WITHOUT_JPEG_CODEC` macro in
 `tests/unit/jpeg_codec.hpp`.

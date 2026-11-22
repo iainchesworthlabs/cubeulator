@@ -1,13 +1,95 @@
 # Accessibility
 
-> **Status in 0.1.0-beta.1:** Almost none of this is built. The screens have
-> no accessible names or roles, the buttons are not focusable and there is no
-> focus ring, and the cube colours carry no marks. What exists is
-> `DesktopShell.qml`'s shortcuts (Ctrl+, for Settings, Ctrl+N for a new scan,
-> F11 or Ctrl+Cmd+F for full screen, Ctrl+Q to quit; F1 is bound and disabled
-> until there is Help), the solve screen's Space, Enter, Right and Left keys,
-> a dialog role on the placeholder About, and mirroring of the layout, but
-> not the cube, in right-to-left languages. Esc and Alt+Left do not go back.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Mostly design. The app has some accessibility
+> support on some screens, listed under "What the app has today" below; the rest
+> of the page is the specification, and none of it has been tried with a screen
+> reader.
+
+## What the app has today
+
+Checked against `src/app/qt` and `CHANGELOG.md` for 0.2.0-beta.4. Everything not
+listed as built is design.
+
+### Built
+
+- **Names and roles (`Accessible`), on some screens.** About (title and name as
+  headings, the version as text); Licences (headings, the rows, the notice
+  text); History (each row and delete button named by its date and summary, and
+  "Deleted" and "Cleared" announced); the solution (headings, the cube as a
+  graphic named by its caption, each turn row a list item named by the whole
+  sentence, with its selected state); the colours screen (each sticker a button
+  named by side, row, column and colour, and "unsure" where the camera doubted
+  it; the palette as radio buttons; the side picker and the palette named as
+  groups); and the confirmation dialogs (role dialog; focus moves to the dialog
+  and returns on close).
+- **Keyboard.** Tab and the arrow keys move between the rows of About and
+  Licences, and into the notice text. Esc goes back on About, Licences, History,
+  the solution, the colours screen and *Another size of cube*, and closes a
+  dialog on its safe choice. The solve screen steps on Space, Enter and the
+  right arrow, and back on the left arrow; the solution on the arrow keys
+  (swapped in right-to-left languages), Space, Home and End; the colours screen
+  has the platform's Undo and Redo. The desktop shell has Ctrl+, (Settings),
+  Ctrl+N (a new scan, from Home or Complete), F11 or Ctrl+Cmd+F (full screen)
+  and Ctrl+Q, and on a Mac Cmd+W and Cmd+M; Ctrl+Shift+D and Ctrl+Shift+S are
+  for developers. F1 (Help) and Shift+Ctrl+N (enter by hand) are bound and
+  disabled, because there is no Help and no Home entry for them to open.
+- **Focus ring.** On a `ListRow` (the rows of About and Licences) and, as a
+  heavier border, on a text box. Nowhere else.
+- **Light, dark and the device's own scheme**, chosen in Settings and followed
+  live.
+- **Right to left.** Hebrew, Arabic and Yiddish mirror the layout; the cube, the
+  camera picture and the nine stickers of a side opt out of mirroring; the
+  solution's arrow keys swap. The i18n screen tests check the mirroring.
+- **A "?" on a sticker the camera doubted**, on the colours screen, so that the
+  doubt does not depend on telling colours apart (it is a mark; the cube colours
+  themselves carry none).
+
+### Designed, not built
+
+- **Names and roles on the other screens.** `AppButton` is an item with a mouse
+  area, so the buttons of Home, scan, solve, complete, settings and *Another
+  size of cube* have no role or name of their own, and are not Tab stops: those
+  screens cannot be driven by Tab at all. Only a `ListRow` (About, Licences) and
+  a few text boxes are Tab stops, so the History rows and the colours screen's
+  stickers, tiles and buttons are named, at best, and cannot be reached by Tab.
+  The scan screen's picture, dots, chips and status, and the solve screen's cube
+  and words, have no accessible text. No screen announces a change except
+  History.
+- **Keys:** Alt+Left, Cmd+[ and the mouse back button; the scan keys (Esc, R, M,
+  H); the colour keys, cursor and Ctrl+Enter of the colours screen; P, H, Page
+  Up and Page Down on the solve screen; Esc on Scan, Solve, Settings, Complete
+  and Home.
+- **Marks on the cube colours**, and the retuned swatches: `Theme.qml` still
+  draws the old six (orange and green 5.4 apart under protanopia), and the dots
+  on the scan screen are still yellow, then green.
+- **Text size.** Sizes are pixels in the QML. Nothing reads the system's text
+  size, and Settings has no row for it; nothing tests a larger text size.
+- **Reduced motion.** Nothing reads the system's setting, and Settings has no
+  Motion row. The solution screen has a `reducedMotion` property for the day
+  something does, and the browser's loading page slows its spinner under
+  `prefers-reduced-motion`; the solved cube on Complete bobs, and the layer to
+  turn nudges, whatever the setting.
+- **The contrast gate on the screens.** `check_tokens.py` passes for
+  `tokens.json`, but `Theme.qml` is still the legacy palette (the brand red
+  `#EC3013` as text, `inkMuted(0.55)`), which the design says misses 4.5:1. The
+  figures in this page describe the tokens, not what the screens draw.
+- **Live announcements, describing the cube, reading turns aloud, focus moved to
+  the title on entry.**
+
+### Not tried
+
+- **No screen reader** (Narrator, NVDA, VoiceOver, TalkBack, Orca) has been run
+  against the app, as far as the repository records. The one test of an
+  accessible name is a unit test of the colours screen's stickers
+  (`tests/unit/colours_screen_test.cpp`). Whether `Accessible` on these custom
+  items is read well on a phone is not known; the iPhone build has not been
+  tried by anyone but its author.
+- **The keyboard walk** is tested for History, Licences and the main journey,
+  not for every screen.
+- **The people tests** the page names (five people who cannot solve a cube, one
+  of them with a colour vision deficiency) are E6; nothing in the repository
+  records them.
 
 ## The target
 
@@ -17,9 +99,10 @@ reads it for software. Where a platform asks for more (48 px targets on
 Android), the stricter rule is the kit's rule everywhere.
 
 The app on 2026-10-13 had no accessible names, no keyboard focus and state
-carried by colour alone (plan, "What was found"), and it still has none of
-the three, bar the desktop shell. So this is the design for the first
-accessible version, not a refinement.
+carried by colour alone (plan, "What was found"). Of the three, names and
+focus now exist on some screens, and the dots on the scan screen still change
+by colour alone ("What the app has today", above). So this is the design for
+the first accessible version, not a refinement.
 
 What "done" means, and who checks it:
 
@@ -73,7 +156,8 @@ under deuteranopia, where about 10 is the least that can be relied on.
 
 The treatment has three layers. Each works without the others.
 
-1. **Retuned swatches.** The closest pair under any dichromacy is now 11.7.
+1. **Retuned swatches.** The closest pair under any dichromacy is now 11.7
+   (in `tokens.json`; the app has not ported them).
 2. **A mark on every colour**, on by default: ring, slash, plus, dot, bar,
    and plain for white. Shown on the drawn cube, the scan chips, the
    colour picker, the review grid and every in-line swatch. With no colour

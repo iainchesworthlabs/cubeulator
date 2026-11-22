@@ -1,21 +1,52 @@
 # App experience plan
 
-> **Status in 0.1.0-beta.1:** This is the plan the app is being built to, not
-> a description of it. On `develop` are the system tests (E0a), the generated
-> licence notices (E0b), the translations plumbing (E2b), the desktop shell's
-> shortcuts, window memory, icon and packaging (E4a) and the design documents
-> (E1). Not there: the component kit (E2a), and with it the E3 screens (first
-> run, About, Licences, Privacy, Help, History, review and hand entry), the
-> mobile shell (E4b), reviewed translations (E5) and release readiness (E6);
-> the screens the app has are the six legacy ones in `src/app/qt`.
+> [!NOTE]
+> **Status at 0.2.0-beta.4, checked 2026-11-22: partly built, and the component
+> kit (E2a) never landed.** This is still the plan the app is being built to, not
+> a description of it. The phases that did not need the kit are done; the ones
+> that did are done piecemeal or not at all. The evidence is in [Where the phases
+> stand](#where-the-phases-stand).
+>
+> **Done:** E0a system tests (#18), E0b licence notices (#27), E1 the design
+> documents, E2b translations (#20, #96, #131, #137) and E4a the desktop shell
+> (#3). The journey's dead ends are closed, and History (#107) and Review the
+> solution (#106) are built. About and Licences are real screens (#235). Archivo
+> and IBM Plex Mono are bundled (#234). The identifier and publisher are settled,
+> and Android has its application id (#255). The iPhone app builds (#239), has a
+> camera backend (#242) and goes to TestFlight (#270).
+>
+> **Left:**
+>
+> - **E2a, the kit, and with it the E3 gate.** The kit exists only on
+>   `origin/feature/ax-kit`, 977 commits behind `develop` (last commit
+>   2026-10-13). Without it the older screens have no accessible names or focus
+>   (see "Since 2026-10-14", below). **This needs the owner's decision: rebase the
+>   kit, rebuild it on `develop`, or retire E2a and the E3 gate.**
+> - **E3** screens not built: First run, Privacy and Help, the build line with
+>   Copy, and Copy details.
+> - **E4b:** the Android camera backend is still a stub; nothing calls the
+>   keep-awake helper; the iPhone's scan has not been seen to work on a phone.
+> - **E5, E6 and F:** no language has been read by a fluent reader and the Noto
+>   Hebrew and Arabic fonts are not bundled; no screen-reader pass, sessions with
+>   people or store listings are recorded; family items F4 (Noto faces), F5 and F7
+>   and all of V1.1 are not built.
+>
+> **Dropped or overtaken:** the `src/render` bgfx stub (#53); the "Detect hands
+> with AI" and "Auto-advance" settings, which went with `ScanSession` (R6);
+> decision 8, mobile capture "outside this plan", since the iPhone's camera backend
+> was built (#242); E3c and E3d as sessions of those names, because the scan,
+> review and solve screens were changed by the review and N x N work instead
+> ([recovery plan](recovery-plan.md), [N x N plan](nxn-app-plan.md)). Decision 5,
+> the Apple stores, is deferred, not resolved ([LICENSE-NOTE.md](../LICENSE-NOTE.md),
+> [licensing](licensing.md)).
 
-Written 2026-10-13. Status: **in effect.** On 2026-10-13 E0a, E0b and E1 had
-reported, E2a and E4a were running, `feature/app-experience` held the design
-and the accepted solve work, and no `ax` code branch had landed on it. Since
-then the solve work (pull request 4), E0a (18), E2b (20), E0b (27) and E4a
-(3) have landed on `develop` by pull request; E2a, the kit, has not. See
-[Integration](#integration) and ["Where the phases
-stand"](#where-the-phases-stand).
+Written 2026-10-13. Status: **in effect, partly built** (the box above). On
+2026-10-13 E0a, E0b and E1 had reported, E2a and E4a were running,
+`feature/app-experience` held the design and the accepted solve work, and no
+`ax` code branch had landed on it. By 2026-10-14 the solve work (pull request 4),
+E0a (18), E2b (20), E0b (27) and E4a (3) had landed on `develop` by pull
+request; E2a, the kit, has not landed since. See [Integration](#integration) and
+["Where the phases stand"](#where-the-phases-stand).
 
 This covers everything a person meets in Cubeulator apart from the two things
 already in flight - reading the cube ([recovery-plan.md](recovery-plan.md))
@@ -54,7 +85,8 @@ then each screen rebuilt on the kit, then platforms, languages and release.
 
 ## What was found
 
-Read from `feature/direct-scan` at `fa81b2e`.
+Read from `feature/direct-scan` at `fa81b2e`. The audit is of 2026-10-13; the box at the
+top of this page and the list after the table say what has changed.
 
 | area | today | where |
 |---|---|---|
@@ -111,6 +143,34 @@ Read from `feature/direct-scan` at `fa81b2e`.
 - *Docs.* README and CHANGELOG no longer say "repository skeleton". The 80%
   coverage gate still excludes `src/app/qt`; the system tests' leg reports its
   coverage without gating on it.
+
+**Since 2026-10-14**, to 0.2.0-beta.4 (checked 2026-11-22):
+
+- *Journey.* History and Review work for a cube of any size, and there are an entry
+  screen (*Another size of cube*) and a colours screen for putting right what the camera
+  misread. Back (Esc, the platform back key) is bound on those screens and on About,
+  Licences, History, Solution and ConfirmDialog, one at a time; there is still no
+  navigation stack.
+- *Languages.* Nine languages, each a complete draft. Whether the literal strings and
+  `DirectScan.cameraError`'s text made in C++ have gone was not re-audited
+  ([i18n-lanes.md](i18n-lanes.md)).
+- *Accessibility.* `Accessible` names and roles exist on About, Licences, History,
+  Solution, Colours, `ListRow` and `ConfirmDialog`, and not on Launch, Permission,
+  Settings, Scan, Solve, Complete or Entry. `AppButton.qml` is still an item with a
+  `MouseArea`, with no role or focus. Colour literals remain outside `Theme.qml` (11
+  lines in `DirectScanScreen.qml`, 5 in `SolveScreen.qml`).
+- *Type.* Archivo and IBM Plex Mono are bundled on Windows, macOS, Linux, Android and
+  iOS (the browser build keeps Qt's face and its Japanese and Chinese subsets). Noto Sans
+  Hebrew and Arabic are not.
+- *Identity.* The Android application id is `com.iainchesworthlabs.cubeulator` (#255).
+  The iPhone app builds, and the Android camera backend is still a stub.
+- *Legal.* About and Licences exist (#235); what they still lack, against
+  [licensing.md](licensing.md#7-about-and-licences-screens-the-requirement), is listed
+  there. Neither can be opened on a phone.
+- *Privacy.* A release build never saves a picture from the camera; recording failed
+  scans is for developer builds, as decided ("Decided since", below).
+- *Tests.* `tests/system` is the safety net it was meant to be; `src/app/qt` C++
+  coverage is reported and not gated (`ci.yml`).
 
 ## The person using it
 
@@ -170,13 +230,16 @@ default above, the answer stands.
   Arabic are set in Noto Sans, the family's face, not IBM Plex
   (`docs/design/family.md` D3, D4).
 - 5: the Apple stores are skipped for now; the question is deferred, not
-  resolved (`LICENSE-NOTE.md` on `feature/ax-licences`).
+  resolved ([`LICENSE-NOTE.md`](../LICENSE-NOTE.md)). The iPhone app has gone to
+  TestFlight for internal testers since 0.2.0-beta.2, which is not a store
+  submission.
 - 6: solve history is in, kept on the device (`docs/design/brief.md`).
 - A release build never saves a picture from the camera; recording failed
   scans is for developer builds (`brief.md` D7).
 - Source strings are British English (`brief.md` D10).
 - Hebrew and Arabic are set in Noto Sans Hebrew and Noto Sans Arabic, the
-  files the other apps ship (`design/family.md` D3).
+  files the other apps ship (`design/family.md` D3). *(Decided, not built: the
+  files are not bundled, see the box at the top.)*
 - Translations are keyed by id, as `strings.json` already is, not by the
   English text (`design/family.md` D5).
 - The repository moved to `iainchesworthlabs/cubeulator` on 2026-10-13.
@@ -191,8 +254,9 @@ default above, the answer stands.
 
 **On 5.** Cubeulator is GPL-3.0-or-later and the maintainer is its only author, so its
 own terms are the maintainer's to change. But the app links Qt Quick 3D and Qt Shader
-Tools, which Qt publishes under GPLv3 or a commercial licence, not LGPL. If
-that reading holds, an App Store exception on Cubeulator's own code would
+Tools, which Qt publishes under GPLv3 or a commercial licence, not LGPL. (E0b
+checked this: Quick 3D holds, and Shader Tools' runtime library does not, so only
+Quick 3D is GPL-only; see [licensing.md](licensing.md).) If that reading holds, an App Store exception on Cubeulator's own code would
 not settle the Apple question, because the same terms arrive through Qt. The
 routes would be a Qt commercial licence, drawing the cube without Quick 3D
 (`src/render`, a bgfx stub, held no rendering code and was removed on
@@ -201,6 +265,12 @@ and Google Play are not affected. E0b verifies this before anyone relies on
 it; it is not legal advice.
 
 ## Lanes
+
+> [!NOTE]
+> **Historical, kept for the reasoning (2026-11-22).** The solve and scan lanes
+> landed on 2026-10-13 (pull requests 4 and 8), and the branches named below,
+> `feature/solve-guidance`, `feature/direct-scan` and `feature/app-experience`, are
+> gone from `origin`. The contracts at the end of this section are still the rules.
 
 Experience work stays out of the solve and scan lanes' files until they
 land. The table was corrected on 2026-10-13 from the solve lane's own
@@ -243,6 +313,9 @@ Contracts every lane keeps:
 - **Cube colours come from `Theme`**, which will gain colour-vision
   variants.
 
+*(2026-11-22: the second contract, an accessible name on every interactive item,
+holds on the newer screens listed in the box above and not yet on the older ones.)*
+
 Found in the audit, belonging to the active lanes:
 
 - Solve: reaching Complete; leaving Solve; the hold instruction on phones;
@@ -256,6 +329,11 @@ Found in the audit, belonging to the active lanes:
   `ScanSession`; `cameraError` text built in C++.
 
 ## Integration
+
+> [!NOTE]
+> **Historical, kept for the reasoning (2026-11-22).** Every branch in the table
+> below landed except `feature/ax-kit`, which has not (see E2a). The stale
+> remote branches are `origin/feature/ax-kit` and `origin/feature/ax-desktop-on-develop`.
 
 *Resolved, except for the kit, by 2026-10-14: the solve work landed as pull
 request 4 (with the scan work, 8), E0a as 18, E2b as 20, E0b as 27 and E4a as
@@ -362,7 +440,8 @@ branches.
   follows the files, the two Noto faces have entries, and a font file that
   no entry claims fails the notices test and the install check. The entries
   are dormant until the files exist: when the kit and the licences branch
-  are both on this branch, run that test.
+  are both on this branch, run that test. *(Neither happened: the Noto entries are
+  still dormant, because the files are not in `src/app/qt/fonts/`.)*
 - **The `AppState.qml` split is proposed, not agreed.** The proposal is at
   the foot of `docs/kit.md` and was written before the solve lane added
   `solveCamera` and `rescan()`. It is re-read against the merged file, then
@@ -382,6 +461,9 @@ branches.
   order, never in a description alone. `design/accessibility.md` should say
   so wherever it relies on a description.
 
+*(2026-11-22: the `outline` pairs are in `tokens.json`'s contrast table now. The
+`AlertMessage` point is not in `design/accessibility.md`.)*
+
 ## Phases
 
 Each phase has one gate. Branches are `feature/ax-<topic>`, cut from
@@ -390,23 +472,24 @@ follows it.
 
 ### Where the phases stand
 
-As of 2026-10-14, `develop` at 7e764eef, from the code.
+The first column of state is as of 2026-10-14, `develop` at 7e764eef, from the code; the
+second is as of 0.2.0-beta.4 (2026-11-22).
 
-| phase | state |
-|---|---|
-| E0a System tests | Landed (18). `tests/system` boots the real `Main.qml`, walks the journey and takes the screenshot tour; `src/app/qt` coverage is reported, not gated |
-| E0b Licences | Landed (27). Notices are generated from the build and ship with the desktop packages; no screen shows them yet |
-| E1 Design | Landed: `docs/design/`. The prototype page is built from `strings.json` by `build.py`; run it after the strings change |
-| E2a Kit | Not landed. `Theme.qml` is the legacy one; `AppButton` is still an item and a mouse area; only `installBundledFonts()` is there |
-| E2b Translations | Landed (20), with ja and zh_CN machine drafts (96). See [i18n.md](i18n.md) |
-| E3a-E3d Screens | Mostly not on `develop`: the legacy Launch, Permission, Scan, Solve, Settings and Complete screens remain, some converted to ids. The solution and History screens are built (`SolutionScreen.qml`, `HistoryScreen.qml`) |
-| E4a Desktop | Landed (3): icon, version resource, installers, shortcuts, remembered window, macOS menu bar (`platforms.md` says it has not been run on a Mac). Nothing calls the keep-awake helper yet |
-| E4b Mobile | Nothing on `develop`. No mobile capture, so a phone build cannot scan |
-| E5 Languages | Not reviewed. ja and zh_CN are complete drafts; de, fr, es, he, ar and yi are empty |
-| E6 Release readiness | Nothing on `develop`: no screen-reader pass, no sessions with people, no store listings |
-| F Family alignment | Nothing on `develop`; the decisions D1-D9 are recorded in `design/family.md` |
+| phase | 2026-10-14 | 0.2.0-beta.4 (2026-11-22) |
+|---|---|---|
+| E0a System tests | Landed (18). `tests/system` boots the real `Main.qml`, walks the journey and takes the screenshot tour; `src/app/qt` coverage is reported, not gated | **Done.** `tests/system` now also holds the layout, reach, history, review, entry, settings and licences tests; a control no test presses fails `system.reach`. `src/app/qt` C++ coverage is still reported, not gated (`ci.yml`) |
+| E0b Licences | Landed (27). Notices are generated from the build and ship with the desktop packages; no screen shows them yet | **Done.** The Licences screen shows them since 0.2.0-beta.1 (#235); the inventory and its upkeep are [licensing.md](licensing.md) |
+| E1 Design | Landed: `docs/design/`. The prototype page is built from `strings.json` by `build.py`; run it after the strings change | **Done.** Unchanged, and kept up as screens change (`AGENTS.md`) |
+| E2a Kit | Not landed. `Theme.qml` is the legacy one; `AppButton` is still an item and a mouse area; only `installBundledFonts()` is there | **Not landed, and the branch has gone stale.** `origin/feature/ax-kit` is 977 commits behind `develop`. `AppButton` is still an item and a mouse area, and `src/app/qt/kit/` holds only `bundled_fonts`. Single pieces arrived on their own: the bundled Latin fonts (#234), `ListRow` and `ConfirmDialog` |
+| E2b Translations | Landed (20), with ja and zh_CN machine drafts (96). See [i18n.md](i18n.md) | **Done.** Nine languages, switched live, with plurals and right-to-left layout; every non-English catalogue is a first draft (#131, #137, #179) |
+| E3a-E3d Screens | Mostly not on `develop`: the legacy Launch, Permission, Scan, Solve, Settings and Complete screens remain, some converted to ids. The solution and History screens are built (`SolutionScreen.qml`, `HistoryScreen.qml`) | **In part.** Added: About and Licences (#235), Entry and Colours (the review and hand-entry screen of the [recovery plan](recovery-plan.md)). Launch, Permission, Settings, Scan, Solve and Complete are the older screens. Not built: First run, Privacy, Help |
+| E4a Desktop | Landed (3): icon, version resource, installers, shortcuts, remembered window, macOS menu bar (`platforms.md` says it has not been run on a Mac). Nothing calls the keep-awake helper yet | **Done**, with two caveats that stand: nothing calls the keep-awake helper (`KeepAwake` is registered in `desktop_integration.cpp` and used nowhere else), and the changelog says the macOS and Linux builds have not been run on hardware by the author |
+| E4b Mobile | Nothing on `develop`. No mobile capture, so a phone build cannot scan | **In part.** The iPhone app builds (#239), has a camera backend (#242) and goes to TestFlight (#270); Android has its application id (#255) but its camera backend is a stub. Keep-awake is not wired; haptics and safe-area insets were not checked |
+| E5 Languages | Not reviewed. ja and zh_CN are complete drafts; de, fr, es, he, ar and yi are empty | **Drafts done, nobody has reviewed them.** Nothing in the app says who reviewed a language |
+| E6 Release readiness | Nothing on `develop`: no screen-reader pass, no sessions with people, no store listings | **Not started.** The licence decision is recorded ([LICENSE-NOTE.md](../LICENSE-NOTE.md)); README and CHANGELOG are current |
+| F Family alignment | Nothing on `develop`; the decisions D1-D9 are recorded in `design/family.md` | **In part:** F1, F3 and Yiddish are done, the rest is not ([the table below](#family-alignment-and-v11)) |
 
-**E0 - Safety net and inventory.** No visual change. Starts now.
+**E0 - Safety net and inventory.** No visual change. *(Done.)* Started 2026-10-13.
 
 - *E0a System tests.* Boot the real `Main.qml` with the real controllers and
   a test frame source (`tests/unit/drawn_cube.hpp` already draws cube sides
@@ -421,9 +504,9 @@ As of 2026-10-14, `develop` at 7e764eef, from the code.
 
 Gate: one command walks launch to solve headless on Linux in CI and uploads
 the screenshots; the coverage report includes `src/app/qt`; the notices are
-generated; the licence options are on the maintainer's desk.
+generated; the licence options are on the maintainer's desk. *(Met.)*
 
-**E1 - Design.** Starts now, beside E0. Writes `docs/design/` and no app
+**E1 - Design.** *(Done.)* Started 2026-10-13 beside E0. Writes `docs/design/` and no app
 code.
 
 - `brief.md` - who it is for, where and how it is used, what the first
@@ -452,7 +535,7 @@ Gate: the maintainer has clicked through the prototype at both sizes and signed 
 off; every state in `journey.md` has a spec; the string inventory is
 complete.
 
-**E2 - The kit.** After the E1 gate (E2b can start once E0a lands).
+**E2 - The kit.** *(E2b done; E2a not landed.)* After the E1 gate (E2b can start once E0a lands).
 
 - *E2a Components.* Tokens in `Theme`; bundled fonts with their licences;
   focusable, accessible controls (button, toggle, choice, list row, dialog,
@@ -470,7 +553,7 @@ meets the target size, and holds 4.5:1 contrast in both themes; the
 pseudo-locale truncates nothing; on a machine without Archivo installed the
 app still shows Archivo.
 
-**E3 - Screens on the kit.** After E2a.
+**E3 - Screens on the kit.** *(In part, and not on the kit: see the box at the top.)* After E2a.
 
 - *E3a* Launch, first run, permission, settings, help.
 - *E3b* About, licences, privacy.
@@ -481,7 +564,7 @@ Gate: the system tests walk the whole journey finding controls by accessible
 name only, by keyboard only, at both sizes, in both themes, in the
 pseudo-locale; no colour or pixel-size literal remains outside `Theme`.
 
-**E4 - Platforms.** Beside E3.
+**E4 - Platforms.** *(E4a done; E4b in part.)* Beside E3.
 
 - *E4a Desktop.* Icons; Windows version resource and installer; macOS bundle,
   menu bar and About; Linux desktop entry and metadata; minimum window size,
@@ -493,11 +576,11 @@ pseudo-locale; no colour or pixel-size literal remains outside `Theme`.
 Gate: an installable package per desktop OS with icon, version and About; an
 APK with its own identity; the screen stays awake through a solve.
 
-**E5 - Languages.** Translate the chosen set, add fallback fonts for scripts
+**E5 - Languages.** *(Drafts done; nobody has reviewed them.)* Translate the chosen set, add fallback fonts for scripts
 Archivo does not cover, run the screenshot tour per language.
 Gate: a fluent reader has reviewed each language's tour.
 
-**E6 - Release readiness.** A pass with a real screen reader on each OS;
+**E6 - Release readiness.** *(Not started.)* A pass with a real screen reader on each OS;
 sessions with five people who cannot solve a cube; store listings and
 privacy policy; the licence decision recorded; README, CHANGELOG and docs
 brought up to date.
@@ -534,17 +617,17 @@ Countdown Solver and Automate. The full account, with sources, is
 **Before V1.0** - cheap now, a migration or a rework later. Each rides in a
 session that is already planned; none is a new session.
 
-| item | rides with | what changes |
-|---|---|---|
-| F1 publisher line and identifier | E4a, E3b | one string, "Iain Chesworth Labs", in the version resource, `Info.plist`, AppStream and About; `com.iainchesworthlabs.cubeulator` as the bundle id, Linux app id and Android package. E4a's branch still carries the earlier answers |
-| F2 setting keys | E2a, E3a | the keys are named in `design/screens/settings.md`, in the family's `group/name` style |
-| F3 language manager and ids | E2b | its brief says **port** the family `LanguageManager` and its CI gates, key by id (`qsTrId`), and add locale-aware numbers, plurals and the unwrapped-string lint |
-| F4 Noto faces | E2a, before it bundles fonts | two `case` lines in `Theme.qml`, the 700 ceiling goes, and E2a checks that Qt draws weight 800 from the variable axis |
-| F4 Yiddish | E2b, E5 | the ninth language: its name in the list, Noto Sans Hebrew, a machine draft, RTL in the tour |
-| F5 build line | E3b | the build line and a **Copy** button on it |
-| F7 Copy details | E3b | a text block for a bug report: no picture, nothing about the cube. Specified in `design/screens/about.md` |
-| F9 token mapping | E2a | a note in `tokens.json` and `system.md`; no value moves |
-| machine-translation note | E5 | one sentence under the language list, as ICL Forge and Countdown Solver have |
+| item | rides with | what changes | state at 0.2.0-beta.4 |
+|---|---|---|---|
+| F1 publisher line and identifier | E4a, E3b | one string, "Iain Chesworth Labs", in the version resource, `Info.plist`, AppStream and About; `com.iainchesworthlabs.cubeulator` as the bundle id, Linux app id and Android package. E4a's branch still carries the earlier answers | **Done.** `CUBEULATOR_PUBLISHER` is "Iain Chesworth Labs" (`cmake/AppIdentity.cmake`) and About shows it; the identifier is `com.iainchesworthlabs.cubeulator`, on Android too (#255) |
+| F2 setting keys | E2a, E3a | the keys are named in `design/screens/settings.md`, in the family's `group/name` style | Not checked. `SettingsState.qml` stores under `category:` groups (solving, rendering, appearance) |
+| F3 language manager and ids | E2b | its brief says **port** the family `LanguageManager` and its CI gates, key by id (`qsTrId`), and add locale-aware numbers, plurals and the unwrapped-string lint | **Done** for the manager and the ids (`src/app/qt/i18n/language_manager.*`, `qsTrId`, plurals). The lint was not checked |
+| F4 Noto faces | E2a, before it bundles fonts | two `case` lines in `Theme.qml`, the 700 ceiling goes, and E2a checks that Qt draws weight 800 from the variable axis | **Not done.** The Noto files are only on `origin/feature/ax-kit` |
+| F4 Yiddish | E2b, E5 | the ninth language: its name in the list, Noto Sans Hebrew, a machine draft, RTL in the tour | **Done** (#137). Until Noto Sans Hebrew is bundled it is drawn with the system's Hebrew fallback |
+| F5 build line | E3b | the build line and a **Copy** button on it | **Not built** (`AboutScreen.qml`'s header says so) |
+| F7 Copy details | E3b | a text block for a bug report: no picture, nothing about the cube. Specified in `design/screens/about.md` | **Not built** |
+| F9 token mapping | E2a | a note in `tokens.json` and `system.md`; no value moves | Not checked |
+| machine-translation note | E5 | one sentence under the language list, as ICL Forge and Countdown Solver have | **Not built:** no such string in `strings.json` |
 
 The design documents already carry D3, D4 and D6: `brief.md`, `system.md`,
 `platforms.md`, `settings.md`, `about.md`, `accessibility.md`, `strings.json`
@@ -563,6 +646,10 @@ and the prototype.
 
 Gate: every line of the checklist in `family.md` section 7 is true of
 Cubeulator, or is recorded as a deliberate difference.
+
+*(2026-11-22: none of V1.1 is built, as far as the tree shows: no "Reviewed by" per
+language, no Help screen to point at Copy details. The tour manifest, the documentation
+skin, the dark neutrals and the back-ports were not checked.)*
 
 ## Sessions
 
@@ -585,6 +672,10 @@ Every session spawned from this plan runs on **Sonnet 5.5** (the maintainer,
 | E5 | Languages | `feature/ax-languages` | E3 gate | translation files |
 | E6 | Release readiness | `feature/ax-release` | E4 and E5 | docs, listings |
 | F | Family alignment (V1.1) | `feature/ax-family` | E3 and E5 landed | About, Settings, `docs/design/family.md` |
+
+*(2026-11-22: E0a, E0b, E1, E2b and E4a ran and landed. E2a ran and did not land. The
+other sessions were not run under these names; some of the screens they cover were built
+by other work, as the box at the top says.)*
 
 ## Testing the app from its UI
 
@@ -621,12 +712,15 @@ stable. Phones are not in CI at first.
 
 ## What is not known
 
-- **QML line coverage without Coco.** Reach may be the honest ceiling.
-- **Quick 3D on CI's software renderers**, on all three desktop runners.
-- **The Qt Quick 3D licence reading.** E0b checks the source of truth.
+- **QML line coverage without Coco.** Reach may be the honest ceiling. *(E0a measured reach: `system.reach` fails a control no system test presses. No line-coverage number was set.)*
+- **Quick 3D on CI's software renderers**, on all three desktop runners. *(The system tests run it on Linux under Xvfb in CI; the other runners were not checked.)*
+- **The Qt Quick 3D licence reading.** E0b checks the source of truth. *(Done: [licensing.md](licensing.md).)*
 - **How a move is advanced with both hands full** - a large tap, a timer,
   voice, or the camera seeing the turn. It needs trying with a real cube in
-  hand. The solve lane owns the mechanism; E1 proposes.
+  hand. The solve lane owns the mechanism; E1 proposes. *(Partly answered: the
+  camera sees the turn and steps the solution on, and the Next turn button covers
+  what it cannot see. Nothing in the repository records anyone but the author
+  trying it with a real cube.)*
 - **The original design handoff.** Its tokens survive, value for value, in
   ICL Forge's `signal` palette (`design/family.md`). The handoff files
   themselves have not been found.
@@ -634,4 +728,5 @@ stable. Phones are not in CI at first.
 - **Screen readers over custom QML on Android and iOS.** The 3D cube and the
   canvas-drawn icons are opaque to them and need text alternatives.
 - **Mobile capture.** Until it exists the phone experience can be designed
-  and built but not used.
+  and built but not used. *(The iPhone's exists since 0.2.0-beta.1 and has not been seen
+  to scan on a phone. Android's does not exist.)*

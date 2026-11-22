@@ -1,16 +1,38 @@
 # Recovery plan
 
-> **Status in 0.1.0-beta.1:** The recovery is built as far as scanning and
-> solving: the side reader and assembly (`src/lib/include/cube/vision/direct_scan.hpp`),
-> the scan screen (`DirectScanScreen.qml`) and the solve screen that follows
-> the cube by camera are in the app, and the old tracking pipeline is gone
-> (R6). Not built: the review and hand-entry screen (R3, so a cube cannot be
-> entered without a camera that reads it), the live gate on fresh scrambles
-> (R4, not run) and most of free handling (R5; only two sides in one view,
-> which settles the cubes six flat sides cannot). The measurements below are
-> from recordings that are not in the repository.
+> [!NOTE]
+> **Status at 0.2.0-beta.4, checked 2026-11-22: built, except the live gate.**
+> Reading a cube by direct side reads, with no tracker, shipped in 0.1.0-beta.1
+> and has grown since: the side reader and assembly
+> (`src/lib/include/cube/vision/direct_scan.hpp`), the scan screen, the solve
+> screen that follows the cube by camera, the review and hand-entry screen
+> (0.2.0-beta.1) and corner views. The old tracking pipeline is gone (R6). Not
+> done: the live gate on fresh scrambles (R4, never run) and a scoreboard of
+> real cubes as large as R1 asked for. The measurements below are from
+> recordings that are not in the repository. The status that stood here for
+> 0.1.0-beta.1, which listed R3 and R5 as not built, is superseded by this one.
+>
+> | step | state | evidence |
+> |---|---|---|
+> | R0 Make it safe | Done, 2026-10-14 | the tag `archive/tracking-first` exists; the rest is under [Progress](#progress) |
+> | R1 A real scoreboard | In part | `cube_scan board` scores recorded sessions against their `truth.txt`, and the five readable sessions score 5 of 5 ([R2 table](#progress)). The 8 to 10 sessions of a written scramble in varied light were not recorded, and the 65 real 2x2, 4x4 and 5x5 sessions of 2026-10-17 and 18 have no truth ([investigation](investigations/2026-10-18-nxn-real-scan-sessions.md)) |
+> | R2 Face reader in C++ | Done | `read_side` and `SideScan`; "Scan a cube by holding each side to the camera" in the changelog for 0.1.0-beta.1. The gate is met on the five readable sessions |
+> | R3 Scan screen and review screen | Done | the scan screen in 0.1.0-beta.1 (sticker dots, a chip per side, "Not reading?" after ten seconds, Try again); the review and hand-entry screen, `ColoursScreen.qml`, in 0.2.0-beta.1 ("Put right what the camera misread", "Check the colours from the solve screen", "Type a cube in, a colour at a time", pull requests #186 to #188 and #177) |
+> | R4 The live gate | **Not run** | no record of five fresh scrambles at the desk in the repository or the changelog. The developer-only recording it asks for is done (`CUBE_SCAN_RECORD_DIR`) |
+> | R5 Free handling | (a) and (b) done, (c) dropped | (a) 0.1.0-beta.1, "A side turned to the edge of what the scan reads square-on is read", and 0.2.0-beta.1, a side need not be held square (the reader finds its four corners); (b) corner views in 0.1.0-beta.1, marked on the scan screen in 0.2.0-beta.2; (c) the corner detector went with R6 and was not needed |
+> | R6 Demolition | Done | no tracker, M3T, ONNX or `ScanSession` file in the tree, and none at the tag `v0.1.0-beta.1` |
+>
+> **Dropped:** R5(c), the corner detector as a face proposer (its weights were
+> AGPL-derived and are gone), and the cascade, the tracker and the hand detector
+> of the old plan (R6).
+>
+> **Left for the owner:** run R4, or say it is not wanted. The plan's one gate is
+> still "real recorded sessions that end in the exact true state", and the
+> changelog's pre-release notes still say the scan has been tried on one cube,
+> in tungsten and backlit light, and on one webcam.
 
-Status: **accepted 2026-10-13.** Supersedes the tracking-first plan
+Status: **accepted 2026-10-13**; where it stands now is the box above.
+Supersedes the tracking-first plan
 (`pipeline-plan.md`, removed from the tree in R6; it and its phase gates are
 at the tag `archive/tracking-first`).
 
@@ -61,6 +83,7 @@ holding the cube. `cube_scan board` reruns the measurement on a local copy.
 ## Progress
 
 **2026-10-14.** R0, R2, R6 done; R1 started; R3 half done; R4 not run; R5(b) started.
+*(That was the state then; the box at the top is the state now.)*
 
 - **R0.** Previous tip tagged `archive/tracking-first`. Webcam frames
   showing the user (`tests/data/captures`, `docs/evidence`) are removed from
@@ -333,19 +356,19 @@ brought forward ahead of R4 (see Progress); `ScanSession` is gone and
 One gate from here on: **real recorded sessions that end in the exact true
 state.** No synthetic clip counts toward a gate.
 
-**R0 — Make it safe.** 207 commits exist only on this machine;
+**R0 — Make it safe.** *(Done 2026-10-14.)* 207 commits exist only on this machine;
 `origin/develop` stops at 2026-07-18. Push every branch, tag the P6 tip
 `archive/tracking-first`, and copy `D:\cubeulator-corpus` to a second
 location.
 
-**R1 — A real scoreboard.** Record 8-10 sessions with a known state: start
+**R1 — A real scoreboard.** *(In part; see the box at the top.)* Record 8-10 sessions with a known state: start
 solved, apply a written scramble (the state is computed, nothing to label),
 then scan as you naturally would. Vary lamp / daylight / window behind,
 near / far, and face-by-face versus tumbling. One command prints sessions
 solved out of total for any reader. Row zero is the P6 runner; row one is
 the spike.
 
-**R2 — Face reader in C++.** Port the spike as two small units:
+**R2 — Face reader in C++.** *(Done.)* Port the spike as two small units:
 `face_reader` (sticker blobs → 3x3 lattice → nine Lab samples; OpenCV core
 and imgproc only) and `scan_accumulator` (group reads by whole-face
 signature with roll alignment, per-face median, which centres are still
@@ -356,28 +379,28 @@ the whole session; require a full nine-blob lattice for a face's first
 read. Gate: at least 90% of R1 sessions exact offline, and no wrong state
 ever accepted.
 
-**R3 — An honest scan screen and a review screen** (alongside R2). Draw the
+**R3 — An honest scan screen and a review screen** (alongside R2). *(Done: the scan screen in 0.1.0-beta.1, the review screen in 0.2.0-beta.1.)* Draw the
 lattice on the face being read. Six chips keyed by centre colour, each
 showing the 3x3 actually read. The prompt names the missing face by colour.
 Then a review net of all 54 stickers: tap to correct, a validity light, and
 Solve. That screen is also hand entry. Add cancel, a hint after a few
 seconds without progress, and a real error when the solver fails.
 
-**R4 — The live gate.** Five fresh scrambles at the desk, evening and
+**R4 — The live gate.** *(Not run.)* Five fresh scrambles at the desk, evening and
 daylight. Pass: four of five go from camera to correct solve steps with no
 manual fix, five of five with one. A failure joins the corpus only if
 recording was on for that scan. Recording is a developer opt-in: the app
 stores nothing unless `CUBE_SCAN_RECORD_DIR` names a folder, and the scan
 screen says so whenever it is recording.
 
-**R5 — Free handling.** Only after R4, in steps, each scored on the corpus:
+**R5 — Free handling.** *(Done in steps (a) and (b); (c) dropped. It was begun before R4, not after.)* Only after R4, in steps, each scored on the corpus:
 (a) no deliberate pause — read any frame where a face is within about 35°
 of square-on, using a homography; (b) two or three faces per frame from a
 corner-on view; (c) only if those fall short, the existing corner detector
 as a face-quad proposer, once its licence is resolved. A pose tracker
 returns only to drive the cosmetic 3D mirror cube, never the read.
 
-**R6 — Demolition.** Remove the legacy cascade, the tracking read path, the
+**R6 — Demolition.** *(Done.)* Remove the legacy cascade, the tracking read path, the
 M3T and onnxruntime dependencies and the environment-variable modes. Merge
 to `develop`, then `main`. The demolition is on `develop` (see Progress).
 
@@ -385,13 +408,18 @@ to `develop`, then `main`. The demolition is on `develop` (see Progress).
 
 - **One complete real session.** The spike was written after looking at it.
   R1 exists to find out how far the result generalises before more code is
-  written.
+  written. *(Answered in part: five real sessions end in the exact cube, and the
+  reader has since been replayed over 65 more real sessions of other sizes. How
+  far it generalises to other people's cubes and rooms is what R4 was for.)*
 - **Hard light.** Backlit and daylight-glare conditions are unproven and
   the measured drift is larger than the red/orange gap. The review screen
-  is the backstop.
+  is the backstop. *(It exists since 0.2.0-beta.1.)*
 - **Other cubes.** The blob step relies on dark plastic between stickers.
   Stickerless and white-bodied cubes are out of scope until asked for - and
   measured: the July corpus is such a cube and reads 0 of 14. It is also
-  the test data for that work when it is wanted.
+  the test data for that work when it is wanted. *(Unchanged: the 0.1.0-beta.1
+  release notes still say a cube with light-coloured plastic and flush tiles is
+  not read.)*
 - **R5 is where the earlier approach died.** It may land only partly. The
-  difference is that the product works without it.
+  difference is that the product works without it. *(It landed in part: (a) and
+  (b).)*

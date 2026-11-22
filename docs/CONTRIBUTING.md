@@ -24,9 +24,11 @@ One shared trunk, and a branch that holds releases:
 - Pull requests are squashed into `develop`, one commit each, so its history is
   linear.
 - **`main`** holds published releases only. A release is a `v*` tag on a
-  `develop` commit; when the release workflow succeeds it fast-forwards `main`
-  to that commit. Nobody opens a pull request into `main`, and there is no
-  promotion or sync-back, because `main` is always an ancestor of `develop`.
+  `develop` commit, and the release bot is to fast-forward `main` to that commit
+  ([Branch protection](branch-protection.md)). Nobody opens a pull request into
+  `main`, and there is no promotion or sync-back, because `main` is always an
+  ancestor of `develop`. The release workflow has no such step yet: `main` still
+  stands at `v0.2.0-beta.1`, and the releases since are tags on `develop`.
 - A fix for an old release goes on a `release/x.y` branch cut from its tag,
   only when `develop` has moved on.
 - Work branches start with `feature/`, `bugfix/`, `docs/`, `chore/` or
@@ -103,10 +105,9 @@ that check.
    `develop`. Open it as a **draft** while the work is unfinished: a draft runs
    the quick checks (branch name, commit text, formatting) and skips the
    builds. **Ready for review** starts the full run.
-2. Make sure the required checks are green — see
-   [Branch protection and the merge queue](branch-protection.md) for which
-   checks are required on `develop` today (the set grows as the build and
-   analysis jobs go green).
+2. Make sure the required checks are green: `CI Status` (one job that sums up
+   the rest of `ci.yml`) and `Scan dependency diff`. See
+   [Branch protection and the merge queue](branch-protection.md).
 3. When it's ready, put it in the queue: `gh pr merge <n>` (or **Merge when
    ready** on the PR; the queue chooses the squash strategy). GitHub merges it onto the current
    `develop` tip, re-runs the required checks on that tree, and lands it —

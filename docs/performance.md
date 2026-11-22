@@ -53,8 +53,8 @@ it was when the measurement was taken.
 
 ### Pass of 2026-10-18 (feature/scan-edge-and-square base, Tracy 0.14.1)
 
-Taken on this branch (`feature/tracy-profiling`, built on
-`feature/scan-edge-and-square`) with the Tracy 0.14.1 upgrade, the first
+Taken on `feature/tracy-profiling`, built on `feature/scan-edge-and-square`
+(which landed as [#203](https://github.com/iainchesworthlabs/cubeulator/pull/203)), with the Tracy 0.14.1 upgrade, the first
 capture after the render-thread and NxN instrumentation landed. Same machine
 and method as below, so the numbers compare with the tables that follow.
 
@@ -129,7 +129,7 @@ this box. Vulkan, Metal and D3D12 have no GPU zone (see
 
 #### The baseline
 
-`tools/perf/tracy_baseline.json` was re-baselined for this branch (33 zones;
+`tools/perf/tracy_baseline.json` was re-baselined on that branch (33 zones, as it still is;
 the scan-edge "looks" added ten new ones, and `solver.assemble_all`,
 `vision.direct_scan.scanned` and `vision.resolve_colors` measured 3-20x
 faster than the old baseline's, which is the scan-edge work showing).
@@ -624,9 +624,9 @@ By what a person waits for, and how far it is from its budget, as found:
 | The first-two-layers searches follow pieces, not cubes | 1.77 to 1.86 s a solve, 3.0 s worst | **0.12 s**, 0.21 to 0.24 s worst; the same 985 000 visits and the same solutions (digest `1bc470006f988409`) | [#75](https://github.com/iainchesworthlabs/cubeulator/pull/75) |
 | An unsolvable cube is answered at once | 2.5 to 6 s | under 0.1 ms, the same `no_solution` | [#74](https://github.com/iainchesworthlabs/cubeulator/pull/74) |
 | A frame is prepared once for both readers | 4.2 ms turned, 8.2 ms at 1080p | 2.2 ms, 3.6 ms; the same reads | [#78](https://github.com/iainchesworthlabs/cubeulator/pull/78) |
-| The cube's light probe is prefiltered once, not on every `View3D`'s first frame | llvmpipe 10 to 16 s a screen with the cube; a browser without a GPU stands still for 35 s at the start and 35 s at the close | 3 to 6 s (the cube itself); the 30th frame in 2 to 4 s; the close 1 s | this change, [above](#the-light-probe) |
-| A sticker of the 3x3 cube is the one model it draws; Home makes the one cube it shows, after its menu | Home 22 ms to make and 224 ms to the tenth frame; Settings 52 and 275; the cube 268 models | 2 and 169; 25 and 184; the cube 80 models (106 in the Cel look) | this change, [above](#screens) |
-| Archivo and IBM Plex Mono are bundled and registered at start-up, not named and looked for | `app.load_qml` 513 ms, first frame 934 ms (English, same binary with the bundle skipped) | **303 ms, 749 ms**; the other languages unchanged | this change, [below](#the-fonts) |
+| The cube's light probe is prefiltered once, not on every `View3D`'s first frame | llvmpipe 10 to 16 s a screen with the cube; a browser without a GPU stands still for 35 s at the start and 35 s at the close | 3 to 6 s (the cube itself); the 30th frame in 2 to 4 s; the close 1 s | [#141](https://github.com/iainchesworthlabs/cubeulator/pull/141), [above](#the-light-probe) |
+| A sticker of the 3x3 cube is the one model it draws; Home makes the one cube it shows, after its menu | Home 22 ms to make and 224 ms to the tenth frame; Settings 52 and 275; the cube 268 models | 2 and 169; 25 and 184; the cube 80 models (106 in the Cel look) | [#212](https://github.com/iainchesworthlabs/cubeulator/pull/212), [above](#screens) |
+| Archivo and IBM Plex Mono are bundled and registered at start-up, not named and looked for | `app.load_qml` 513 ms, first frame 934 ms (English, same binary with the bundle skipped) | **303 ms, 749 ms**; the other languages unchanged | [#234](https://github.com/iainchesworthlabs/cubeulator/pull/234), [below](#the-fonts) |
 
 The solver's cost per visit fell from 1.7 to 3.4 us to 0.15 to 0.29 us; what it
 did not change is the number of visits, and that is the one lever left (below).
@@ -652,7 +652,7 @@ the family 85 ms in), and it is what [#230](https://github.com/iainchesworthlabs
 did; with the fonts bundled it is worth nothing (`app.load_qml` 263 and 254 ms,
 seven alternated pairs, its own thread 18 ms), so it was dropped.
 
-The four Latin files `feature/ax-kit` carries (Archivo Regular, Bold and ExtraBold;
+The four Latin files, which `feature/ax-kit` carried and `src/app/qt/fonts/` holds now (Archivo Regular, Bold and ExtraBold;
 IBM Plex Mono Medium, 740 KB) are compiled in under `:/fonts` and registered at
 start-up on every platform but the browser (`CUBEULATOR_PLATFORM_BUNDLE_LATIN_FONTS`).
 Same binary, the bundle skipped by an environment variable in one build against

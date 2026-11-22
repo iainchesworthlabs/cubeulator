@@ -1,16 +1,86 @@
 # Platforms
 
-> **Status in 0.1.0-beta.1:** Desktop is built (E4a, see
-> [packaging.md](../packaging.md)): the identity, the icon and version
-> resource, the installers, the remembered window (default 960 x 680,
-> minimum 360 x 560), the shortcuts for Settings, a new scan, full screen and
-> quit, and a macOS menu bar that has not been run on a Mac. Not built: back
-> handling (Esc, Alt+Left, the Android key), keep-awake (the helper exists
-> and nothing calls it), sound and haptics, safe areas, the text-size and
-> reduced-motion helpers, the mobile shells (the Android and iOS camera
-> backends are stubs, and the Android package is still
-> `org.qtproject.example`) and the bundled Archivo, Plex Mono and Noto
-> faces. The browser build is built; it is described under Web.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Desktop is built, the browser build is built, and
+> an iPhone build is on TestFlight; Android only compiles. What each has is
+> under "What the app has today" below. The rest of the page is the
+> specification, and a statement marked **(verify)** is still from memory of the
+> Qt documentation, not from a build.
+
+## What the app has today
+
+Checked against `src/app`, `packaging/` and `CHANGELOG.md` for 0.2.0-beta.4.
+
+**Desktop (Windows, macOS, Linux)**
+
+- The identity (name, the publisher, `com.iainchesworthlabs.cubeulator`, the
+  Windows AppUserModelID), the icon files, the version resource and
+  `Info.plist`, and the installers ([packaging.md](../packaging.md)): an NSIS
+  `.exe`, a `.dmg`, a `.deb` and an `.rpm`. The Windows and macOS packages are
+  not signed with a certificate (or notarised), so SmartScreen and Gatekeeper
+  ask first; every release file has a GPG signature.
+- The remembered window: default 960 x 680, minimum 360 x 560, position and
+  maximised state kept, a position off every screen ignored
+  (`src/app/desktop/window_geometry.cpp`).
+- The shortcuts for Settings, a new scan (from Home or Complete), full screen
+  and quit, and the macOS menu bar (`DesktopShell.qml`). The menu bar has not
+  been run on a Mac. In it, **Enter Colours by Hand** and **Cubeulator Help**
+  are disabled (nothing sets `handEntryAvailable` or `helpAvailable`; hand
+  entry is reached through *Another size of cube*, and there is no Help), and
+  About is in the Help menu: it relies on Qt moving it to the application menu
+  by its wording, which is unchecked.
+- The camera: no desktop shows the permission screen, macOS included
+  (`AppState.beginScan()` skips it), where the Summary below says macOS shows
+  `permission.ask` first.
+- The bundled Archivo and IBM Plex Mono (below).
+- Not built: back handling (Esc goes back on some screens only; Alt+Left, Cmd+[
+  and the mouse back button do nothing); keep-awake (`KeepAwake` is registered
+  and no screen asks for it); sound; the text-size and reduced-motion helpers;
+  the title bar following the app theme; the camera-blocked state.
+
+**iPhone** (0.2.0-beta.1 on; iOS 18 or later;
+[the iPhone build](../guide/iphone.md))
+
+- Built, signed and checked by Apple on a hosted Mac, and sent to TestFlight for
+  the maintainer's internal testers (0.2.0-beta.2); there is no file to
+  download. The camera is AVFoundation: the back camera first, a button for the
+  front one, the picture kept upright as the phone turns, exposure and white
+  balance held during a scan, and the camera's reason in the language of the
+  phone (an `InfoPlist.strings` for each of the nine). Portrait and both
+  landscapes; not upside down.
+- The permission screen leads to the scan (0.2.0-beta.3). The scan itself, the
+  camera's colours and the 3D cube's other looks have not been tried on a phone
+  by anyone but the author.
+- Not built: safe-area insets, the shell's back stack and the edge swipe,
+  keep-awake, sound and haptics, text size and reduced motion, About and
+  Licences (the Settings row is offered on desktop and in the browser only).
+
+**Android**
+
+- Compiled by CI (arm64-v8a) and not released. The application id is set from
+  `cmake/AppIdentity.cmake` when it is built (the `org.qtproject.example` line
+  in the manifest is replaced).
+- The camera backend is a stub: it lists no cameras and starting one fails with
+  "camera not found". The permission screen is shown, and the scan after it
+  cannot start. The manifest declares the camera permission, with no `uses-feature`
+  entry marking the camera `required="false"` as the notes below ask, and leaves
+  the orientation unspecified; the rest of the Android column is design.
+
+**Browser** (published under `/app/` of the company site; [the web build](../web.md), [for users](../guide/web.md))
+
+- Built as the Web table says: the back camera first on a phone and a **Switch
+  camera** button, exposure and white balance held where the browser allows, the
+  fonts and the settings as described. The shell's own breakpoint does the
+  layout.
+
+**Everywhere**
+
+- Nine languages, the layout mirrored in Hebrew, Arabic and Yiddish (the cube
+  and the camera picture do not mirror), a light and dark theme that follows the
+  system's or is chosen in Settings.
+- Not built: safe areas, and the text-size and reduced-motion helpers that read
+  each platform's setting (`SystemTheme` reads the colour scheme, and
+  `LanguageManager` the device's language).
 
 One shared QML shell; each platform's manners. This says what a person on
 each platform expects and what the shell does about it. E4a (desktop) and
@@ -39,12 +109,15 @@ that builds them must check.
 | **Sound** | Yes | Yes | Yes |
 | **Haptics** | No | No | No |
 | **Icon** | `.ico` with 16, 20, 24, 32, 40, 48, 64 and 256 px | `.icns`, 16 to 1024 px | `hicolor` theme: one scalable SVG and 48, 64, 128, 256 px PNGs |
-| **Installer** | NSIS installer from CPack (already wired up). Start menu entry, uninstaller, version resource | `.dmg` from CPack. Signed and notarised | `.deb` and `.rpm` from CPack (already wired up), with a desktop entry and AppStream metadata. Flatpak later |
+| **Installer** | NSIS installer from CPack (already wired up). Start menu entry, uninstaller, version resource. Not signed with a certificate yet | `.dmg` from CPack. Not signed or notarised yet, so Gatekeeper asks first | `.deb` and `.rpm` from CPack (already wired up), with a desktop entry and AppStream metadata. Flatpak later |
 
 ### Mobile
 
-Usable only once mobile capture exists (plan decision 8). Until then a
-phone build opens in `home.camera-unsupported` and works by hand entry.
+Usable only once mobile capture exists (plan decision 8). An iPhone has it
+since 0.2.0-beta.1; Android does not yet (see "What the app has today"). A
+phone build with no camera backend is meant to open in
+`home.camera-unsupported` and work by hand entry; the app has no such state,
+and shows its permission screen and then a scan that cannot start.
 
 | | Android | iOS |
 |---|---|---|
@@ -60,12 +133,12 @@ phone build opens in `home.camera-unsupported` and works by hand entry.
 | **Language** | Declares its languages to the system, so the per-app language setting (Android 13 and later) works. The in-app choice also works | Declares its languages, so Settings > Cubeulator > Language works. The in-app choice also works |
 | **Icon** | Adaptive: a foreground and a background layer, plus a single-colour layer for themed icons | One 1024 px image, no transparency, no rounded corners; dark and tinted variants |
 | **Launch** | The system splash screen: the icon on `paper` (light) or its dark value | A launch screen: the mark on `paper`. No text |
-| **Package** | `.aab` for the store, `.apk` for testing | Xcode archive. The App Store question is open (plan decision 5) |
+| **Package** | `.aab` for the store, `.apk` for testing | Xcode archive, sent to TestFlight for the maintainer's internal testers (nothing to download). The App Store question is open (plan decision 5) |
 
 ### Web
 
 The same shell, as WebAssembly in a browser tab (`src/app/platform/web/`,
-[Try it in your browser](../web.md)). It is a desktop-shaped platform that
+[the web build](../web.md)). It is a desktop-shaped platform that
 may be on a phone, so the shell's own responsive breakpoints do the
 work, not a platform flag.
 
@@ -208,10 +281,10 @@ value.
 
 | script | font | shipped |
 |---|---|---|
-| Latin | Archivo; IBM Plex Mono | To be bundled (E2a); not in the app yet. About 400 KB |
-| Hebrew | Noto Sans Hebrew (variable, weights 100-900) | To be bundled (E2a); not in the app yet. About 110 KB |
-| Yiddish | Noto Sans Hebrew, the same file | To be bundled (E2a); not in the app yet |
-| Arabic | Noto Sans Arabic (variable, weights 100-900) | To be bundled (E2a); not in the app yet. About 825 KB |
+| Latin | Archivo (Regular, Bold, ExtraBold); IBM Plex Mono (Medium) | Bundled since 0.2.0-beta.1, on every platform but the browser (`src/app/qt/fonts`): four files, about 740 KB. The browser draws Latin with the face Qt carries |
+| Hebrew | Noto Sans Hebrew (variable, weights 100-900) | Not bundled. Archivo has no Hebrew, so Qt takes it from the system's fallback (DejaVu Sans in the browser). About 110 KB when it is |
+| Yiddish | Noto Sans Hebrew, the same file | Not bundled, as Hebrew |
+| Arabic | Noto Sans Arabic (variable, weights 100-900) | Not bundled, as Hebrew. About 825 KB when it is |
 | Japanese | The system's: Yu Gothic UI on Windows, Hiragino Sans on macOS and iOS, Noto Sans CJK JP on Android and Linux | No. The browser build has no system fonts and bundles a Noto Sans JP subset |
 | Simplified Chinese | The system's: Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC | No. The browser build bundles a Noto Sans SC subset |
 
@@ -240,7 +313,7 @@ value.
 | Version | From the build (`GenerateVersion.cmake`), shown in About and in every package | In the Windows resource, `Info.plist`, the AppStream release and every desktop package's name (E4a). Not yet in the Android manifest (E4b) |
 | Publisher | Iain Chesworth Labs | From `Packaging.cmake`. The copyright line stays in the person's name (`family.md` D1). One variable, `CUBEULATOR_PUBLISHER` in `cmake/AppIdentity.cmake`, read by the version resource, the AppStream developer and CPack |
 | Category | Windows, macOS, iOS: Utilities. Android: Tools. Linux: `Game;LogicGame;` | macOS and Linux are built; on Linux `Utility` was dropped, because two main categories list the app twice in a menu. The rest are proposed |
-| Camera usage string (iOS, macOS) | `permission.system.camera` in `strings.json`, in all nine languages | Written in English and set in the macOS `Info.plist`; the other languages' `InfoPlist.strings` are E5's |
+| Camera usage string (iOS, macOS) | `permission.system.camera` in `strings.json`, in all nine languages | iOS: an `InfoPlist.strings` for each of the nine, written at configure time. macOS: English only, set in `Info.plist`; the other languages' `InfoPlist.strings` are E5's |
 | Code signing | Windows: unsigned installers trip SmartScreen. macOS: unsigned apps will not open without a workaround. Both need a certificate | **Open**, for E4a and E6 |
 
 ## Per platform, the things that are easy to miss

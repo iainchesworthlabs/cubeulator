@@ -21,7 +21,7 @@ matter, with no details, and the maintainer will reply there to arrange a privat
 ## What counts
 
 Anything that breaks what the app says about itself is in scope: a camera picture saved, sent or exposed without
-someone switching a developer option on (see [Privacy](docs/guide/privacy.md)), a release file that does not verify
+someone switching a developer option on (see [Privacy](docs/privacy.md)), a release file that does not verify
 against its signature or attestation, a way to run code through a crafted camera frame, settings file or history file,
 or a flaw in the build and release workflows.
 

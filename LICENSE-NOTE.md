@@ -1,22 +1,32 @@
 # A note on licensing: GPL-3.0-or-later and app stores
 
-Cubeulator is licensed GPL-3.0-or-later, matching
-[CountdownSolver](https://github.com/iainchesworth/CountdownSolver) exactly.
+Cubeulator's source is licensed GPL-3.0-or-later, matching
+[CountdownSolver](https://github.com/iainchesworthlabs/countdownsolver) exactly.
+The programs built from it are GPL-3.0-only, because they include Qt Quick 3D
+(see 2026-10-30, below).
 
 ## Where things stand
 
-At 0.1.0-beta.1, the first public pre-release:
+At 0.2.0-beta.4 (the facts were last checked on 2026-11-22):
 
-- **Licence:** GPL-3.0-or-later, as in [LICENSE](LICENSE). Nothing in this
-  note changes it.
+- **Licence:** the source is GPL-3.0-or-later (each source file says so in its
+  SPDX header, and [`REUSE.toml`](REUSE.toml) covers the other files) and the
+  binaries are GPL-3.0-only (2026-10-30, below). [LICENSE](LICENSE) is the GPL
+  text. Nothing in this note changes any of it.
 - **Apple App Store and Mac App Store:** skipped for now. That is a deferral,
   not a decision against them for ever: the question below has to be answered
   before any Apple submission.
+- **The iPhone:** since 0.2.0-beta.2 the iPhone app goes to TestFlight for the
+  maintainer's internal testers. That is not an App Store submission, and the
+  question below is about the stores. [docs/licensing.md](docs/licensing.md)
+  (Option D) lists TestFlight among the routes it expects to be possible; that
+  has not been examined in a primary source.
 - **Everything else:** the Windows, macOS and Linux packages are ordinary
   GPL-3.0 distribution: the licence and the third-party notices are in the
   package and the source is in this repository. Google Play and F-Droid are
-  planned once the app can capture on a phone, and no conflict has been found
-  with either. The channel-by-channel reading, including the browser build,
+  planned once the app can capture on a phone (the Android camera backend is
+  still a stub), and no conflict has been found with either. The
+  channel-by-channel reading, including the browser build,
   is in [docs/licensing.md](docs/licensing.md); it is an engineering
   analysis, not legal advice.
 
@@ -76,5 +86,14 @@ looks: the About screen reads "version 3" and notes that the source code may
 also be used under any later version, the RPM's licence field is GPL-3.0-only,
 and [docs/licensing.md](docs/licensing.md) gives the reasoning. Qt Quick 3D
 stays; dropping it, or buying the commercial licence, is the Apple-store
-question above and is not decided here. This is recorded as decision (b) of
-[docs/migration.md](docs/migration.md).
+question above and is not decided here. This is recorded in the Licence row of
+the decisions in [docs/migration.md](docs/migration.md#decisions-made), and
+the wording went in with pull request #277.
+
+**2026-11-22 - facts brought up to date, conclusion unchanged.** The facts this
+note rests on were checked against 0.2.0-beta.4: the About screen, the RPM's
+licence field, `vcpkg.json`, `REUSE.toml` and the generated notices say what the
+2026-10-30 entry says; the source files carry SPDX headers (pull request #280);
+the iPhone app goes to TestFlight rather than the App Store; and the pointer to
+the migration plan, which named a decision "(b)" that the plan does not label,
+now names the row. No decision in this note changed.

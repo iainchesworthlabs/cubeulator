@@ -7,8 +7,10 @@ This page is for building Cubeulator from source. To use it, see the
 
 - A C++23 compiler with `<mdspan>`: GCC 16+, Clang 23+, MSVC 14.51+, or AppleClang 17+.
 - CMake 4+ and Ninja.
-- Qt 6.12.x, the current LTS (prebuilt, via [aqtinstall](https://github.com/miurahr/aqtinstall))
-  — only needed if you're building the desktop GUI shell (the default).
+- Qt 6.12.x, the current LTS (prebuilt, via [aqtinstall](https://github.com/miurahr/aqtinstall)),
+  with the Qt Quick 3D and Qt Shader Tools modules — only needed if you're
+  building the Qt app (the default). The CMake files accept Qt 6.5 or later;
+  6.12.0 is what CI and the helper scripts below install.
 - Git, and a place for vcpkg (the labs' fork, pinned by `vcpkg.json`; see
   [vcpkg](#vcpkg) below).
 
@@ -36,6 +38,9 @@ wins:
    out the baseline and exports it).
 
 With none of them a configure that needs vcpkg stops and lists these options.
+
+### Sharing vcpkg between checkouts
+
 Set the store once per machine, in your environment:
 
 ```sh
@@ -65,21 +70,44 @@ and `VCPKG_INSTALLED_DIR`, as vcpkg documents.
 
 ## First build
 
-Install Qt locally with the pinned helper script, then configure and build:
+Install Qt locally with the pinned helper script, then configure and build.
+`-DCMAKE_PREFIX_PATH` says where that Qt is; without it, `cmake/FindQt6.cmake`
+looks in the usual aqtinstall places (`C:/Qt`, `~/Qt`, ...).
+
+### Windows
+
+The preset names no compiler, so configure from a Developer PowerShell (CI does
+the same with `ilammy/msvc-dev-cmd`).
 
 ```sh
-# Windows
 pwsh ci/install-qt.ps1
 cmake --preset windows-msvc-debug -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/msvc2022_64
 cmake --build --preset windows-msvc-debug
 ctest --preset windows-msvc-debug
+```
 
-# Linux/macOS
+### Linux
+
+vcpkg's builds need the X11 and OpenGL development packages (the ones CI installs
+are listed under [Presets](building.md#presets)).
+
+```sh
 ./ci/install-qt.sh
 cmake --preset linux-gcc-debug -DCMAKE_PREFIX_PATH=$HOME/Qt/6.12.0/gcc_64
 cmake --build --preset linux-gcc-debug
 ctest --preset linux-gcc-debug
 ```
+
+### macOS
+
+```sh
+./ci/install-qt.sh
+cmake --preset macos-clang-debug -DCMAKE_PREFIX_PATH=$HOME/Qt/6.12.0/macos
+cmake --build --preset macos-clang-debug
+ctest --preset macos-clang-debug
+```
+
+### Tests and the library on its own
 
 `ctest --preset <preset>` leaves out the system tests, which draw the real app
 in a window; `ctest --preset <preset>-system` runs them
@@ -94,8 +122,8 @@ ctest --preset linux-gcc-debug
 ```
 
 See [Building & packaging](building.md) for every preset (including Android,
-which builds the same Qt/QML app, iOS, which is currently build-only, and
-[WebAssembly](building.md#webassembly-browser), which builds it for a browser)
-and packaging options.
+which builds the same Qt/QML app, iOS, which builds it as an iPhone app from a
+Mac, and [WebAssembly](building.md#webassembly-browser), which builds it for a
+browser) and packaging options.
 
 Just want to try it? [Open it in your browser](web.md).

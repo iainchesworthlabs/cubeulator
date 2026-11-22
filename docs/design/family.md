@@ -1,11 +1,17 @@
 # The family
 
-> **Status in 0.1.0-beta.1:** A survey and a set of decisions, not behaviour.
-> Built: the publisher and identifier (`cmake/AppIdentity.cmake`), the
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** A survey and a set of decisions, not behaviour.
+> The survey of the sibling apps, and the "Cubeulator planned" columns, are as
+> they stood on 2026-10-13 and may have moved on since. Built: the publisher and
+> identifier (`cmake/AppIdentity.cmake`, now used by the Android build too), the
 > nine-language set, ids and the ported language manager with its gates
-> ([i18n.md](../i18n.md)). Not built: the Noto faces, the build line with
-> **Copy**, **Copy details** and the named setting keys (D3, D6, F2, F4, F5,
-> F7). The sibling apps were read on 2026-10-13 and may have moved on since.
+> ([i18n.md](../i18n.md)), the Licences screen (F6) and an About screen with the
+> source address (F5), the bundled Archivo and IBM Plex Mono, and the setting
+> keys `language/code`, `history/keep` and (as `appearance/themeMode`) the
+> theme. Not built: the Noto Hebrew and Arabic faces (D3, F4), the build line
+> with **Copy**, **Copy details** (D6, F5, F7) and the rest of the named setting
+> keys (F2).
 
 Written 2026-10-13. Status: **decisions D1 to D9 taken the same day**
 *(the maintainer)*, recorded in section 5; everything else here is survey or

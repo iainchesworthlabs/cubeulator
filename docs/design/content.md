@@ -1,10 +1,15 @@
 # Content
 
-> **Status in 0.1.0-beta.1:** The voice, the glossary and the strings are the
-> app's as far as they are used: the QML asks for 74 of the 406 strings in
-> the inventory, and the rest belong to screens that are not built. The scan
-> and solve screens still show English literals of their own, most of which
-> follow the wording here.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** The voice, the glossary and the strings are the
+> app's as far as they are used: the QML asks for 278 of the 480 strings in the
+> inventory, and the rest belong to screens that are not built (First run,
+> Privacy, Help, most of the scan and solve screens' own wording) or to settings
+> that are not. The scan and solve screens, the developer rows in Settings and a
+> few small labels still show English literals of their own, most of which
+> follow the wording here. The solve screen's names for stages 4 and 5 ("Orient
+> last layer", "Permute last layer") are not the design's ("Yellow top", "Top
+> layer in order"), which the solution screen uses.
 
 How Cubeulator talks, the words it uses, and every string it shows.
 
@@ -54,10 +59,10 @@ this table.
 
 | word | means | never |
 |---|---|---|
-| **cube** | The 3x3 puzzle. Also the picture of it on screen | Rubik's (a trade mark), puzzle |
+| **cube** | The puzzle: a 3x3, and since 0.2.0-beta.1 any size from 2×2 to 5×5. Also the picture of it on screen | Rubik's (a trade mark), puzzle |
 | **side** | One of the cube's six sides. Named by the colour of its centre ("the red side") or by where it is as held ("the top") | face (reads as a person's face; the repository is public and the rule is to say *side*) |
-| **sticker** | One of the nine coloured squares on a side | facelet, tile, cell, square |
-| **centre** | The middle sticker of a side. It never moves, so it names the side | - |
+| **sticker** | One of the coloured squares on a side: nine on a 3x3, N × N on a cube of size N | facelet, tile, cell, square |
+| **centre** | The middle sticker of a side. It never moves, so it names the side. A 2x2 or a 4x4 has none | - |
 | **piece** | One of the small blocks the cube is made of. Used only in the stage explanations and in "this cannot be a real cube" | cubie |
 | **layer** | A side together with the pieces that turn with it. Used only in the stage explanations ("bottom layer", "middle layer") | slice |
 | **turn** | One movement: a side turned a quarter or a half | move (cubers' word; see notation) |
@@ -70,7 +75,7 @@ this table.
 | **read** | What the app does to a side ("3 of 6 sides read") | captured, detected, recognised |
 | **the picture** | The cube drawn on the solve screen | model, render, 3D view |
 | **the camera picture** | What the camera sees, on the scan screen | preview, feed, frame |
-| **stage** | One of the five parts of the solve | step (a step would be a turn), phase |
+| **stage** | One of the parts of the solve: five in the Beginner method, fewer in the others, more on a bigger cube | step (a step would be a turn), phase |
 | **solve** | Following the turns. Also the record of one ("unfinished solve") | session, run |
 | **history** | The list of past solves | log, records |
 | **mark** | The shape drawn on a cube colour | pattern, symbol, icon |
@@ -133,7 +138,7 @@ Off by default (Settings > Solving > Show cube notation).
 
 ## The stages
 
-The solver's five stages, in plain names. "Orient" and "permute the last
+The Beginner method's five stages, in plain names. The other methods and the bigger cubes have stages of their own (`stage.f2l`, `stage.reduce`, `stage.finish`, `stage.parity`, `stage.centres`, `stage.edges`, `stage.corners`). "Orient" and "permute the last
 layer" are cubers' terms and are not used.
 
 | # | solver's name | shown as | what it does | why |

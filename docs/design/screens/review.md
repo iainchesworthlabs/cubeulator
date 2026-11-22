@@ -1,13 +1,21 @@
 # Review and hand entry
 
-> **Status:** The colours screen (the section "Entering the colours of a cube of
-> any size", below) is built for sizes 2 to 5 and is the screen this page's 3x3
-> sketch became: one side at a time, paint rather than pick, the count and the
-> cube check beside Solve. It also puts right a cube the camera misread (the
-> section "Putting a misread scan right"), reached from the scan screen once six
-> sides are in, and from the solve screen for a cube read as valid. Not built: the sketch's
-> `review.working` and `review.solve-failed` states (Solve goes straight to the
-> solve screen), the keyboard map below, and the unfolded overview.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** The colours screen (`ColoursScreen.qml`; the
+> section "Entering the colours of a cube of any size", below) is built for
+> sizes 2 to 5 and is the screen this page's 3x3 sketch became: one side at a
+> time, paint rather than pick, the count and the cube check beside Solve, Undo
+> and Redo (also the platform's shortcuts), Esc to go back. It also puts right a
+> cube the camera misread (the section "Putting a misread scan right"), reached
+> from the scan screen once six sides are in, and from the solve screen for a
+> cube read as valid. The screen before it, for a cube that is not a 3x3
+> (`EntryScreen.qml`; "A cube of another size", below), is built. Hand entry has
+> no button on Home: it is reached from *Another size of cube*, by *Enter the
+> colours*. Not built: the sketch's `review.working` and `review.solve-failed`
+> states (Solve goes straight to the solve screen), its keyboard map (the colour
+> keys 1 to 6, the cursor over the stickers, Page Up and Page Down, Ctrl+Enter)
+> and its unfolded overview, the Help button, and the `objectName`s of the
+> sketch's table (the screen's are `colours.*` and `entry.*`).
 
 Lane: **scan** (`feature/direct-scan`; recovery plan R3). This is a
 proposal for the chrome and the states. Checking that colours make a cube,
@@ -15,8 +23,8 @@ and assembling one, are theirs.
 
 One screen does two jobs: **checking** a cube the camera read, and
 **entering** one by hand. The second is also the only way in on a device
-whose camera the build cannot use, which is every phone until mobile
-capture exists.
+whose camera the build cannot use: an Android phone today, and any phone
+before its camera backend existed (an iPhone's has since 0.2.0-beta.1).
 
 Entered from: Home (**Enter colours by hand**: entering); `scan.conflict`,
 `scan.solve-failed` and `solve.hold` (**Check the colours**: checking);
@@ -267,21 +275,22 @@ compare, not as the two candidates (the sketch's "Two cubes that both fit").
 
 Not part of the 3x3's journey, so it has no state of its own in
 `../journey.md`: the screen is reached from Home by **Another size of cube**
-(`home.other`), and it is how a cube that is not a 3x3 gets into the app
-until the camera reads one (`../../nxn-app-plan.md`, P2 and P3). One column,
-at most 640 wide, scrolling when the window is short:
+(`home.other`). It began as the way a cube that is not a 3x3 gets into the
+app before the camera could read one; the camera now reads 2×2 to 5×5 too
+(**Scan it instead**; `../../nxn-app-plan.md`, P2 and P3). One column, at
+most 640 wide, scrolling when the window is short:
 
 | part | component | string | objectName |
 |---|---|---|---|
 | Back | button, ghost, chevron | `common.back` | `entry.back` |
 | Title | heading | `entry.title` | `entry.title` |
 | Size | a row of buttons that wraps, the chosen one primary: 2×2, 3×3, 4×4, 5×5 | `entry.size.label`, `entry.size.option` | `entry.size.<n>` |
-| What the camera does at this size | one line under the sizes | `entry.size.camera`, `entry.size.noCamera` | `entry.size.note` |
+| What the camera does at this size | one line under the sizes, the same at every size | `entry.size.camera` | `entry.size.note` |
 | The scramble | a multi-line box in the mono face, on `surface`, the border `accent` while it is wrong | `entry.scramble.label`, `entry.scramble.placeholder` | `entry.scramble` |
 | What a scramble looks like | one paragraph under the box, replaced by the fault while there is one | `entry.scramble.help` | `entry.scramble.help` |
 | What is wrong | the fault, in `accent`, and the move at fault selected in the box | `entry.error.unknownMove`, `entry.error.layer`, `entry.error.empty`, `entry.error.solved` | `entry.error` |
 | Solve | button, primary, block, trailing chevron. Control+Return in the box does the same | `entry.solve` | `entry.solve` |
-| Scan instead | button, secondary, block; only at 3×3 | `entry.scan` | `entry.scan` |
+| Scan instead | button, secondary, block, at every size | `entry.scan` | `entry.scan` |
 | Enter the colours | button, secondary, block, trailing chevron. Opens the screen below at the size chosen | `common.enterByHand` | `entry.colours` |
 
 **The size is chosen, never read off the scramble or the camera.** Sizes 2 to 5
@@ -333,7 +342,7 @@ sticker to name it by and a 5x5 has 150 stickers to set:
   every colour N × N times and still not a cube, with what is wrong with it and the
   sticker of the piece at fault outlined. Solve is on only for a cube that is one.
 - **Leaving with colours entered asks first** (`review.discard.*`); **Scan
-  instead** is there at 3×3.
+  instead** is there at every size.
 
 | part | component | string | objectName |
 |---|---|---|---|
@@ -349,7 +358,7 @@ sticker to name it by and a 5x5 has 150 stickers to set:
 | Fill this side | button, ghost | `review.fillSide` | `colours.fillSide` |
 | Status | a headline and, when there is one, what is wrong | `review.status.emptyN`, `review.status.partial`, `review.status.miscount`, `review.status.miscountOver`, `review.status.miscountUnder`, `review.status.countItem`, `review.status.impossible`, `review.status.impossibleBody`, `review.status.valid`, `review.fault.noScheme`, `review.fault.centreColours`, `review.fault.unknownPiece`, `review.fault.repeatedPiece`, `review.fault.twistedCorner`, `review.fault.flippedEdge`, `review.fault.swappedPieces` | `colours.status` |
 | Solve | button, primary, block; on only for a cube that is one | `review.solve` | `colours.solve` |
-| Scan instead | button, secondary; only at 3×3 | `entry.scan` | `colours.scan` |
+| Scan instead | button, secondary, at every size; from a scan it reads *Scan again* | `entry.scan`, `common.scanAgain` | `colours.scan` |
 | Discard dialog | dialog | `review.discard.title`, `review.discard.body`, `review.discard.keep`, `review.discard.confirm` | `colours.discard` |
 
 ## Needs from the scan lane

@@ -74,8 +74,7 @@ the issue or the `feature/*` branch that carries it.
 A page that says "no, and here is why" is worth as much as one that says yes: it
 is the thing that stops the same idea being investigated again in three weeks.
 Land it as a small docs-only pull request that also adds it to the list at the
-end of this page (the site's navigation lists only this page); it needs no
-changelog fragment.
+end of this page, which is the index; it needs no changelog fragment.
 
 ## What happens to the branch
 
@@ -120,7 +119,8 @@ name.
 
 - [2026-10-17: can the direct scan read a cube of N x N?](2026-10-17-nxn-scan-s0.md) -
   yes, on drawn cubes: a 5x5 and a 7x7 read at the 3x3's sticker size, 4,240 scans and no
-  wrong cube; no recording of one exists, so not yet on a real one. `cube_scan_s0` repeats it.
+  wrong cube; no recording of one existed, so not yet on a real one (real 2x2, 4x4 and 5x5
+  sessions were recorded the next day: see the last entry). `cube_scan_s0` repeats it.
 
 - [2026-10-17: can a cube of N x N be settled by two sides at once?](2026-10-17-nxn-corner-reader.md) -
   on drawn tumbles yes to 5x5 (31 of 32 cubes four turns from solved, none wrong) and half of

@@ -3,10 +3,10 @@
 What the developer-only scan recorder writes, and what `cube_scan` reads. The
 code is `src/lib/include/cube/vision/recording_v2.hpp` (recorder, manifest,
 integrity check) and `frame_recording.hpp` (file names and the index rows).
-`cube_scan` itself uses the frame files, `truth.txt` or `layout.txt`, and the
-times in the index (the capture time of each frame, which says how far a side
-moved between frames in time and not only in frames); the manifest and the
-integrity check are for `check_recording` and for people.
+`cube_scan` itself uses the frame files, `truth.txt`, `layout.txt` or `cube_n.txt`,
+the manifest's `size`, and the times in the index (the capture time of each frame,
+which says how far a side moved between frames in time and not only in frames); the
+rest of the manifest and the integrity check are for `check_recording` and for people.
 
 ## When anything is written
 
@@ -52,7 +52,11 @@ more of the room and nothing the reader uses.
 ### Frames
 
 - JPEG quality 90, at most 640 pixels wide (`kAnalysisWidth`): exactly the
-  stream the reader runs on, so a replay reproduces the live read.
+  stream the reader runs on for a 2x2 or 3x3, so a replay reproduces the live
+  read. A bigger cube is read live at 960 pixels wide (4x4 and 5x5) or 1280 (more),
+  when the camera gives so many ([vision pipeline](vision-pipeline.md#a-cube-of-another-size)),
+  so a replay of one reads the 640-pixel frame that was kept, with less than the
+  app had ([finding 0](investigations/2026-10-18-nxn-real-scan-sessions.md)).
 - The file for pass `n` is `rec_%06d.jpg` of `n % 3600`: the files wrap at a
   3600-frame ring so a recorder left on bounds its disk use, while `index.csv`
   keeps growing. A row whose file has since been overwritten is detected from
@@ -141,13 +145,18 @@ row-major as seen from outside the cube, in any orientation and any order.
 Nothing in the app writes it; it is typed from the cube in hand.
 
 For a cube that is not a 3x3 (the manifest says `size`), the words are `size^2`
-letters long, and `cube_scan replay` and `board` read the session as that size
-and score the cube against them (odd sizes: an even size has no middle sticker to
-put its sides together by). The other `cube_scan` commands are a 3x3's.
+letters long, and `cube_scan` reads the session as that size and scores the cube
+against them: `replay`, `board`, `diagnose`, `holds`, `funnel`, `read` and `cost`
+do; `corners`, `corner-colours` and `ambiguity` are a 3x3's. An even size has no
+middle sticker to put its sides together by, so the sides are put together as the
+scan puts them and the cube is the truth when it is the same cube held any way up.
 `cube_scan_s0 --session <dir> <size> <seed>` writes a drawn cube as such a session. The app
-records one when it is started with `CUBE_SCAN_SIZE=5` (an odd size, 3 to 9) as well as
-`CUBE_SCAN_RECORD_DIR`: the scan from the launch screen is then of that size, and the manifest
-says so. The entry screen still offers the camera for a 3x3 only.
+records one for any size from 2 to 9 when it is started with `CUBE_SCAN_SIZE` (for example
+`CUBE_SCAN_SIZE=5`) as well as `CUBE_SCAN_RECORD_DIR`: the scan from the launch screen is then
+of that size, and the manifest says so. A scan started from *Another size of cube* is of the
+size chosen there, and a scan with nothing chosen finds the size from the cube
+(Auto, [vision pipeline](vision-pipeline.md#a-cube-of-another-size)); a scan whose size
+changes starts a new recording, at the new size, in a folder of its own.
 
 ## `layout.txt`
 
@@ -159,3 +168,11 @@ each side as the solver lays it out (not as seen from outside). `cube_scan`
 scores a decision against it. `cube_tumble_sim` writes it with the frames it
 draws, and its `pose.csv` (`frame,seconds,U,D,L,R,F,B`: each side's angle in
 degrees to the camera axis, 0 square-on, per frame), which nothing else reads.
+
+## `cube_n.txt`
+
+Optional, the same job as `layout.txt` for a cube that is not a 3x3: one line of
+`6 * size^2` letters of `WYROGB`, the cube in `NCube`'s own facelet order. A cube
+whose six flat sides fit several cubes needs it, because the sides alone do not say
+which. `cube_scan` scores against it before it looks at `truth.txt`;
+`cube_tumble_sim` writes it for a cube of `--size` with `random` as its layout.

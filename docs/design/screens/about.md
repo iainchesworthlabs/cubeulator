@@ -1,11 +1,15 @@
 # About
 
-> **Status:** Built in part (`AboutScreen.qml`), reached from the **About
-> Cubeulator** row in Settings and from the macOS Help menu (not over a scan
-> or a solve). It has the name, the version, the three paragraphs, the
-> **Licences** and **Source code** rows and the small print. Not built, because
-> what they lead to is not: the icon, the build line with **Copy**, Privacy and
-> **Copy details**. There is no About at all on phones.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Built in part (`AboutScreen.qml`, since
+> 0.2.0-beta.1; it replaced a small dialog). It is reached from the **About
+> Cubeulator** row in Settings and from the macOS menu bar (in the Help menu,
+> not yet run on a Mac), not over a scan or a solve. It has the name, the
+> version (selectable), the three paragraphs, the **Licences** and **Source
+> code** rows and the small print, and Esc goes back. Not built: the icon, the
+> **Privacy** row (there is no Privacy screen), the build line with **Copy**,
+> and **Copy details**. There is no About on phones: Settings does not offer the
+> row there, and the iPhone has no menu bar. The browser build has it.
 
 Lane: experience. New (E3b). When this was written the app had no about box.
 

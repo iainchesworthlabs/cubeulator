@@ -1,10 +1,19 @@
 # Identity
 
-> **Status in 0.1.0-beta.1:** The icon is in use: `packaging/make_platform_icons.py`
-> turns `icon.svg` and `icon-small.svg` into the `.ico`, `.icns`, PNG and
-> `hicolor` files the desktop packages carry, and the browser build uses
-> `icon.svg`. The name treatment (wordmark and lock-up) has no screen to sit
-> on, and the store screenshots and listings are not made.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** The icon is in use.
+> `packaging/make_platform_icons.py` turns `icon.svg` and `icon-small.svg` into
+> the `.ico`, `.icns`, PNG and `hicolor` files the desktop packages carry, and,
+> with `--ios-assets`, into the iPhone app's asset catalogue (one 1024 px icon
+> and a launch background colour in light and dark); the browser build uses
+> `icon.svg`. Drawn and not used by any build: `icon-dark.svg`, `icon-mono.svg`
+> and `icon-android-foreground.svg` (the iOS dark and tinted variants, Android's
+> themed icon and its adaptive icon; the Android package has no icon resources).
+> The name treatment is partly in the app: the eyebrow on Home and the About
+> screen's name, with no icon beside it, so there is no lock-up. The store
+> listings are not made. The screenshot tour (`tests/system/tour_test.cpp`)
+> takes pictures of every screen from drawn frames, which is the source the
+> screenshots below name; the captions and sizes are not made.
 
 A proposal for the app icon, the name treatment and the store screenshots.
 E4a and E4b turn it into the per-platform files listed in
@@ -67,7 +76,7 @@ Alternatives considered and set aside:
 | treatment | spec | where |
 |---|---|---|
 | **Wordmark** | Archivo ExtraBold, sentence case, tracking -0.01 em, in `ink` | The About screen; store graphics; the README |
-| **Eyebrow** | Archivo Bold, capitals, tracking 0.1 em, 13 px, in `accentText` | The top of the Home screen. This is the only place the name appears in the running app |
+| **Eyebrow** | Archivo Bold, capitals, tracking 0.1 em, 13 px, in `accentText` | The top of the Home screen. The only other place the name appears in the running app is the About screen's wordmark |
 | **Lock-up** | The icon, a gap of half its width, the wordmark with its x-height centred on the icon | Store feature graphics; the top of the About screen |
 
 - The name is never translated or transliterated. In right-to-left text it

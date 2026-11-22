@@ -1,17 +1,31 @@
 # Scan
 
-> **Status in 0.1.0-beta.1:** Partly built, as `DirectScanScreen.qml`: the
-> camera picture with a dot on each sticker, a status panel, six chips in the
-> measured colours with a bar that fills while a side is held, **Cancel** and
-> **Start over**, and the wording of the guidance, which is all still a literal
-> in English. Not built: the leave and restart dialogs (both buttons act at
-> once), More, the camera picker, hand entry, the stuck hint, resuming after
-> the camera was lost, marks on the chips, and most of the spec's
-> `objectName`s. The app differs from the spec in two ways: the picture and
-> its dots are shown mirrored when the camera faces the user (the chips are
-> not), and it has a state the spec lacks, when six sides fit together in two
-> ways and it asks for two sides in one view (`scan.guide.ambiguous`,
-> recovery plan R5).
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Partly built, as `DirectScanScreen.qml`: the
+> camera picture with a dot on each sticker of the side in view (and, for a cube
+> held on a corner, a dot in a colour of its own on each side seen:
+> `scan.cornerDot`), a status panel, six chips in the measured colours with a
+> bar that fills while a side is held, size buttons (**Auto** and 2×2 to 5×5),
+> **Cancel** and **Start over**, **Check the colours** once six sides are in (it
+> opens the colours screen), **Switch camera** where the platform offers it (the
+> browser and an iPhone, with more than one camera), **Try again** when the
+> camera would not start, and a banner while a developer is recording the scan.
+> The wording of the guidance is still a literal in English. Not built: the
+> leave and restart dialogs (both buttons act at once), More, the camera picker,
+> hand entry from here, the stuck hint, resuming after the camera was lost,
+> marks on the chips, the keys (Esc, R, M, H), keeping the screen awake, sound
+> and haptics, and most of the spec's `objectName`s (the app has `scan.video`,
+> `scan.picture`, `scan.dot`, `scan.cornerDot`, `scan.status`, `scan.sizes`,
+> `scan.size.*`, `scan.chips`, `scan.buttons`, `scan.checkColours`,
+> `scan.switchCamera` and `scan.retry`).
+>
+> The app differs from the spec in three ways: the picture and its dots are
+> shown mirrored when the camera faces the user (the chips are not); it has a
+> state the spec lacks, when six sides fit together in two ways, in which it
+> asks for two sides in one view and names the corner to show when it can
+> (`scan.guide.ambiguous`, `scan.guide.ambiguousCorner`; recovery plan R5); and
+> the cube's size is chosen or found on this screen, which the spec does not
+> have.
 
 Lane: **scan** (`feature/direct-scan`). This is a proposal for the chrome
 and the states of `DirectScanScreen.qml`. How the cube is read is theirs.
@@ -60,6 +74,7 @@ top leading corner and the chips and buttons centred at the bottom.
 | Corner dots | Nine markers on each side of a corner the camera sees at an angle, shown only when no side is square to the camera. One colour to a side (`#4CC9F0`, `#C39BFF`, `#FF8FD0`), not the side dots' yellow and green, so that a corner is told from a side square to the camera at a glance. Same size and dark edge as the sticker dots. Ignored by screen readers | - | `scan.cornerDot` |
 | Status panel | status panel; a polite live region | `scan.title.*`, `scan.guide.*`, `scan.camera.*`, `scan.solveFailed.title`, `scan.solveFailed.body` | `scan.status` |
 | Hint | An overlay panel with a bold line and a sentence | `scan.stuck.title`, `scan.stuck.body` | `scan.hint` |
+| Size | A row of buttons over the chips: **Auto** and 2×2 to 5×5, the one in use primary. With **Auto** the scan works the size out from the cube in view, until the first side is captured; a size chosen stands until **Auto** is chosen again. Changing it starts the scan over. Hidden once the cube is read or the camera has failed | `scan.size.auto`, `entry.size.option` | `scan.sizes`, `scan.size.auto`, `scan.size.<n>` |
 | Chip 1-6 | side chip. Stickers are the measured colours; each carries the mark of the colour the reader took it for | `scan.a11y.chipEmpty`, `scan.a11y.chipRead`, `scan.a11y.chipInView`, `colourSide.*` | `scan.chip1` ... `scan.chip6` |
 | Cancel | button, secondary on a panel, thumb | `common.cancel` | `scan.cancel` |
 | Start over | button, secondary on a panel, thumb. Disabled until a side is read | `scan.startOver` | `scan.startOver` |

@@ -1,11 +1,18 @@
 # Privacy
 
-> **Status in 0.1.0-beta.1:** Not built; the only privacy wording in the app
-> is the permission screen's reassurances, which phones show. One claim in the
-> table below does not match the code: recording is not compiled out of
-> release builds. `DirectScan` records a scan when `CUBE_SCAN_RECORD_DIR`
-> names a folder, nothing records by default, and the scan screen shows a
-> banner while it does.
+> [!WARNING]
+> **Status in 0.2.0-beta.4:** Not built; the only privacy wording in the app is
+> the permission screen's reassurances, which phones show, and the About screen
+> has no Privacy row. One claim in the table below does not match the code:
+> recording is not compiled out of release builds. `DirectScan` records a scan
+> when `CUBE_SCAN_RECORD_DIR` names a folder, and the diagnostics channel can
+> keep camera frames when its separate frames switch is on
+> ([`settings.developer`](settings.md#settingsdeveloper);
+> [diagnostics.md](../../diagnostics.md)). Nothing records by default; the scan
+> screen shows a banner while the first is on (a literal "Recording this scan to
+> ...", not `settings.dev.recording`), every screen shows the diagnostics marker
+> while the second is, and the permission screen does not hide
+> `permission.point2` while either is.
 
 Lane: experience. New (E3b).
 

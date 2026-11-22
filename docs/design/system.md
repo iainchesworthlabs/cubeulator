@@ -1,11 +1,16 @@
 # Design system
 
-> **Status in 0.1.0-beta.1:** A specification that has not been ported.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** A specification that has not been ported.
 > `Theme.qml` is still the legacy one: the brand red used for text,
-> `inkMuted(opacity)`, the old sticker colours, a single 720 breakpoint, no
-> focus ring and no marks, and none of the components below exist as kit
-> types (`AppButton` is an item with a mouse area). Archivo and IBM Plex Mono
-> are named and not bundled. The measured tables are computed from
+> `inkMuted(opacity)`, the old sticker colours, a single 720 breakpoint and no
+> marks, and the kit's components do not exist as kit types. Three come near:
+> `ListRow` (the List row, with a role, a name and a focus ring),
+> `ConfirmDialog` (the Dialog: the safe choice first, focus moved in and
+> returned) and `AppButton`, which is still an item with a mouse area, with no
+> role, no focus and no focus ring. Archivo and IBM Plex Mono are bundled and
+> loaded at start-up since 0.2.0-beta.1 (everywhere but the browser); Noto Sans
+> Hebrew and Arabic are not. The measured tables are computed from
 > `tokens.json`; they say what the tokens do, not what the app draws.
 
 The existing look made into rules. Machine-readable values are in
@@ -214,11 +219,13 @@ OKLab distance x 100 between two swatches as seen with each kind of colour visio
 |---|---|---|
 | **Archivo** (OFL) | Everything in Latin script | Regular 400, Bold 700, ExtraBold 800 |
 | **IBM Plex Mono** (OFL) | Numbers that change (turn count, time), notation, key names | Medium 500 |
-| **Noto Sans Hebrew**, **Noto Sans Arabic** (OFL) | Hebrew, Yiddish and Arabic | One variable file each, weight 100 to 900, so headings keep 800. The same files ICL Forge, Countdown Solver and Automate ship (`family.md` D3) |
+| **Noto Sans Hebrew**, **Noto Sans Arabic** (OFL) | Hebrew, Yiddish and Arabic | One variable file each, weight 100 to 900, so headings keep 800. The same files ICL Forge, Countdown Solver and Automate ship (`family.md` D3). **Not bundled yet:** Qt takes these scripts from the system's fallback |
 | The system's own | Japanese, Simplified Chinese | Not bundled; see `platforms.md` |
 
 The fonts are loaded from the app's resources at start-up. A machine
-without Archivo installed still shows Archivo (plan, E2 gate; not yet met).
+without Archivo installed still shows Archivo (plan, E2 gate; met for Latin
+since 0.2.0-beta.1 on every platform but the browser, which draws with the face
+Qt carries).
 
 Sizes are in **rem**. One rem is `16 px x Theme.textScale`.
 `textScale` is the operating system's text-size setting multiplied by the

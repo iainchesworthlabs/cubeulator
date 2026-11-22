@@ -5,6 +5,13 @@ many moves a person has to make and in how much of the solution a person
 could learn from, and they are deliberately three separate engines rather
 than one engine with a setting.
 
+These are the 3x3 solvers. The app does not call them directly: it solves
+every size through `cube::nxn::solve_held`, which at size 3 hands the cube to
+them unchanged ([the app's 3x3](nxn-solver.md#the-apps-3x3)), and for a bigger
+cube reduces it to a 3x3 first and then finishes it by the method chosen
+([solving a cube of any size](nxn-solver.md)). A 2x2 has one search of its own
+and no method to choose.
+
 | method | what it is | moves (mean) | longest seen | time (desktop) |
 |---|---|---|---|---|
 | `Beginner` | Layer by layer: cross, white corners, middle edges, 2-look OLL, 2-look PLL | 100.7 | 135 | 0.1 s |
@@ -99,8 +106,9 @@ pruning tables) are built on first use, in about 30 ms with the four pruning
 tables on four threads (70 to 100 ms on one; 160 ms before they were made
 faster).
 `prepare(SolveMethod::Advanced)` does that ahead of time, from any thread; the
-app calls it on a worker at start-up, so the tables are built long before the
-person has finished scanning. The next section is why not all of them are made
+app does it on a worker at start-up (`cube::nxn::prepare(3, ...)`, which builds
+the same tables), so the tables are built long before the person has finished
+scanning. The next section is why not all of them are made
 by the compiler.
 
 The first solution takes about 160 thousand nodes at the median and never

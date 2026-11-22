@@ -1,12 +1,20 @@
 # Complete
 
-> **Status in 0.1.0-beta.1:** Partly built, as `CompleteScreen.qml`, reached
-> from the solve screen's **Finish**: the bobbing solved cube, "Solved", the
-> turns and the time (the method too, on the wide layout), **Review the
-> solution** (which opens the solution), and **Scan another cube**. Not built:
-> **Done**, **My cube is not solved** and its sheet, the history entry, the
-> sound. The time shown is the clock that has run since the scan began, not
-> the first-to-last-turn time the spec asks for.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Partly built, as `CompleteScreen.qml`, reached
+> from the solve screen's **Finish**: the bobbing solved cube, "Solved" with its
+> underline, the turns and the time (the eyebrow and the method too, on the wide
+> layout), **Review the solution** (which opens the solution) and **Scan another
+> cube**. Opening it marks the solve finished in History. Not built: **Done**,
+> **My cube is not solved** and its sheet, the sound and the haptic pattern, and
+> the `objectName`s of the table below (the app has `complete.stats`,
+> `complete.review` and `complete.scanAnother`). Where it differs from this
+> page: **Review the solution** is the primary button and **Scan another cube**
+> the secondary one; the cube is a fixed solved picture with white on top, not
+> yellow on top as it was held; it still bobs, and the underline sweeps again
+> and again, where the spec stills both; and the time shown is the clock that
+> has run since the scan began (carried on from the time kept, for a solve
+> carried on from History), not the first-to-last-turn time the spec asks for.
 
 Lane: **solve** reaches it; the chrome is experience. Replaces
 `CompleteScreen.qml`.

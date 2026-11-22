@@ -1,12 +1,18 @@
 # Home
 
-> **Status in 0.1.0-beta.1:** Partly built, still as the legacy
-> `LaunchScreen.qml`: the eyebrow, the 3D cube, the headline and lede (wide
-> layout only), **Scan a cube**, **History** (the list of solves) and a
-> language button and **Settings** that both open Settings. Not built: Enter
-> colours by hand, Help, the unfinished-solve card, the camera notices, the
-> short layout and the size classes; its `objectName`s are `launch.*`, not the
-> `home.*` below, and unlike the spec it has a language button.
+> [!NOTE]
+> **Status in 0.2.0-beta.4:** Partly built, still as the legacy
+> `LaunchScreen.qml`: the eyebrow, the 3D cube (made a moment after the buttons
+> are drawn), **Scan a cube**, **Another size of cube**, **History** (the list
+> of solves), a language button and **Settings** (both open Settings), and, on
+> the wide layout only, the headline and lede. Not built: Enter colours by hand
+> (hand entry is reached through *Another size of cube*), Help, the
+> unfinished-solve card (an unfinished solve is carried on from History
+> instead), the camera notices and **Look again**, the short layout and the size
+> classes (one layout change, at 720 wide). Its `objectName`s are `launch.*`
+> (`launch.startScan`, `launch.other`, `launch.solveHistory`, `launch.language`,
+> `launch.settings`), not the `home.*` below, and unlike the spec it has a
+> language button and a History button that is secondary, not ghost.
 
 Lane: experience. Replaces `LaunchScreen.qml`.
 
@@ -104,8 +110,9 @@ Desktop; no camera was found.
 
 ### `home.camera-unsupported`
 
-This build cannot use this device's camera: every phone until mobile
-capture exists (plan decision 8).
+This build cannot use this device's camera: a phone whose build has no
+camera backend (plan decision 8). An iPhone has one since 0.2.0-beta.1;
+Android does not yet.
 
 - A caution notice: `home.unsupported.title`, `home.unsupported.body`.
 - **Enter colours by hand** is the primary action.
