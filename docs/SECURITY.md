@@ -25,7 +25,7 @@ will reply there to arrange a private channel.
 
 Anything that breaks what the app says about itself is in scope: a camera
 picture saved, sent or exposed without someone switching a developer option on
-(see [Privacy](guide/privacy.md)), a release file that does not verify against
+(see [Privacy](privacy.md)), a release file that does not verify against
 its signature or attestation (see
 [Verifying build authenticity](#verifying-build-authenticity)), a way to run
 code through a crafted camera frame, settings file or history file, or a flaw
