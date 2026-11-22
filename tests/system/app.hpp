@@ -148,6 +148,13 @@ public:
     // nothing.
     int drag_cube();
     void key(Qt::Key which);  // to the window's focus item
+    // Scrolls the list a control sits in until the control is in view, as a finger
+    // would. A click does this itself; a picture of a screen scrolled down wants it
+    // without one.
+    void reveal(const QString& object_name);
+    // Takes the pointer off the controls (to the window's top-left corner), so that the
+    // control a click left it on does not show as hovered in a picture.
+    void park_pointer();
 
     // ---- waiting -----------------------------------------------------------
     // Runs the event loop until `done` holds. False if `timeout_ms` passed.

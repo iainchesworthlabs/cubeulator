@@ -38,6 +38,12 @@ Choose **Another size of cube** on the start screen, then a size from 2x2 to
   the piece at fault. When it is a cube it can solve, **Solve** lights up.
 
 <figure markdown="span">
+  ![The screen for another size of cube with 5x5 chosen, the move Q picked out in red in the scramble box, and the message 'Q' is not a move.](img/entry-error-wide-light.webp#only-light){ loading=lazy }
+  ![The screen for another size of cube with 5x5 chosen, the move Q picked out in red in the scramble box, and the message 'Q' is not a move.](img/entry-error-wide-dark.webp#only-dark){ loading=lazy }
+  <figcaption>A scramble with something in it that is not a move: it is picked out, and the screen says so.</figcaption>
+</figure>
+
+<figure markdown="span">
   ![The colours screen: the top and front sides of a 4x4 painted, the cube drawn beside them, and a count of the stickers still to paint.](img/colours-wide-light.webp){ loading=lazy }
   <figcaption>Painting a 4x4. The cube beside it is the cube as far as you have got.</figcaption>
 </figure>
