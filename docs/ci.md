@@ -313,7 +313,9 @@ The setup is the owner's, once:
 5. Run `gh workflow run publish-site.yml --ref develop`. If the production deploy fails, the job *Explain a failed deploy* says what to
    check.
 6. Point the repository's homepage (and `homepage` in `.github/repo-settings.json`) at `https://iainchesworthlabs.com/cubeulator/`, and turn
-   Pages off.
+   Pages off (`gh api -X DELETE repos/iainchesworthlabs/cubeulator/pages`). Both were done on 2026-11-22, after the first publish. Pages
+   must stay off: the shared `admin/apply.sh` creates it again whenever its `pages` step runs, and it ignores `repo-settings.json`, so run
+   it with `--only` and a list that leaves `pages` out (for the rulesets alone, `--only rulesets`).
 7. After the first publish, the company site lists Cubeulator from its own `icl-app.json` at its next deploy (a push to `main` of `icl-site`
    that touches `site/`, `tools/` or `data/`, or **Re-run all jobs** of its latest `site-deploy` run).
 
