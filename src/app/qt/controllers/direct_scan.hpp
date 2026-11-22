@@ -164,7 +164,7 @@ public:
     ~DirectScan() override;
 
     [[nodiscard]] bool running() const noexcept { return running_; }
-    [[nodiscard]] bool starting() const { return start_watcher_.isRunning(); }
+    [[nodiscard]] bool starting() const noexcept { return starting_; }
     [[nodiscard]] QString cameraError() const { return camera_error_; }
     [[nodiscard]] int frameSeq() const noexcept { return frame_seq_; }
     [[nodiscard]] int frameWidth() const noexcept { return frame_width_; }
@@ -308,6 +308,11 @@ private:
 
     QTimer poll_timer_;
     QFutureWatcher<cube::Result<void>> start_watcher_;
+    // The camera is being opened: from openCamera() until handleStartFinished() has run. Not the
+    // watcher's isRunning(), which turns false when the worker returns, a queued event before
+    // handleStartFinished() runs. A stop() in that gap saw nothing to stop and a camera that was
+    // not yet running, did nothing, and the camera then opened for a screen that had been left.
+    bool starting_ = false;
     bool stop_requested_while_starting_ = false;
     bool running_ = false;
     QString camera_error_;

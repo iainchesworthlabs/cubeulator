@@ -464,7 +464,7 @@ std::optional<int> DirectScan::detectedSize(const cv::Mat& bgr, bool read_here) 
 
 void DirectScan::start(const QString& deviceId) {
     setWatching(false);
-    if (start_watcher_.isRunning()) {
+    if (starting_) {
         // Back on the scan screen while the camera is still opening: cancel
         // the stop queued in between, or the camera would open and close.
         stop_requested_while_starting_ = false;
@@ -481,7 +481,7 @@ void DirectScan::start(const QString& deviceId) {
 
 void DirectScan::watch(const QString& deviceId) {
     setWatching(true);
-    if (start_watcher_.isRunning()) {
+    if (starting_) {
         stop_requested_while_starting_ = false;
         return;
     }
@@ -519,6 +519,7 @@ void DirectScan::openCamera(const QString& deviceId) {
     // the scan builds tables that take a quarter of a second in a browser, and
     // it would be the first frame of the scan, on the page's main thread, that
     // paid for them. The worker has the time: opening a camera takes longer.
+    starting_ = true;
     start_watcher_.setFuture(QtConcurrent::run([device]() {
         cube::vision::warm_up_colour_conversion();
         return cube::platform::camera::start(device);
@@ -527,6 +528,7 @@ void DirectScan::openCamera(const QString& deviceId) {
 }
 
 void DirectScan::handleStartFinished() {
+    starting_ = false;
     const auto result = start_watcher_.result();
     const bool stop_requested = std::exchange(stop_requested_while_starting_, false);
     if (!result.has_value()) {
@@ -557,7 +559,7 @@ void DirectScan::handleStartFinished() {
 }
 
 void DirectScan::stop() {
-    if (start_watcher_.isRunning()) {
+    if (starting_) {
         stop_requested_while_starting_ = true;
         return;
     }

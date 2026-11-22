@@ -28,6 +28,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QThreadPool>
 
 namespace {
 
@@ -303,6 +304,29 @@ TEST_CASE("cancelling mid-scan returns to launch and lets go of the camera", "[s
     start_scan_from_launch(app);
     CHECK(scan.sidesRead() == 0);
     CHECK(FakeCamera::instance().starts() == 2);
+}
+
+TEST_CASE("a stop asked for as the camera finishes opening still lets go of it", "[system][scan]") {
+    App& app = App::fresh();
+    auto& scan = app.runtime().directScan();
+    auto& camera = FakeCamera::instance();
+    camera.set_start_delay(0);
+
+    scan.start(QStringLiteral("fake:0"));
+    REQUIRE(scan.starting());
+
+    // The camera has opened on its worker, but the event that says so has not been delivered yet:
+    // the gap in which the future is finished, so the watcher no longer says it is running, and the
+    // scan does not yet know that the camera is. A stop in the gap used to find nothing to stop, do
+    // nothing, and the camera then opened for a screen that had been left (its light staying on).
+    QThreadPool::globalInstance()->waitForDone();
+    CHECK(scan.starting());
+    scan.stop();
+
+    REQUIRE(app.wait_for([&]() { return !scan.starting(); }));
+    CHECK_FALSE(scan.running());
+    REQUIRE(app.wait_for([&]() { return !camera.capturing(); }));
+    CHECK(camera.stops() == camera.starts());
 }
 
 TEST_CASE("start over forgets the sides read and keeps scanning", "[system][scan]") {
