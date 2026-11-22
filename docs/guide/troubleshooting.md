@@ -25,7 +25,7 @@ device was found* or *the camera could not be started*.
   can, add yourself (`sudo usermod -aG video $USER`) and log in again.
 - **In a browser:** allow the camera when the browser asks, and check the
   address bar's site settings if you said no. The page has to be served over
-  `https://`; see [Try it in your browser](../web.md).
+  `https://`; see [In your browser](web.md).
 
 Once the cause is sorted, **Try again** on the scan screen asks for the camera
 again; you do not have to go back to the start screen.
@@ -146,7 +146,7 @@ version carries its own.
 choose another graphics system and restart Cubeulator. If Cubeulator will not
 open at all, start it once with `--graphics-api=software` (a shortcut's
 *Target* box, or a terminal) and choose from Settings; see
-[Graphics API](../graphics-api.md).
+[Graphics API](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/graphics-api.md).
 
 **Some buttons are cut off.** The window can be as small as 360 by 560;
 below 720 pixels wide it switches to the narrow layout, which scrolls. Make

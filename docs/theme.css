@@ -1,0 +1,16 @@
+/* The Cubeulator palette: the one file that holds its colours. Eight roles, each light-dark(light, dark).
+   The colours are the app's own, from docs/design/tokens.json: the brand red (accentFill and accentText, tuned for
+   buttons and for red text on the page), its tint, the ink and the dark paper. The brand red itself (#ec3013) is for
+   graphics and is too light for text on white, so the roles use its darker text and fill forms.
+   Held to the company contract by tools/ci/check_site_kit.py (WCAG 2.2 AA, light and dark). Change a colour here and
+   run: python tools/ci/check_site_kit.py */
+[data-app="cubeulator"] {
+  --app-primary:       light-dark(#b82009, #ff5a3d);
+  --app-on-primary:    light-dark(#ffffff, #1a1918);
+  --app-accent:        light-dark(#b82009, #ff7359);
+  --app-link:          light-dark(#b82009, #ff7359);
+  --app-tint:          light-dark(#fff2ef, #3a1a14);
+  --app-gradient-from: light-dark(#201e1d, #1a1918);
+  --app-gradient-to:   light-dark(#b82009, #8c1a07);
+  --app-on-gradient:   light-dark(#ffffff, #f3f2f2);
+}

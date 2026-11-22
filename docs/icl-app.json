@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "Cubeulator",
+  "family": "games",
+  "summary": "Hold a Rubik's Cube up to the camera and follow the solution turn by turn on a 3D cube.",
+  "tags": ["Windows", "macOS", "Linux", "Web"],
+  "status": "available",
+  "icon": "assets/img/icon.svg",
+  "order": 100
+}

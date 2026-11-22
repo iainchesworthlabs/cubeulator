@@ -1,0 +1,68 @@
+name: Publish site
+
+# Publishes the documentation to https://iainchesworthlabs.com/cubeulator/ without a release (docs/ci.md, "Publishing the site").
+#
+# Run it by hand on develop: gh workflow run publish-site.yml --ref develop
+#
+# It moves the branch `site` to the commit the run is on, the tip of develop. A push to `site` starts docs.yml, which
+# builds that commit and deploys it, and the company site's role for this repository trusts a push to `site` and to no
+# other branch. `site` holds the source that is built, not built pages. It only ever moves forward along develop: the
+# update is not forced, so a commit that is not ahead of the branch stops the run.
+#
+# No CI runs for this: a push to `site` starts docs.yml and nothing else, and what `develop` holds has been through the
+# merge queue already (a change to pages alone builds and tests nothing there: .github/actions/changed-code).
+#
+# The push is made with the release bot's App token, because a push made with GITHUB_TOKEN does not start workflows.
+# The `site-publish-only` ruleset lets that App, and nothing else, create or move the branch.
+
+on:
+  workflow_dispatch:
+
+# Two runs must not race to move the branch.
+concurrency:
+  group: publish-site
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  move:
+    name: Move the site branch
+    # A run on any other branch would publish work that has not been through the merge queue.
+    if: ${{ github.ref == 'refs/heads/develop' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - name: Create a token for the release bot
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Move the site branch to this commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # gh prints the body of an error response, such as the 404 for a branch that does not exist yet, on stdout, so
+          # whether the branch exists is read from the exit status and never from the text.
+          current=""
+          if ! current="$(gh api "repos/$REPO/git/ref/heads/site" --jq .object.sha 2>/dev/null)"; then
+            current=""
+          fi
+          if [ "$current" = "$GITHUB_SHA" ]; then
+            echo "The site branch is already at $GITHUB_SHA, so there is nothing new to publish. To publish this commit again, re-run the last Docs run of the push to site." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -n "$current" ]; then
+            # force=false: the move must be a fast-forward, so a commit that is not ahead of the branch stops here.
+            gh api --method PATCH "repos/$REPO/git/refs/heads/site" -f sha="$GITHUB_SHA" -F force=false
+          else
+            gh api --method POST "repos/$REPO/git/refs" -f ref="refs/heads/site" -f sha="$GITHUB_SHA"
+          fi
+          echo "The site branch is now at $GITHUB_SHA. The Docs workflow builds and publishes it." >> "$GITHUB_STEP_SUMMARY"

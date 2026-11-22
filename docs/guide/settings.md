@@ -24,10 +24,10 @@ Settings is open.
 | **History** | *Keep a history of solves*, on by default, and **Clear history**. Both are described in [Past solves](history.md). | Yes |
 | **Cube style** | How the 3D cube is shaded: *Physically-Based Realism* (the default), *Instructional Glow* or *Borderlands Cel-Shading*. It applies to the cube on the start, solve and review screens, at every size of cube. | No |
 | **Cube motion** | Whether the cube on the start and settings screens turns by itself when left alone, and how fast. | No |
-| **Rendering** | Which graphics system draws the window (Automatic, Direct3D 11 or 12, Vulkan, OpenGL; what is offered depends on the system). Automatic is right unless the cube does not draw, and falls back on its own if the first choice cannot start on your computer ([how](../graphics-api.md)). A change takes effect the next time Cubeulator starts. | Yes |
+| **Rendering** | Which graphics system draws the window (Automatic, Direct3D 11 or 12, Vulkan, OpenGL; what is offered depends on the system). Automatic is right unless the cube does not draw, and falls back on its own if the first choice cannot start on your computer ([how](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/graphics-api.md)). A change takes effect the next time Cubeulator starts. | Yes |
 | **About Cubeulator** | The name, the version, who made it and under what licence, the address of the source code, and the way to the [licences](#about-and-licences). (On a Mac it is in the Help menu.) | |
 | **Show frame rate** | A small counter over the 3D cube, for people measuring performance. | No |
-| **Write diagnostics to a file**, **Also keep camera frames**, **Snapshot now** | For people debugging a scan: write what the scan reads and decides to a file on your device. Off every time the app starts. See [Privacy](privacy.md#developer-recording-and-diagnostics). | No |
+| **Write diagnostics to a file**, **Also keep camera frames**, **Snapshot now** | For people debugging a scan: write what the scan reads and decides to a file on your device. Off every time the app starts. See [Privacy](../privacy.md#developer-recording-and-diagnostics). | No |
 
 A wide window also has a **Test turn** button under the cube, which turns a
 random layer so you can see the cube style at work.
@@ -64,12 +64,10 @@ at once. **Same as this device** follows the system's language.
 What to expect in this beta:
 
 - **English** is complete, and the source of every other.
-- **Japanese** and **Simplified Chinese** are complete first drafts made with
+- **The other eight** (Deutsch, Français, Español, Japanese, Simplified
+  Chinese, Hebrew, Arabic and Yiddish) are complete first drafts made with
   machine assistance that no fluent reader has been through yet. Expect
   wording a native speaker would change.
-- **German, French, Spanish, Hebrew, Arabic and Yiddish** show English text
-  until their translations are written. They are selectable so that the layout
-  and direction can be tried.
 - **The scan screen's guidance and most of the words round the solution** (the
   stage names, *Previous*, *Next turn*, *Finish*, *Out of step? Rescan*) are
   English in every language for now.
@@ -91,7 +89,7 @@ carries its own). On Linux, install a CJK font such as Noto Sans CJK.
 | Play or pause, first turn, solved cube | <kbd>Space</kbd>, <kbd>Home</kbd>, <kbd>End</kbd> | the same | The solution screen ([Following the solution](solve.md#reviewing-the-solution)) |
 | Back | <kbd>Esc</kbd> | the same | The history, solution, About and Licences screens, and a question asking before it deletes |
 | Move between the rows of About and Licences, open one | <kbd>Tab</kbd>, <kbd>↑</kbd> and <kbd>↓</kbd>; <kbd>Enter</kbd> or <kbd>Space</kbd> | the same | About and Licences |
-| Diagnostics on or off, snapshot | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> | <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd> | Anywhere ([Privacy](privacy.md#developer-recording-and-diagnostics)) |
+| Diagnostics on or off, snapshot | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> | <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd> | Anywhere ([Privacy](../privacy.md#developer-recording-and-diagnostics)) |
 
 *Esc* goes back on the history, solution, About and Licences screens; elsewhere use the
 **Back**, **Cancel** and **Finish** buttons.
@@ -115,8 +113,8 @@ In the system's usual per-user settings store: the registry
 (`HKEY_CURRENT_USER\Software\Cubeulator\Cubeulator`) on Windows, a preferences
 file on macOS, `~/.config/Cubeulator/Cubeulator.conf` on Linux, and the
 browser's local storage for the site in a browser. They stay on your device
-([Privacy](privacy.md)). Uninstalling does not remove them.
+([Privacy](../privacy.md)). Uninstalling does not remove them.
 
 ## Next
 
-[Privacy](privacy.md), or [Troubleshooting](troubleshooting.md).
+[Privacy](../privacy.md), or [Troubleshooting](troubleshooting.md).

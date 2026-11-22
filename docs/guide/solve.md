@@ -101,7 +101,7 @@ Beginner is the default. You can change method at any moment, including
 half-way: the cube is solved *from where it stands now*, with whatever you have
 done kept. The method you choose is remembered for the next cube. It can also
 be set in [Settings](settings.md). Each method works out its answer in about a
-second or less. How they work is in [Solve methods](../solver-methods.md).
+second or less. How they work is in [How it works](how-it-works.md#three-methods).
 
 ## The camera follows you
 

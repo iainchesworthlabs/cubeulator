@@ -1,3 +1,10 @@
+---
+template: marketing.html
+layout: prose
+title: Privacy
+title_tag: "Privacy: what Cubeulator does with the camera picture"
+description: "The camera picture is read on your device and nowhere else. Nothing is saved or uploaded, and there is no account, no telemetry and no update check."
+---
 # Privacy
 
 Cubeulator uses your camera to read the colours on a cube. This page says what
@@ -36,7 +43,7 @@ On your device, in the system's settings store:
 - the graphics system you chose, if you changed it;
 - the window's size, position and whether it was maximised.
 
-[Settings and shortcuts](settings.md#where-the-settings-are-kept) says where
+[Settings and shortcuts](guide/settings.md#where-the-settings-are-kept) says where
 that is on each system. Uninstalling Cubeulator does not remove it.
 
 And, in a file of its own in the app's data folder, the history of your
@@ -46,7 +53,7 @@ how many turns and how long. Never a picture. It is
 `~/Library/Application Support/Cubeulator/solve-history.json` on macOS and
 `~/.config/cubeulator/solve-history.json` on Linux, the newest 100 are kept,
 and in a browser it is the page's own storage. **Settings > History** turns
-keeping it off and clears it. See [Past solves](history.md).
+keeping it off and clears it. See [Past solves](guide/history.md).
 
 ## Developer recording and diagnostics
 
@@ -57,7 +64,7 @@ neither sends anything anywhere.
 **Recording a scan.** If the environment variable `CUBE_SCAN_RECORD_DIR` is
 set to a folder when the app starts, each scan's frames (at the 640-pixel
 working size) are saved under it, in the format described in
-[Recording format](../recording-format.md). While it is on, the scan screen
+[Recording format](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/recording-format.md). While it is on, the scan screen
 shows a red dot and *Recording this scan to* and the folder, so a recording is
 never silent. Only a scan is recorded, never the solve screen's camera.
 
@@ -68,13 +75,13 @@ the cube was put together) as lines of text to a file in a per-user folder on
 your device. It is off every time the app starts, and while it is on every
 screen shows a strip saying so and where the file is. It holds numbers and
 names and no picture, unless a second switch, **Also keep camera frames**, is
-also on. See [Live diagnostics](../diagnostics.md).
+also on. See [Live diagnostics](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/diagnostics.md).
 
 Frames can show whoever was holding the cube, so keep any recording private.
 
 ## In a browser
 
-[The browser version](../web.md) is a set of static files with no server behind
+[The browser version](guide/web.md) is a set of static files with no server behind
 it. The page asks your browser for the camera, and the browser shows its own
 indicator and lets you withdraw permission at any time. Settings are kept in
 the browser's local storage for that site.
@@ -90,7 +97,14 @@ scanning will then say *Camera unavailable*.
 
 Cubeulator is built from open-source components, which are credited in the
 installed package, in the app (**Settings > About Cubeulator > Licences**) and
-in [Licensing](../licensing.md). Each release file
+in [Licensing](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/licensing.md). Each release file
 carries a GPG signature and a build attestation, so you can
-[check](../SECURITY.md#verifying-build-authenticity) that a download is the one
+[check](guide/verify.md) that a download is the one
 this project built.
+
+## This site
+
+These pages set no cookies, run no analytics and load nothing from other sites. The company's own policy, for
+iainchesworthlabs.com as a whole, is at [Privacy](/privacy/). Questions about this page go to
+[GitHub issues](https://github.com/iainchesworthlabs/cubeulator/issues); a security matter goes through the
+[private route](https://github.com/iainchesworthlabs/cubeulator/security/advisories/new).

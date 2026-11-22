@@ -1,0 +1,85 @@
+/* The guide is MkDocs Material. This file sets Material's colours from the Cubeulator palette (theme.css), so the guide
+   and the Cubeulator pages look related, and styles the slim bar above Material's header. Light and dark follow the
+   device (there is no switch). */
+html[data-app] { color-scheme: light dark; }
+body[data-md-color-scheme] {
+  --md-primary-fg-color: var(--app-primary);
+  --md-primary-fg-color--light: var(--app-primary);
+  --md-primary-fg-color--dark: var(--app-primary);
+  --md-primary-bg-color: var(--app-on-primary);
+  --md-primary-bg-color--light: var(--app-on-primary);
+  --md-accent-fg-color: var(--app-link);
+  --md-typeset-a-color: var(--app-link);
+  --md-text-font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --md-code-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.cu-guidebar { background: var(--app-gradient-from); color: var(--app-on-gradient); font-size: 0.8rem; }
+.cu-guidebar__in { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; max-width: 61rem; margin-inline: auto; padding: 0.25rem 0.8rem; }
+.cu-guidebar a { color: inherit; display: inline-block; padding: 0.4rem 0; }
+.cu-guidebar a:hover { text-decoration: underline; }
+
+/* ---- Reading: system fonts, a comfortable measure, clear headings ---- */
+.md-typeset { font-size: 0.82rem; line-height: 1.7; }
+.md-content__inner { max-width: 44rem; }
+.md-typeset h1 { font-weight: 750; letter-spacing: -0.02em; color: var(--md-default-fg-color); margin-bottom: 1.2rem; }
+.md-typeset h2 { font-weight: 700; letter-spacing: -0.01em; margin-top: 2.4em; padding-top: 0.4em; border-top: 1px solid var(--md-default-fg-color--lightest); }
+.md-typeset h3 { font-weight: 680; margin-top: 1.8em; }
+.md-typeset h2:first-of-type { border-top: 0; }
+.md-typeset a { text-underline-offset: 0.18em; }
+.md-typeset a:not(.headerlink):hover { text-decoration: underline; }
+.md-typeset :focus-visible, .md-header :focus-visible, .md-nav :focus-visible { outline: 3px solid var(--app-link); outline-offset: 2px; }
+.md-typeset kbd { border-radius: 0; }
+
+/* ---- Tables: a clean grid that scrolls instead of overflowing ---- */
+.md-typeset table:not([class]) { display: block; max-width: 100%; overflow-x: auto; font-size: 0.78rem; border: 1px solid var(--md-default-fg-color--lightest); box-shadow: none; }
+.md-typeset table:not([class]) th { background: var(--app-tint); color: var(--md-default-fg-color); font-weight: 680; white-space: nowrap; }
+.md-typeset table:not([class]) td, .md-typeset table:not([class]) th { padding: 0.6em 0.9em; vertical-align: top; }
+.md-typeset table:not([class]) tbody tr:hover { background: var(--md-default-bg-color); box-shadow: none; }
+
+/* ---- Code ---- */
+.md-typeset pre > code { border: 1px solid var(--md-default-fg-color--lightest); font-size: 0.78rem; line-height: 1.6; }
+
+/* ---- Pictures of the app: a quiet frame, centred, never wider than the text ---- */
+.md-typeset img { height: auto; max-width: 100%; }
+.md-typeset figure img { display: block; margin: 0 auto; border: 1px solid var(--md-default-fg-color--lightest); }
+.md-typeset figcaption { font-size: 0.72rem; }
+
+/* ---- Navigation: current page is clear ---- */
+.md-nav--primary .md-nav__title { font-weight: 700; }
+.md-nav__item .md-nav__link--active { font-weight: 700; color: var(--app-link); }
+.md-nav__link { font-size: 0.74rem; }
+.md-footer { background: var(--md-default-bg-color); color: var(--md-default-fg-color); border-top: 1px solid var(--md-default-fg-color--lightest); }
+.md-footer__link, .md-footer__title { color: var(--md-default-fg-color); }
+.md-footer-meta { background: var(--md-default-bg-color); }
+.md-footer-meta__inner, .md-copyright { color: var(--md-default-fg-color--light); }
+.md-copyright a { color: var(--app-link); }
+@media (max-width: 44.9375em) { .md-content__inner { margin-inline: 0.8rem; } }
+
+/* ---- Dark: follows the device, with the company shell's dark neutrals in place of Material's light ones ---- */
+@media (prefers-color-scheme: dark) {
+  body[data-md-color-scheme="default"] {
+    color-scheme: dark;
+    --md-default-fg-color: #eceff3;
+    --md-default-fg-color--light: #a3adbb;
+    --md-default-fg-color--lighter: #7a8696;
+    --md-default-fg-color--lightest: #2a3440;
+    --md-default-bg-color: #0e1217;
+    --md-default-bg-color--light: rgb(14 18 23 / 0.7);
+    --md-default-bg-color--lighter: rgb(14 18 23 / 0.3);
+    --md-default-bg-color--lightest: rgb(14 18 23 / 0.12);
+    --md-code-fg-color: #eceff3;
+    --md-code-bg-color: #161c24;
+    --md-code-hl-color: rgb(255 255 255 / 0.1);
+    --md-typeset-color: #eceff3;
+    --md-typeset-table-color: rgb(255 255 255 / 0.12);
+    --md-footer-bg-color: #0e1217;
+    --md-footer-bg-color--dark: #0e1217;
+    --md-footer-fg-color: #eceff3;
+    --md-footer-fg-color--light: #a3adbb;
+  }
+  html[data-app] { color-scheme: dark; }
+  /* The guide's pictures come in a light and a dark version (#only-light, #only-dark). Material swaps them by its own
+     palette name, which does not change here, so the swap follows the device. */
+  html body[data-md-color-scheme="default"] img[src$="#only-light"] { display: none; }
+  html body[data-md-color-scheme="default"] img[src$="#only-dark"] { display: block; }
+}

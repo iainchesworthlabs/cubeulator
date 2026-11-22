@@ -15,8 +15,8 @@
 | `osv-scanner.yml` | Scans `vcpkg.json` against the OSV database | No (visible only) | No |
 | `zizmor.yml` | Lints the workflow YAML itself | No (visible only) | No |
 | `scorecard.yml` | OpenSSF Scorecard supply-chain health score. Publishes only from a run on `main` (push, weekly, or a branch-protection change), so the README badge reads "invalid repo path" until the first release has merged ([Cutting a release](releasing.md#preparing-the-release), step 10) | No (badge/score) | No |
-| `docs.yml` | Builds the mkdocs site and the web app (`.github/actions/web-build`, the same one `ci.yml`'s Web leg uses), and publishes both to GitHub Pages - the app under `/app/` | N/A (push to `main`, and manual runs) | No |
-| `docs-check.yml` | On a PR that touches `docs/` or `mkdocs.yml`: builds the documentation (not the web app) with `mkdocs build --strict`, so a broken link shows on the PR and not on the push to `main` that publishes the site | No (advisory) | No |
+| `docs.yml` | The company site's pages of Cubeulator, <https://iainchesworthlabs.com/cubeulator/> ([The Cubeulator pages](#the-cubeulator-pages)). A pull request builds the pages with `--strict` and puts a preview at `_preview/cubeulator/pr-<n>/`, removed when the pull request closes. A push to the branch `site` builds the pages and the web app (`.github/actions/web-build`, the same one `ci.yml`'s Web leg uses), and publishes both: the app under `/cubeulator/app/` | N/A (pull requests and pushes to `site`) | No |
+| `publish-site.yml` | By hand, on `develop`: moves the branch `site` to the tip of `develop`, which starts the publication of `docs.yml` ([Publishing the site](#publishing-the-site)) | N/A (manual runs) | No |
 | `dependabot-auto-merge.yml` | Enables auto-merge on Dependabot's minor/patch PRs for GitHub Actions and pip | No (acts on Dependabot PRs only) | No |
 | `cache-hygiene.yml` | Prunes the Actions cache quota: closed PRs' and deleted branches' entries, superseded vcpkg and Qt generations ([below](#the-vcpkg-binary-cache)) | No (acts on the cache only) | No |
 
@@ -27,13 +27,13 @@ the `merge_group` rule a workflow has to follow to be part of it.
 ### CI Status
 
 `ci.yml` ends in one job, `CI Status`, that collects the others (`needs:` lists the
-clang-format, platform-isolation, clang-tidy, plan, build, Android, web, web test, iOS,
-system test and coverage jobs). It uses the shared `ci-status` action: it fails when a
+clang-format, platform-isolation, site, clang-tidy, plan, build, Android, web, web test,
+iOS, system test and coverage jobs). It uses the shared `ci-status` action: it fails when a
 collected job failed or was cancelled, and when a job the plan asked for was skipped,
 because a check that silently did not run is a failure of the gate. Which jobs the plan
 asks for is the `expected` map in the job: the mobile, web and system jobs skip as a
 whole on a documentation-only change and on a merge-queue entry, and platform-isolation
-skips on a queue entry. Add a job to `ci.yml` by adding it to `needs:`, and to `expected`
+and site skip on a queue entry. Add a job to `ci.yml` by adding it to `needs:`, and to `expected`
 if it can skip.
 
 This is the check that branch protection and the merge queue will name, instead of each
@@ -65,13 +65,15 @@ entry against its `base_sha`) and outputs `code=false` when each changed file is
 under `docs/` (except `docs/design/`, which the icon rasterising, the packaging
 and the translation tests read), `changelog.d/`, `.github/ISSUE_TEMPLATE/`, is
 `.github/PULL_REQUEST_TEMPLATE.md`, `.github/CODEOWNERS`, `mkdocs.yml`, a
-root-level `*.md` or `LICENSE*`. Anything else, an empty or failed diff, and
+root-level `*.md` or `LICENSE*`, or one of the company site's files: `tools/docs/`
+(the theme, the hooks and the kit copy), `tools/ci/check_site_*.py`,
+`tools/tests/test_check_site.py`, `.github/workflows/docs.yml` and
+`.github/workflows/publish-site.yml`, which the Site job runs and nothing builds. Anything else, an empty or failed diff, and
 every event that is not a pull request or queue entry (a push, a manual run, a
 schedule), is `code=true`.
 
 **Drafts.** A draft runs the planner and the static checks (`Policy`,
-`clang-format`, `platform-isolation`, the documentation build, the dependency
-diff), and its build, test and analysis jobs report success in seconds without a
+`clang-format`, `platform-isolation`, `Site`, the dependency diff), and its build, test and analysis jobs report success in seconds without a
 step. `ci.yml` and `codeql.yml` list `ready_for_review` among the pull request
 types, so marking the pull request ready starts the full gate on the same
 commit. A draft cannot be queued, and the queue runs the required legs on its own
@@ -94,7 +96,7 @@ What `code=false` does (for a draft as for a documentation change), and why it i
   tests are not required, so they are skipped by `if:`. If one is ever made a
   required check it needs the same treatment as the legs above first.
 - **Still runs on documentation:** `clang-format`, `platform-isolation`,
-  `Policy`, `Docs build (strict)`, `Scan dependency diff`, Zizmor and OSV-Scanner.
+  `Policy`, `Site`, `Scan dependency diff`, Zizmor and OSV-Scanner.
 
 ### Running some legs by hand
 
@@ -195,6 +197,116 @@ gh variable delete CONTROL_RUNNER_JSON                                          
   actionlint does not parse `$/` yet (as of 1.7.12,
   [rhysd/actionlint#711](https://github.com/rhysd/actionlint/issues/711));
   nothing in this repository runs it.
+
+## The Cubeulator pages
+
+The public documentation of Cubeulator is served by iainchesworthlabs.com under `/cubeulator/`, built from this repository as one
+MkDocs build, as the Snake, Field Test and ARINC Data Loader pages are. What is published is the part for people who use
+Cubeulator; the rest of `docs/` stays in the repository, where GitHub shows it.
+
+**What is published.** The pages (home, Features, FAQ, Privacy, Support, What's new, Accessibility, Press), the user guide
+(`docs/guide/`), and the web app under `app/`. The pages are Markdown files, some with an HTML body (the home page, Features,
+Press), drawn by `tools/docs/theme/marketing.html`: no script (only a JSON-LD block on the home page), no inline style and
+relative links, because a preview blocks every script and serves the pages from another address. The guide is MkDocs Material
+(`tools/docs/theme/main.html` adds a slim bar that takes the reader back to the pages). `exclude_docs` in `mkdocs.yml` lists
+everything else in `docs/` (building, architecture, testing, this page, the plans, the design system and the rest); a new
+developer page goes in that list, and a test fails until it does. `docs/privacy.md` is the page the guide and the stores link
+to; `privacy/` and `support/` never move once a store listing prints them.
+
+**The look** is the company site's shell:
+
+- `tools/docs/site-kit/v1/` is a **pinned copy** of the company kit (`icl.css`, the header and footer, the palette checker).
+  Nothing is fetched at build or run time. `tools/docs/site_shell_hook.py` lets the templates include the kit's header and footer,
+  puts `data-app="cubeulator"` on any page that lacks it (the guide's) and copies `icl.css` to `assets/icl.css` of the site. To move
+  to a newer kit, copy the files of its `/assets/v1/` folder over the copy, with the same layout (the checksum file is
+  `kit/SHA256SUMS.txt`, the version `kit/VERSION.txt`), run `check_site_kit.py` and note the version in the pull request. The copy
+  is kit 1.1.2.
+- `docs/theme.css` is the Cubeulator palette: eight colour roles, light and dark, in one file. Its colours are the app's own, from
+  `docs/design/tokens.json` (see the comment at the top of the file). To change a colour, change that file only.
+- `docs/assets/cubeulator.css` is the layout the shell does not have, and `docs/assets/guide.css` sets Material's colours from the
+  palette. They use the shell's variables and hold no colour of their own.
+- `tools/docs/site_assets_hook.py` copies the app icon (three SVG files) from `docs/design/identity/` to `assets/img/` of the site, so
+  the icon has one source.
+- `docs/icl-app.json` is the tile manifest the company site reads to list Cubeulator on its home page, in its Games menu and in its
+  footer. A change to it shows at the company site's next deploy (`icl-site`, README, "Product lists").
+
+**The checks.** `tools/ci/check_site_kit.py` fails when a file of the kit copy differs from the kit's `SHA256SUMS.txt`, or the palette
+fails the company's checker (`check-palette.mjs`, Node 20 or later: shape, and WCAG 2.2 AA contrast against the shell's neutrals).
+`tools/ci/check_site_pages.py` builds the site (`mkdocs build --strict`) and fails on
+
+- a page with no title, no canonical address or not one `h1`;
+- a Cubeulator page (not the guide) with no `lang="en-AU"`, a `<script>` (except JSON-LD), a `<style>` or `style=`, anything loaded
+  from another host, a link to an email address, or an `<img>` with no `width` and `height` in pixels or of another shape than its
+  file (PNG and WebP are read);
+- on any page, an `<img>` with no `alt` attribute (`alt=""` is for a picture that only decorates), or an alt that is a file name or
+  shorter than 10 characters;
+- a link to a file or an anchor that is not in the built site, or to `/cubeulator/` instead of a relative link (a link into `app/` is
+  not followed: the web app is added after the build);
+- a built site that lacks `privacy/`, `support/`, `guide/` or one of the other pages;
+- a "What's new" page that does not name the newest release of `CHANGELOG.md` in bold (a release changes `docs/whats-new.md` as well);
+- a key fingerprint on `guide/verify/` that is not the one of `docs/SECURITY.md`.
+
+Both run in the **Site** job of `ci.yml`, which `CI Status` waits for. Their unit tests are `tools/tests/test_check_site.py`, which the
+Site job runs with Node and jinja2 required (`CUBEULATOR_SITE_TESTS_STRICT=1`). To look at the site: `pip install -r docs/requirements.txt`,
+then `mkdocs serve`. The web app is not part of that; `docs.yml` adds it.
+
+**Pictures.** The pictures of the guide (`docs/guide/img/`) are screenshots of the app, made by its own screenshot tour with a drawn camera
+frame (`python tools/docs/update_guide_screenshots.py`), so nobody is in them. To take them again, run the tour, **look at each picture**, and
+update the alt text and the `width` and `height` in the markup (a unit test compares them with the files).
+
+A change to a page needs no changelog fragment: the pages are under `docs/` and `tools/`. A change to the app does, and a release changes
+`docs/whats-new.md`.
+
+### Publishing the site
+
+`docs.yml` builds the pages on every pull request that touches `docs/**`, `mkdocs.yml`, `tools/docs/**` or the workflow, and publishes
+them with the shared `docs-deploy-aws.yml` of `icl-common-infra`:
+
+| Event | What happens |
+|---|---|
+| Pull request from this repository | The pages are built (not the web app: a preview blocks every script, so it could not run) and uploaded to `https://iainchesworthlabs.com/_preview/cubeulator/pr-<n>/` through the preview role (`_preview/cubeulator/*` only). One comment on the pull request carries the address. A preview needs the secrets below; without them the step says so and is skipped. |
+| Pull request closed | The preview is deleted. |
+| Push to the branch `site` | The pages and the web app are built, and synced to `cubeulator/` of the bucket with `--delete`, the app under `cubeulator/app/`, and the path is invalidated, through the production role (`cubeulator/*` only). It refuses any other ref. |
+
+A merge to `develop` does **not** publish, and neither does a release. The branch `site` holds the commit of `develop` that the site was
+last built from, and only `publish-site.yml` moves it. To publish what `develop` holds, with no release and no CI:
+
+```bash
+gh workflow run publish-site.yml --ref develop
+```
+
+The workflow fast-forwards `site` to the tip of `develop` with the release bot's App token (a push made with `GITHUB_TOKEN` does not start
+workflows), and refuses to run on any other branch or to move `site` backwards. The push starts `docs.yml` and nothing else. What `develop`
+holds has been through the merge queue already, and a change to pages alone builds nothing there. The web app is built from that commit, so
+it is the app the pages describe, not the last release's. To publish the same commit again, re-run the Docs run of the last push to `site`.
+
+The `site-publish-only` ruleset (`.github/rulesets/`) lets the release bot, and nothing else, create or move `site`, with no deletion and no
+force push, because the company site's deploy role trusts a push to that branch. `branch-names` lets the name `site` exist.
+
+This replaced the publication to GitHub Pages (`https://iainchesworthlabs.github.io/cubeulator/`), which went out on a push to `main`.
+The setup is the owner's, once:
+
+1. In `icl-site`, the `cubeulator` entry of `APPS` (`infra/lib/apps.ts`: slug `cubeulator`, repo `iainchesworthlabs/cubeulator`, its numeric
+   repository id, the role `icl-site-deploy-cubeulator`, `publishRef: 'site'`), deployed with its `deploy-infra` workflow. The role then
+   trusts a push to `site` and a pull request of this repository.
+2. Customise this repository's OIDC subject claim as the other apps' are (immutable subject, keys `repo`, `context`, `event_name`):
+
+   ```bash
+   gh api -X PUT repos/iainchesworthlabs/cubeulator/actions/oidc/customization/sub \
+     -F use_default=false -f 'include_claim_keys[]=repo' -f 'include_claim_keys[]=context' -f 'include_claim_keys[]=event_name'
+   ```
+
+3. Set the repository secrets `DOCS_ROLE_ARN` (the stack output `DeployRoleArnCubeulator`), `DOCS_PREVIEW_ROLE_ARN`
+   (`PreviewRoleArnCubeulator`), `DOCS_BUCKET` (`BucketName`) and `DOCS_DISTRIBUTION_ID` (`DistributionId`). They are identifiers, not
+   credentials; the trust policy is the protection (`icl-site`, README, "Values for the app repos").
+4. Apply the rulesets in `.github/rulesets/` (`branch-names`, updated to allow `site`, and `site-publish-only`, new) with `admin/apply.sh`
+   of `icl-common-infra` (`--only rulesets`, with `RELEASE_BOT_APP_ID` set). `branch-names` has to come first.
+5. Run `gh workflow run publish-site.yml --ref develop`. If the production deploy fails, the job *Explain a failed deploy* says what to
+   check.
+6. Point the repository's homepage (and `homepage` in `.github/repo-settings.json`) at `https://iainchesworthlabs.com/cubeulator/`, and turn
+   Pages off.
+7. After the first publish, the company site lists Cubeulator from its own `icl-app.json` at its next deploy (a push to `main` of `icl-site`
+   that touches `site/`, `tools/` or `data/`, or **Re-run all jobs** of its latest `site-deploy` run).
 
 ## Nightly
 
@@ -464,9 +576,8 @@ change is a reviewed diff (the exceptions are listed under the table):
 
 What is **not** pinned: the apt packages installed on a runner
 (`libx11-dev`, `rpm`, `xvfb`, ...), which come with the image and have no
-sensible pin short of a mirror; the documentation jobs (`docs.yml`'s `build`
-and `deploy`, and `docs-check.yml`), which run on `ubuntu-latest` and a
-`3.x` Python, though they install the pinned mkdocs; and the CMake of the web
+sensible pin short of a mirror; the documentation jobs (`docs.yml`'s `assemble`, and the `Site` job of `ci.yml`),
+which run on a hosted Ubuntu and Python 3.12, though they install the pinned mkdocs; and the CMake of the web
 build, above.
 
 An action is bumped to the newest release that is at least a week old. A

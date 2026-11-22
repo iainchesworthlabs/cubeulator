@@ -32,11 +32,12 @@ feature/* bugfix/* chore/* docs/* ...  ──PR──▶  merge queue  ──squ
 
 | Ruleset | Applies to | What it does |
 | --- | --- | --- |
-| `branch-names` | every branch except `main`, `develop`, `gh-pages`, `quality-history` and the allowed prefixes | A branch name must start with `feature/`, `bugfix/`, `release/`, `hotfix/` or `support/`, or with a prefix in the exclusion list below. Dependabot (`dependabot/`), the merge queue (`gh-readonly-queue/`), `docs/`, `chore/`, `agent/` and `spike/` are allowed |
+| `branch-names` | every branch except `main`, `develop`, `site`, `gh-pages`, `quality-history` and the allowed prefixes | A branch name must start with `feature/`, `bugfix/`, `release/`, `hotfix/` or `support/`, or with a prefix in the exclusion list below. Dependabot (`dependabot/`), the merge queue (`gh-readonly-queue/`), `docs/`, `chore/`, `agent/` and `spike/` are allowed |
 | `develop-protection` | `develop` | A pull request is required (0 approvals, conversations resolved, stale approvals dismissed), squash only, linear history, required checks `CI Status` and `Scan dependency diff`, no deletion, no force push. There is no bypass actor |
 | `merge-queue-develop` | `develop` | The merge queue: `SQUASH`, `ALLGREEN`, up to 4 entries built and 5 merged, check timeout 180 minutes |
 | `main-release-only` | `main` | No update, deletion or force push, except by the release bot (the only bypass actor) |
 | `tags` | `v*` | No creation, update or deletion, except by the organisation owner and the release bot |
+| `site-publish-only` | `site` | The branch the company site's pages are published from ([Publishing the site](ci.md#publishing-the-site)). No update, creation, deletion or force push, except by the release bot (the only bypass actor), because the company site's deploy role trusts a push to this branch |
 
 The approval count is 0 because this is a solo-maintainer repository and GitHub doesn't count an
 author's own approval, so a required approval could only be met by bypassing it.

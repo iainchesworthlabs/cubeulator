@@ -5,7 +5,8 @@ description: >-
   checks only; the full gate runs when it is marked ready, and again in the
   queue) and for a change to documentation alone, and "true" otherwise. A
   documentation change is one where every changed file is one that nothing
-  builds or tests reads. Any other event (a push, a manual run, a schedule) is
+  builds or tests reads (the pages of the company site count: docs/ci.md,
+  "The Cubeulator pages"). Any other event (a push, a manual run, a schedule) is
   "true": those runs are what warm the caches and gate releases, and are not
   worth being clever about.
 
@@ -55,6 +56,9 @@ runs:
               docs/design/*) code=true ;;
               docs/*) ;;
               mkdocs.yml | changelog.d/* | .github/ISSUE_TEMPLATE/* | .github/PULL_REQUEST_TEMPLATE.md | .github/CODEOWNERS) ;;
+              # The company site's pages: the theme, the hooks, the kit copy, their checks, and the two workflows that
+              # build and publish them. Nothing builds or tests reads them; the Site job of ci.yml runs them.
+              tools/docs/* | tools/ci/check_site_*.py | tools/tests/test_check_site.py | .github/workflows/docs.yml | .github/workflows/publish-site.yml) ;;
               */*) code=true ;;
               *.md | LICENSE | LICENSE.*) ;;
               *) code=true ;;
