@@ -60,7 +60,7 @@ feature/* bugfix/* ──PR──▶ merge queue ──▶ develop
 | `Cubeulator-<version>-macos-arm64.dmg` | macOS 14.4 and later, Apple Silicon |
 | `Cubeulator-<version>-linux-x64.deb` | Debian and Ubuntu |
 | `Cubeulator-<version>-linux-x64.rpm` | Fedora |
-| `Cubeulator-<version>-web.zip` | The browser build: the static site that [Try it in your browser](web.md) serves under `/app/`, with `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and `HOSTING.txt`, to be hosted over https. Not an installer; held by `packaging/web/check-package.sh` |
+| `Cubeulator-<version>-web.zip` | The browser build: the static site that the company site serves under `/app/` ([In your browser](guide/web.md)), with `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` and `HOSTING.txt`, to be hosted over https. Not an installer; held by `packaging/web/check-package.sh` |
 | `SHA512SUMS` | one line per package and for each SBOM |
 | `SHA512SUMS.asc`, `<file>.asc` | detached GPG signatures, from the project key, on the manifest, every package and each SBOM |
 | `cubeulator-signing-key.asc` | the public key, so that a download can be verified offline |
@@ -254,6 +254,11 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    caveat); write those. `--check` changes nothing and only says what is wrong.
    Open a PR into `develop`; it goes through the merge queue like any other.
 
+   Change `docs/whats-new.md` in the same pull request: the new version in bold at the top, and a short
+   section for it that says in plain words what changed and what is not yet proven. The `Site` check
+   fails until the page names the newest release of `CHANGELOG.md`, because the page is what a person
+   reads before they download.
+
    Pull requests that were open when you prepared the release can merge after
    it, each with a fragment, and the release then fails `check_release.py` (its
    notes would miss them). Fold them into the section that is already cut:
@@ -303,7 +308,9 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    platform fails, fix it and tag again, or re-run the failed jobs.
 7. **Review the draft** under Releases: the notes, the five packages, the
    checksums and signatures. Edit the notes if you want to.
-8. **Publish it.**
+8. **Publish it.** The pages at iainchesworthlabs.com/cubeulator/ are not published by a release: when
+   `docs/whats-new.md` has changed, run `gh workflow run publish-site.yml --ref develop`
+   ([Publishing the site](ci.md#publishing-the-site)).
 9. **No back-merge.** `main` is an ancestor of `develop` and is only
    fast-forwarded to a release (see the note at the top), so there is nothing to
    merge back.

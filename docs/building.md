@@ -94,7 +94,7 @@ and why are in [Toolchain versions](ci.md#toolchain-versions)).
 ## WebAssembly (browser)
 
 `web-emscripten-*` builds the same Qt/QML app as WebAssembly, which is what
-[Try it in your browser](web.md) serves. The output is a directory of static
+[the web build](web.md) is, and what the site serves under `app/`. The output is a directory of static
 files - `index.html`, `cube_app.js`, `cube_app.wasm`, `qtloader.js`, the
 isolation worker and the icon - and nothing else: there is no installer.
 

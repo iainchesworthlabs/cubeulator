@@ -130,7 +130,7 @@ to TestFlight links it.
 
 ## WebAssembly
 
-The browser build ([Try it in your browser](web.md)) takes its two libraries
+The browser build ([the web build](web.md)) takes its two libraries
 from vcpkg the same way, on the `wasm32-emscripten-threads` triplet
 (`cmake/triplets/`): vcpkg's own `wasm32-emscripten` with `-pthread` (and `-fexceptions`, the mode
 Qt's kit uses), because Qt's multithreaded WebAssembly kit is built with atomics

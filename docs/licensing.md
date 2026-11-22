@@ -120,8 +120,8 @@ Platform key: **W** Windows, **M** macOS, **L** Linux, **A** Android,
 `ios-clang-*` presets set `CUBEULATOR_BUILD_APP=OFF` and build the library
 alone) [V: `CMakePresets.json`], and it goes to TestFlight, not to the release
 page. The
-browser build (WebAssembly, preset `web-emscripten-*`, [Try it in your
-browser](web.md)) is a sixth platform whose set is smaller; it is described in
+browser build (WebAssembly, preset `web-emscripten-*`, [the web
+build](web.md)) is a sixth platform whose set is smaller; it is described in
 [section 2.5](#25-per-platform-differences-that-change-obligations) and is not
 one of the letters.
 
@@ -444,7 +444,7 @@ LGPL-obligations page, "Modules Not Available Under LGPL"].
 | channel | what stands in the way, if anything | status |
 |---|---|---|
 | **Direct download** (GitHub releases: NSIS installer, DMG, DEB, RPM; the packages are not yet OS code-signed or notarised, see [Cutting a release](releasing.md)) | Nothing beyond GPL-3.0 itself: ship licence, notices, source or an offer | clear [I] |
-| **Web** (the app as static files under `/app/` of the documentation site, [Try it in your browser](web.md)) | Not examined in a primary source. The program, with Qt linked in, is sent to the visitor's browser, so the same GPL-3.0 terms are assumed to apply as to a download [I][L]. The release's zip carries the licence and the notices, and the app in it has the About and Licences screens (since 0.2.0-beta.1; the browser build is not `is_mobile`, so Settings > About Cubeulator is there), which name the licence and the source address and list the embedded notices (section 7). Whether the hosted page itself shows a licence or a source link was not re-checked (sections 2.5 and 6) | **open** [L] |
+| **Web** (the app as static files under `/app/` of the company site, iainchesworthlabs.com/cubeulator/, [the web build](web.md)) | Not examined in a primary source. The program, with Qt linked in, is sent to the visitor's browser, so the same GPL-3.0 terms are assumed to apply as to a download [I][L]. The release's zip carries the licence and the notices, and the app in it has the About and Licences screens (since 0.2.0-beta.1; the browser build is not `is_mobile`, so Settings > About Cubeulator is there), which name the licence and the source address and list the embedded notices (section 7). Whether the hosted page itself shows a licence or a source link was not re-checked (sections 2.5 and 6) | **open** [L] |
 | **Microsoft Store** | Not examined in a primary source here. GPL apps appear in it [I]. MSIX packaging replaces the NSIS installer. | [L], research needed |
 | **Mac App Store** | Same Apple terms as iOS (below) plus the sandbox; a notarised DMG outside the store avoids Apple's *store* terms entirely | blocked by the same question as iOS [I][L] |
 | **Linux** (tarball, DEB, RPM, Flathub, Snap) | Nothing found. The project's own DEB and RPM carry Qt (section 2.5); distros that package it supply Qt themselves | clear [I] |

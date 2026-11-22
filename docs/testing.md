@@ -1014,7 +1014,7 @@ harness, a seed or two, and a row in the table above.
 
 ## Browser tests
 
-The web build ([Try it in your browser](web.md)) is tested in two ways, because
+The web build ([the web build](web.md)) is tested in two ways, because
 it has two things worth testing: that the code is right when it is
 WebAssembly, and that the app is right in a page.
 
@@ -1179,7 +1179,7 @@ columns), which CI uploads.
 ### The camera's exposure and white balance
 
 The scan holds the camera's exposure and white balance where its automatics
-settled (`camera_web.js`; [Differences from the desktop apps](web.md#differences-from-the-desktop-apps)),
+settled (`camera_web.js`; [Differences from the desktop apps](guide/web.md#differences-from-the-desktop-apps)),
 and says only what it read back: `applied` when `getSettings()` shows `manual`
 at the value asked for, `rejected` when the camera was asked and did not hold,
 `unsupported` when the browser or the camera has no such control. The cases for

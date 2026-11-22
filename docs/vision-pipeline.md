@@ -605,7 +605,7 @@ The iPhone has its own backend (`src/app/platform/ios/camera_ios.mm`, AVFoundati
 directly rather than through OpenCV). Its lock holds exposure and white balance
 where the automatics settled, reports what the device said for each, and says
 plainly that it has no brightness or saturation control. It has not yet run on a
-phone ([Installing on an iPhone](ios-install.md)).
+phone ([The iPhone build](guide/iphone.md), and what to check on a first install: [First run on an iPhone](ios-install.md)).
 
 The browser asks the camera itself, and only where the camera offers it: a
 track that lists a manual exposure or white balance is asked
@@ -615,7 +615,7 @@ manual at those values - a constraint the browser skipped, or a camera that
 took manual at a value of its own, is reported `rejected` and put back. A
 browser or camera with no such control (Firefox and Safari offer a page none)
 reports `unsupported`. Either way the scan goes on
-([Differences from the desktop apps](web.md#differences-from-the-desktop-apps)).
+([Differences from the desktop apps](guide/web.md#differences-from-the-desktop-apps)).
 
 ## While the cube is being solved: `HeldCube`
 

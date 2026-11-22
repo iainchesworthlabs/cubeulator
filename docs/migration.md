@@ -91,7 +91,7 @@ To do:
 
 These are project features that the standard has no room for or that go beyond it. They stay.
 
-- The WebAssembly application on GitHub Pages under `/app/`, beside the documentation.
+- The WebAssembly application, which was on GitHub Pages under `/app/` beside the documentation and is now served under `/app/` of the company site (iainchesworthlabs.com/cubeulator/).
 - `docs/design/`, `docs/investigations/` and the spike process.
 - The platform-isolation check (`tools/checks/check_platform_isolation.ps1`); the shared preprocessor check runs beside it.
 - Performance and profiling tools, ProfileRecorder, and Tracy as a dormant build.

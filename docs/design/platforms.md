@@ -39,7 +39,7 @@ Checked against `src/app`, `packaging/` and `CHANGELOG.md` for 0.2.0-beta.4.
   the title bar following the app theme; the camera-blocked state.
 
 **iPhone** (0.2.0-beta.1 on; iOS 18 or later;
-[ios-install.md](../ios-install.md))
+[the iPhone build](../guide/iphone.md))
 
 - Built, signed and checked by Apple on a hosted Mac, and sent to TestFlight for
   the maintainer's internal testers (0.2.0-beta.2); there is no file to
@@ -66,7 +66,7 @@ Checked against `src/app`, `packaging/` and `CHANGELOG.md` for 0.2.0-beta.4.
   entry marking the camera `required="false"` as the notes below ask, and leaves
   the orientation unspecified; the rest of the Android column is design.
 
-**Browser** (published under `/app/`; [web.md](../web.md))
+**Browser** (published under `/app/` of the company site; [the web build](../web.md), [for users](../guide/web.md))
 
 - Built as the Web table says: the back camera first on a phone and a **Switch
   camera** button, exposure and white balance held where the browser allows, the
@@ -138,7 +138,7 @@ and shows its permission screen and then a scan that cannot start.
 ### Web
 
 The same shell, as WebAssembly in a browser tab (`src/app/platform/web/`,
-[Try it in your browser](../web.md)). It is a desktop-shaped platform that
+[the web build](../web.md)). It is a desktop-shaped platform that
 may be on a phone, so the shell's own responsive breakpoints do the
 work, not a platform flag.
 
