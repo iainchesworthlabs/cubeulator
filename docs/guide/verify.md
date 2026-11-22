@@ -37,10 +37,15 @@ who made the release if it is the only place the fingerprint appears.
 
 | | |
 |---|---|
-| Key | `Cubeulator Release Signing Key`, RSA 4096, signing only |
-| Fingerprint | `0CF2 A242 440A 7AF0 18A2  BFF3 03E2 D330 B299 EB46` |
-| Created | 2026-10-14 |
-| Expires | 2031-10-13 |
+| Key | `Iain Chesworth Labs Releases`, ed25519, signing only |
+| Fingerprint | `FD13 CB8C AC83 1664 8CD9  74D0 8149 254C 4189 4DBE` |
+| Created | 2026-10-22 |
+| Expires | 2028-10-21 |
+
+This is the key of every release from 0.2.0-beta.3 on, and the one in `docs/signing-key.asc`. The two releases before it,
+0.1.0-beta.1 and 0.2.0-beta.1, were signed with an earlier key, `Cubeulator Release Signing Key` (RSA 4096, created
+2026-10-14, expires 2031-10-13), whose fingerprint is `0CF2 A242 440A 7AF0 18A2  BFF3 03E2 D330 B299 EB46`. Compare the key
+that comes with the release you have with the fingerprint for that release. (0.2.0-beta.2 was tagged and never published.)
 
 ```sh
 gpg --show-keys --fingerprint cubeulator-signing-key.asc

@@ -412,9 +412,10 @@ identifiers.
 > [!NOTE]
 > [The migration plan](migration.md) ("Signing key") moves releases to the
 > organisation's key and deletes the repository secrets; releases up to
-> v0.2.0-beta.1 were signed with the project key described here. `release.yml`
-> still reads the two secret names below, and which key signs the next release
-> is the owner's to confirm.
+> v0.2.0-beta.1 were signed with the project key described here. From
+> v0.2.0-beta.3 on the release carries the organisation's key (`docs/signing-key.asc`),
+> because `release.yml` reads the two secret names below and the organisation's
+> secrets of those names now provide them.
 
 The release is signed with the project's GPG key, held as two repository
 secrets (the same names the other projects of the family use):
