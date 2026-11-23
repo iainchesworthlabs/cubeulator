@@ -1,0 +1,1 @@
+**About and Licences can be opened on the iPhone.** The Settings screen did not offer the About row on a phone, so neither it nor the licence notices under it could be reached there, although the design lists it on every platform and the GPL notices have to be within reach. The row is there on every platform now.

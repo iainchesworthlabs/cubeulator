@@ -39,7 +39,7 @@ on a Mac) names the app and its version, says who made it, that it is free
 software under the GNU General Public License, and gives the address of its
 source code, which opens in your browser when you press it. **Back**, or
 <kbd>Esc</kbd>, returns to where you opened it. It is not offered in the middle
-of a scan or a solve, where leaving would lose your place. It is not offered on a phone.
+of a scan or a solve, where leaving would lose your place.
 
 <figure markdown="span">
   ![The About screen: Cubeulator, Version 0.2.0-beta.4, who made it, the GNU General Public License notice, a Licences row and the source code address.](img/about-wide-light.webp#only-light){ loading=lazy }

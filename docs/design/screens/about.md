@@ -8,8 +8,9 @@
 > version (selectable), the three paragraphs, the **Licences** and **Source
 > code** rows and the small print, and Esc goes back. Not built: the icon, the
 > **Privacy** row (there is no Privacy screen), the build line with **Copy**,
-> and **Copy details**. There is no About on phones: Settings does not offer the
-> row there, and the iPhone has no menu bar. The browser build has it.
+> and **Copy details**. It is reached from Settings on every platform, a phone
+> included (the iPhone has no menu bar); it was missing from Settings on phones
+> in 0.2.0-beta.4 and earlier.
 
 Lane: experience. New (E3b). When this was written the app had no about box.
 
