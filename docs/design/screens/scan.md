@@ -16,11 +16,17 @@
 > `scan.camera.*` states are not built). Not built: the
 > leave and restart dialogs (both buttons act at once), More, the camera picker,
 > hand entry from here, the stuck hint, resuming after the camera was lost,
-> marks on the chips, the keys (Esc, R, M, H), keeping the screen awake, sound
+> marks on the chips, the keys R, M and H (Esc is **Cancel**, and does not ask
+> first), keeping the screen awake, sound
 > and haptics, and most of the spec's `objectName`s (the app has `scan.video`,
 > `scan.picture`, `scan.dot`, `scan.cornerDot`, `scan.status`, `scan.sizes`,
 > `scan.size.*`, `scan.chips`, `scan.buttons`, `scan.checkColours`,
-> `scan.switchCamera` and `scan.retry`).
+> `scan.switchCamera` and `scan.retry`). For a screen reader the screen is a
+> pane named by its headline, the picture is "Camera picture" (`scan.a11y.preview`),
+> each chip says which side it is and whether it is read, and the headline and
+> the guidance are announced as they change (a camera that will not start
+> interrupts); the buttons are Tab stops with a focus ring in the overlay's
+> colours.
 >
 > The app differs from the spec in three ways: the picture and its dots are
 > shown mirrored when the camera faces the user (the chips are not); it has a

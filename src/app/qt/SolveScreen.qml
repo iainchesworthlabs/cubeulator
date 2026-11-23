@@ -246,7 +246,10 @@ Rectangle {
     Connections {
         target: HeldCube
         function onMoveSeen() {
-            moveSeenNote.restart();
+            // A flash is not shown to someone who asked for less motion; the
+            // step itself, and the words, say the move was seen.
+            if (!Theme.reducedMotion)
+                moveSeenNote.restart();
             if (root.pendingStep === 0)
                 root.next();
         }
@@ -276,6 +279,23 @@ Rectangle {
         return qsTrId("solve.move.layers").arg(placeWords[movePlace])
             .arg(SolveController.currentMoveFirst + 1).arg(SolveController.currentMoveLast + 1).arg(turnWords);
     }
+
+    // What a screen reader says of the turn to make: the side, how far, and which
+    // way - clockwise or anticlockwise as the person looks at that side from
+    // outside, which is how a quarter turn is counted and does not depend on how
+    // the cube is held. A half turn has no direction.
+    readonly property string moveSpeech: {
+        if (moveSide === "")
+            return SolveController.atEnd ? qsTrId("complete.title") : "";
+        const turns = SolveController.currentMoveTurns;
+        if (turns === 2)
+            return moveWords;
+        return qsTrId("solve.a11y.move").arg(moveWords).arg(turns === 1 ? qsTrId("dir.cw") : qsTrId("dir.ccw"));
+    }
+    // ... and, when there is a turn to make, how far through the solve it is.
+    readonly property string progressSpeech: SolveController.atEnd || SolveController.isSolving ? ""
+        : qsTrId("solve.progress").arg(Qt.locale(Qt.uiLanguage).toString(SolveController.moveIndex + 1))
+              .arg(Qt.locale(Qt.uiLanguage).toString(SolveController.totalMoves))
 
     // ---- where the cube is looked at from ------------------------------------
     // Normally from above and to the right, which shows the top, the front
@@ -374,6 +394,22 @@ Rectangle {
     Component.onCompleted: {
         forceActiveFocus();
         updateStageOrder();
+    }
+
+    // For a screen reader: entering the screen says how the cube is held (the
+    // header's line), and each turn is said as it comes - the stage first when
+    // it has changed - with what the camera makes of the cube beside it. The
+    // keys are the screen's, so focus is on the screen and not on a button.
+    Accessible.role: Accessible.Pane
+    Accessible.name: root.holdWords
+    Announcer {
+        lead: SolveController.isSolving || !root.currentCopy ? "" : root.currentCopy.title
+        message: SolveController.isSolving ? qsTrId("solve.solving")
+            : (root.progressSpeech !== "" ? root.progressSpeech + ". " : "") + root.moveSpeech
+    }
+    Announcer {
+        message: root.mistakeTitle !== "" ? root.mistakeTitle + ". " + root.mistakeWords : root.cameraWords
+        settle: 700
     }
     Keys.onRightPressed: next()
     Keys.onSpacePressed: next()
@@ -504,6 +540,9 @@ Rectangle {
                 showStats: SettingsState.statsForNerds
 
                 objectName: "solve.cube"
+                // One GPU surface: the turn in words is what stands in for it.
+                Accessible.role: Accessible.Graphic
+                Accessible.name: qsTrId("solve.a11y.cube").arg(root.moveSpeech)
 
                 // Turned the way the cube is held, and seen from wherever shows
                 // the side about to move.
@@ -530,6 +569,8 @@ Rectangle {
                 showStats: SettingsState.statsForNerds
 
                 objectName: "solve.cube"
+                Accessible.role: Accessible.Graphic
+                Accessible.name: qsTrId("solve.a11y.cube").arg(root.moveSpeech)
 
                 // Turned the way the cube is held, as the 3x3's is.
                 homeRotation: Qt.vector3d(0, 0, 0)
@@ -556,6 +597,8 @@ Rectangle {
                 text: qsTrId("solve.stageOf").arg(root.digits(root.stagePosition + 1)).arg(root.digits(root.stageCount))
                 font.capitalization: Font.AllUppercase
                 color: Theme.accent; font.family: Theme.fontHeading; font.pixelSize: 11; font.letterSpacing: 1.4
+                Accessible.role: Accessible.Heading
+                Accessible.name: text
             }
             Text {
                 text: SolveController.atEnd ? qsTrId("complete.title") : SolveController.currentMoveNotation
@@ -747,13 +790,15 @@ Rectangle {
                                            Math.min(frameW - viewW / (2 * shownScale), aimX))
             property real shownY: Math.max(viewH / (2 * shownScale),
                                            Math.min(frameH - viewH / (2 * shownScale), aimY))
-            Behavior on shownScale { SmoothedAnimation { duration: 350; velocity: -1 } }
-            Behavior on shownX { SmoothedAnimation { duration: 350; velocity: -1 } }
-            Behavior on shownY { SmoothedAnimation { duration: 350; velocity: -1 } }
+            Behavior on shownScale { enabled: !Theme.reducedMotion; SmoothedAnimation { duration: 350; velocity: -1 } }
+            Behavior on shownX { enabled: !Theme.reducedMotion; SmoothedAnimation { duration: 350; velocity: -1 } }
+            Behavior on shownY { enabled: !Theme.reducedMotion; SmoothedAnimation { duration: 350; velocity: -1 } }
 
             Rectangle {
                 id: preview
                 objectName: "solve.camera"
+                Accessible.role: Accessible.Graphic
+                Accessible.name: qsTrId("scan.a11y.preview")
                 // What the tests read: where a frame pixel lands in here.
                 readonly property real pictureX: previewImage.x
                 readonly property real pictureY: previewImage.y
@@ -833,7 +878,7 @@ Rectangle {
                     color: "transparent"
                     border.width: 2
                     border.color: root.sightColor
-                    Behavior on border.color { ColorAnimation { duration: 180 } }
+                    Behavior on border.color { enabled: !Theme.reducedMotion; ColorAnimation { duration: 180 } }
                 }
             }
         }
@@ -945,6 +990,15 @@ Rectangle {
             color: isCurrent ? Theme.accent100 : "transparent"
             opacity: isDone ? 0.5 : 1.0
 
+            // A list of the stages: the title, what it asks of the person once it
+            // is the one being worked on, and which one that is. (The tick and the
+            // number inside are for the eye.)
+            Accessible.role: Accessible.ListItem
+            Accessible.name: copy ? copy.title : ""
+            Accessible.description: isCurrent && copy ? copy.detail : ""
+            Accessible.selectable: true
+            Accessible.selected: isCurrent
+
             Rectangle {
                 anchors.bottom: parent.bottom
                 width: parent.width; height: 1
@@ -1032,6 +1086,7 @@ Rectangle {
             SolveMethodPicker {
                 id: methodPicker
                 objectName: "solve.method"
+                groupName: qsTrId("settings.section.solving")
                 x: Theme.space3; y: Theme.space3
                 width: parent.width - 2 * Theme.space3
                 showNote: root.wide
@@ -1272,7 +1327,8 @@ Rectangle {
                 }
 
                 RotationAnimation on rotation {
-                    running: SolveController.isSolving
+                    // Still, with the words under it, for reduced motion.
+                    running: SolveController.isSolving && !Theme.reducedMotion
                     from: 0; to: 360
                     duration: 900
                     loops: Animation.Infinite

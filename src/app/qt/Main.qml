@@ -44,7 +44,8 @@ ApplicationWindow {
     NumberAnimation {
         id: screenFade
         target: screens; property: "opacity"
-        from: 0; to: 1; duration: 280; easing.type: Easing.OutCubic
+        // Reduced motion: a shorter fade, opacity only (it only ever was).
+        from: 0; to: 1; duration: Theme.reducedMotion ? 120 : 280; easing.type: Easing.OutCubic
     }
 
     // The diagnostics channel is never silent: while it writes, every screen

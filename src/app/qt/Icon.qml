@@ -11,6 +11,10 @@ Canvas {
     property string name: ""
     property color color: Theme.ink
     property real strokeWidth: 2
+    // A picture beside words: the control it sits in carries the name, and an
+    // icon that said its own as well would be read twice
+    // (docs/design/accessibility.md, "Things that are opaque").
+    Accessible.ignored: true
 
     // A chevron points the way the layout goes, so it turns round when the
     // layout is mirrored. Nothing else here is a direction: the icons that

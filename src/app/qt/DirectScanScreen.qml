@@ -117,6 +117,24 @@ Item {
         return qsTrId("scan.guide.next");
     }
 
+    // ---- for a screen reader and the keyboard ----------------------------------
+    // Entering the screen says what it is (the headline), Esc is Cancel, and a
+    // change of the headline or the guidance - what a person looking at the
+    // screen would see change - is said. A camera that will not start is the
+    // one thing that stops the person, and interrupts.
+    focus: true
+    Component.onCompleted: forceActiveFocus()
+    Keys.onEscapePressed: AppState.goLaunch()
+    Keys.onBackPressed: AppState.goLaunch()
+    Accessible.role: Accessible.Pane
+    Accessible.name: root.headline
+    Announcer {
+        lead: root.headline
+        message: root.guidance
+        assertive: root.cameraFailed
+        settle: 500
+    }
+
     Rectangle { anchors.fill: parent; color: "#141312" }
 
     // The camera and the dots on it are one picture and flip together, about
@@ -126,6 +144,9 @@ Item {
         id: video
         objectName: "scan.video"
         anchors.fill: parent
+        // Live video: what it shows is in the status panel, which is read.
+        Accessible.role: Accessible.Graphic
+        Accessible.name: qsTrId("scan.a11y.preview")
         transform: Scale {
             origin.x: video.width / 2
             xScale: root.mirrored ? -1 : 1
@@ -194,7 +215,7 @@ Item {
         height: statusColumn.height + 2 * Theme.space3
         radius: 8
         color: Qt.rgba(0.08, 0.075, 0.07, 0.78)
-        Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        Behavior on height { enabled: !Theme.reducedMotion; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
         Column {
             id: statusColumn
@@ -208,7 +229,9 @@ Item {
                 wrapMode: Text.WordWrap
                 color: root.complete ? root.good : "#F3F2F2"
                 font.family: Theme.fontHeading; font.pixelSize: 24; font.weight: Font.DemiBold
-                Behavior on color { ColorAnimation { duration: 220 } }
+                Accessible.role: Accessible.Heading
+                Accessible.name: text
+                Behavior on color { enabled: !Theme.reducedMotion; ColorAnimation { duration: 220 } }
             }
             Text {
                 width: parent.width
@@ -259,13 +282,18 @@ Item {
         anchors.bottomMargin: Theme.space3
         spacing: Theme.space2
         visible: !root.complete && !root.cameraFailed
+        Accessible.role: Accessible.Grouping
+        Accessible.name: qsTrId("entry.size.label")
 
         // The size is found from the cube until a size is chosen; this goes back to
         // finding it.
         AppButton {
             objectName: "scan.size.auto"
             height: 36
+            overCamera: true
             variant: DirectScan.autoSize ? "primary" : "secondary"
+            checkable: true
+            checked: DirectScan.autoSize
             text: qsTrId("scan.size.auto")
             onClicked: DirectScan.useAutoSize()
         }
@@ -274,9 +302,12 @@ Item {
             AppButton {
                 objectName: "scan.size." + modelData
                 height: 36
+                overCamera: true
                 // Not while the size is being found: then DirectScan.size is the size found so
                 // far, and Auto is the choice that stands, not the size beside it as well.
                 variant: !DirectScan.autoSize && modelData === DirectScan.size ? "primary" : "secondary"
+                checkable: true
+                checked: !DirectScan.autoSize && modelData === DirectScan.size
                 text: qsTrId("entry.size.option").arg(modelData)
                 onClicked: DirectScan.size = modelData
             }
@@ -311,10 +342,18 @@ Item {
                 color: Qt.rgba(0.08, 0.075, 0.07, 0.85)
                 border.width: root.complete || inView ? 3 : 1
                 border.color: root.complete ? root.good : inView ? "#F3F2F2" : Qt.rgba(1, 1, 1, 0.25)
-                Behavior on border.color { ColorAnimation { duration: 220 } }
+                Behavior on border.color { enabled: !Theme.reducedMotion; ColorAnimation { duration: 220 } }
 
-                // A side arriving.
-                onFilledChanged: if (filled) arrive.restart()
+                // Nine coloured squares to the eye; to a screen reader, which side
+                // it is and whether it has been read. (The colours themselves are
+                // what the camera measured, not a name to speak.)
+                Accessible.role: Accessible.Graphic
+                Accessible.name: !filled ? qsTrId("scan.a11y.chipEmpty").arg(slot + 1)
+                    : (inView ? qsTrId("scan.a11y.chipInView") : qsTrId("scan.a11y.chipRead"))
+                          .arg(slot + 1).arg("").trim()
+
+                // A side arriving (a still chip, with reduced motion).
+                onFilledChanged: if (filled && !Theme.reducedMotion) arrive.restart()
                 SequentialAnimation {
                     id: arrive
                     NumberAnimation { target: chipFrame; property: "scale"; from: 0.8; to: 1.08; duration: 130; easing.type: Easing.OutQuad }
@@ -325,7 +364,7 @@ Item {
                 Connections {
                     target: root
                     function onCompleteChanged() {
-                        if (root.complete)
+                        if (root.complete && !Theme.reducedMotion)
                             confirm.restart();
                     }
                 }
@@ -373,6 +412,7 @@ Item {
 
         AppButton {
             height: 42
+            overCamera: true
             variant: "secondary"; text: qsTrId("common.cancel")
             onClicked: AppState.goLaunch()
         }
@@ -381,6 +421,7 @@ Item {
         AppButton {
             objectName: "scan.checkColours"
             height: 42
+            overCamera: true
             visible: DirectScan.reviewable && !root.cameraFailed
             variant: DirectScan.conflicted ? "primary" : "secondary"
             text: qsTrId("scan.checkColours")
@@ -388,6 +429,7 @@ Item {
         }
         AppButton {
             height: 42
+            overCamera: true
             visible: !root.complete && !root.cameraFailed
             variant: "secondary"; text: qsTrId("scan.startOver")
             enabled: DirectScan.sidesRead > 0
@@ -400,6 +442,7 @@ Item {
         AppButton {
             objectName: "scan.switchCamera"
             height: 42
+            overCamera: true
             visible: PlatformFacts.cameraSwitchOnScanScreen && CameraController.devices.length > 1
             enabled: !DirectScan.starting
             variant: "secondary"; text: qsTrId("scan.more.switchCamera")
@@ -415,6 +458,7 @@ Item {
         AppButton {
             objectName: "scan.retry"
             height: 42
+            overCamera: true
             visible: root.cameraFailed
             variant: "primary"; text: qsTrId("common.tryAgain")
             onClicked: DirectScan.start(CameraController.selectedDeviceId)

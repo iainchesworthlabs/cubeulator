@@ -13,6 +13,18 @@ Rectangle {
     // stops after "don't ask again"; Qt's API doesn't expose which), so
     // both a re-ask and the OS-settings escape hatch are offered.
     readonly property bool denied: CameraPermission.status === 1
+    readonly property string titleWords: root.denied ? qsTrId("permission.refused.title") : qsTrId("permission.title")
+
+    // Entering the screen says what it is, and Esc is "Not now".
+    focus: true
+    Component.onCompleted: forceActiveFocus()
+    Keys.onEscapePressed: AppState.goLaunch()
+    Keys.onBackPressed: AppState.goLaunch()
+    Accessible.role: Accessible.Pane
+    Accessible.name: root.titleWords
+    // The answer to the system's prompt arrives while the person is looking at
+    // it: said when it is no.
+    Announcer { message: root.denied ? root.titleWords : "" }
 
     Connections {
         target: CameraPermission
@@ -56,6 +68,8 @@ Rectangle {
             text: root.denied ? qsTrId("permission.refused.title") : qsTrId("permission.title")
             font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 25; color: Theme.ink
             width: parent.width; wrapMode: Text.WordWrap
+            Accessible.role: Accessible.Heading
+            Accessible.name: text
         }
         Text {
             id: narrowBody
@@ -127,6 +141,8 @@ Rectangle {
                 text: root.denied ? qsTrId("permission.refused.title") : qsTrId("permission.title")
                 font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 32; color: Theme.ink
                 width: parent.width - parent.padding * 2; wrapMode: Text.WordWrap
+                Accessible.role: Accessible.Heading
+                Accessible.name: text
             }
             Text {
                 text: root.denied ? qsTrId("permission.refused.body") : qsTrId("permission.body")

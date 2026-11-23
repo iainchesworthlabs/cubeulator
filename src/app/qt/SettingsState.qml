@@ -79,8 +79,14 @@ QtObject {
         id: appearanceSettingsId
         category: "appearance"
         property string themeMode: "system"
+        // "system" (the device's own setting, which is the default: nothing
+        // moves differently on a device that has not asked for less), "reduced"
+        // or "full" (Theme.reducedMotion).
+        property string motion: "system"
     }
     property alias themeMode: appearanceSettingsId.themeMode
+    property alias motion: appearanceSettingsId.motion
+    readonly property var motionModes: ["system", "reduced", "full"]
 
     // Which QRhi backends Qt actually supports on this platform (see
     // https://doc.qt.io/qt-6/qsgrendererinterface.html): "auto" always, then

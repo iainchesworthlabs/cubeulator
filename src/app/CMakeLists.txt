@@ -184,6 +184,8 @@ if(CUBEULATOR_BUILD_APP)
             qt/ConfirmDialog.qml
             qt/SolutionScreen.qml
             qt/TurnArrow.qml
+            qt/FocusRing.qml
+            qt/Announcer.qml
         SOURCES
             qt/CameraPermission.hpp
             qt/CameraPermission.cpp

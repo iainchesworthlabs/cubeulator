@@ -8,6 +8,13 @@ Rectangle {
     color: Theme.paper
     readonly property bool wide: width >= Theme.wideBreakpoint
 
+    // Entering the screen says what it is: "Solved", and how the solve went.
+    focus: true
+    Component.onCompleted: forceActiveFocus()
+    Accessible.role: Accessible.Pane
+    Accessible.name: qsTrId("complete.title")
+    Accessible.description: qsTrId("history.item.done", AppState.moveCount).arg(AppState.elapsedLabel())
+
     // The way this cube was solved, by SolveController.Method.
     readonly property var methodNames: [
         qsTrId("solve.method.beginner"),
@@ -17,8 +24,12 @@ Rectangle {
 
     readonly property var solvedCube: ({ top: Array(9).fill(Theme.faceU), right: Array(9).fill(Theme.faceR), left: Array(9).fill(Theme.faceF) })
 
+    // The cube is a picture of the solved one, which the title and the numbers
+    // already say; it bobs unless the person has asked for less motion.
     component BobbingCube: CubeView {
+        Accessible.ignored: true
         SequentialAnimation on y {
+            running: !Theme.reducedMotion
             loops: Animation.Infinite
             NumberAnimation { from: 0; to: -5; duration: 1300; easing.type: Easing.InOutQuad }
             NumberAnimation { from: -5; to: 0; duration: 1300; easing.type: Easing.InOutQuad }
@@ -34,8 +45,11 @@ Rectangle {
             height: parent.barHeight
             width: parent.fullWidth * scaleX
             color: Theme.accent
-            property real scaleX: 0
+            property real scaleX: Theme.reducedMotion ? 1 : 0
             SequentialAnimation on scaleX {
+                // Reduced motion draws it, whole, and leaves it (the property's
+                // own binding, above, says whole).
+                running: !Theme.reducedMotion
                 loops: Animation.Infinite
                 NumberAnimation { from: 0; to: 1; duration: 1300; easing.type: Easing.OutCubic }
                 PauseAnimation { duration: 1100 }
@@ -62,7 +76,7 @@ Rectangle {
         Column {
             topPadding: Theme.space2
             spacing: 4
-            Text { text: qsTrId("complete.title"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 44; color: Theme.ink; font.letterSpacing: -0.5 }
+            Text { text: qsTrId("complete.title"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 44; color: Theme.ink; font.letterSpacing: -0.5; Accessible.role: Accessible.Heading; Accessible.name: text }
             SweepUnderline { fullWidth: 120 }
         }
 
@@ -132,7 +146,7 @@ Rectangle {
 
             Column {
                 spacing: 6
-                Text { text: qsTrId("complete.title"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 64; color: Theme.ink; font.letterSpacing: -1 }
+                Text { text: qsTrId("complete.title"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 64; color: Theme.ink; font.letterSpacing: -1; Accessible.role: Accessible.Heading; Accessible.name: text }
                 SweepUnderline { fullWidth: 180; barHeight: 5 }
             }
 

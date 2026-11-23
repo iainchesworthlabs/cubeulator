@@ -7,17 +7,21 @@
 > device's, light, dark), the language (the device's, then the nine, applied at
 > once and kept), **Keep a history of solves** and **Clear history** (which asks
 > first), and the **About Cubeulator** row on desktop and in the browser (it
-> opens the About screen; there is none on phones). Not built: marks, text size,
-> motion, advancing and pace, explanations, notation, sound, vibration, the Help
-> row, the language and camera sheets (both are rows of choices in the column),
-> the camera states as notices (the app shows them as plain text, and has no
-> `settings.camera.unsupported`), and Esc to go back. The developer rows (cube
+> opens the About screen; there is none on phones), and the **Motion** row
+> (Same as this device, Reduced, Full; `appearance/motion`, "system" by default),
+> and Esc to go back. Every chip, switch and button is a Tab stop with a name and
+> a role, and a choice says whether it is the one that is on. Not built: marks,
+> text size, advancing and pace, explanations, notation, sound, vibration, the
+> Help row, the language and camera sheets (both are rows of choices in the
+> column), and the camera states as notices (the app shows them as plain text,
+> and has no `settings.camera.unsupported`). The developer rows (cube
 > style, auto-rotate and its speed, the graphics backend, frame rate, a **Test
 > turn** button, and the diagnostics switches where the platform has a
 > diagnostics folder) are shown in every build, and ask for their words by id
 > (`settings.dev.*`).
 > What persists today is `language/code`, `appearance/themeMode`,
-> `solving/method`, `rendering/graphicsBackend` and `history/keep`; the cube
+> `appearance/motion`, `solving/method`, `rendering/graphicsBackend` and
+> `history/keep`; the cube
 > style and auto-rotate are not kept, and the other keys in the persistence
 > table below are the design's.
 

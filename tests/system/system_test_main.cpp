@@ -172,6 +172,12 @@ int main(int argc, char* argv[]) {
         QSettings store;
         store.setValue("appearance/themeMode", seeded);
         store.sync();
+    } else {
+        // Motion begins as the tests are written for, not as this machine asks
+        // (test_platform.hpp); App::fresh puts it back before every case. Not in the
+        // relaunch run, which is how the app starts from a store a person has left
+        // the theme in and nothing else: it checks the app's own default.
+        cube::test::pin_full_motion();
     }
 
     QGuiApplication app(argc, argv);

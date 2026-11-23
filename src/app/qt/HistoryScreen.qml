@@ -75,6 +75,9 @@ Rectangle {
     Component.onCompleted: forceActiveFocus()
     Keys.onEscapePressed: root.goBack()
     Keys.onBackPressed: root.goBack()
+    // Entering the screen says what it is.
+    Accessible.role: Accessible.Pane
+    Accessible.name: qsTrId("history.title")
 
     // ---- parts ----------------------------------------------------------------
 
@@ -254,6 +257,23 @@ Rectangle {
 
                     Accessible.role: Accessible.Button
                     Accessible.name: qsTrId("history.a11y.row").arg(dateText).arg(summaryText)
+                    Accessible.focusable: true
+                    Accessible.onPressAction: row.open()
+
+                    // Tab reaches the row (and then its delete button), Space and Enter
+                    // open it, and Delete asks to delete it.
+                    activeFocusOnTab: true
+                    onActiveFocusChanged: if (activeFocus) list.positionViewAtIndex(index, ListView.Contain)
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            event.accepted = true;
+                            if (!event.isAutoRepeat)
+                                row.open();
+                        } else if (event.key === Qt.Key_Delete) {
+                            event.accepted = true;
+                            root.deleteTarget = row.modelData.id;
+                        }
+                    }
 
                     function open() {
                         if (modelData.carryOn)
@@ -268,6 +288,7 @@ Rectangle {
                         color: Theme.inkMuted(0.07)
                     }
                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.divider }
+                    FocusRing {}
 
                     // The row itself: everything but the delete button.
                     MouseArea {
@@ -332,11 +353,23 @@ Rectangle {
                         width: 56; height: 56
                         Accessible.role: Accessible.Button
                         Accessible.name: qsTrId("history.a11y.delete").arg(row.dateText)
+                        Accessible.focusable: true
+                        Accessible.onPressAction: root.deleteTarget = row.modelData.id
+                        activeFocusOnTab: true
+                        onActiveFocusChanged: if (activeFocus) list.positionViewAtIndex(row.index, ListView.Contain)
+                        Keys.onPressed: (event) => {
+                            if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                event.accepted = true;
+                                if (!event.isAutoRepeat)
+                                    root.deleteTarget = row.modelData.id;
+                            }
+                        }
                         Rectangle {
                             anchors.fill: parent
                             color: Theme.inkMuted(0.07)
                             visible: deleteArea.containsMouse
                         }
+                        FocusRing {}
                         Icon {
                             anchors.centerIn: parent
                             name: "cross"
@@ -407,12 +440,11 @@ Rectangle {
 
     // What a screen reader is told when a row or the whole list has gone. The
     // list changes under it, so there is no control left to carry the news.
-    Item {
+    Announcer {
         objectName: "history.announcement"
-        width: 1; height: 1
-        opacity: 0
-        Accessible.role: Accessible.AlertMessage
-        Accessible.name: root.announcement
+        message: root.announcement
+        // Said again if it is the same twice (a second solve deleted): each is news.
+        repeatAfter: 0
     }
 
     // ---- dialogs (last, so they are over everything) ----------------------------
@@ -427,6 +459,7 @@ Rectangle {
         onConfirmed: {
             SolveHistory.remove(root.deleteTarget);
             root.deleteTarget = 0;
+            root.announcement = "";  // so that the same news twice is two changes
             root.announcement = qsTrId("history.a11y.deleted");
         }
     }
@@ -442,6 +475,7 @@ Rectangle {
         onConfirmed: {
             SolveHistory.clear();
             root.confirmingClear = false;
+            root.announcement = "";
             root.announcement = qsTrId("history.a11y.cleared");
         }
     }

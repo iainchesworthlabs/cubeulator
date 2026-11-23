@@ -20,6 +20,9 @@ Canvas {
     property string kind: "right"
     property color color: Theme.ink
     property real strokeWidth: 2
+    // The direction is in the words beside it (the turn sentence), so the
+    // arrow is not read out.
+    Accessible.ignored: true
 
     onKindChanged: requestPaint()
     onColorChanged: requestPaint()

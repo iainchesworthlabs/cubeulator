@@ -50,8 +50,16 @@ Rectangle {
     }
 
     focus: true
+    Component.onCompleted: forceActiveFocus()
     Keys.onEscapePressed: AppState.closeEntry()
     Keys.onBackPressed: AppState.closeEntry()
+    Accessible.role: Accessible.Pane
+    Accessible.name: qsTrId("entry.title")
+
+    // What is wrong with the scramble appears under the box while focus is in
+    // it; it is said as well, as it is not something the person can hear
+    // arrive.
+    Announcer { message: root.problem !== null ? root.problemWords : ""; assertive: true }
 
     Flickable {
         anchors.fill: parent
@@ -91,6 +99,8 @@ Rectangle {
                     wrapMode: Text.Wrap
                     font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 22
                     color: Theme.ink
+                    Accessible.role: Accessible.Heading
+                    Accessible.name: text
                 }
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Theme.divider }
             }
@@ -111,6 +121,8 @@ Rectangle {
                 Flow {
                     width: parent.width
                     spacing: Theme.space2
+                    Accessible.role: Accessible.Grouping
+                    Accessible.name: qsTrId("entry.size.label")
                     Repeater {
                         model: root.sizes
                         delegate: AppButton {
@@ -118,6 +130,8 @@ Rectangle {
                             objectName: "entry.size." + modelData
                             height: 44
                             variant: modelData === root.size ? "primary" : "secondary"
+                            checkable: true
+                            checked: modelData === root.size
                             text: qsTrId("entry.size.option").arg(root.digits(modelData))
                             onClicked: {
                                 AppState.entrySize = modelData;
@@ -165,6 +179,8 @@ Rectangle {
                         anchors.margins: Theme.space2
                         padding: Theme.space1
                         wrapMode: TextEdit.Wrap
+                        Accessible.name: qsTrId("entry.scramble.label")
+                        Accessible.description: qsTrId("entry.scramble.help")
                         placeholderText: qsTrId("entry.scramble.placeholder")
                         placeholderTextColor: Theme.inkMuted(0.45)
                         color: Theme.ink
@@ -177,12 +193,20 @@ Rectangle {
                         background: null
                         onTextChanged: root.problem = null
                         // Return makes a new line, which is whitespace as far as
-                        // moves are concerned; Ctrl+Return solves.
+                        // moves are concerned; Ctrl+Return solves. Tab and Shift+Tab
+                        // leave the box (it would otherwise be a keyboard trap: a tab
+                        // is not a move, and is not typed here).
                         Keys.onPressed: (event) => {
                             if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                                     && (event.modifiers & Qt.ControlModifier)) {
                                 event.accepted = true;
                                 root.solve();
+                            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                                event.accepted = true;
+                                const forward = event.key === Qt.Key_Tab && !(event.modifiers & Qt.ShiftModifier);
+                                const next = scramble.nextItemInFocusChain(forward);
+                                if (next)
+                                    next.forceActiveFocus(forward ? Qt.TabFocusReason : Qt.BacktabFocusReason);
                             }
                         }
                     }

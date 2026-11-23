@@ -13,6 +13,8 @@ Column {
 
     // The method chosen: a SolveController.Method value.
     property int current: SolveController.Beginner
+    // What a screen reader calls the three choices.
+    property string groupName: ""
     // Whether to say what the chosen method is. The solve screen's narrow
     // layout has no room for it and leaves it out.
     property bool showNote: true
@@ -26,6 +28,9 @@ Column {
 
     width: parent ? parent.width : 0
     spacing: Theme.space1
+
+    Accessible.role: Accessible.Grouping
+    Accessible.name: root.groupName
 
     // Each a plain qsTrId() with a literal id, so the extractor can see it;
     // the order is SolveController.Method's.
@@ -62,6 +67,11 @@ Column {
                 text: modelData
                 enabled: root.choosable
                 variant: index === root.current ? "primary" : "secondary"
+                checkable: true
+                checked: index === root.current
+                // What the method is, which the note says where there is room
+                // to show it.
+                accessibleDescription: root.notes[index] !== undefined ? root.notes[index] : ""
                 onClicked: root.selected(index)
             }
         }

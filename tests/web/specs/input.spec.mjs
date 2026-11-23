@@ -83,22 +83,47 @@ test.describe('a finger', () => {
 });
 
 test.describe('a keyboard', () => {
-  // EXPECTED TO CHANGE (tests/system/known_today_test.cpp, and the plan's
-  // Accessibility item): the controls are an Item and a MouseArea, not focus
-  // items, and nothing handles Escape or Back. These say what is true today so
-  // that the change shows up as a failure to update.
-  test('reaches no control with Tab, and Escape leaves nothing', async ({ app }) => {
-    for (let i = 0; i < 6; i++) {
+  // The controls are Tab stops (AppButton takes focus, Enter and Space press it, and
+  // a ring shows where it is) and Escape goes back on Settings; the desktop build's
+  // counterpart is tests/system/accessibility_test.cpp. What these hold on the web is
+  // that it holds here too, and that it does not trap: the page's own errors are failed
+  // by the fixture, as in every spec.
+  const SHELL = ['Main', 'ApplicationWindowContentControl', 'ApplicationWindow'];
+  // The control that has keyboard focus, by name, or null.
+  const focusedControl = async (app) => {
+    const focused = (await app.state()).items.filter((item) => item.activeFocus && item.name &&
+      !SHELL.includes(item.name));
+    return focused.length > 0 ? focused[0].name : null;
+  };
+
+  test('reaches the controls of the launch screen with Tab, in order, and comes round', async ({ app }) => {
+    const order = ['launch.startScan', 'launch.other', 'launch.solveHistory', 'launch.language',
+      'launch.settings'];
+    for (const name of order) {
+      await app.key('Tab');
+      await expect.poll(() => focusedControl(app)).toBe(name);
+    }
+    // No trap: one more comes round to the first.
+    await app.key('Tab');
+    await expect.poll(() => focusedControl(app)).toBe(order[0]);
+    expect(await app.screen()).toBe('launch');
+  });
+
+  test('presses the control it is on with Enter, and Escape goes back', async ({ app }) => {
+    for (let i = 0; i < 5; i++) {
       await app.key('Tab');
     }
-    const focused = (await app.state()).items.filter((item) => item.activeFocus && item.name &&
-      !['Main', 'ApplicationWindowContentControl', 'ApplicationWindow'].includes(item.name));
-    expect(focused).toEqual([]);
+    await expect.poll(() => focusedControl(app)).toBe('launch.settings');
+    await app.key('Enter');
+    await app.waitForScreen('settings');
+    await app.key('Escape');
+    await app.waitForScreen('launch');
+  });
 
+  test('Escape leaves Settings opened with the mouse', async ({ app }) => {
     await app.click('launch.settings');
     await app.waitForScreen('settings');
     await app.key('Escape');
-    await app.page.waitForTimeout(300);
-    expect(await app.screen()).toBe('settings');
+    await app.waitForScreen('launch');
   });
 });

@@ -236,7 +236,9 @@ The relaunch case needs the settings store seeded before the app exists, which
 only its ctest entry does (`CUBE_SYSTEM_TEST_THEME`). Picked up through a tag it
 shares with other cases (`[settings]`, `[system]`) it is reported as skipped,
 with that reason; run alone without the seed, the binary exits 4, so the
-entry cannot pass without the check having been made.
+entry cannot pass without the check having been made. It is also the one run that
+does not start from the Motion setting the other cases are pinned to (see
+"Motion is pinned to full", below), so it checks the app's own default.
 
 On a desktop that opens a window and drives it; on a headless Linux box give
 it a display and software GL (this is what CI does):
@@ -328,6 +330,42 @@ on Windows); the whole macOS step is about 28 minutes.
 - **Sweeps.** `press_every_control` (`sweep.hpp`) presses everything the live
   item tree offers on a screen, once; a control added tomorrow is pressed
   with no test change, and what it does is for a case of its own.
+- **Motion is pinned to full, because hosts differ.** The app follows the device's
+  request for less motion (Settings > Appearance > Motion is "same as this device"
+  until a person changes it), and a GitHub-hosted Windows runner is a virtual machine
+  that reports a request for less motion (its animations are off; Qt 6.12 passes that
+  on as `ReducedMotion`), so the nudge and the sweep of a turn, which many cases wait
+  for, never happen there. On a desktop every case passed, and on the hosted Windows leg
+  eleven unit tests and the launch cube's spin failed: exactly what a desktop does with
+  the preference forced. So every binary that loads the app's QML starts from
+  "full": `cube::test::pin_full_motion()` (`tests/test_platform.hpp`) is called in
+  `qml_test_main.cpp`, `i18n/screen_test_main.cpp` and `system_test_main.cpp` once their
+  settings store is a temporary directory, and `App::fresh()` sets it again before
+  every case. A case about less motion sets `"reduced"` or `"system"` itself
+  (`accessibility_test.cpp`); the one that follows the device reads Qt's own report and
+  compares. The app's own default ("same as this device") is checked by the one run
+  that does not pin it, `system.relaunch`, which starts from a store with a theme in it and
+  nothing else. A case that waits for the layer to move needs no line of its own, and one
+  that is about the layer standing still must say so.
+- **The keyboard and the accessibility tree.** `accessibility_test.cpp` takes the
+  same walk with the keyboard and with what a screen reader is given. It walks
+  Qt's accessibility tree (`QAccessible`, which every platform's reader is built
+  on) on every screen in both layouts and fails when a control that
+  `App::visible_controls` finds is not in it with a role that can be operated
+  and a name that is not an id, when a screen is not a named pane with a
+  heading, or when focus is not on the screen after it appears; it presses Tab
+  round every screen (`App::key(Qt::Key_Tab)`, `App::focus_name`) and fails on a
+  control Tab does not stop on; it makes the whole journey with Tab, Shift+Tab,
+  Enter, Space, the arrows and Esc (`App::press_focused` counts a keyboard press
+  for the reach gate, as a click is counted); and it installs
+  `QAccessible::installUpdateHandler` to read what the app announces
+  (`Accessible.announce`) and how urgently. A control that cannot be reached by
+  Tab says why in `reached_otherwise` (the draggable cubes, which are a way to
+  look; the rows of the solution, which the arrow keys step to). A hidden case,
+  `cube_system_tests "[.focus-shot]"`, writes pictures of the focus ring (light
+  and dark, over the camera) to `$CUBE_SYSTEM_TEST_OUT/screens` for a person to
+  look at. What the tests cannot say is how NVDA, Narrator or VoiceOver speaks
+  any of it.
 - **QML warnings are failures.** `diagnostics.cpp` collects what the app's own
   QML printed; the journey cases assert it is nothing.
 - **One file is added from `tests/CMakeLists.txt`**, not listed in
@@ -617,10 +655,11 @@ to turn a layer in, so a box that is clear is a cube that is clear at any angle.
 ### Known today
 
 `known_today_test.cpp` asserts, as they are, the behaviours the
-[experience plan](app-experience-plan.md) lists as defects. Two are left: the
+[experience plan](app-experience-plan.md) lists as defects. One is left: the
 launch screen's language button is a picker with one language and opens
-Settings, and there is no back handling (Escape, the Back key) and no control
-that takes keyboard focus on the settings screen. Each is tagged
+Settings. (The other, that there was no back handling and no control took
+keyboard focus on the settings screen, is fixed, and is a journey step in
+`accessibility_test.cpp`.) Each is tagged
 `[known-today]`, cites its plan line and owner, and is written to **fail the
 day it is fixed** - that is the prompt to turn it into a journey step. Nothing
 in the suite fixes them.
@@ -1147,10 +1186,13 @@ at once measured seven times slower each than one. `CUBEULATOR_WEB_WORKERS`
 raises it on a machine with cores to spare.
 
 **Known today.** A few cases say what is true now and are marked "EXPECTED TO
-CHANGE", as in `tests/system/known_today_test.cpp`: a toggle's label does not answer a press (only its box does), Tab
-reaches no control and Escape leaves nothing on most screens, and a chosen
+CHANGE", as in `tests/system/known_today_test.cpp`: a toggle's label does not answer a press (only its box does), and a chosen
 language still shows English where its catalogue's entries are unfinished. They fail
-when the app is fixed, which is the prompt to update them.
+when the app is fixed, which is the prompt to update them. (The keyboard case was
+one until the controls became Tab stops: `input.spec.mjs` now says Tab reaches them in
+order and comes round, Enter presses one, and Escape goes back from Settings. The web
+contexts also say `reducedMotion: 'no-preference'`, for the reason in "Motion is pinned
+to full" above.)
 
 `settings.spec.mjs` attaches a picture of the settings and launch screens in
 each of German, French and Spanish to its report. A passing test's attachments

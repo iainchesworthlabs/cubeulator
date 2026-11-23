@@ -1685,6 +1685,11 @@ En tus manos.</translation>
         <extracomment>Read after the turn sentence when notation is switched on. %1 is letters such as R' or U2; do not translate it.</extracomment>
         <translation>En notación: %1</translation>
     </message>
+    <message id="solve.a11y.move">
+        <source>%1, %2 as you look at that side.</source>
+        <extracomment>Spoken (screen readers) with each new turn on the solve screen, for a quarter turn or three. %1 is the turn in words, such as 'Top · quarter turn' (the same words as the screen shows, with the dot a separator). %2 is dir.cw or dir.ccw. 'As you look at that side' means from outside the cube, straight at the side that turns, which is how a quarter turn is counted whichever way the cube is held. A half turn has no direction and speaks %1 alone.</extracomment>
+        <translation>%1, %2 al mirar ese lado.</translation>
+    </message>
     <message id="solve.method.beginner">
         <source>Beginner</source>
         <extracomment>Name of the first way of solving a cube: layer by layer. A button label, one word.</extracomment>

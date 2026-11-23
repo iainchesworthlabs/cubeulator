@@ -15,6 +15,7 @@
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QQmlEngine>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QtGlobal>
 
@@ -40,6 +41,13 @@ int main(int argc, char* argv[]) {
     // tests away from the store the real app writes.
     QCoreApplication::setOrganizationName("Cubeulator");
     QCoreApplication::setApplicationName("Cubeulator-qml-tests");
+    // A store of this process's own, so that no run reads a developer's or leaves
+    // its own behind, and every run starts from the Motion setting the tests are
+    // written for, not the one the machine asks for (test_platform.hpp).
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QTemporaryDir settings_dir;
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings_dir.path());
+    cube::test::pin_full_motion();
     // The history of solves is a file in the app's own data folder, which the
     // controllers open when they are made and a solve stepped through writes.
     // A directory of this process's own, so that it is not a person's.

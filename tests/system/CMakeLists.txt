@@ -38,6 +38,7 @@ add_executable(cube_system_tests
     licences_test.cpp
     entry_test.cpp
     review_test.cpp
+    accessibility_test.cpp
     progress_listener.cpp)
 
 target_include_directories(cube_system_tests PRIVATE

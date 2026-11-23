@@ -39,12 +39,12 @@ Rectangle {
     // from the history.
     property string subtitle: ""
 
-    // Two things the app has no setting for yet: Settings > Appearance >
-    // Motion (Reduced turns each layer in no time and plays more slowly) and
-    // Settings > Solving > Show cube notation (each stage's turns as letters,
-    // the way cubers read an algorithm). The settings screens' rebuild
-    // (docs/design/screens/settings.md) binds these two.
-    property bool reducedMotion: false
+    // Settings > Appearance > Motion, or the device's own setting (Theme):
+    // Reduced turns each layer in no time and plays more slowly. And one thing
+    // the app has no setting for yet: Settings > Solving > Show cube notation
+    // (each stage's turns as letters, the way cubers read an algorithm). The
+    // settings screens' rebuild (docs/design/screens/settings.md) binds it.
+    property bool reducedMotion: Theme.reducedMotion
     property bool showNotation: false
 
     // ---- layout --------------------------------------------------------------
@@ -463,6 +463,17 @@ Rectangle {
         rebuild();
         forceActiveFocus();
     }
+
+    // For a screen reader: entering the screen says what it is (and, from the
+    // history, which solve), and each turn is said as the position moves, which
+    // keys and the buttons do without moving focus off the screen.
+    Accessible.role: Accessible.Pane
+    Accessible.name: qsTrId("solution.title")
+    Accessible.description: root.subtitle
+    Announcer {
+        message: root.total > 0 && root.position < root.total
+            ? root.caption + ". " + root.turnSpeech(root.turnList[root.position]) : root.caption
+    }
     Keys.onRightPressed: mirrored ? previous() : next()
     Keys.onLeftPressed: mirrored ? next() : previous()
     Keys.onSpacePressed: toggle()
@@ -817,6 +828,8 @@ Rectangle {
                                  .arg(root.turnSpeech(info))
             Accessible.selectable: true
             Accessible.selected: selected
+            // Pressing the row, for a reader that can, goes to the turn.
+            Accessible.onPressAction: root.jumpTo(info.index)
 
             Rectangle {
                 visible: turn.selected

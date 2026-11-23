@@ -148,6 +148,17 @@ public:
     // nothing.
     int drag_cube();
     void key(Qt::Key which);  // to the window's focus item
+    // The same with modifiers. Shift+Tab is Qt::Key_Backtab with ShiftModifier.
+    void key(Qt::Key which, Qt::KeyboardModifiers modifiers);
+    // What keyboard focus is on, as a name a test can compare: the objectName of the
+    // item that has it or of the nearest item above it that has one; empty when
+    // nothing has focus or nothing above it is named.
+    [[nodiscard]] QString focus_name() const;
+    // The item that has keyboard focus, or nullptr.
+    [[nodiscard]] QQuickItem* focus_item() const;
+    // A press of Enter or Space on what has focus, counted for the reach gate as
+    // a press of that control (App::click is what counts the others).
+    void press_focused(Qt::Key which = Qt::Key_Return);
     // Scrolls the list a control sits in until the control is in view, as a finger
     // would. A click does this itself; a picture of a screen scrolled down wants it
     // without one.

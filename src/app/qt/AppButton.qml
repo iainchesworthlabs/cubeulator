@@ -5,6 +5,13 @@ import Cubeulator
 
 // btn / btn-primary / btn-secondary / btn-ghost from the Modernist system:
 // flat fills, zero radius, flush-left labels in block buttons.
+//
+// It is a button to a screen reader (a radio button when it is one of a set of
+// choices, `checkable`), named by its own label, and to the keyboard: Tab
+// reaches it, Space and Enter press it, and a ring says where focus is. A
+// click or a tap does not take focus from the screen (the solve screen's keys
+// act on the screen, not on the last button that was pressed), so the ring is
+// for the keyboard alone.
 Item {
     id: root
 
@@ -17,7 +24,6 @@ Item {
     property bool trailingSlot: false
     property string leadingIcon: ""
     property bool block: false // fill width; label flush-left instead of centered
-    property bool enabled: true
     // The widest the button may be, for one that is as wide as its label (a
     // chip in a row). A label that does not fit wraps onto another line and
     // the button grows taller; it is never cut off or run past the edge. -1:
@@ -40,6 +46,19 @@ Item {
     implicitWidth: block ? 200 : (maxWidth > 0 ? Math.min(label.implicitWidth + chrome, maxWidth)
                                                : label.implicitWidth + chrome)
 
+    // What a screen reader says: the label unless it is told otherwise (a
+    // button whose label reads badly alone), and, where the label is not
+    // enough, what pressing it does.
+    property string accessibleName: root.text
+    property string accessibleDescription: ""
+    // One of a set of choices, of which `checked` says whether this is the one
+    // that is on: a chip, a method, a size. Its look is the caller's (the
+    // variant); this is what a screen reader hears.
+    property bool checkable: false
+    property bool checked: false
+    // Over the camera picture, where the focus ring takes the overlay's colours.
+    property bool overCamera: false
+
     signal clicked()
 
     readonly property bool primary: variant === "primary"
@@ -47,6 +66,28 @@ Item {
     readonly property bool ghost: variant === "ghost"
 
     opacity: enabled ? 1.0 : 0.45
+
+    // `enabled` is Item's own (this used to shadow it with a property of its
+    // own, which left the item itself enabled): a disabled button is out of the
+    // tab chain and says so to a screen reader, and so is one whose parent is
+    // disabled.
+    activeFocusOnTab: true
+    Accessible.role: root.checkable ? Accessible.RadioButton : Accessible.Button
+    Accessible.name: root.accessibleName
+    Accessible.description: root.accessibleDescription
+    Accessible.focusable: true
+    Accessible.checkable: root.checkable
+    Accessible.checked: root.checked
+    Accessible.onPressAction: root.clicked()
+
+    Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            event.accepted = true;
+            // Held down it does not press again and again.
+            if (!event.isAutoRepeat)
+                root.clicked();
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -87,6 +128,8 @@ Item {
             // a width there is no room to speak of, so it is left whole.)
             wrapMode: Text.Wrap
             width: root.textRoom > 0 ? Math.min(implicitWidth, root.textRoom) : implicitWidth
+            // The button says it; reading the label as well says it twice.
+            Accessible.ignored: true
         }
 
         // Inside the row, so that the label and the icon are centred together:
@@ -115,11 +158,12 @@ Item {
         color: root.primary ? Theme.paper : Theme.ink
     }
 
+    FocusRing { overCamera: root.overCamera }
+
     MouseArea {
         id: mouse
         anchors.fill: parent
         hoverEnabled: true
-        enabled: root.enabled
         cursorShape: Qt.PointingHandCursor
         onClicked: root.clicked()
     }

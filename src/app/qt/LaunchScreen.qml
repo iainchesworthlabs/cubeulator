@@ -8,6 +8,12 @@ Rectangle {
     color: Theme.paper
     readonly property bool wide: width >= Theme.wideBreakpoint
 
+    // Entering the screen says what it is; Tab then starts at its first button.
+    focus: true
+    Component.onCompleted: forceActiveFocus()
+    Accessible.role: Accessible.Pane
+    Accessible.name: qsTrId("app.name")
+
     // The cube is made once the menu has been drawn, not before: the first
     // frame of a 3D view is the longest the GUI thread is held at start-up
     // (docs/performance.md, "Screens"), and the person waits for the buttons,
@@ -33,6 +39,8 @@ Rectangle {
             font.family: Theme.fontHeading
             font.pixelSize: 11
             font.letterSpacing: 1.6
+            Accessible.role: Accessible.Heading
+            Accessible.name: text
         }
 
         Item {
@@ -157,6 +165,8 @@ Rectangle {
                     // off or run into the other pane, it wraps.
                     width: parent.width
                     wrapMode: Text.WordWrap
+                    Accessible.role: Accessible.Heading
+                    Accessible.name: text
                 }
                 Text {
                     text: qsTrId("home.lede")

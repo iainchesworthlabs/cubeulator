@@ -11,6 +11,14 @@ QtObject {
     readonly property bool effectiveDark: SettingsState.themeMode === "dark"
         || (SettingsState.themeMode === "system" && SystemTheme.dark)
 
+    // Whether the person has asked for less motion: in Settings, or by the
+    // device's own setting where Settings says "same as this device" (the
+    // default). Everything that moves by itself - the cube's idle spin, the lean
+    // of the layer to turn, a turn's sweep, the pulses and the fades - asks this,
+    // and stands still, or snaps, when it is true (docs/design/system.md, "Motion").
+    readonly property bool reducedMotion: SettingsState.motion === "reduced"
+        || (SettingsState.motion === "system" && SystemTheme.reducedMotion)
+
     readonly property color ink: effectiveDark ? "#F3F2F2" : "#201E1D"
     readonly property color paper: effectiveDark ? "#1A1918" : "#F3F2F2"
     readonly property color surface: effectiveDark ? "#242220" : "#EAE9E9"

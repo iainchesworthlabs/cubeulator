@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QTemporaryDir settings_dir;
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings_dir.path());
+    cube::test::pin_full_motion();
     qunsetenv("CUBEULATOR_LOCALE");
     // The history of solves is a file in the app's own data folder, which the
     // controllers open when they are made and a solve stepped through writes.
