@@ -8,11 +8,13 @@
 // docs/app-experience-plan.md it comes from. None of them is fixed by this
 // workstream: the experience lane owns them, each in its own phase.
 //
-// Four things that used to be here are gone: the solve lane's Finish step now
+// Five things that used to be here are gone: the solve lane's Finish step now
 // reaches the complete screen, its Rescan is the way out of the solve screen,
 // Review the solution on the complete screen opens the solution (all three
-// journey steps, journey_test.cpp), and the History button on Home opens the
-// list of solves kept (history_test.cpp).
+// journey steps, journey_test.cpp), the History button on Home opens the
+// list of solves kept (history_test.cpp), and the settings screen has a back
+// (Esc and the Back key) and takes keyboard focus on its buttons
+// (accessibility_test.cpp, which is the journey step it became).
 //
 // Tagged [known-today] so `cube_system_tests "[known-today]"` lists them.
 
@@ -22,9 +24,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
-
-#include <QQuickItem>
-#include <QQuickWindow>
 
 using cube::systest::App;
 
@@ -45,29 +44,4 @@ TEST_CASE("known today: buttons that do nothing", "[system][known-today]") {
     app.click("launch.language");
     REQUIRE(app.wait_for([&]() { return app.screen() == "settings"; }));
     app.go("launch");
-}
-
-TEST_CASE("known today: there is no back, and nothing takes keyboard focus",
-          "[system][known-today]") {
-    // EXPECTED TO CHANGE - plan, Journey ("No back handling (Android back,
-    // Esc)") and Accessibility ("buttons are Item + MouseArea, not
-    // focusable"). Owner: experience lane, E2a.
-    App& app = App::fresh();
-    app.click("launch.settings");
-    REQUIRE(app.wait_for([&]() { return app.screen() == "settings"; }));
-
-    for (const Qt::Key key : {Qt::Key_Escape, Qt::Key_Back}) {
-        app.key(key);
-        CHECK(app.screen() == "settings");
-    }
-
-    // Tab walks through nothing: no control is a focus item.
-    for (int i = 0; i < 4; ++i) {
-        app.key(Qt::Key_Tab);
-    }
-    QQuickItem* focused = app.window().activeFocusItem();
-    const bool on_a_control =
-        focused != nullptr &&
-        QByteArray(focused->metaObject()->className()).startsWith("AppButton");
-    CHECK_FALSE(on_a_control);
 }

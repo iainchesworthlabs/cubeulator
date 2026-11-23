@@ -14,12 +14,14 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QGuiApplication>
 #include <QMetaObject>
 #include <QMetaProperty>
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
+#include <QStyleHints>
 #include <QVariant>
 #include <QtTest/QTest>
 
@@ -185,6 +187,12 @@ void App::boot() {
         },
         Qt::DirectConnection);
 
+    // Whether Tab stops on buttons is the platform's own setting: macOS has it off
+    // (Tab only reaches text) until a person turns Full Keyboard Access on. What the
+    // keyboard cases are about is the app's tab chain, so they ask for all controls,
+    // as Windows and Linux always give.
+    QGuiApplication::styleHints()->setTabFocusBehavior(Qt::TabFocusAllControls);
+
     reach_ = std::make_unique<Reach>(*this);
     reach_->start();
 }
@@ -230,6 +238,8 @@ void App::reset(Start start, Scene3D scene) {
     runtime_->history().clear();
     runtime_->history().setKeep(true);
     settings_state_->setProperty("themeMode", "light");
+    // As the device asks, which is how the app starts.
+    settings_state_->setProperty("motion", "system");
     settings_state_->setProperty("shaderStyleIndex", 0);
     // Still, not spinning: a spinning cube is a scene that changes every
     // frame, and a software renderer spends the whole walk drawing it. The
@@ -560,6 +570,32 @@ int App::drag_cube() {
 }
 
 void App::key(Qt::Key which) {
+    QTest::keyClick(window_, which);
+    pump(40);
+}
+
+void App::key(Qt::Key which, Qt::KeyboardModifiers modifiers) {
+    QTest::keyClick(window_, which, modifiers);
+    pump(40);
+}
+
+QQuickItem* App::focus_item() const {
+    return window_->activeFocusItem();
+}
+
+QString App::focus_name() const {
+    for (QQuickItem* up = window_->activeFocusItem(); up != nullptr; up = up->parentItem()) {
+        if (!up->objectName().isEmpty()) {
+            return up->objectName();
+        }
+    }
+    return {};
+}
+
+void App::press_focused(Qt::Key which) {
+    QQuickItem* item = window_->activeFocusItem();
+    REQUIRE(item != nullptr);
+    reach_->activated(control_key(item), layout());
     QTest::keyClick(window_, which);
     pump(40);
 }
