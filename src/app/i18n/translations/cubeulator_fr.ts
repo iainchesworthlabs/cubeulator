@@ -1583,7 +1583,7 @@ Entre vos mains.</translation>
     <message id="solve.camera.sideHidden">
         <source>Matched. The camera cannot see the side facing you: press Next after this move.</source>
         <extracomment>Words under the move label on the solve screen, what the camera makes of the cube. Said for a 3x3 when the move to make is on the side that faces the person, which the camera cannot see being turned. solve.camera.layerHidden is the same for a bigger cube. 'Next' is the main button, which is now called 'Next turn' (solve.next): translate the button's name as the button has it.</extracomment>
-        <translation>Reconnu. La caméra ne peut pas voir le côté face à vous : touchez « Rotation suivante » après ce mouvement.</translation>
+        <translation>Reconnu. La caméra ne voit pas le côté face à vous : touchez « Rotation suivante » ensuite.</translation>
     </message>
     <message id="solve.camera.matchedMove">
         <source>Matched. Make the move and it steps on by itself.</source>
