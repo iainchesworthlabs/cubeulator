@@ -297,12 +297,12 @@ Entre vos mains.</translation>
     </message>
     <message id="amount.quarter">
         <source>Quarter turn</source>
-        <extracomment>How far to turn: 90 degrees.</extracomment>
+        <extracomment>How far to turn: 90 degrees. The solve screen's move label has the same amount after a dot, in lower case: solve.amount.quarter. Whether a word keeps its capital after a separator is each language's own, so that is a string of its own.</extracomment>
         <translation>Quart de tour</translation>
     </message>
     <message id="amount.half">
         <source>Half turn</source>
-        <extracomment>How far to turn: 180 degrees.</extracomment>
+        <extracomment>How far to turn: 180 degrees. See amount.quarter: the move label has it after a dot as solve.amount.half.</extracomment>
         <translation>Demi-tour</translation>
     </message>
     <message id="turn.U1">
@@ -539,41 +539,6 @@ Entre vos mains.</translation>
         <source>Put the eight corners where they belong. A 2x2 has nothing else.</source>
         <extracomment>What this stage does, in one sentence.</extracomment>
         <translation>Placez les huit coins à leur place. Un 2x2 n’a rien d’autre.</translation>
-    </message>
-    <message id="solve.stage.1.detail">
-        <source>Bring the four white edges home, matching each side centre.</source>
-        <extracomment>The words under the stage's name on the solve screen (the list of stages on the wide layout, the stage on the narrow one), as the screen words them. The design's wording of the same stage is stage.1.what. 'Edge' and 'corner' are pieces of the cube; 'home' means into their place.</extracomment>
-        <translation>Ramenez les quatre arêtes blanches à leur place, en les accordant au centre de chaque côté.</translation>
-    </message>
-    <message id="solve.stage.2.detail">
-        <source>Insert the four white corners to complete the first layer.</source>
-        <extracomment>The words under the stage's name on the solve screen (the list of stages on the wide layout, the stage on the narrow one), as the screen words them. The design's wording of the same stage is stage.2.what. 'Edge' and 'corner' are pieces of the cube; 'home' means into their place.</extracomment>
-        <translation>Insérez les quatre coins blancs pour terminer la première couche.</translation>
-    </message>
-    <message id="solve.stage.3.detail">
-        <source>Send the middle-layer edges home.</source>
-        <extracomment>The words under the stage's name on the solve screen (the list of stages on the wide layout, the stage on the narrow one), as the screen words them. The design's wording of the same stage is stage.3.what. 'Edge' and 'corner' are pieces of the cube; 'home' means into their place.</extracomment>
-        <translation>Ramenez les arêtes de la couche du milieu à leur place.</translation>
-    </message>
-    <message id="solve.stage.4.title">
-        <source>Orient last layer</source>
-        <extracomment>Name of the fourth stage of the Beginner method on the solve screen, as the screen words it: the cubers' name for it. The design's name is stage.4.title ('Yellow top'), which the solution screen uses. 'Orient' means to turn the pieces the right way up without moving them to their places.</extracomment>
-        <translation>Orienter la dernière couche</translation>
-    </message>
-    <message id="solve.stage.4.detail">
-        <source>Orient the last layer's edges and corners so the top side reads solid.</source>
-        <extracomment>The words under the stage's name on the solve screen (the list of stages on the wide layout, the stage on the narrow one), as the screen words them. The design's wording of the same stage is stage.4.what. 'Edge' and 'corner' are pieces of the cube; 'home' means into their place. 'Reads solid' means the whole top side is one colour.</extracomment>
-        <translation>Orientez les arêtes et les coins de la dernière couche pour que le dessus soit d’une seule couleur.</translation>
-    </message>
-    <message id="solve.stage.5.title">
-        <source>Permute last layer</source>
-        <extracomment>Name of the fifth stage of the Beginner method on the solve screen, as the screen words it: the cubers' name for it. The design's name is stage.5.title ('Top layer in order'), which the solution screen uses. 'Permute' means to move the pieces into their places.</extracomment>
-        <translation>Permuter la dernière couche</translation>
-    </message>
-    <message id="solve.stage.5.detail">
-        <source>Permute the last layer's pieces into their solved positions.</source>
-        <extracomment>The words under the stage's name on the solve screen (the list of stages on the wide layout, the stage on the narrow one), as the screen words them. The design's wording of the same stage is stage.5.what. 'Edge' and 'corner' are pieces of the cube; 'home' means into their place.</extracomment>
-        <translation>Placez les pièces de la dernière couche dans leurs positions résolues.</translation>
     </message>
     <message id="home.lede">
         <source>Show your cube to the camera, then follow one turn at a time until it is solved.</source>
@@ -870,11 +835,6 @@ Entre vos mains.</translation>
         <extracomment>Guidance while a side is being read.</extracomment>
         <translation>Lecture de ce côté. Gardez-le là</translation>
     </message>
-    <message id="scan.guide.readingHold">
-        <source>Reading this side — hold it there</source>
-        <extracomment>Guidance while a side is being read, as the scan screen words it: one line with a dash. scan.guide.reading says the same in two sentences and is the design's; the screen does not use that one. Write the dash as your language writes one, or use a full stop.</extracomment>
-        <translation>Lecture de ce côté – gardez-le là</translation>
-    </message>
     <message id="scan.guide.next">
         <source>Turn to a side that is not filled in below, square to the camera</source>
         <extracomment>Guidance between sides. 'Below' refers to the row of six small squares at the bottom of the screen.</extracomment>
@@ -962,12 +922,12 @@ Entre vos mains.</translation>
     </message>
     <message id="scan.camera.none.title">
         <source>No camera found</source>
-        <extracomment>Headline.</extracomment>
+        <extracomment>Headline. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>Aucune caméra trouvée</translation>
     </message>
     <message id="scan.camera.none.body">
         <source>Plug in a camera and look again, or enter the colours by hand.</source>
-        <extracomment>Guidance.</extracomment>
+        <extracomment>Guidance. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>Branchez une caméra et cherchez à nouveau, ou saisissez les couleurs à la main.</translation>
     </message>
     <message id="scan.camera.error.notFound">
@@ -982,42 +942,42 @@ Entre vos mains.</translation>
     </message>
     <message id="scan.camera.busy.title">
         <source>The camera is in use</source>
-        <extracomment>Headline.</extracomment>
+        <extracomment>Headline. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>La caméra est utilisée</translation>
     </message>
     <message id="scan.camera.busy.body">
         <source>Another program is using it. Close that program, then try again.</source>
-        <extracomment>Guidance.</extracomment>
+        <extracomment>Guidance. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>Un autre programme l’utilise. Fermez ce programme, puis réessayez.</translation>
     </message>
     <message id="scan.camera.blocked.title">
         <source>Camera access is blocked</source>
-        <extracomment>Headline.</extracomment>
+        <extracomment>Headline. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>L’accès à la caméra est bloqué</translation>
     </message>
     <message id="scan.camera.blocked.body">
         <source>This device's settings do not let Cubeulator use the camera. Allow it there, then try again.</source>
-        <extracomment>Guidance.</extracomment>
+        <extracomment>Guidance. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>Les paramètres de cet appareil ne permettent pas à Cubeulator d’utiliser la caméra. Autorisez-la à cet endroit, puis réessayez.</translation>
     </message>
     <message id="scan.camera.lost.title">
         <source>The camera stopped</source>
-        <extracomment>Headline.</extracomment>
+        <extracomment>Headline. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>La caméra s’est arrêtée</translation>
     </message>
     <message id="scan.camera.lost.body">
         <source>It may have been unplugged. The sides already read are kept.</source>
-        <extracomment>Guidance.</extracomment>
+        <extracomment>Guidance. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>Elle a peut-être été débranchée. Les côtés déjà lus sont conservés.</translation>
     </message>
     <message id="scan.camera.failed.title">
         <source>The camera could not start</source>
-        <extracomment>Headline.</extracomment>
+        <extracomment>Headline. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>La caméra n’a pas pu démarrer</translation>
     </message>
     <message id="scan.camera.failed.body">
         <source>Try again. If it keeps happening, report it with this code: %1</source>
-        <extracomment>Guidance. %1 is a short error code such as E-CAM-12.</extracomment>
+        <extracomment>Guidance. %1 is a short error code such as E-CAM-12. For a richer set of camera states, not built: the scan screen says scan.title.cameraUnavailable and scan.camera.error.* today.</extracomment>
         <translation>Réessayez. Si cela se reproduit, signalez-le avec ce code : %1</translation>
     </message>
     <message id="scan.solveFailed.title">
@@ -1400,14 +1360,9 @@ Entre vos mains.</translation>
         <extracomment>Shown when the description of a side has a letter that is no colour. %1 is that letter. The letters W Y G B O R are fixed and not translated.</extracomment>
         <translation>« %1 » n’est pas une couleur. Utilisez W, Y, G, B, O ou R, ou ? pour un autocollant que vous ne distinguez pas.</translation>
     </message>
-    <message id="solve.working">
-        <source>Working out the solution…</source>
-        <extracomment>Shown while the solution is computed.</extracomment>
-        <translation>Calcul de la solution…</translation>
-    </message>
     <message id="solve.solving">
         <source>Solving…</source>
-        <extracomment>Shown beside a spinner on the solve screen while the solution is worked out. An ellipsis means it is happening now. solve.working, which says 'Working out the solution…', is the design's and the screen does not use it.</extracomment>
+        <extracomment>Shown beside a spinner on the solve screen while the solution is worked out, a strip's width: keep it short. An ellipsis means it is happening now.</extracomment>
         <translation>Résolution…</translation>
     </message>
     <message id="solve.failed.title">
@@ -1475,14 +1430,9 @@ Entre vos mains.</translation>
         <extracomment>Button. Opens advice for when the cube and the picture disagree.</extracomment>
         <translation>Il ne correspond pas</translation>
     </message>
-    <message id="solve.holdLine">
-        <source>Yellow on top · green facing you</source>
-        <extracomment>A reminder that stays on the solve screen the whole time. Keep it short. The dot is a separator.</extracomment>
-        <translation>Jaune en haut · vert face à vous</translation>
-    </message>
     <message id="solve.holdLine.hold">
         <source>Hold %1 on top, %2 facing you</source>
-        <extracomment>The line across the top of the solve screen until the camera has seen how the cube is held: an instruction. %1 is the colour of the centre of the side on top and %2 the colour of the side facing the person, each as colour.word.*. It is read in a narrow strip and is cut off when too long, so keep it short; a dash or a colon is fine in place of the commas. The design's fixed line is solve.holdLine.</extracomment>
+        <extracomment>The line across the top of the solve screen until the camera has seen how the cube is held: an instruction. %1 is the colour of the centre of the side on top and %2 the colour of the side facing the person, each as colour.word.*. It is read in a narrow strip and runs to two lines at most, so keep it short; a dash or a colon is fine in place of the commas.</extracomment>
         <translation>Tenez : %1 en haut, %2 face à vous</translation>
     </message>
     <message id="solve.holdLine.holding">
@@ -1510,14 +1460,9 @@ Entre vos mains.</translation>
         <extracomment>The main button on the solve screen. Very large.</extracomment>
         <translation>Rotation suivante</translation>
     </message>
-    <message id="solve.previous">
-        <source>Back one</source>
-        <extracomment>Button. Undoes the last turn on screen so the person can undo it on the cube.</extracomment>
-        <translation>Une en arrière</translation>
-    </message>
     <message id="solve.move.layer">
         <source>%1 · layer %2 · %3</source>
-        <extracomment>The move in words for a layer inside a cube bigger than 3x3. %1 is the side, as 'Right side' or 'Top'; %2 is how far in the layer is counted from that side, starting at 1 for the outer layer; %3 is 'quarter turn' or 'half turn'. The dots are separators.</extracomment>
+        <extracomment>The move in words for a layer inside a cube bigger than 3x3. %1 is the side, as 'Right' or 'Top' (side.*); %2 is how far in the layer is counted from that side, starting at 1 for the outer layer; %3 is 'quarter turn' or 'half turn' (solve.amount.*). The dots are separators.</extracomment>
         <translation>%1 · couche %2 · %3</translation>
     </message>
     <message id="solve.move.layers">
@@ -1525,24 +1470,14 @@ Entre vos mains.</translation>
         <extracomment>The same for several layers turned together. %2 and %3 are the nearest and the farthest layer, counted from the side as above; %4 is 'quarter turn' or 'half turn'.</extracomment>
         <translation>%1 · couches %2 à %3 · %4</translation>
     </message>
-    <message id="solve.place.left">
-        <source>Left side</source>
-        <extracomment>The move in words, on the solve screen, for a turn of the left side ('Left side · quarter turn'). The same side as side.left, which is one word; this has 'side', as the screen words it. Keep it short: it is set in a narrow column.</extracomment>
-        <translation>Côté gauche</translation>
-    </message>
-    <message id="solve.place.right">
-        <source>Right side</source>
-        <extracomment>The move in words, on the solve screen, for a turn of the right side ('Right side · quarter turn'). See solve.place.left. This is the longest of the labels in the column.</extracomment>
-        <translation>Côté droit</translation>
-    </message>
     <message id="solve.amount.quarter">
         <source>quarter turn</source>
-        <extracomment>How far, in the move in words on the solve screen ('Right side · quarter turn', and %3 of solve.move.layer). Lower case in English because it follows a dot. The same amount as amount.quarter, which is a label with a capital.</extracomment>
+        <extracomment>How far, in the move in words on the solve screen ('Right · quarter turn', and %3 of solve.move.layer). Lower case in English because it follows a dot. It is the same amount as amount.quarter, which is a label with a capital, and a string of its own because whether a word keeps its capital after a separator differs by language: write it as your language writes it there.</extracomment>
         <translation>quart de tour</translation>
     </message>
     <message id="solve.amount.half">
         <source>half turn</source>
-        <extracomment>How far, in the move in words on the solve screen: see solve.amount.quarter. The same amount as amount.half.</extracomment>
+        <extracomment>How far, in the move in words on the solve screen: see solve.amount.quarter, which says why this is not amount.half. Lower case in English because it follows a dot.</extracomment>
         <translation>demi-tour</translation>
     </message>
     <message id="solve.skipToCore">
@@ -1581,8 +1516,8 @@ Entre vos mains.</translation>
         <translation>Correspond à votre cube</translation>
     </message>
     <message id="solve.camera.sideHidden">
-        <source>Matched. The camera cannot see the side facing you: press Next after this move.</source>
-        <extracomment>Words under the move label on the solve screen, what the camera makes of the cube. Said for a 3x3 when the move to make is on the side that faces the person, which the camera cannot see being turned. solve.camera.layerHidden is the same for a bigger cube. 'Next' is the main button, which is now called 'Next turn' (solve.next): translate the button's name as the button has it.</extracomment>
+        <source>Matched. The camera cannot see the side facing you: press Next turn after this move.</source>
+        <extracomment>Words under the move label on the solve screen, what the camera makes of the cube. Said for a 3x3 when the move to make is on the side that faces the person, which the camera cannot see being turned. solve.camera.layerHidden is the other message, for a bigger cube, where it is a layer the camera cannot see. 'Next turn' is the main button (solve.next): translate the button's name as the button has it.</extracomment>
         <translation>Reconnu. La caméra ne voit pas le côté face à vous : touchez « Rotation suivante » ensuite.</translation>
     </message>
     <message id="solve.camera.matchedMove">
@@ -1692,7 +1627,7 @@ Entre vos mains.</translation>
     </message>
     <message id="solve.lost.title">
         <source>Cube and picture do not match</source>
-        <extracomment>Headline.</extracomment>
+        <extracomment>Headline. The strings of a sheet the app does not have (a pause menu, not built). The controls the built screen has for the same things are solve.rescan and solve.mistake.rescan; these are not their rivals.</extracomment>
         <translation>Le cube et l’image ne correspondent pas</translation>
     </message>
     <message id="solve.lost.body">
@@ -1722,7 +1657,7 @@ Entre vos mains.</translation>
     </message>
     <message id="solve.lost.rescan">
         <source>Scan the cube again</source>
-        <extracomment>Button.</extracomment>
+        <extracomment>Button. For the sheet of solve.lost.title, not built: the built screen's button is solve.rescan.</extracomment>
         <translation>Scanner à nouveau le cube</translation>
     </message>
     <message id="solve.lost.carryOn">

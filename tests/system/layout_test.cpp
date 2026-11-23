@@ -277,7 +277,7 @@ TEST_CASE("the solve screen keeps its cube clear of the camera preview and the m
     // English that is the one that says the side facing you cannot be seen
     // (SolveScreen.qml, cameraWords).
     const QString longest =
-        "Matched. The camera cannot see the side facing you: press Next after this move.";
+        "Matched. The camera cannot see the side facing you: press Next turn after this move.";
     for (const bool longest_words : {false, true}) {
         if (longest_words) {
             QQuickItem* words = app.find("solve.words");
@@ -293,7 +293,7 @@ TEST_CASE("the solve screen keeps its cube clear of the camera preview and the m
         }
     }
 
-    // The label is not the same width for every move ("Right side" is
+    // The label is not the same width for every move ("Right" is
     // longer than "Top"), and the cube must not answer to it: held at the
     // smallest window, where there is least room, through the whole
     // solution.

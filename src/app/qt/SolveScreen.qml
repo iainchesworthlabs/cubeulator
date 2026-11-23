@@ -20,15 +20,15 @@ Rectangle {
     // contract; SolveController.stageRanges gives the structural (index
     // range) data this pairs with.
     readonly property var stageCopy: [
-        { title: qsTrId("stage.1.title"), detail: qsTrId("solve.stage.1.detail") },
-        { title: qsTrId("stage.2.title"), detail: qsTrId("solve.stage.2.detail") },
-        { title: qsTrId("stage.3.title"), detail: qsTrId("solve.stage.3.detail") },
-        { title: qsTrId("solve.stage.4.title"), detail: qsTrId("solve.stage.4.detail") },
-        { title: qsTrId("solve.stage.5.title"), detail: qsTrId("solve.stage.5.detail") }
+        { title: qsTrId("stage.1.title"), detail: qsTrId("stage.1.what") },
+        { title: qsTrId("stage.2.title"), detail: qsTrId("stage.2.what") },
+        { title: qsTrId("stage.3.title"), detail: qsTrId("stage.3.what") },
+        { title: qsTrId("stage.4.title"), detail: qsTrId("stage.4.what") },
+        { title: qsTrId("stage.5.title"), detail: qsTrId("stage.5.what") }
     ]
     // The three stages the other two methods have (cube::solver::Stage::F2l,
     // Reduce and Finish, which follow the five above in value). Worded through
-    // ids; the five above are the solve lane's, and are worded by them.
+    // ids, as the five above are, and as the solution screen words them.
     readonly property var extraStageCopy: [
         { title: qsTrId("stage.f2l.title"), detail: qsTrId("stage.f2l.what") },
         { title: qsTrId("stage.reduce.title"), detail: qsTrId("stage.reduce.what") },
@@ -258,8 +258,8 @@ Rectangle {
     // "left", "right", "front", "back", or "" when there is no move.
     readonly property string movePlace: moveSide !== "" ? HeldCube.places[moveSide] : ""
     readonly property var placeWords: ({
-        top: qsTrId("side.top"), bottom: qsTrId("side.bottom"), left: qsTrId("solve.place.left"),
-        right: qsTrId("solve.place.right"), front: qsTrId("side.front"), back: qsTrId("side.back")
+        top: qsTrId("side.top"), bottom: qsTrId("side.bottom"), left: qsTrId("side.left"),
+        right: qsTrId("side.right"), front: qsTrId("side.front"), back: qsTrId("side.back")
     })
     readonly property string turnWords: SolveController.currentMoveTurns === 2 ? qsTrId("solve.amount.half") : qsTrId("solve.amount.quarter")
     readonly property bool outerMove: SolveController.currentMoveFirst === 0
@@ -566,9 +566,9 @@ Rectangle {
             // colour of its centre, and how far. It keeps its place when
             // there is no move to say (at the end), so the cube does not
             // move for it; and it shrinks to its column rather than run
-            // under the preview ("Right side" is the longest name).
+            // under the preview ("Bottom" or "Right" is the longest name).
             //
-            // A cube bigger than 3x3 names layers too ("Left side · layer 2 ·
+            // A cube bigger than 3x3 names layers too ("Left · layer 2 ·
             // half turn"), which is more than one line holds in this column; the
             // room for a second is kept whatever the move says, for the reason
             // above, and the words are made to fit the two lines (or the one) as

@@ -45,7 +45,7 @@ holding topic has a picture of the cube above the text.
 | Topic row | list row | `help.howItWorks`, `help.scanning`, `help.entering`, `help.holding`, `help.turns`, `help.lost`, `help.cubes`, `help.notation`, `help.keys` | `help.topic.howItWorks` ... `help.topic.keys` |
 | Topic text | paragraphs | `help.scanning.body`, `help.entering.body`, `help.holding.body`, `help.turns.body`, `help.lost.body`, `help.cubes.body`, `help.notation.body`, `help.keys.body` | `help.text` |
 | Cube picture (holding) | The solve lane's cube view, solved, as held: yellow on top, green in front. Role: graphic; its name is `solve.hold.body` | `solve.hold.body` | `help.cube` |
-| Hold reminder (holding) | Two swatches and a line, as on the solve screen | `solve.holdLine` | `help.holdLine` |
+| Hold reminder (holding) | A line, as on the solve screen, naming yellow on top and green facing | `solve.holdLine.hold` | `help.holdLine` |
 
 Help text uses exactly the words of the glossary (`../content.md`) and of
 the strings it describes. When a button is renamed, the topic that names

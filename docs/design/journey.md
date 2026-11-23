@@ -222,13 +222,13 @@ Lane: **solve** (proposal for the chrome). Spec: `screens/solve.md`.
 | `solve.already-solved` | The cube that was read is solved | **Scan another cube** > `scan.starting`. **Home** |
 | `solve.hold` | Before the first turn: how to hold the cube, with the cube as scanned | **I am holding it like this** > `solve.move`. **Check the colours** > `review.valid`. Back > `home.resume` |
 | `solve.hold-resume` | The same, entered by **Carry on**: says which turn it resumes at and to check the cube matches the picture | **It matches** > `solve.move`. **It does not match** > `solve.lost`. Back > `home.resume` |
-| `solve.move` | One turn is shown. Waiting for the person to make it and advance | Advance > `solve.turning`. Back one > `solve.turning` (reversed). Menu > `solve.menu`. Back > `home.resume` |
+| `solve.move` | One turn is shown. Waiting for the person to make it and advance | Advance > `solve.turning`. Previous > `solve.turning` (reversed). Menu > `solve.menu`. Back > `home.resume` |
 | `solve.move-hint` | `solve.move` for the first turn of a first-ever solve, with a line saying how to advance | As `solve.move` |
 | `solve.turning` | The turn plays on screen. About 0.4 s; nothing with reduced motion | By itself > `solve.move`, `solve.stage-done`, `solve.last-move` or `complete.default` |
 | `solve.stage-done` | Between stages: the stage just finished, a prompt to check the cube against the picture, and what the next stage does | **Carry on** > `solve.move`. **It does not match** > `solve.lost` |
 | `solve.last-move` | The last turn is shown. The advance control reads **Finish** | Advance > `solve.turning` > `complete.default` |
 | `solve.auto` | Timer mode: turns advance at a set pace; a bar counts down | A tap anywhere > `solve.auto-paused`. Stage ends still stop at `solve.stage-done` |
-| `solve.auto-paused` | Timer mode, paused. Also where the app returns to after being in the background | **Carry on** > `solve.auto`. **Back one**. Menu |
+| `solve.auto-paused` | Timer mode, paused. Also where the app returns to after being in the background | **Carry on** > `solve.auto`. **Previous**. Menu |
 | `solve.menu` | Sheet: **Carry on**, **How to hold the cube**, **My cube does not match**, **Settings**, **Leave this solve** | Each item. Back closes the sheet |
 | `solve.lost` | The cube and the picture disagree. Says what to try, in order | **Go back one turn** > `solve.move`. **Scan the cube again** > `scan.starting` (the new scan replaces this solve). **Carry on anyway** > `solve.move` |
 

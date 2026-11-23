@@ -109,7 +109,7 @@ Item {
         if (DirectScan.conflicted)
             return qsTrId("scan.guide.conflict");
         if (DirectScan.reading)
-            return qsTrId("scan.guide.readingHold");
+            return qsTrId("scan.guide.reading");
         if (cubeInView)
             return qsTrId("scan.guide.inView");
         if (DirectScan.sidesRead === 0)
