@@ -20,6 +20,7 @@
 
 #include <QQuickItem>
 #include <QString>
+#include <QStringList>
 
 #include <array>
 #include <string>
@@ -38,6 +39,21 @@ void open_entry(App& app) {
     app.click("launch.other");
     REQUIRE(app.wait_for([&]() { return app.screen() == "entry"; }));
     app.pump(80);
+}
+
+// Which of the scan screen's size buttons are drawn as the choice (the primary ones), by the
+// last part of the object name: "auto", "2", "3", "4", "5". There is one choice, not two.
+[[nodiscard]] QStringList chosen_scan_sizes(App& app) {
+    QStringList chosen;
+    for (const QString& size : {QStringLiteral("auto"), QStringLiteral("2"), QStringLiteral("3"),
+                                QStringLiteral("4"), QStringLiteral("5")}) {
+        QQuickItem* button = app.find(QStringLiteral("scan.size.") + size);
+        REQUIRE(button != nullptr);
+        if (button->property("variant").toString() == QStringLiteral("primary")) {
+            chosen.append(size);
+        }
+    }
+    return chosen;
 }
 
 void type_scramble(App& app, const QString& text) {
@@ -85,9 +101,14 @@ TEST_CASE("Home opens the screen for another size, which offers its sizes and go
             app.click(QString::fromStdString("scan.size." + std::to_string(size)));
             CHECK(scan.size() == size);
             CHECK_FALSE(scan.autoSize());
+            CHECK(chosen_scan_sizes(app) == QStringList{QString::number(size)});
         }
         app.click("scan.size.auto");
         CHECK(scan.autoSize());
+        // Auto is the choice, and the size beside it (the last one chosen, or the one found
+        // from the cube) is not drawn as chosen as well.
+        CHECK(scan.size() == 3);
+        CHECK(chosen_scan_sizes(app) == QStringList{QStringLiteral("auto")});
 
         const auto warnings = cube::systest::take_qml_warnings();
         for (const auto& warning : warnings) {

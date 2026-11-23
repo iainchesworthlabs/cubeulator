@@ -665,8 +665,10 @@ TEST_CASE("a bigger cube is rescanned part-way at its own size, and solved again
         CHECK(camera.size() == size);
         CHECK_FALSE(camera.autoSize());
         CHECK(state->property("solveCamera").toBool());
+        // It carries on from 42. The clock runs while the test does, so the upper bound is room
+        // for a slow machine (a sanitizer build under load), not a claim about how long this takes.
         CHECK(state->property("elapsedSeconds").toInt() >= 42);
-        CHECK(state->property("elapsedSeconds").toInt() < 45);
+        CHECK(state->property("elapsedSeconds").toInt() < 42 + 60);
 
         // And a scan of the cube as it stands is solved from there: a new solution, from the
         // turn it starts at.

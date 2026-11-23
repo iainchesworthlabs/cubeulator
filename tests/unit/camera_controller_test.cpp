@@ -6,9 +6,15 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QThreadPool>
 
+#include <chrono>
+#include <condition_variable>
+#include <expected>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -28,6 +34,79 @@ bool wait_until(const std::function<bool()>& predicate, int timeout_ms = 30000) 
     return predicate();
 }
 
+using cube::platform::camera::DeviceInfo;
+using cube::platform::camera::Facing;
+
+const DeviceInfo kBack{.identifier = "back", .display_name = "Back", .facing = Facing::rear};
+const DeviceInfo kFront{.identifier = "front", .display_name = "Front", .facing = Facing::front};
+
+// A camera list that the test holds back. The worker waits inside the enumeration until release()
+// (or the end of the test, which releases it too, so that a failed check cannot leave a worker
+// waiting for ever), and so what the controller says while a probe is in flight is read from a
+// probe that is certain to be in flight, not from one that may or may not have finished by the
+// time the check runs. After release() the enumeration answers at once, which is what a second
+// refresh finds.
+class HeldEnumeration {
+public:
+    using Answer = cube::Result<std::vector<DeviceInfo>>;
+
+    explicit HeldEnumeration(std::vector<DeviceInfo> devices = {})
+        : state_(std::make_shared<State>()) {
+        state_->answer = std::move(devices);
+    }
+    HeldEnumeration(const HeldEnumeration&) = delete;
+    HeldEnumeration& operator=(const HeldEnumeration&) = delete;
+    ~HeldEnumeration() { release(); }
+
+    // What the controller is built with. Holds the state by shared pointer: the worker can outlive
+    // this object, and must not find it gone.
+    [[nodiscard]] CameraController::Enumerator enumerator() const {
+        return [state = state_]() -> Answer {
+            std::unique_lock lock(state->mutex);
+            ++state->started;
+            state->worker = std::this_thread::get_id();
+            state->changed.notify_all();
+            state->changed.wait(lock, [&] { return state->released; });
+            return state->answer;
+        };
+    }
+
+    void answer(Answer next) {
+        const std::scoped_lock lock(state_->mutex);
+        state_->answer = std::move(next);
+    }
+    void release() {
+        const std::scoped_lock lock(state_->mutex);
+        state_->released = true;
+        state_->changed.notify_all();
+    }
+    // Until `count` enumerations have begun on a worker.
+    [[nodiscard]] bool wait_started(int count) const {
+        std::unique_lock lock(state_->mutex);
+        return state_->changed.wait_for(lock, std::chrono::seconds(30),
+                                        [&] { return state_->started >= count; });
+    }
+    [[nodiscard]] int started() const {
+        const std::scoped_lock lock(state_->mutex);
+        return state_->started;
+    }
+    [[nodiscard]] std::thread::id worker() const {
+        const std::scoped_lock lock(state_->mutex);
+        return state_->worker;
+    }
+
+private:
+    struct State {
+        mutable std::mutex mutex;
+        std::condition_variable changed;
+        bool released = false;
+        int started = 0;
+        std::thread::id worker;
+        Answer answer;
+    };
+    std::shared_ptr<State> state_;
+};
+
 }  // namespace
 
 TEST_CASE("CameraController starts idle with no devices", "[qt][controllers]") {
@@ -40,17 +119,87 @@ TEST_CASE("CameraController starts idle with no devices", "[qt][controllers]") {
 
 TEST_CASE("CameraController::refreshDevices runs off the GUI thread and reports a result",
           "[qt][controllers]") {
-    // No real camera is guaranteed on a CI runner; this only checks the
-    // enumerate_devices()->QVariantList marshaling path doesn't throw and
-    // leaves lastError empty, matching the platform contract that
-    // enumeration always succeeds (possibly with an empty list).
-    CameraController controller;
+    HeldEnumeration held({kBack, kFront});
+    CameraController controller(held.enumerator(), false);
+    int lists = 0;
+    QObject::connect(&controller, &CameraController::devicesChanged, [&] { ++lists; });
 
     controller.refreshDevices();
+    // The worker is waiting to be let go, so this is not a race with it: the controller is busy
+    // because it has asked and not yet been told.
     REQUIRE(controller.busy());
+    REQUIRE(held.wait_started(1));
+    CHECK(held.worker() != std::this_thread::get_id());
+    CHECK(controller.devices().isEmpty());
+
+    held.release();
+    REQUIRE(wait_until([&] { return !controller.busy(); }));
+    CHECK(lists == 1);
+    CHECK(controller.devices().size() == 2);
+    CHECK(controller.lastError().isEmpty());
+    // The first one listed is the one a first launch uses.
+    CHECK(controller.selectedDeviceId() == QString("back"));
+}
+
+TEST_CASE("CameraController stays busy until it has the list, even when the probe has returned",
+          "[qt][controllers]") {
+    HeldEnumeration held({kBack});
+    CameraController controller(held.enumerator(), false);
+    std::vector<bool> busy_seen;
+    QObject::connect(&controller, &CameraController::busyChanged,
+                     [&] { busy_seen.push_back(controller.busy()); });
+
+    controller.refreshDevices();
+    REQUIRE(held.wait_started(1));
+    held.release();
+    // The probe has returned on its worker, but the event that says so has not been delivered:
+    // the gap in which the future is finished, so the watcher no longer says it is running, and
+    // the controller does not yet have the list. A refresh asked for in the gap found nothing in
+    // flight and probed the cameras a second time, which replaced the future and with it the
+    // answer of the first; and busy() said the list was settled when it was not.
+    QThreadPool::globalInstance()->waitForDone();
+    CHECK(controller.busy());
+    CHECK(controller.devices().isEmpty());
+    controller.refreshDevices();
+    CHECK(held.started() == 1);
 
     REQUIRE(wait_until([&] { return !controller.busy(); }));
-    REQUIRE(controller.lastError().isEmpty());
+    CHECK(held.started() == 1);
+    CHECK(controller.devices().size() == 1);
+    CHECK(busy_seen == std::vector<bool>{true, false});
+
+    // With the list in, the next refresh is a new probe.
+    controller.refreshDevices();
+    CHECK(controller.busy());
+    REQUIRE(wait_until([&] { return !controller.busy(); }));
+    CHECK(held.started() == 2);
+}
+
+TEST_CASE("CameraController reports a list that could not be read, and can read it again",
+          "[qt][controllers]") {
+    HeldEnumeration held;
+    held.answer(std::unexpected(cube::CubeError::camera_not_found));
+    CameraController controller(held.enumerator(), false);
+    QStringList errors;
+    QObject::connect(&controller, &CameraController::errorOccurred,
+                     [&](const QString& message) { errors.append(message); });
+
+    controller.refreshDevices();
+    held.release();
+    REQUIRE(wait_until([&] { return !controller.busy(); }));
+    REQUIRE(errors.size() == 1);
+    CHECK(controller.lastError() == errors.first());
+    CHECK_FALSE(controller.lastError().isEmpty());
+    CHECK(controller.devices().isEmpty());
+
+    // A failure is not a probe that never ends: the next refresh runs, and clears the error.
+    held.answer(std::vector<DeviceInfo>{kBack});
+    controller.refreshDevices();
+    CHECK(controller.lastError().isEmpty());
+    REQUIRE(wait_until([&] { return !controller.busy(); }));
+    CHECK(errors.size() == 1);
+    CHECK(controller.lastError().isEmpty());
+    CHECK(controller.devices().size() == 1);
 }
 
 TEST_CASE("CameraController::selectDevice updates the id and skips duplicate signals",
@@ -90,9 +239,6 @@ TEST_CASE("CameraController mirrors the preview until a camera says otherwise",
 
 namespace {
 
-using cube::platform::camera::DeviceInfo;
-using cube::platform::camera::Facing;
-
 // A controller that lists what it is given, the first time and each time after:
 // `devices` is read again at every refresh, so a test changes what the next
 // one finds by changing it.
@@ -106,8 +252,7 @@ struct Listed {
               [this]() -> cube::Result<std::vector<DeviceInfo>> { return devices; },
               ids_withheld_until_use)) {}
 
-    // Until the controller has taken the answer: `busy()` goes false a moment
-    // before its slot runs, so it is the list changing that is waited for.
+    // Until the controller has taken the answer, which is the list changing.
     void refresh() {
         int lists = 0;
         const QMetaObject::Connection connection =
@@ -117,9 +262,6 @@ struct Listed {
         QObject::disconnect(connection);
     }
 };
-
-const DeviceInfo kBack{.identifier = "back", .display_name = "Back", .facing = Facing::rear};
-const DeviceInfo kFront{.identifier = "front", .display_name = "Front", .facing = Facing::front};
 
 }  // namespace
 
