@@ -291,11 +291,12 @@ Rectangle {
             }
         }
 
-        // The way to About on Windows and Linux, which have no menu bar
-        // (platforms.md). There is no About on a phone.
+        // The way to About on every platform (platforms.md): the only way on
+        // Windows, Linux and a phone, which have no application menu, and an
+        // addition to the menu on a Mac. The GPL notices are under it, so a
+        // phone has to be able to reach them too.
         Column {
             width: parent.width
-            visible: !AppState.isMobile
             AppButton {
                 objectName: "settings.about"
                 variant: "ghost"

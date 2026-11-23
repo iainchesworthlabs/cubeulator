@@ -746,14 +746,13 @@ contract (every interactive item has an `objectName` and an accessible name).
 > Privacy, the build line with Copy, and Copy details, which
 > `docs/design/screens/about.md` specifies, are not built either.
 >
-> **Reachability.** About is opened from Settings > About Cubeulator on
-> Windows, Linux and in the browser, and from the application menu on a Mac. The
-> Settings row is hidden on a phone (`visible: !AppState.isMobile` in
-> `SettingsScreen.qml`, with the comment "There is no About on a phone"), and
-> Licences is reached only from About, so neither can be opened on the iPhone
-> build, although `docs/design/platforms.md` lists Settings > About Cubeulator
-> for iOS and Android. The rules below ask for items 1 to 6 within two taps from
-> any screen.
+> **Reachability.** About is opened from Settings > About Cubeulator on every
+> platform, and also from the application menu on a Mac. The Settings row was
+> hidden on a phone in 0.2.0-beta.4 and earlier (`visible: !AppState.isMobile` in
+> `SettingsScreen.qml`), so neither About nor the Licences under it could be
+> opened on the iPhone build, against `docs/design/platforms.md`. The rules below
+> ask for items 1 to 6 within two taps from any screen; About is one tap from Settings, and Licences
+> one more.
 >
 > **One thing to look at.** The Licences screen's own row names the licence
 > `GPL-3.0-or-later` (`kLicenceId` in `about_info.cpp`, and `project.license` in
