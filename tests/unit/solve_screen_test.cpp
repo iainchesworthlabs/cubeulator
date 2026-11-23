@@ -257,9 +257,11 @@ TEST_CASE("pressing on before a turn has finished takes both steps", "[qml][solv
             Move{side_of(move.value("face").toString()), move.value("turns").toInt()});
         screen.call("next");
     }
-    // Eleven have landed; the twelfth is still turning.
+    // Eleven have landed; the twelfth is still turning. No event has been handled since the
+    // twelfth press, so the turn cannot have finished whatever the machine is doing: it is waited
+    // for below, and the wait is for an event, so it is long enough to survive a loaded one.
     CHECK(solver.moveIndex() == 11);
-    REQUIRE(wait_for([&]() { return solver.moveIndex() == 12; }));
+    REQUIRE(wait_for([&]() { return solver.moveIndex() == 12; }, 60'000));
     CHECK(solver.currentCube() == expected);
     CHECK(screen.shows(expected));
 }
