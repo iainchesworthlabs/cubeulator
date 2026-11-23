@@ -9,8 +9,11 @@
 > **Cancel** and **Start over**, **Check the colours** once six sides are in (it
 > opens the colours screen), **Switch camera** where the platform offers it (the
 > browser and an iPhone, with more than one camera), **Try again** when the
-> camera would not start, and a banner while a developer is recording the scan.
-> The wording of the guidance is still a literal in English. Not built: the
+> camera would not start, and a banner while a developer is recording the scan
+> (`scan.dev.recording`). Every word on it asks for its string by id, and the
+> reason the camera did not start is said in the app's language
+> (`scan.camera.error.notFound`, `scan.camera.error.startFailed`; the design's
+> `scan.camera.*` states are not built). Not built: the
 > leave and restart dialogs (both buttons act at once), More, the camera picker,
 > hand entry from here, the stuck hint, resuming after the camera was lost,
 > marks on the chips, the keys (Esc, R, M, H), keeping the screen awake, sound
@@ -73,6 +76,7 @@ top leading corner and the chips and buttons centred at the bottom.
 | Sticker dots | Nine markers on the side in view. A hollow ring while the side is seen; a filled disc in `overlay.ok` while it counts. Each has a dark edge so it shows on any sticker. Ignored by screen readers | - | `scan.dots` |
 | Corner dots | Nine markers on each side of a corner the camera sees at an angle, shown only when no side is square to the camera. One colour to a side (`#4CC9F0`, `#C39BFF`, `#FF8FD0`), not the side dots' yellow and green, so that a corner is told from a side square to the camera at a glance. Same size and dark edge as the sticker dots. Ignored by screen readers | - | `scan.cornerDot` |
 | Status panel | status panel; a polite live region | `scan.title.*`, `scan.guide.*`, `scan.camera.*`, `scan.solveFailed.title`, `scan.solveFailed.body` | `scan.status` |
+| Recording note | A line in the corner, over the picture, while a developer build is recording the scan. A path follows it, which is not translated. Developer builds only | `scan.dev.recording` | - |
 | Hint | An overlay panel with a bold line and a sentence | `scan.stuck.title`, `scan.stuck.body` | `scan.hint` |
 | Size | A row of buttons over the chips: **Auto** and 2×2 to 5×5, the one in use primary. With **Auto** the scan works the size out from the cube in view, until the first side is captured; a size chosen stands until **Auto** is chosen again. Changing it starts the scan over. Hidden once the cube is read or the camera has failed | `scan.size.auto`, `entry.size.option` | `scan.sizes`, `scan.size.auto`, `scan.size.<n>` |
 | Chip 1-6 | side chip. Stickers are the measured colours; each carries the mark of the colour the reader took it for | `scan.a11y.chipEmpty`, `scan.a11y.chipRead`, `scan.a11y.chipInView`, `colourSide.*` | `scan.chip1` ... `scan.chip6` |

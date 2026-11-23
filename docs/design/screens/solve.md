@@ -18,12 +18,14 @@
 > instruction block, notation, sound, carrying on after leaving (a solve carried
 > on from History goes straight to its turn, with no camera), and keeping the
 > screen awake. Where it differs from this page: the cube can be dragged, and
-> the camera follows the turns, which the spec lists as later. Many of its words
-> are still English literals (the camera's, the stage list's, **Previous**,
-> **Out of step? Rescan**), and the stage names of stages 4 and 5 are "Orient
-> last layer" and "Permute last layer", not the design's "Yellow top" and "Top
-> layer in order" (`stage.4.title`, `stage.5.title`, which the solution screen
-> does use).
+> the camera follows the turns, which the spec lists as later. Every word on it
+> asks for its string by id. Some are worded differently from this page, and
+> have strings of their own so that the design's keep theirs ("The words the
+> built screen has", below): the stage names of stages 4 and 5 are "Orient last
+> layer" and "Permute last layer", not the design's "Yellow top" and "Top layer
+> in order" (`stage.4.title`, `stage.5.title`, which the solution screen does
+> use), the button is **Previous**, not **Back one**, and the hold line names the
+> colours the cube is held by.
 
 Lane: **solve** (`feature/solve-guidance`). This is a proposal for the
 chrome round the cube view and for the states of `SolveScreen.qml`. The
@@ -153,6 +155,27 @@ stage change.
 asks nothing (brief, D5). The on-screen way to do the same is **Pause >
 Leave this solve**: there is no back arrow on this screen, because a
 96-high target and a small arrow should not sit together.
+
+## The words the built screen has
+
+The screen was built before these strings were written and says some things in
+its own words. Each has a string of its own, with the English the screen showed,
+so that the design's wording keeps its ids and nothing a person reads changed
+when the words moved into the catalogue. Which wording wins is the owner's to
+say: where it is the design's, the screen takes the id in the last column and
+the string here goes.
+
+| part | the screen says | strings | the design's, which the screen does not use |
+|---|---|---|---|
+| Hold reminder | "Hold yellow on top, green facing you", and "Holding ..." once the camera has seen how the cube is held. The colours are those of the centres on top and facing the person | `solve.holdLine.hold`, `solve.holdLine.holding`, `colour.word.*` | `solve.holdLine` |
+| Stage names 4 and 5, and what each stage asks | "Orient last layer", "Permute last layer", and a sentence of its own for every stage of the Beginner method | `solve.stage.4.title`, `solve.stage.5.title`, `solve.stage.1.detail`, `solve.stage.2.detail`, `solve.stage.3.detail`, `solve.stage.4.detail`, `solve.stage.5.detail` | `stage.4.title`, `stage.5.title`, `stage.1.what` to `stage.5.what` |
+| Stage headings | "STAGES" over the wide layout's list, "STAGE 1 OF 5" over the move: the capitals are the app's | `solve.stages`, `solve.stageOf` | |
+| The move in words | "Left side" and "Right side" (with the word *side*), "quarter turn" and "half turn" (lower case, after a dot) | `solve.place.left`, `solve.place.right`, `solve.move.quarter`, `solve.move.half` | `side.left`, `side.right`, `amount.quarter`, `amount.half` |
+| What the camera says | The words under the move label | `solve.camera.matched`, `solve.camera.sideHidden`, `solve.camera.matchedMove`, `solve.camera.unsure`, `solve.camera.wrongMove`, `solve.camera.wrongSide`, `solve.camera.showAgain`, `solve.camera.holdAny` | `solve.camera.layerHidden` is the one string the design had |
+| When the cube does not match | A note with a title, a sentence that names the side by the colour of its centre and, when it is not the side the move was on, where that side is, and a button | `solve.mistake.title.move`, `solve.mistake.title.side`, `solve.mistake.wayWrong`, `solve.mistake.sideWrong`, `solve.mistake.unknown`, `solve.mistake.rescan`, `solve.theSide.*`, `solve.mistake.place.*` | `solve.lost.*` |
+| A view that has turned | A note while the picture has swung round behind the cube | `solve.view.behind`, `solve.view.note` | |
+| Stepping back, and the way out | **Previous**; **Out of step? Rescan** | `solution.previous`, `solve.rescan` | `solve.previous`, `solve.lost.rescan` |
+| The rest | The hint on the cube; the spinner's word | `solve.hint.drag`, `solve.solving` | `solve.working` |
 
 ## States
 

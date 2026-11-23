@@ -14,7 +14,8 @@
 > `settings.camera.unsupported`), and Esc to go back. The developer rows (cube
 > style, auto-rotate and its speed, the graphics backend, frame rate, a **Test
 > turn** button, and the diagnostics switches where the platform has a
-> diagnostics folder) are shown in every build, mostly with English literals.
+> diagnostics folder) are shown in every build, and ask for their words by id
+> (`settings.dev.*`).
 > What persists today is `language/code`, `appearance/themeMode`,
 > `solving/method`, `rendering/graphicsBackend` and `history/keep`; the cube
 > style and auto-rotate are not kept, and the other keys in the persistence
@@ -156,8 +157,17 @@ section under `settings.section.developer`:
 - a caution notice, `settings.dev.recording`, when the build records
   failed scans;
 - the graphics backend as a choice, headed `settings.dev.backend`;
-- the cube style (`settings.dev.cubeStyle`);
-- a switch, `settings.dev.stats`;
+- the cube style (`settings.dev.cubeStyle`), a line under it
+  (`settings.dev.cubeStyle.note`) and three choices (`settings.dev.cubeStyle.pbr`,
+  `settings.dev.cubeStyle.glow`, `settings.dev.cubeStyle.cel`);
+- the cube's motion, which the design did not have: a heading
+  (`settings.dev.motion`), a switch (`settings.dev.autoRotate`) and three speeds
+  (`settings.pace.slow`, `settings.dev.speed.normal`, `settings.dev.speed.fast`);
+- a heading over the graphics backend rows (`settings.dev.rendering`) and, under
+  the cube in the wide layout, a button that turns one layer of it at random
+  (`settings.dev.testTurn`);
+- a switch, `settings.dev.stats`, which puts the frame rate in the corner of the
+  window (`settings.dev.fps`);
 - the diagnostics channel, which `docs/diagnostics.md` describes and this
   design did not: a switch, `settings.dev.diagnostics`; under it a second
   switch, `settings.dev.diagnosticsFrames`, that only takes effect while
