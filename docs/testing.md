@@ -1186,10 +1186,13 @@ at once measured seven times slower each than one. `CUBEULATOR_WEB_WORKERS`
 raises it on a machine with cores to spare.
 
 **Known today.** A few cases say what is true now and are marked "EXPECTED TO
-CHANGE", as in `tests/system/known_today_test.cpp`: a toggle's label does not answer a press (only its box does), Tab
-reaches no control and Escape leaves nothing on most screens, and a chosen
+CHANGE", as in `tests/system/known_today_test.cpp`: a toggle's label does not answer a press (only its box does), and a chosen
 language still shows English where its catalogue's entries are unfinished. They fail
-when the app is fixed, which is the prompt to update them.
+when the app is fixed, which is the prompt to update them. (The keyboard case was
+one until the controls became Tab stops: `input.spec.mjs` now says Tab reaches them in
+order and comes round, Enter presses one, and Escape goes back from Settings. The web
+contexts also say `reducedMotion: 'no-preference'`, for the reason in "Motion is pinned
+to full" above.)
 
 `settings.spec.mjs` attaches a picture of the settings and launch screens in
 each of German, French and Spanish to its report. A passing test's attachments

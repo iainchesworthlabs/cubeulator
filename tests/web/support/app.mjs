@@ -99,6 +99,11 @@ export class CubeulatorApp {
         hasTouch: options.touch ?? false,
         isMobile: options.touch ?? false,
         permissions: options.permissions ?? ['camera'],
+        // Qt reports the browser's prefers-reduced-motion as a request for less
+        // motion, which stills the cube's spin and the nudge of a layer. A runner's
+        // browser may ask for it without anyone having said so, so the specs say
+        // they do not (docs/testing.md, "Motion is pinned to full").
+        reducedMotion: 'no-preference',
       });
       if ((options.camera ?? 'fake') === 'fake') {
         await context.addInitScript({ content: await readFile(fakeCameraScript, 'utf8') });
