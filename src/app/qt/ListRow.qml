@@ -110,15 +110,9 @@ Item {
         color: Theme.ink
     }
 
-    // The ring: 2 px, inside the row, so that it is not cut by the list's clip.
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: 1
-        visible: root.activeFocus
-        color: "transparent"
-        border.width: 2
-        border.color: Theme.accent
-    }
+    // The ring: the one every control has (FocusRing.qml), inside the row, so
+    // that it is not cut by the list's clip.
+    FocusRing {}
 
     MouseArea {
         id: area

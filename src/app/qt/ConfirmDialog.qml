@@ -34,6 +34,7 @@ Item {
 
     Accessible.role: Accessible.Dialog
     Accessible.name: root.title
+    Accessible.description: root.body
 
     onOpenChanged: {
         if (open)
@@ -44,6 +45,12 @@ Item {
 
     Keys.onEscapePressed: root.kept()
     Keys.onBackPressed: root.kept()
+
+    // Focus stays in the dialog until it closes: Tab and Shift+Tab go round its
+    // two buttons, and not out to the screen behind it, which is covered and
+    // does not take presses. (The safe choice is first.)
+    KeyNavigation.tab: keepButton
+    KeyNavigation.backtab: confirmButton
 
     // The screen beneath is dimmed and does not take presses.
     Rectangle {
@@ -95,14 +102,20 @@ Item {
                 width: parent.width
                 spacing: Theme.space3
                 AppButton {
+                    id: keepButton
                     objectName: root.objectName + ".keep"
+                    KeyNavigation.tab: confirmButton
+                    KeyNavigation.backtab: confirmButton
                     variant: "primary"
                     maxWidth: parent.width
                     text: root.keepText
                     onClicked: root.kept()
                 }
                 AppButton {
+                    id: confirmButton
                     objectName: root.objectName + ".confirm"
+                    KeyNavigation.tab: keepButton
+                    KeyNavigation.backtab: keepButton
                     variant: "secondary"
                     maxWidth: parent.width
                     text: root.confirmText
