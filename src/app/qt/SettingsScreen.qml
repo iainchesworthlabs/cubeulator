@@ -16,10 +16,20 @@ Rectangle {
         // and capitalised here, which is locale-aware (content.md).
         font.capitalization: Font.AllUppercase
         color: Theme.accent
+        Accessible.role: Accessible.Heading
+        Accessible.name: text
     }
 
     // settings.confirm-clear: the same question History asks.
     property bool confirmingClear: false
+
+    // Entering the screen says what it is, and Esc is Back.
+    focus: true
+    Component.onCompleted: forceActiveFocus()
+    Keys.onEscapePressed: AppState.closeSettings()
+    Keys.onBackPressed: AppState.closeSettings()
+    Accessible.role: Accessible.Pane
+    Accessible.name: qsTrId("common.settings")
 
     // The theme choices by their key, so that each is a plain qsTrId() call
     // the extractor can see; SettingsState owns the keys, not the words.
@@ -33,9 +43,14 @@ Rectangle {
         id: chipRoot
         property var options: []
         property int currentIndex: 0
+        // What a screen reader calls the set of choices: the section's label.
+        property string groupName: ""
         signal selected(int index)
         width: parent ? parent.width : 0
         spacing: Theme.space2
+
+        Accessible.role: Accessible.Grouping
+        Accessible.name: chipRoot.groupName
 
         Repeater {
             model: chipRoot.options
@@ -47,27 +62,53 @@ Rectangle {
                 maxWidth: chipRoot.width
                 text: modelData
                 variant: index === chipRoot.currentIndex ? "primary" : "secondary"
+                checkable: true
+                checked: index === chipRoot.currentIndex
                 onClicked: chipRoot.selected(index)
             }
         }
     }
 
+    // A switch: a check box and its label. Tab reaches it, Space and Enter turn
+    // it, and a screen reader says what it is, whether it is on, and turns it.
     component Toggle: Row {
+        id: toggleRoot
         property bool checked: false
         property string label: ""
         signal toggled()
         spacing: Theme.space2
+
+        activeFocusOnTab: true
+        Accessible.role: Accessible.CheckBox
+        Accessible.name: toggleRoot.label
+        Accessible.focusable: true
+        Accessible.checkable: true
+        Accessible.checked: toggleRoot.checked
+        Accessible.onToggleAction: toggleRoot.toggled()
+        Accessible.onPressAction: toggleRoot.toggled()
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                event.accepted = true;
+                if (!event.isAutoRepeat)
+                    toggleRoot.toggled();
+            }
+        }
+
         Rectangle {
             width: 20; height: 20; anchors.verticalCenter: parent.verticalCenter
             color: "transparent"
             border.width: 1.5; border.color: Theme.divider
             Icon { anchors.centerIn: parent; visible: parent.parent.checked; name: "check"; color: Theme.accent; width: 14; height: 14; strokeWidth: 3 }
+            // The ring goes round the box, on its edge: the row has no room of
+            // its own, and the list it is in clips what is outside it.
+            FocusRing { active: toggleRoot.activeFocus }
             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: parent.parent.toggled() }
         }
         Text {
             text: parent.label
             anchors.verticalCenter: parent.verticalCenter
             font.family: Theme.fontHeading; font.pixelSize: 13; color: Theme.ink
+            Accessible.ignored: true
         }
     }
 
@@ -104,6 +145,7 @@ Rectangle {
                 ChipRow {
                     visible: CameraController.devices.length > 0
                     objectName: "settings.camera"
+                    groupName: qsTrId("settings.section.camera")
                     options: CameraController.devices.map(function (d) { return d.label; })
                     currentIndex: CameraController.devices.findIndex(function (d) { return d.id === CameraController.selectedDeviceId; })
                     onSelected: (index) => CameraController.selectDevice(CameraController.devices[index].id)
@@ -149,6 +191,7 @@ Rectangle {
             // row, which also carries on from the cube in hand.
             SolveMethodPicker {
                 objectName: "settings.method"
+                groupName: qsTrId("settings.section.solving")
                 current: SettingsState.solveMethod
                 onSelected: (method) => SettingsState.solveMethod = method
             }
@@ -160,9 +203,26 @@ Rectangle {
             SectionLabel { text: qsTrId("settings.section.appearance") }
             ChipRow {
                 objectName: "settings.theme"
+                groupName: qsTrId("settings.section.appearance")
                 options: SettingsState.themeModes.map(function (m) { return root.themeLabels[m.key]; })
                 currentIndex: SettingsState.themeModes.findIndex(function (m) { return m.key === SettingsState.themeMode; })
                 onSelected: (index) => SettingsState.themeMode = SettingsState.themeModes[index].key
+            }
+            // How much the screens move by themselves: as the device asks, less, or
+            // as before. Applies at once, and says so by doing it.
+            Text {
+                text: qsTrId("settings.motion")
+                font.family: Theme.fontHeading; font.pixelSize: 12
+                color: Theme.inkMuted(0.6)
+                width: parent.width; wrapMode: Text.WordWrap
+                topPadding: Theme.space2
+            }
+            ChipRow {
+                objectName: "settings.motion"
+                groupName: qsTrId("settings.motion")
+                options: [qsTrId("settings.motion.system"), qsTrId("settings.motion.reduced"), qsTrId("settings.motion.full")]
+                currentIndex: Math.max(0, SettingsState.motionModes.indexOf(SettingsState.motion))
+                onSelected: (index) => SettingsState.motion = SettingsState.motionModes[index]
             }
         }
 
@@ -176,6 +236,7 @@ Rectangle {
             // under language/code (LanguageManager).
             ChipRow {
                 objectName: "settings.language"
+                groupName: qsTrId("settings.section.language")
                 readonly property var languages: LanguageManager.availableLanguages()
                 options: [qsTrId("settings.language.system").arg(LanguageManager.deviceLanguage().name)]
                     .concat(languages.map(function (l) { return l.name; }))
@@ -237,6 +298,7 @@ Rectangle {
             }
             ChipRow {
                 objectName: "settings.cubeStyle"
+                groupName: qsTrId("settings.dev.cubeStyle")
                 options: SettingsState.shaderStyles
                 currentIndex: SettingsState.shaderStyleIndex
                 onSelected: (index) => SettingsState.shaderStyleIndex = index
@@ -255,6 +317,7 @@ Rectangle {
             }
             ChipRow {
                 objectName: "settings.rotateSpeed"
+                groupName: qsTrId("settings.dev.motion")
                 options: SettingsState.rotateSpeeds
                 currentIndex: SettingsState.rotateSpeedIndex
                 onSelected: (index) => SettingsState.rotateSpeedIndex = index
@@ -278,6 +341,7 @@ Rectangle {
             }
             ChipRow {
                 objectName: "settings.graphicsBackend"
+                groupName: qsTrId("settings.dev.rendering")
                 options: SettingsState.availableGraphicsBackends.map(function (b) { return b.label; })
                 currentIndex: SettingsState.availableGraphicsBackends.findIndex(function (b) { return b.key === SettingsState.graphicsBackend; })
                 onSelected: (index) => SettingsState.graphicsBackend = SettingsState.availableGraphicsBackends[index].key
@@ -376,7 +440,7 @@ Rectangle {
             spacing: Theme.space2
             AppButton { variant: "ghost"; objectName: "settings.back"; leadingIcon: "chevron-left"; text: qsTrId("common.back"); onClicked: AppState.closeSettings() }
         }
-        Text { text: qsTrId("common.settings"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 28; color: Theme.ink }
+        Text { text: qsTrId("common.settings"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 28; color: Theme.ink; Accessible.role: Accessible.Heading; Accessible.name: text }
 
         Flickable {
             width: parent.width
@@ -399,7 +463,7 @@ Rectangle {
             spacing: Theme.space4
 
             AppButton { variant: "ghost"; objectName: "settings.back"; leadingIcon: "chevron-left"; text: qsTrId("common.back"); onClicked: AppState.closeSettings() }
-            Text { text: qsTrId("common.settings"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 36; color: Theme.ink }
+            Text { text: qsTrId("common.settings"); font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 36; color: Theme.ink; Accessible.role: Accessible.Heading; Accessible.name: text }
 
             Flickable {
                 width: parent.width - (Theme.space8 + Theme.space2) * 2

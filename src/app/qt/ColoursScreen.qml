@@ -243,6 +243,26 @@ Rectangle {
     Component.onCompleted: forceActiveFocus()
     Keys.onEscapePressed: root.leave()
     Keys.onBackPressed: root.leave()
+    // 1 to 6 choose the colour to paint with, in the order the palette shows
+    // them (the text box has them first when it is where the focus is).
+    Keys.onPressed: (event) => {
+        if (event.key >= Qt.Key_1 && event.key <= Qt.Key_6 && (event.modifiers & ~Qt.KeypadModifier) === 0) {
+            root.brush = event.key - Qt.Key_1;
+            event.accepted = true;
+        }
+    }
+
+    // For a screen reader: entering the screen says what it is, and whether the
+    // cube is one is said when it becomes one, or turns out not to be. (Not
+    // after every sticker: "5 stickers to go" is not news.)
+    Accessible.role: Accessible.Pane
+    Accessible.name: titleText.text
+    Announcer {
+        readonly property string verdict: root.status.state
+        message: verdict === "valid" || verdict === "miscount" || verdict === "impossible"
+                 ? (root.detail !== "" ? root.headline + ". " + root.detail : root.headline) : ""
+        settle: 600
+    }
 
     // ---- the screen -------------------------------------------------------------
     Item {
@@ -270,6 +290,8 @@ Rectangle {
             wrapMode: Text.Wrap
             font.family: Theme.fontHeading; font.weight: Font.ExtraBold; font.pixelSize: 22
             color: Theme.ink
+            Accessible.role: Accessible.Heading
+            Accessible.name: text
         }
         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 2; color: Theme.divider }
     }
@@ -395,6 +417,8 @@ Rectangle {
                         width: Math.floor((sideGrid.width - (sideGrid.columns - 1) * sideGrid.spacing) / sideGrid.columns)
                         height: sideGrid.tileHeight
                         variant: modelData === root.side ? "primary" : "secondary"
+                        checkable: true
+                        checked: modelData === root.side
                         text: root.sideName(modelData)
                         trailingIcon: root.complete(modelData) ? "check" : ""
                         trailingSlot: true
@@ -462,7 +486,69 @@ Rectangle {
                     readonly property real pad: 4
                     readonly property var names: ColourEntry.sides[root.side]
 
+                    // The keyboard's way to paint, one Tab stop for the whole side:
+                    // the arrow keys move a cursor over the stickers, Space and Enter
+                    // paint the one it is on with the brush, Backspace and Delete take
+                    // its colour away, 1 to 6 choose the brush and Page Up and Page
+                    // Down the side. The cursor is the ring on one sticker; what it
+                    // is on is said, as a screen reader cannot follow it by itself.
+                    property int cursor: 0
+                    readonly property string cursorSpoken: {
+                        const item = stickerRepeater.itemAt(Math.min(cursor, root.size * root.size - 1));
+                        return item ? item.spoken : "";
+                    }
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Button
+                    Accessible.name: gridBox.cursorSpoken
+                    Accessible.description: qsTrId("review.sidePicker")
+                    Accessible.focusable: true
+                    Accessible.onPressAction: root.paint(gridBox.cursor)
+                    Announcer { message: gridBox.activeFocus ? gridBox.cursorSpoken : ""; settle: 150; repeatAfter: 0 }
+                    Connections {
+                        target: root
+                        function onSizeChanged() { gridBox.cursor = Math.min(gridBox.cursor, root.size * root.size - 1); }
+                    }
+                    function sideStep(by) {
+                        const at = root.sideOrder.indexOf(root.side) + by;
+                        if (at >= 0 && at < root.sideOrder.length)
+                            root.side = root.sideOrder[at];
+                    }
+                    Keys.onPressed: (event) => {
+                        const n = root.size;
+                        let col = gridBox.cursor % n;
+                        let row = Math.floor(gridBox.cursor / n);
+                        switch (event.key) {
+                        case Qt.Key_Left: col = Math.max(0, col - 1); break;
+                        case Qt.Key_Right: col = Math.min(n - 1, col + 1); break;
+                        case Qt.Key_Up: row = Math.max(0, row - 1); break;
+                        case Qt.Key_Down: row = Math.min(n - 1, row + 1); break;
+                        case Qt.Key_Space:
+                        case Qt.Key_Return:
+                        case Qt.Key_Enter:
+                            if (!event.isAutoRepeat) {
+                                ColourEntry.beginStroke();
+                                root.paint(gridBox.cursor);
+                                ColourEntry.endStroke();
+                            }
+                            event.accepted = true;
+                            return;
+                        case Qt.Key_Backspace:
+                        case Qt.Key_Delete:
+                            ColourEntry.beginStroke();
+                            ColourEntry.paint(root.side, gridBox.cursor, -1);
+                            ColourEntry.endStroke();
+                            event.accepted = true;
+                            return;
+                        case Qt.Key_PageDown: gridBox.sideStep(1); event.accepted = true; return;
+                        case Qt.Key_PageUp: gridBox.sideStep(-1); event.accepted = true; return;
+                        default: return;
+                        }
+                        gridBox.cursor = row * n + col;
+                        event.accepted = true;
+                    }
+
                     Repeater {
+                        id: stickerRepeater
                         model: root.size * root.size
                         delegate: Rectangle {
                             required property int index
@@ -486,6 +572,7 @@ Rectangle {
                                 .arg(colourOf === "" ? qsTrId("colour.unset") : root.colourName(root.palette.indexOf(colourOf)))
                             Accessible.role: Accessible.Button
                             Accessible.name: spoken
+                            Accessible.onPressAction: root.paint(index)
 
                             // A "?" on a sticker the camera was unsure of: a mark, not a
                             // colour, so it shows to a person who cannot tell the colours
@@ -501,6 +588,14 @@ Rectangle {
                                        ? "#201E1D" : "#F3F2F2"
                             }
                         }
+                    }
+
+                    // Where the keyboard's cursor is.
+                    Item {
+                        x: gridBox.pad + (gridBox.cursor % root.size) * gridBox.cell + 1
+                        y: gridBox.pad + Math.floor(gridBox.cursor / root.size) * gridBox.cell + 1
+                        width: gridBox.cell - 2; height: width
+                        FocusRing { active: gridBox.activeFocus }
                     }
 
                     // Tap or drag over the stickers to paint them.
@@ -553,6 +648,16 @@ Rectangle {
                         Accessible.role: Accessible.RadioButton
                         Accessible.name: root.colourName(colourIndex)
                         Accessible.checked: root.brush === colourIndex
+                        Accessible.focusable: true
+                        Accessible.onPressAction: root.brush = colourIndex
+                        activeFocusOnTab: true
+                        Keys.onPressed: (event) => {
+                            if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                root.brush = colourIndex;
+                                event.accepted = true;
+                            }
+                        }
+                        FocusRing {}
                         Icon {
                             visible: parent.colourIndex < 0
                             anchors.centerIn: parent

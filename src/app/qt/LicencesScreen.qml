@@ -64,6 +64,9 @@ Rectangle {
     Component.onCompleted: forceActiveFocus()
     Keys.onEscapePressed: root.goBack()
     Keys.onBackPressed: root.goBack()
+    // Entering the screen says what it is.
+    Accessible.role: Accessible.Pane
+    Accessible.name: qsTrId("licences.title")
 
     Item {
         id: column
