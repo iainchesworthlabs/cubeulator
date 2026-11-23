@@ -375,6 +375,7 @@ TEST_CASE("a camera that will not start is explained, and can be left", "[system
 
     CHECK_FALSE(scan.running());
     CHECK(scan.cameraError() == "the camera could not be started");
+    CHECK(scan.cameraErrorCode() == "startFailed");
     CHECK(app.find_text("Camera unavailable") != nullptr);
     // The reason is shown to the person, not only logged.
     CHECK(app.find_text("the camera could not be started") != nullptr);
@@ -404,6 +405,8 @@ TEST_CASE("a camera that will not start can be asked for again from the scan scr
     REQUIRE(app.wait_for([&]() { return app.screen() == "scan"; }));
     REQUIRE(app.wait_for([&]() { return !scan.cameraError().isEmpty() && !scan.starting(); }));
     REQUIRE(app.wait_for([&]() { return app.find("scan.retry") != nullptr; }));
+    CHECK(scan.cameraErrorCode() == "notFound");
+    CHECK(app.find_text("no camera device was found") != nullptr);
 
     // The way on is on the screen, in the place Start over has when there is a
     // camera - nothing is running to start over from - and it fits: inside the
@@ -439,6 +442,7 @@ TEST_CASE("a camera that will not start can be asked for again from the scan scr
     app.click("scan.retry");
     CHECK(scan.starting());
     CHECK(scan.cameraError().isEmpty());
+    CHECK(scan.cameraErrorCode().isEmpty());
     CHECK(app.find("scan.retry") == nullptr);
     CHECK(app.find_text(QStringLiteral("Starting the camera") + QChar(0x2026)) != nullptr);
     CHECK(app.find_text("Camera unavailable") == nullptr);

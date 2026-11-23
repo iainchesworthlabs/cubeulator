@@ -127,8 +127,9 @@ class CppLint(unittest.TestCase):
 
 class Allowlist(unittest.TestCase):
     def test_the_shipped_allowlist_is_well_formed_and_names_an_owner(self):
+        # Empty once every lane has converted its literals, as it is now; an entry that is
+        # there still names its owner and the literals it lets through.
         entries = lint.load_allowlist()
-        self.assertTrue(entries)
         for f, e in entries.items():
             self.assertTrue(e.get("owner"), f)
             self.assertTrue(e.get("literals"), f)

@@ -230,7 +230,7 @@ Rectangle {
             spacing: Theme.space2
             SectionLabel { text: qsTrId("settings.dev.cubeStyle") }
             Text {
-                text: "Shader style for the 3D cube shown around the app."
+                text: qsTrId("settings.dev.cubeStyle.note")
                 font.family: Theme.fontHeading; font.pixelSize: 12
                 color: Theme.inkMuted(0.6)
                 width: parent.width; wrapMode: Text.WordWrap
@@ -246,11 +246,11 @@ Rectangle {
         Column {
             width: parent.width
             spacing: Theme.space3
-            SectionLabel { text: "CUBE MOTION" }
+            SectionLabel { text: qsTrId("settings.dev.motion") }
             Toggle {
                 objectName: "settings.cubeAutoRotate"
                 checked: SettingsState.cubeAutoRotate
-                label: "Auto-rotate when idle"
+                label: qsTrId("settings.dev.autoRotate")
                 onToggled: SettingsState.cubeAutoRotate = !SettingsState.cubeAutoRotate
             }
             ChipRow {
@@ -266,7 +266,7 @@ Rectangle {
         Column {
             width: parent.width
             spacing: Theme.space2
-            SectionLabel { text: "RENDERING" }
+            SectionLabel { text: qsTrId("settings.dev.rendering") }
             readonly property string currentBackendName: SettingsState.graphicsApiNames[GraphicsInfo.api] || ("API " + GraphicsInfo.api)
             readonly property bool pendingRestart: SettingsState.graphicsBackend !== "auto"
                 && SettingsState.graphicsBackendKeyNames[SettingsState.graphicsBackend] !== currentBackendName
@@ -440,7 +440,7 @@ Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     variant: "secondary"
                     objectName: "settings.testTurn"
-                    text: "Test turn"
+                    text: qsTrId("settings.dev.testTurn")
                     onClicked: {
                         var axes = ["x", "y", "z"];
                         var layers = [-1, 0, 1];

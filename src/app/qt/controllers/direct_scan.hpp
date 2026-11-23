@@ -55,8 +55,12 @@ class DirectScan : public QObject {
 
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
     Q_PROPERTY(bool starting READ starting NOTIFY runningChanged)
-    // Why the camera is not running, in words for the user. Empty when it is.
+    // Why the camera is not running, in the library's English. Empty when it is. Kept for the
+    // logs and the tests: the screen words the reason through cameraErrorCode.
     Q_PROPERTY(QString cameraError READ cameraError NOTIFY runningChanged)
+    // The same reason as a code the screen turns into words in the app's language ("notFound",
+    // "startFailed", or "other"). Empty when the camera is running.
+    Q_PROPERTY(QString cameraErrorCode READ cameraErrorCode NOTIFY runningChanged)
 
     // Bumped per frame so the preview Image re-requests its source.
     Q_PROPERTY(int frameSeq READ frameSeq NOTIFY frameUpdated)
@@ -166,6 +170,7 @@ public:
     [[nodiscard]] bool running() const noexcept { return running_; }
     [[nodiscard]] bool starting() const noexcept { return starting_; }
     [[nodiscard]] QString cameraError() const { return camera_error_; }
+    [[nodiscard]] QString cameraErrorCode() const { return camera_error_code_; }
     [[nodiscard]] int frameSeq() const noexcept { return frame_seq_; }
     [[nodiscard]] int frameWidth() const noexcept { return frame_width_; }
     [[nodiscard]] int frameHeight() const noexcept { return frame_height_; }
@@ -316,6 +321,7 @@ private:
     bool stop_requested_while_starting_ = false;
     bool running_ = false;
     QString camera_error_;
+    QString camera_error_code_;
 
     mutable std::mutex frame_mutex_;
     cv::Mat latest_frame_;

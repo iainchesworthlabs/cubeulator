@@ -24,11 +24,13 @@ QtObject {
     readonly property var languages: ["English"]
     property int languageIndex: 0
 
-    readonly property var shaderStyles: ["Physically-Based Realism", "Instructional Glow", "Borderlands Cel-Shading"]
+    readonly property var shaderStyles: [qsTrId("settings.dev.cubeStyle.pbr"), qsTrId("settings.dev.cubeStyle.glow"),
+                                         qsTrId("settings.dev.cubeStyle.cel")]
     property int shaderStyleIndex: 0
 
     property bool cubeAutoRotate: true
-    readonly property var rotateSpeeds: ["Slow", "Normal", "Fast"]
+    readonly property var rotateSpeeds: [qsTrId("settings.pace.slow"), qsTrId("settings.dev.speed.normal"),
+                                         qsTrId("settings.dev.speed.fast")]
     property int rotateSpeedIndex: 1
     readonly property real rotateSpeedValue: [0.15, 0.35, 0.65][rotateSpeedIndex]
 
@@ -69,9 +71,9 @@ QtObject {
     // restart needed), but it's still persisted since it's a genuine
     // standing preference.
     readonly property var themeModes: [
-        { key: "system", label: "System" },
-        { key: "light", label: "Light" },
-        { key: "dark", label: "Dark" }
+        { key: "system" },
+        { key: "light" },
+        { key: "dark" }
     ]
     property Settings appearanceSettings: Settings {
         id: appearanceSettingsId
@@ -87,7 +89,7 @@ QtObject {
     // rather than in StatsOverlay so main.cpp's comment about valid values
     // and this list can't drift apart silently.
     readonly property var availableGraphicsBackends:
-        [{ key: "auto", label: "Auto" }].concat(PlatformFacts.graphicsBackends)
+        [{ key: "auto", label: qsTrId("scan.size.auto") }].concat(PlatformFacts.graphicsBackends)
 
     // GraphicsInfo.api (a running window's actual backend) -> display name.
     readonly property var graphicsApiNames: ({

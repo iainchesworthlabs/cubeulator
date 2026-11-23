@@ -159,7 +159,7 @@ Rectangle {
                     Rectangle { width: 2; height: parent.height; color: Theme.divider }
                     Column {
                         width: parent.width / 3 - 4; height: parent.height; padding: Theme.space4
-                        Text { text: "METHOD"; font.pixelSize: 11; font.letterSpacing: 1; color: Theme.inkMuted(0.6); font.family: Theme.fontHeading }
+                        Text { text: qsTrId("complete.method"); font.capitalization: Font.AllUppercase; font.pixelSize: 11; font.letterSpacing: 1; color: Theme.inkMuted(0.6); font.family: Theme.fontHeading }
                         // A name, not a number: in the label face, and wrapped
                         // inside the column - "Intermediate" is wider than the
                         // column in the mono face at this size.
