@@ -91,7 +91,9 @@ jobs:
         uses: $/.github/actions/install-gcc
 
       - name: Install vcpkg build dependencies
-        run: sudo apt-get install -y libx11-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+        # Retries: the archive mirror is the one thing here that is not ours, and a night lost to it said "a fuzz
+        # harness crashed" (issue 301).
+        run: sudo apt-get -o Acquire::Retries=5 install -y libx11-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
 
       # libclang-rt-23-dev carries libFuzzer and the sanitizer runtimes; the archive lists
       # it only as a Recommends, and install-llvm.sh installs without those.
@@ -139,7 +141,8 @@ jobs:
         uses: iainchesworthlabs/icl-common-infra/actions/report-nightly-failure@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
         with:
           engine: fuzz
-          detail: A fuzz harness crashed or failed. The input is in the fuzz-crashes artifact of the run; add it to src/lib/fuzz/regressions/<harness>/ with the fix.
+          # A failure before the harnesses ran (a download, the build) is not a crash: say which it was.
+          detail: ${{ steps.fuzz.outcome == 'failure' && 'A fuzz harness crashed or failed. The input is in the fuzz-crashes artifact of the run; add it to src/lib/fuzz/regressions/<harness>/ with the fix.' || 'The fuzz run failed before any harness ran (a download, a package or the build), so there is no crash and no input. Read the failed step of the run, and re-run it.' }}
 
       - name: Save vcpkg binaries
         if: ${{ always() }}
