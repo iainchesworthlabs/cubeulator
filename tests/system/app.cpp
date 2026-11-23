@@ -238,8 +238,11 @@ void App::reset(Start start, Scene3D scene) {
     runtime_->history().clear();
     runtime_->history().setKeep(true);
     settings_state_->setProperty("themeMode", "light");
-    // As the device asks, which is how the app starts.
-    settings_state_->setProperty("motion", "system");
+    // Full, whatever the machine asks for: a hosted Windows runner reports
+    // reduced motion, which stills the nudge and the sweep of a turn that most
+    // cases wait for. A case about less motion sets "system" or "reduced" itself
+    // (accessibility_test.cpp); the app's own default is held by a case of its own.
+    settings_state_->setProperty("motion", "full");
     settings_state_->setProperty("shaderStyleIndex", 0);
     // Still, not spinning: a spinning cube is a scene that changes every
     // frame, and a software renderer spends the whole walk drawing it. The

@@ -28,15 +28,12 @@
 
 #include <cube/solver/solver.hpp>
 
-#include <QAccessibilityHints>
 #include <QAccessible>
-#include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QSet>
 #include <QSettings>
-#include <QStyleHints>
 
 #include <functional>
 #include <map>
@@ -1070,12 +1067,23 @@ TEST_CASE("Settings has a Motion row, which is kept and which Theme follows",
         App& app = App::fresh();
         static_cast<void>(cube::systest::take_qml_warnings());
         app.resize(size_for(layout));
-        // The app starts as the device asks: nothing changes for a device that has not
-        // asked for less.
-        CHECK(app.settings_state().property("motion").toString() == "system");
-        const bool device_asks =
-            QGuiApplication::styleHints()->accessibility()->motionPreference() ==
-            Qt::MotionPreference::ReducedMotion;
+        // Every case begins from "full" (App::fresh), whatever this machine asks for: a
+        // hosted Windows runner is a virtual machine with its animations off, and Qt
+        // reports that as a request for less motion.
+        CHECK(app.settings_state().property("motion").toString() == "full");
+        CHECK_FALSE(reduced(app));
+        // "Same as this device" follows whatever the device says, which is not the same on
+        // every machine: the case reads what the app was told (SystemTheme, which is Qt's
+        // report of the platform's setting) and compares, and never assumes it.
+        auto* device =
+            app.runtime().engine().singletonInstance<QObject*>("Cubeulator", "SystemTheme");
+        REQUIRE(device != nullptr);
+        const bool device_asks = device->property("reducedMotion").toBool();
+        // The row offers the same as the device first, then reduced, then full.
+        const QVariant modes = app.settings_state().property("motionModes");
+        REQUIRE(modes.isValid());
+        CHECK(modes.toStringList() == QStringList({"system", "reduced", "full"}));
+        set_motion(app, "system");
         CHECK(reduced(app) == device_asks);
 
         app.click("launch.settings");

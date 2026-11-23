@@ -5,6 +5,7 @@
 #include "cube_test_platform_facts.hpp"
 
 #include <QByteArray>
+#include <QSettings>
 #include <QString>
 #include <QStringList>
 #include <QtGlobal>
@@ -24,6 +25,23 @@ inline void apply_default_qpa_platform() {
     if (!qpa.empty() && !qEnvironmentVariableIsSet("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", QByteArray(qpa.data(), static_cast<qsizetype>(qpa.size())));
     }
+}
+
+// Starts every test that loads the app's own QML from the same Motion setting,
+// whatever the machine says. The app's Settings > Appearance > Motion is "same
+// as this device" until a person changes it, and the device may ask for less
+// motion: a hosted Windows runner is a virtual machine with "Show animations in
+// Windows" off, so Qt reports ReducedMotion there and the nudge and the sweep of
+// a turn - which the cube, solve and solution tests wait for - never happen. A
+// test about the layer moving is about the layer moving, so it starts from "full"
+// (docs/testing.md, "Motion"); a test about less motion sets "reduced" or "system"
+// itself. Call it once, after QSettings has been pointed at a store of the
+// process's own and before the QML engine makes the settings singleton, which
+// reads the store when it is made.
+inline void pin_full_motion() {
+    QSettings store;
+    store.setValue(QStringLiteral("appearance/motion"), QStringLiteral("full"));
+    store.sync();
 }
 
 // If a test that draws the real app cannot, because this platform's desktop

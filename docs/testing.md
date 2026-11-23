@@ -236,7 +236,9 @@ The relaunch case needs the settings store seeded before the app exists, which
 only its ctest entry does (`CUBE_SYSTEM_TEST_THEME`). Picked up through a tag it
 shares with other cases (`[settings]`, `[system]`) it is reported as skipped,
 with that reason; run alone without the seed, the binary exits 4, so the
-entry cannot pass without the check having been made.
+entry cannot pass without the check having been made. It is also the one run that
+does not start from the Motion setting the other cases are pinned to (see
+"Motion is pinned to full", below), so it checks the app's own default.
 
 On a desktop that opens a window and drives it; on a headless Linux box give
 it a display and software GL (this is what CI does):
@@ -328,6 +330,23 @@ on Windows); the whole macOS step is about 28 minutes.
 - **Sweeps.** `press_every_control` (`sweep.hpp`) presses everything the live
   item tree offers on a screen, once; a control added tomorrow is pressed
   with no test change, and what it does is for a case of its own.
+- **Motion is pinned to full, because hosts differ.** The app follows the device's
+  request for less motion (Settings > Appearance > Motion is "same as this device"
+  until a person changes it), and a GitHub-hosted Windows runner is a virtual machine
+  that reports a request for less motion (its animations are off; Qt 6.12 passes that
+  on as `ReducedMotion`), so the nudge and the sweep of a turn, which many cases wait
+  for, never happen there. On a desktop every case passed, and on the hosted Windows leg
+  eleven unit tests and the launch cube's spin failed: exactly what a desktop does with
+  the preference forced. So every binary that loads the app's QML starts from
+  "full": `cube::test::pin_full_motion()` (`tests/test_platform.hpp`) is called in
+  `qml_test_main.cpp`, `i18n/screen_test_main.cpp` and `system_test_main.cpp` once their
+  settings store is a temporary directory, and `App::fresh()` sets it again before
+  every case. A case about less motion sets `"reduced"` or `"system"` itself
+  (`accessibility_test.cpp`); the one that follows the device reads Qt's own report and
+  compares. The app's own default ("same as this device") is checked by the one run
+  that does not pin it, `system.relaunch`, which starts from a store with a theme in it and
+  nothing else. A case that waits for the layer to move needs no line of its own, and one
+  that is about the layer standing still must say so.
 - **The keyboard and the accessibility tree.** `accessibility_test.cpp` takes the
   same walk with the keyboard and with what a screen reader is given. It walks
   Qt's accessibility tree (`QAccessible`, which every platform's reader is built

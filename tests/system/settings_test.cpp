@@ -132,6 +132,14 @@ TEST_CASE("a second launch comes up with the theme the first one left",
     App& app = App::launched();
     REQUIRE(app.wait_for([&]() { return theme_is_dark(app); }));
     CHECK(app.settings_state().property("themeMode").toString() == "dark");
+    // Nothing was said about motion, so it is the same as the device: the app's own
+    // default, which every other entry puts out of reach by starting from "full"
+    // (test_platform.hpp), and which follows whatever this machine's device asks.
+    CHECK(app.settings_state().property("motion").toString() == "system");
+    auto* device = app.runtime().engine().singletonInstance<QObject*>("Cubeulator", "SystemTheme");
+    REQUIRE(device != nullptr);
+    CHECK(app.theme().property("reducedMotion").toBool() ==
+          device->property("reducedMotion").toBool());
     CHECK(app.window().color() == QColor("#1A1918"));
     app.settle();
     CHECK(app.grab().pixelColor(2, 2).lightness() < 80);
