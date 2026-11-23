@@ -68,9 +68,9 @@ solution, and shows you the turns one at a time on a 3D cube.
       what it misreads, and you can type a scramble or the colours in instead
       ([Another size of cube](other-sizes.md)).
     - **The other eight languages are first drafts** that no fluent reader has
-      been through, and some of the wording is English whatever language you
-      choose: the scan screen's guidance and most of the words around the
-      solution. See [Settings and shortcuts](settings.md#language).
+      been through: every screen is in them, the scan and solve screens
+      included, but expect wording a native speaker would change. See
+      [Settings and shortcuts](settings.md#language).
     - **The installers are not code-signed**, so Windows and macOS ask before
       they run it. [Installing](install.md) says what to expect.
 

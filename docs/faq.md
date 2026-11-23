@@ -40,7 +40,7 @@ Is there an update check?
 :   No. Cubeulator never contacts a server. To update, download the newer package and install it over the old one; your settings are kept.
 
 Which languages does it speak?
-:   Nine: English, Deutsch, Français, Español, Japanese, Simplified Chinese, Hebrew, Arabic and Yiddish. English is complete; the other eight are complete first drafts that no fluent reader has been through, and some words on the solve screen are English in every language. See [Settings](guide/settings.md#language).
+:   Nine: English, Deutsch, Français, Español, Japanese, Simplified Chinese, Hebrew, Arabic and Yiddish. English is complete; the other eight are complete first drafts that no fluent reader has been through, so some of the wording is one a native speaker would change. Every screen is in them, the solve screen included. See [Settings](guide/settings.md#language).
 
 How do I report a problem?
 :   Open an [issue on GitHub](https://github.com/iainchesworthlabs/cubeulator/issues). [Support](support.md) says what to put in it.
