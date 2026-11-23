@@ -1,43 +1,110 @@
 # Accessibility
 
 > [!NOTE]
-> **Status in 0.2.0-beta.4:** Mostly design. The app has some accessibility
-> support on some screens, listed under "What the app has today" below; the rest
-> of the page is the specification, and none of it has been tried with a screen
-> reader.
+> **Status in 0.2.0-beta.4 plus the accessibility work after it:** Part built.
+> Every control of every screen has a role and a name, can be reached with Tab
+> and pressed with Enter or Space, and shows a focus ring; each screen is a named
+> pane with a heading; what changes by itself (the scan's guidance, the next
+> turn, an error) is announced; the whole journey is walked by keyboard in a
+> test; and the app follows the device's request for less motion, with a Motion
+> row in Settings. The rest of the page is still the specification. All of it was
+> tried against Qt's own accessibility tree and events in the system tests, and
+> **none of it with a screen reader**: whether Narrator, NVDA or VoiceOver read
+> it well is not known.
 
 ## What the app has today
 
-Checked against `src/app/qt` and `CHANGELOG.md` for 0.2.0-beta.4. Everything not
-listed as built is design.
+Checked against `src/app/qt`, `tests/system/accessibility_test.cpp` and
+`CHANGELOG.md`. Everything not listed as built is design.
 
 ### Built
 
-- **Names and roles (`Accessible`), on some screens.** About (title and name as
-  headings, the version as text); Licences (headings, the rows, the notice
-  text); History (each row and delete button named by its date and summary, and
-  "Deleted" and "Cleared" announced); the solution (headings, the cube as a
-  graphic named by its caption, each turn row a list item named by the whole
-  sentence, with its selected state); the colours screen (each sticker a button
-  named by side, row, column and colour, and "unsure" where the camera doubted
-  it; the palette as radio buttons; the side picker and the palette named as
-  groups); and the confirmation dialogs (role dialog; focus moves to the dialog
-  and returns on close).
-- **Keyboard.** Tab and the arrow keys move between the rows of About and
-  Licences, and into the notice text. Esc goes back on About, Licences, History,
-  the solution, the colours screen and *Another size of cube*, and closes a
-  dialog on its safe choice. The solve screen steps on Space, Enter and the
-  right arrow, and back on the left arrow; the solution on the arrow keys
-  (swapped in right-to-left languages), Space, Home and End; the colours screen
-  has the platform's Undo and Redo. The desktop shell has Ctrl+, (Settings),
-  Ctrl+N (a new scan, from Home or Complete), F11 or Ctrl+Cmd+F (full screen)
-  and Ctrl+Q, and on a Mac Cmd+W and Cmd+M; Ctrl+Shift+D and Ctrl+Shift+S are
-  for developers. F1 (Help) and Shift+Ctrl+N (enter by hand) are bound and
-  disabled, because there is no Help and no Home entry for them to open.
-- **Focus ring.** On a `ListRow` (the rows of About and Licences) and, as a
-  heavier border, on a text box. Nowhere else.
+- **Names and roles (`Accessible`), everywhere.** `AppButton` is a button, or a
+  radio button when it is one of a set of choices (a chip, a method, a size,
+  a side: `checkable` and `checked`), named by its own label so that a
+  translation carries over, with the disabled state exposed (it is the item's
+  own `enabled`; it used to shadow it with a property of its own). Switches in
+  Settings are check boxes; the rows of About, Licences and History are buttons
+  (links where they leave the app); a colour of the palette is a radio button;
+  a turn of the solution is a list item that can be pressed. Icons and arrows
+  are ignored: the control that holds them carries the name. Each screen is a
+  pane named by its title, and its title, its eyebrow or its headline is a
+  heading. A set of choices is a group named by its section. The 3D cube on the
+  solve screen is a graphic named "The cube as it should look now" with the turn
+  in words; the scan's picture is "Camera picture" and each of its six chips says
+  which side it is and whether it is read. The home, settings and finishing
+  cubes are decoration and not listed. The test
+  (`every control on every screen has a name and a role`) walks Qt's
+  accessibility tree - the one every platform's reader is built on - on each
+  screen in both layouts and fails on a control that is not in it with a role
+  that can be operated and a name that is not an id.
+- **Keyboard.** Every button, choice, switch, list row, history row and delete
+  button, the palette and the colours screen's side grid is a Tab stop
+  (`activeFocusOnTab`) and is pressed with Enter or Space; Shift+Tab goes back.
+  A click or tap does not take focus, so the solve screen's keys still act on
+  the screen after a button was clicked. On the colours screen the grid is one
+  Tab stop: the arrow keys move a cursor over the stickers, Space and Enter
+  paint, Backspace and Delete unset, 1 to 6 choose the colour, Page Up and Page
+  Down change side. A dialog holds Tab inside itself, and the scramble box lets
+  Tab leave. Focus that arrives below the fold of a list is scrolled into view.
+  Esc goes back on Settings (to where it was opened from), History, the
+  solution, About, Licences, *Another size of cube*, the colours screen and a
+  dialog (its safe choice), is **Not now** on the camera permission screen and
+  **Cancel** on the scan screen (it does not ask first). The solve screen steps
+  on Space, Enter and the right arrow, and back on the left arrow; the solution
+  on the arrow keys (swapped in right-to-left languages), Space, Home and End;
+  the colours screen has the platform's Undo and Redo. The desktop shell has
+  Ctrl+, (Settings), Ctrl+N (a new scan, from Home or Complete), F11 or
+  Ctrl+Cmd+F (full screen) and Ctrl+Q, and on a Mac Cmd+W and Cmd+M;
+  Ctrl+Shift+D and Ctrl+Shift+S are for developers. F1 (Help) and Shift+Ctrl+N
+  (enter by hand) are bound and disabled, because there is no Help and no Home
+  entry for them to open. `tests/system/accessibility_test.cpp` walks Tab round
+  every screen and the whole journey (scan, solve, finish, review, scan again)
+  with the keyboard alone, in both layouts.
+- **Focus ring.** Two bands inside the edge of the control, so that no list that
+  clips can cut them: 2 px of `ink`, then 2 px of the page's colour (the design
+  has the ring outside the control; most of the controls sit in lists and
+  columns that clip, so it is drawn on the control's own edge). Over the camera
+  picture, on the scan screen, it is `overlay.ink` and the overlay panel's
+  colour, so that one band shows against any picture. The pairs are the ones
+  `tokens.json` already measures (`ink` on `paper`), and `check_tokens.py` still
+  passes. `FocusRing.qml` is the one place it is drawn.
+- **Announcements.** `Announcer.qml` says something to a screen reader through
+  `Accessible.announce` (Qt 6.8's `QAccessibleAnnouncementEvent`: UI Automation's
+  notification event on Windows; the platform's announcement notification on
+  macOS and iOS) without moving focus, politely unless it says otherwise, after
+  the words have stopped changing for 300 ms and never the same words twice
+  within two seconds. It is used for: the scan's headline and guidance, a
+  camera that will not start (assertive), the turn to make on the solve screen
+  with its place in the solve and, when it changes, the stage; what the camera
+  makes of the cube there; the solution's turn as it moves; what is wrong with a
+  typed scramble (assertive); the colours screen's verdict when the cube is
+  valid, miscounted or impossible; the camera permission being refused; and
+  "Solve deleted" and "History cleared". The tests listen with
+  `QAccessible::installUpdateHandler` and read what was said, for the scan, the
+  camera failure, the solve's turn, the solution's turn, the scramble's error
+  and the history; what the camera makes of the cube, the permission refusal
+  and the colours screen's verdict are said the same way and have no test of
+  their own.
 - **Light, dark and the device's own scheme**, chosen in Settings and followed
   live.
+- **Reduced motion.** `Theme.reducedMotion` is on when Settings > Appearance >
+  Motion says **Reduced**, or says **Same as this device** (the default) and the
+  device asks (`Qt.styleHints.accessibility.motionPreference`, new in Qt 6.12,
+  which each platform plugin fills in from its own setting - Windows "Show
+  animations", the macOS and iOS "Reduce motion", the browser's
+  `prefers-reduced-motion` - or does not; which of them do was not checked, so
+  the row in Settings is the way that always works). Then the
+  home and settings cube does not spin; the layer to turn is drawn leaning, still,
+  and a turn snaps; the cube's view does not swing to look at the back; the
+  finishing cube does not bob and the underline under "Solved" is drawn whole; a
+  chip does not pop and six do not ripple; the camera preview on the solve screen
+  does not glide and does not flash when a move is seen; the working spinner
+  stands still; screens fade in 120 ms and not 280; the solution plays more
+  slowly (it had that already). Changing the setting changes a screen that is
+  on show. `Same as this device` is the default, so a device that has not asked
+  for less sees no change; the saved key is `appearance/motion`. There is no
+  "shake" in the app to still.
 - **Right to left.** Hebrew, Arabic and Yiddish mirror the layout; the cube, the
   camera picture and the nine stickers of a side opt out of mirroring; the
   solution's arrow keys swap. The i18n screen tests check the mirroring.
@@ -47,46 +114,46 @@ listed as built is design.
 
 ### Designed, not built
 
-- **Names and roles on the other screens.** `AppButton` is an item with a mouse
-  area, so the buttons of Home, scan, solve, complete, settings and *Another
-  size of cube* have no role or name of their own, and are not Tab stops: those
-  screens cannot be driven by Tab at all. Only a `ListRow` (About, Licences) and
-  a few text boxes are Tab stops, so the History rows and the colours screen's
-  stickers, tiles and buttons are named, at best, and cannot be reached by Tab.
-  The scan screen's picture, dots, chips and status, and the solve screen's cube
-  and words, have no accessible text. No screen announces a change except
-  History.
-- **Keys:** Alt+Left, Cmd+[ and the mouse back button; the scan keys (Esc, R, M,
-  H); the colour keys, cursor and Ctrl+Enter of the colours screen; P, H, Page
-  Up and Page Down on the solve screen; Esc on Scan, Solve, Settings, Complete
-  and Home.
+- **Keys:** Alt+Left, Cmd+[ and the mouse back button; the scan keys R, M and H;
+  Ctrl+Enter on the colours screen; P, H, Page Up and Page Down on the solve
+  screen; Esc on Solve, Complete and Home (Solve has no "leave" to say it with:
+  its only way out is the rescan button).
 - **Marks on the cube colours**, and the retuned swatches: `Theme.qml` still
   draws the old six (orange and green 5.4 apart under protanopia), and the dots
-  on the scan screen are still yellow, then green.
+  on the scan screen are still yellow, then green. `settings.marks` is a string
+  with nothing behind it.
 - **Text size.** Sizes are pixels in the QML. Nothing reads the system's text
-  size, and Settings has no row for it; nothing tests a larger text size.
-- **Reduced motion.** Nothing reads the system's setting, and Settings has no
-  Motion row. The solution screen has a `reducedMotion` property for the day
-  something does, and the browser's loading page slows its spinner under
-  `prefers-reduced-motion`; the solved cube on Complete bobs, and the layer to
-  turn nudges, whatever the setting.
+  size, and Settings has no row for it; nothing tests a larger text size. Qt 6.12
+  has no cross-platform text scale to read (`QStyleHints` and
+  `QAccessibilityHints` give the colour scheme, the contrast preference and the
+  motion preference only), and nothing in the Windows plugin refers to the
+  "Text size" setting. What a phone's own scale does to `QGuiApplication::font()`
+  is not used either: every size in the screens is a pixel count that would have
+  to be multiplied (127 of them across the screens and widgets when this was written).
 - **The contrast gate on the screens.** `check_tokens.py` passes for
   `tokens.json`, but `Theme.qml` is still the legacy palette (the brand red
   `#EC3013` as text, `inkMuted(0.55)`), which the design says misses 4.5:1. The
   figures in this page describe the tokens, not what the screens draw.
-- **Live announcements, describing the cube, reading turns aloud, focus moved to
-  the title on entry.**
+- **Describing the cube, reading turns aloud, durations spoken as durations**
+  (the solved screen says "62 turns · 12:40"), **the chips read out as nine
+  colours**, **a quarter-turn's direction by side** (the solve screen says
+  clockwise or anticlockwise as the person looks at the side, not "to the
+  left").
+- **Target sizes of 48 px** are not measured; many buttons are 30 to 44 high.
 
 ### Not tried
 
 - **No screen reader** (Narrator, NVDA, VoiceOver, TalkBack, Orca) has been run
-  against the app, as far as the repository records. The one test of an
-  accessible name is a unit test of the colours screen's stickers
-  (`tests/unit/colours_screen_test.cpp`). Whether `Accessible` on these custom
-  items is read well on a phone is not known; the iPhone build has not been
-  tried by anyone but its author.
-- **The keyboard walk** is tested for History, Licences and the main journey,
-  not for every screen.
+  against the app, as far as the repository records. What the tests show is
+  that Qt's accessibility tree has the right names, roles, states and focus and
+  that the announcement events are raised; how a reader speaks them, whether
+  the announcement events are turned into speech on every platform, and whether
+  `Accessible` on the custom items is read well on a phone are not known. The
+  iPhone build has not been tried by anyone but its author.
+- **Focus on entering a screen.** Each screen's root takes focus when it appears
+  and is a named pane, so that a reader starts on the title; whether a reader
+  announces the pane's name on that is a reader's behaviour and has not been
+  seen.
 - **The people tests** the page names (five people who cannot solve a cube, one
   of them with a colour vision deficiency) are E6; nothing in the repository
   records them.
@@ -100,7 +167,7 @@ Android), the stricter rule is the kit's rule everywhere.
 
 The app on 2026-10-13 had no accessible names, no keyboard focus and state
 carried by colour alone (plan, "What was found"). Of the three, names and
-focus now exist on some screens, and the dots on the scan screen still change
+focus now exist on every screen, and the dots on the scan screen still change
 by colour alone ("What the app has today", above). So this is the design for
 the first accessible version, not a refinement.
 

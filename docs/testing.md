@@ -328,6 +328,25 @@ on Windows); the whole macOS step is about 28 minutes.
 - **Sweeps.** `press_every_control` (`sweep.hpp`) presses everything the live
   item tree offers on a screen, once; a control added tomorrow is pressed
   with no test change, and what it does is for a case of its own.
+- **The keyboard and the accessibility tree.** `accessibility_test.cpp` takes the
+  same walk with the keyboard and with what a screen reader is given. It walks
+  Qt's accessibility tree (`QAccessible`, which every platform's reader is built
+  on) on every screen in both layouts and fails when a control that
+  `App::visible_controls` finds is not in it with a role that can be operated
+  and a name that is not an id, when a screen is not a named pane with a
+  heading, or when focus is not on the screen after it appears; it presses Tab
+  round every screen (`App::key(Qt::Key_Tab)`, `App::focus_name`) and fails on a
+  control Tab does not stop on; it makes the whole journey with Tab, Shift+Tab,
+  Enter, Space, the arrows and Esc (`App::press_focused` counts a keyboard press
+  for the reach gate, as a click is counted); and it installs
+  `QAccessible::installUpdateHandler` to read what the app announces
+  (`Accessible.announce`) and how urgently. A control that cannot be reached by
+  Tab says why in `reached_otherwise` (the draggable cubes, which are a way to
+  look; the rows of the solution, which the arrow keys step to). A hidden case,
+  `cube_system_tests "[.focus-shot]"`, writes pictures of the focus ring (light
+  and dark, over the camera) to `$CUBE_SYSTEM_TEST_OUT/screens` for a person to
+  look at. What the tests cannot say is how NVDA, Narrator or VoiceOver speaks
+  any of it.
 - **QML warnings are failures.** `diagnostics.cpp` collects what the app's own
   QML printed; the journey cases assert it is nothing.
 - **One file is added from `tests/CMakeLists.txt`**, not listed in
@@ -617,10 +636,11 @@ to turn a layer in, so a box that is clear is a cube that is clear at any angle.
 ### Known today
 
 `known_today_test.cpp` asserts, as they are, the behaviours the
-[experience plan](app-experience-plan.md) lists as defects. Two are left: the
+[experience plan](app-experience-plan.md) lists as defects. One is left: the
 launch screen's language button is a picker with one language and opens
-Settings, and there is no back handling (Escape, the Back key) and no control
-that takes keyboard focus on the settings screen. Each is tagged
+Settings. (The other, that there was no back handling and no control took
+keyboard focus on the settings screen, is fixed, and is a journey step in
+`accessibility_test.cpp`.) Each is tagged
 `[known-today]`, cites its plan line and owner, and is written to **fail the
 day it is fixed** - that is the prompt to turn it into a journey step. Nothing
 in the suite fixes them.

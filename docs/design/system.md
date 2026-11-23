@@ -6,9 +6,12 @@
 > `inkMuted(opacity)`, the old sticker colours, a single 720 breakpoint and no
 > marks, and the kit's components do not exist as kit types. Three come near:
 > `ListRow` (the List row, with a role, a name and a focus ring),
-> `ConfirmDialog` (the Dialog: the safe choice first, focus moved in and
-> returned) and `AppButton`, which is still an item with a mouse area, with no
-> role, no focus and no focus ring. Archivo and IBM Plex Mono are bundled and
+> `ConfirmDialog` (the Dialog: the safe choice first, focus moved in, held
+> there by Tab and returned) and `AppButton`, which has a role, a name from its
+> label, a Tab stop, Enter and Space, a disabled state and a focus ring, and is
+> otherwise the item with a mouse area it was (the ring is two bands inside the
+> edge, not outside it: see `accessibility.md`, "Focus ring"; `FocusRing.qml`
+> draws it, `Announcer.qml` says what changes). Archivo and IBM Plex Mono are bundled and
 > loaded at start-up since 0.2.0-beta.1 (everywhere but the browser); Noto Sans
 > Hebrew and Arabic are not. The measured tables are computed from
 > `tokens.json`; they say what the tokens do, not what the app draws.

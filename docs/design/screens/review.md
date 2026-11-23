@@ -12,10 +12,14 @@
 > (`EntryScreen.qml`; "A cube of another size", below), is built. Hand entry has
 > no button on Home: it is reached from *Another size of cube*, by *Enter the
 > colours*. Not built: the sketch's `review.working` and `review.solve-failed`
-> states (Solve goes straight to the solve screen), its keyboard map (the colour
-> keys 1 to 6, the cursor over the stickers, Page Up and Page Down, Ctrl+Enter)
-> and its unfolded overview, the Help button, and the `objectName`s of the
-> sketch's table (the screen's are `colours.*` and `entry.*`).
+> states (Solve goes straight to the solve screen), Ctrl+Enter to solve, its
+> unfolded overview, the Help button, and the `objectName`s of the
+> sketch's table (the screens' are `colours.*` and `entry.*`). Its keyboard map is
+> built but for that: the grid of a side is one Tab stop, in which the arrow keys
+> move a cursor over the stickers, Space and Enter paint, Backspace and Delete
+> unset, 1 to 6 choose the colour and Page Up and Page Down change side; the
+> palette and the buttons are Tab stops of their own; and the verdict is
+> announced when the cube is valid, miscounted or impossible.
 
 Lane: **scan** (`feature/direct-scan`; recovery plan R3). This is a
 proposal for the chrome and the states. Checking that colours make a cube,

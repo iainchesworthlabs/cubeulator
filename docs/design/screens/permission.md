@@ -6,8 +6,9 @@
 > (`permission.point1` to `permission.point3`), **Allow camera** (**Try again**
 > after a refusal), **Open device settings** (after a refusal) and **Not now**,
 > named `permission.enable`, `permission.openSettings` and `permission.notNow`.
-> Once access is allowed it goes on to the scan by itself. Not built: the back
-> control, **Enter colours by hand**, a separate **Ask again**, the caution
+> Once access is allowed it goes on to the scan by itself. Esc is **Not now**.
+> The screen is a pane named by its title, and a refusal is announced. Not
+> built: the back control, **Enter colours by hand**, a separate **Ask again**, the caution
 > icon, and macOS: `AppState.beginScan()` skips this screen on every desktop
 > system, macOS included, and in the browser, where the browser asks. On an
 > iPhone the screen leads to the scan (0.2.0-beta.3 fixed it reading the answer

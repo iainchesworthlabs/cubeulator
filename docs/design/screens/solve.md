@@ -17,15 +17,22 @@
 > its sheets, the stage check, timer mode, the 96-high buttons, the three-line
 > instruction block, notation, sound, carrying on after leaving (a solve carried
 > on from History goes straight to its turn, with no camera), and keeping the
-> screen awake. Where it differs from this page: the cube can be dragged, and
-> the camera follows the turns, which the spec lists as later. Every word on it
-> asks for its string by id, and where the screen and this page worded a thing
-> differently the owner decided (2026-11-23, `../../i18n.md`): the screen now
-> says the design's stage names and sentences, the design's *Left* and *Right*
-> and **Previous** (the button is not **Back one**), and the design's pages
-> take the screen's hold line (it names the colours the cube is held by) and
-> **Solving…**. What the screen has beyond this page is under "The words the
-> built screen has", below.
+> screen awake. For a screen reader the screen is a pane named by the hold line,
+> the cube a graphic named by the turn in words (`solve.a11y.cube`), and each
+> turn is announced with its place in the solve, the stage first when it changes,
+> and what the camera makes of the cube beside it (the turn's direction is
+> clockwise or anticlockwise as the person looks at the side, `solve.a11y.move`,
+> not the design's "to the left"); Tab reaches the method, **Check the colours**,
+> **Previous**, **Next turn** and **Out of step? Rescan** in that order, and the
+> screen's keys act whatever has focus. Esc does nothing here. Where it differs
+> from this page: the cube can be dragged, and the camera follows the turns,
+> which the spec lists as later. Every word on it asks for its string by id,
+> and where the screen and this page worded a thing differently the owner
+> decided (2026-11-23, `../../i18n.md`): the screen now says the design's stage
+> names and sentences, the design's *Left* and *Right* and **Previous** (the
+> button is not **Back one**), and the design's pages take the screen's hold
+> line (it names the colours the cube is held by) and **Solving…**. What the
+> screen has beyond this page is under "The words the built screen has", below.
 
 Lane: **solve** (`feature/solve-guidance`). This is a proposal for the
 chrome round the cube view and for the states of `SolveScreen.qml`. The
@@ -103,7 +110,7 @@ away.
 | Progress | solve progress bar. Role: progress bar, value in turns | - | `solve.progress` |
 | The cube | The solve lane's cube view. Role: graphic. Also the tap target for the state's main action | `solve.a11y.cube` | `solve.cube` |
 | Hold reminder | A line: the hold the screen asks for, with the colours of the centre on top and the centre facing the person, and what the camera saw once it has seen the cube held. (The design's two swatches are not built) | `solve.holdLine.hold`, `solve.holdLine.holding`, `colour.word.*` | `solve.holdLine` |
-| Instruction block | instruction block; a polite live region whose text is the whole sentence | `side.*`, `dir.*`, `amount.*`, `turn.*`, `solve.a11y.notation` | `solve.instruction` |
+| Instruction block | instruction block; a polite live region whose text is the whole sentence | `side.*`, `dir.*`, `amount.*`, `turn.*`, `solve.a11y.move`, `solve.a11y.notation` | `solve.instruction` |
 | First-turn hint | A line on `accentTint` above the instruction | `solve.hint.touch`, `solve.hint.keys` | `solve.hint` |
 | Next turn | button, primary, giant | `solve.next`, `solve.finish` | `solve.next` |
 | Previous | button, secondary, giant | `solution.previous` | `solve.previous` |
