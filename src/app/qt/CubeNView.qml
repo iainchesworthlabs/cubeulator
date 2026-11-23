@@ -101,7 +101,9 @@ Item {
     // vertical like a turntable, then viewPitch tips the top towards the viewer.
     property real viewPitch: 0
     property real viewYaw: 0
-    property int viewDuration: 450
+    // A view that swings to show a side is an animation the person did not ask
+    // for: with reduced motion (Theme) it is there at once.
+    property int viewDuration: Theme.reducedMotion ? 0 : 450
     property real shownPitch: viewPitch
     property real shownYaw: viewYaw
     Behavior on shownPitch { NumberAnimation { id: pitchSwing; duration: root.viewDuration; easing.type: Easing.InOutCubic } }
@@ -201,7 +203,10 @@ Item {
         playing = true;
         playAnim.from = turnAngle;
         playAnim.to = playTarget;
-        playAnim.duration = turnDuration * (Math.abs(playTarget) > 90 ? 1.5 : 1);
+        // Reduced motion: the layers snap, on the next tick so that whoever asked
+        // finds the turn finished the way it always is, by movePlayed.
+        playAnim.duration = Theme.reducedMotion ? 1
+                          : turnDuration * (Math.abs(playTarget) > 90 ? 1.5 : 1);
         playAnim.start();
     }
 
@@ -287,10 +292,22 @@ Item {
         if (viewMoving)
             return; // once the cube has stopped turning, this runs again
         nudgeSign = turn.degrees > 0 ? 1 : -1;
+        if (Theme.reducedMotion) {
+            // Drawn leaning, still: the way it will go, without the going.
+            turnAngle = nudgeSign * nudgeAngle;
+            return;
+        }
         if (Math.abs(turn.degrees) > 90)
             nudgeTwice.restart();
         else
             nudgeOnce.restart();
+    }
+
+    // The setting changing under a cube on screen: the layers start or stop
+    // nudging, and the spin follows its Timer's own condition.
+    Connections {
+        target: Theme
+        function onReducedMotionChanged() { root.scheduleGuide(); }
     }
 
     // Every sticker as it sits, in the cube's own frame and in cubie spacings:
@@ -692,7 +709,7 @@ Item {
     Timer {
         interval: 16
         repeat: true
-        running: root.autoRotate && !dragHandler.active && !springAnim.running
+        running: root.autoRotate && !Theme.reducedMotion && !dragHandler.active && !springAnim.running
         onTriggered: cubeRoot.eulerRotation.y = cubeRoot.eulerRotation.y + root.autoRotateSpeed
     }
 
