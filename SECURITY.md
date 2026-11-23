@@ -56,6 +56,7 @@ FD13 CB8C AC83 1664 8CD9  74D0 8149 254C 4189 4DBE
 That is the key of every release from 0.2.0-beta.3 on. 0.1.0-beta.1 and 0.2.0-beta.1 were signed with an earlier key,
 `Cubeulator Release Signing Key` (RSA 4096), fingerprint `0CF2 A242 440A 7AF0 18A2  BFF3 03E2 D330 B299 EB46`.
 
-The public key is committed as [`docs/signing-key.asc`](docs/signing-key.asc), and each release holds a copy. The
+The public key is committed as [`docs/signing-key.asc`](docs/signing-key.asc); a release does not carry a copy, so that
+it cannot vouch for itself. The
 commands for both checks, for the SBOMs and for working offline are in
 [Verifying build authenticity](docs/SECURITY.md#verifying-build-authenticity).

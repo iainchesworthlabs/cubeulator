@@ -1,27 +1,24 @@
 name: Release
 
-# Builds the desktop packages (an installer for Windows, a disk image for macOS,
-# a .deb and an .rpm for Linux) and the web build's zip, signs and attests
-# them, builds the iPhone app and sends it to TestFlight (the .ipa is not a
-# release file), renders the release notes from CHANGELOG.md and, for a real release,
-# creates a DRAFT GitHub Release. How to cut one is docs/releasing.md.
+# Builds the desktop packages (an installer for Windows, a disk image for macOS, a .deb and an .rpm for Linux), the
+# web build's zip and the iPhone app (to TestFlight), then hands the packages to the shared publish workflow of
+# icl-common-infra, which writes the SHA-512 manifest, signs, attests, checks the SBOMs and creates the GitHub Release.
+# How to cut one is docs/releasing.md.
 #
-#   push a tag vX.Y.Z[-label.N]      ->  a release: verify, build, sign and
-#                                        attest, draft release
-#   run by hand, dry_run (default)   ->  a DRY RUN: all of the above except the
-#                                        tag and the release. Signed with a
-#                                        throwaway key; the files and the notes
-#                                        are a workflow artifact to inspect
-#   run by hand, dry_run unticked    ->  a release, the tag made at the end
-#   a PR that changes the release    ->  only the tools' self-test runs, so that
-#   machinery                            GitHub parses this file and a mistake
-#                                        shows before a tag does
+#   push a tag vX.Y.Z[-label.N]      ->  a release: verify, build, then publish. The tag is on a commit of develop. The
+#                                        tag is pushed by the owner, or made by the `Tag a release` workflow with the
+#                                        release bot's token (tag-release.yml). The publish job waits for the owner to
+#                                        approve the `release` environment.
+#   run by hand                      ->  a rehearsal of the packaging: build every package and the SBOMs, with Apple
+#                                        validating the iPhone build, and publish nothing
+#   a PR that changes the release    ->  only the tools' self-test runs, so that GitHub parses this file and a mistake
+#   machinery                            shows before a tag does
 #
-# A release is a deliberate human step (docs/branch-protection.md): the
-# workflow leaves the release as a draft, and publishing it is the click that
-# makes it public. Packages are not OS code-signed yet (docs/packaging.md); what
-# is signed is the SHA-512 manifest and every package, with the project's GPG
-# key, and each package carries a build-provenance attestation and an SBOM.
+# A final release (no label) also fast-forwards `main` to the tag, with the release bot, after it is published: `main`
+# only ever holds a released commit (docs/branch-protection.md). Packages are not OS code-signed with a trusted
+# certificate yet; the Windows files are test-signed when SIGN_WINDOWS is `test` (docs/packaging.md); what is signed
+# for everyone is the SHA-512 manifest and every file, with the organisation's GPG key (docs/signing-key.asc), and each
+# file carries a build-provenance attestation and an SBOM.
 
 on:
   push:
@@ -30,36 +27,20 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+-*"
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: >-
-          Dry run: build, sign with a throwaway key and render the notes, but
-          create no tag and no release. Untick for a real release.
-        type: boolean
-        default: true
       ios:
         description: >-
-          Build the iPhone app too, signed for TestFlight when SIGN_IOS_UPLOAD is
-          true (docs/ios-install.md); a real release uploads it, a dry run has
-          Apple validate it. A tag push always builds it. Untick to rehearse the
-          rest without a Mac and without those secrets.
+          Build the iPhone app too; Apple validates the build and nothing is uploaded (a tag uploads it to TestFlight,
+          docs/ios-install.md). Untick to rehearse the rest without a Mac and without the Apple secrets.
         type: boolean
         default: true
-      unsigned:
-        description: >-
-          Real release only: go ahead without the GPG signature when the
-          signing key is not provisioned. Without this a missing key fails the
-          release, so that it is never unsigned by accident.
-        type: boolean
-        default: false
   pull_request:
     paths:
       - ".github/workflows/release.yml"
+      - ".github/workflows/tag-release.yml"
       - "packaging/check-package.sh"
       - "tools/release/**"
 
-# Nothing is granted by default. Each job asks for exactly what it needs:
-# `sign` the OIDC token and attestation write (and holds the GPG key),
-# `publish` contents: write (and holds neither).
+# Nothing is granted by default. Each job asks for exactly what it needs.
 permissions: {}
 
 concurrency:
@@ -70,9 +51,6 @@ concurrency:
 jobs:
   verify:
     name: Verify the release
-    # A tag the release bot pushed was made by a dispatched release (publish, below), which
-    # carries on in its own run: this one would build and upload everything a second time.
-    if: ${{ github.event_name != 'push' || github.event.sender.type != 'Bot' }}
     runs-on: ubuntu-26.04
     permissions:
       # actions and checks: check_health.py reads the commit's workflow runs
@@ -84,13 +62,11 @@ jobs:
       version: ${{ steps.check.outputs.version }}
       tag: ${{ steps.check.outputs.tag }}
       prerelease: ${{ steps.check.outputs.prerelease }}
-      from_unreleased: ${{ steps.check.outputs.from_unreleased }}
       publish: ${{ steps.mode.outputs.publish }}
-      dry_run: ${{ steps.mode.outputs.dry_run }}
       ios: ${{ steps.mode.outputs.ios }}
     steps:
-      # The whole history, with the tags: whether a release commit sits on main
-      # and whether the tag exists need it.
+      # The whole history, with the tags: whether the release commit sits on
+      # develop needs it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -110,34 +86,27 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
-          DRY_RUN_INPUT: ${{ inputs.dry_run }}
           IOS_INPUT: ${{ inputs.ios }}
         run: |
           publish=false
-          dry_run=true
           pushed_tag=""
           ios=true
           if [ "$EVENT" = "push" ]; then
             # A tag was pushed: the tag is the release.
             publish=true
-            dry_run=false
             pushed_tag="$REF_NAME"
-          elif [ "$DRY_RUN_INPUT" = "false" ]; then
-            publish=true
-            dry_run=false
           fi
           # A tag push builds iOS whatever was ticked: the release is not the
-          # place to leave a platform out by accident. Only a dispatch can.
+          # place to leave a platform out by accident. Only a rehearsal can.
           if [ "$EVENT" = "workflow_dispatch" ] && [ "$IOS_INPUT" = "false" ]; then
             ios=false
           fi
           {
             echo "publish=$publish"
-            echo "dry_run=$dry_run"
             echo "pushed_tag=$pushed_tag"
             echo "ios=$ios"
           } >> "$GITHUB_OUTPUT"
-          echo "event=$EVENT publish=$publish dry_run=$dry_run ios=$ios tag=${pushed_tag:-<made at the end>}"
+          echo "event=$EVENT publish=$publish ios=$ios tag=${pushed_tag:-<none: a rehearsal>}"
 
       # The version is the one CMakeLists.txt declares; the tag, the changelog
       # section and the package names must all agree with it
@@ -148,55 +117,47 @@ jobs:
         shell: bash
         env:
           PUSHED_TAG: ${{ steps.mode.outputs.pushed_tag }}
-          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+          PUBLISH: ${{ steps.mode.outputs.publish }}
         run: |
           args=()
           if [ -n "$PUSHED_TAG" ]; then args+=(--tag "$PUSHED_TAG"); fi
-          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          if [ "$PUBLISH" != "true" ]; then args+=(--dry-run); fi
           python3 tools/release/check_release.py "${args[@]}" --github-output "$GITHUB_OUTPUT"
 
-      # main only receives releases (docs/branch-protection.md). A final
-      # release must be on it; a pre-release may be cut from a release/* branch
-      # to be tried first. A dispatched release makes its tag at the end, so
-      # the tag must not exist yet.
+      # A release is cut from develop, and `main` follows it afterwards (final
+      # releases only). The shared publish workflow checks the same; failing
+      # here saves the builds.
       - name: Check where the release is cut from
         if: ${{ github.event_name != 'pull_request' && steps.mode.outputs.publish == 'true' }}
         shell: bash
         env:
-          EVENT: ${{ github.event_name }}
           TAG: ${{ steps.check.outputs.tag }}
-          PRERELEASE: ${{ steps.check.outputs.prerelease }}
         run: |
-          git fetch --no-tags origin main
-          if [ "$PRERELEASE" != "true" ] && ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "::error::$TAG is a final release and $GITHUB_SHA is not on main. Final releases are cut from main, after the develop -> main release PR."
-            exit 1
-          fi
-          if [ "$EVENT" = "workflow_dispatch" ] && git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "::error::Tag $TAG already exists. Push a tag to release it again, or prepare a new version."
+          git fetch --no-tags origin develop
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/develop; then
+            echo "::error::$TAG does not point at a commit on develop ($GITHUB_SHA is not). Releases are cut from develop."
             exit 1
           fi
           echo "$TAG may be released from $GITHUB_SHA."
 
       # The README shows a badge for each of CI, CodeQL, OSV-Scanner and
-      # Zizmor; `main` shows their latest runs, so a release whose commit is
-      # not green on all of them is a red front page. The tag is on the merge
-      # commit of the release PR, which has only just been pushed, so it is the
-      # develop tip it merged that is judged (--through-merge): that is what was
-      # tested. A dry run reports and goes on; a release stops.
+      # Zizmor; a release whose commit is not green on all of them is a red
+      # front page. If the commit is a merge commit, it is the develop tip it
+      # merged that is judged (--through-merge): that is what was tested. A
+      # rehearsal reports and goes on; a release stops.
       - name: Check the commit is green
         if: ${{ github.event_name != 'pull_request' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          DRY_RUN: ${{ steps.mode.outputs.dry_run }}
+          PUBLISH: ${{ steps.mode.outputs.publish }}
         run: |
           status=0
           python3 tools/release/check_health.py \
             --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_SHA" --through-merge \
             --summary "$GITHUB_STEP_SUMMARY" || status=$?
-          if [ "$status" -ne 0 ] && [ "$DRY_RUN" = "true" ]; then
-            echo "::warning::The commit is not green. A release would stop here; a dry run goes on."
+          if [ "$status" -ne 0 ] && [ "$PUBLISH" != "true" ]; then
+            echo "::warning::The commit is not green. A release would stop here; a rehearsal goes on."
             exit 0
           fi
           exit "$status"
@@ -376,6 +337,20 @@ jobs:
           CMAKE_PRESET: ${{ matrix.preset }}
         run: cmake --build --preset "$CMAKE_PRESET"
 
+      # Authenticode, behind the SIGN_WINDOWS repository variable (false, test or production;
+      # icl-common-infra docs/test-signing.md). The program is signed before CPack so that the
+      # installer carries a signed program, and the installer after it. `rename: false`: the
+      # package keeps the name docs and checks use, whatever the mode; the notes say what it is.
+      - name: Sign the program (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        uses: iainchesworthlabs/icl-common-infra/actions/sign-windows@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
+        with:
+          mode: ${{ vars.SIGN_WINDOWS || 'false' }}
+          files: build/${{ matrix.preset }}/bin/Cubeulator.exe
+          rename: "false"
+          pfx-base64: ${{ secrets.WIN_TESTSIGN_PFX_BASE64 }}
+          pfx-password: ${{ secrets.WIN_TESTSIGN_PFX_PASSWORD }}
+
       - name: Package
         shell: bash
         env:
@@ -384,6 +359,16 @@ jobs:
         # CPack writes the package to the directory it is run from, the
         # workspace root.
         run: cpack --config "build/${CMAKE_PRESET}/CPackConfig.cmake" -G "${PACKAGE_GENERATORS}"
+
+      - name: Sign the installer (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        uses: iainchesworthlabs/icl-common-infra/actions/sign-windows@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
+        with:
+          mode: ${{ vars.SIGN_WINDOWS || 'false' }}
+          files: Cubeulator-${{ needs.verify.outputs.version }}-windows-x64.exe
+          rename: "false"
+          pfx-base64: ${{ secrets.WIN_TESTSIGN_PFX_BASE64 }}
+          pfx-password: ${{ secrets.WIN_TESTSIGN_PFX_PASSWORD }}
 
       # The same assertions CI makes on every push: Qt, the icon, the
       # identifier, the notices. A release that fails them is not published.
@@ -420,10 +405,11 @@ jobs:
           path: build/${{ matrix.preset }}/third_party_notices/third-party-notices.json
           if-no-files-found: error
 
+      # The shared publish workflow takes every artifact named release-*.
       - name: Upload the package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: package-${{ matrix.artifact }}
+          name: release-${{ matrix.artifact }}
           path: |
             Cubeulator-*.exe
             Cubeulator-*.dmg
@@ -437,7 +423,7 @@ jobs:
   # to TestFlight. The build, the signing and their checks are
   # .github/workflows/ios-device.yml, which the maintainer also runs by hand;
   # this calls it so that the build testers get is the release's. A real
-  # release uploads it; a dry run only has Apple validate it. With
+  # release uploads it; a rehearsal only has Apple validate it. With
   # SIGN_IOS_UPLOAD unset the app is built unsigned and nothing is sent. The
   # IPA is not a release file: an App Store IPA installs on no device
   # (docs/ios-install.md). The secrets are named here, one by one, and not
@@ -517,26 +503,23 @@ jobs:
       - name: Upload the package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: package-web
+          name: release-web
           path: dist-web/Cubeulator-*-web.zip
           if-no-files-found: error
 
-  # Everything between "the packages exist" and "a release exists": the SHA-512
-  # manifest, the GPG signatures, the SBOM, the provenance attestations and the
-  # notes. It runs in a dry run too, with a throwaway key, so that the first
-  # time any of it runs is not the first release. It writes nothing to the
-  # repository.
-  sign:
-    name: Sign, attest and render the notes
-    needs: [verify, build, web, ios]
-    # The iOS job is skipped only when a dispatch asked for no iPhone build;
-    # one that ran and failed stops the release here like any other platform.
-    if: ${{ github.event_name != 'pull_request' && !cancelled() && needs.verify.result == 'success' && needs.build.result == 'success' && needs.web.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.ios.result) }}
+  # The bills of materials: what is INSIDE each package, per platform, from the build's own inventory
+  # (tools/release/make_sbom.py), not what a scan of an installer sees. The CycloneDX file is the same bill of materials
+  # reshaped from the SPDX document, for the scanners that read that format; the two cannot disagree. They go to the
+  # publish workflow as an artifact named release-*, so they are lines of the SHA-512 manifest, under the same GPG
+  # signature as the packages, and attested.
+  sbom:
+    name: Make the SBOMs
+    needs: [verify, build, web]
+    if: ${{ github.event_name != 'pull_request' && !cancelled() && needs.verify.result == 'success' && needs.build.result == 'success' && needs.web.result == 'success' }}
     runs-on: ubuntu-26.04
+    timeout-minutes: 15
     permissions:
       contents: read
-      id-token: write # the keyless Sigstore identity of this job
-      attestations: write # the provenance and SBOM attestations
     env:
       VERSION: ${{ needs.verify.outputs.version }}
       TAG: ${{ needs.verify.outputs.tag }}
@@ -550,7 +533,7 @@ jobs:
       - name: Download the packages
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: package-*
+          pattern: release-*
           merge-multiple: true
           path: dist/files
 
@@ -559,12 +542,10 @@ jobs:
         run: |
           cd dist/files
           ls -l
-          # Exactly one package per platform, named for this version, or
-          # something is wrong.
+          # Exactly one package per platform, named for this version, or something is wrong.
           patterns=("Cubeulator-${VERSION}-windows-x64.exe" "Cubeulator-${VERSION}-macos-arm64.dmg"
                     "Cubeulator-${VERSION}-linux-x64.deb" "Cubeulator-${VERSION}-linux-x64.rpm"
                     "Cubeulator-${VERSION}-web.zip")
-          expected=5
           for pattern in "${patterns[@]}"; do
             n=$(find . -maxdepth 1 -name "$pattern" | wc -l)
             if [ "$n" -ne 1 ]; then
@@ -573,18 +554,11 @@ jobs:
             fi
           done
           n=$(find . -maxdepth 1 -type f | wc -l)
-          if [ "$n" -ne "$expected" ]; then
-            echo "::error::expected $expected files, found $n"
+          if [ "$n" -ne "${#patterns[@]}" ]; then
+            echo "::error::expected ${#patterns[@]} files, found $n"
             exit 1
           fi
 
-      # The SBOM is made first, so that it is a line of the checksum manifest and
-      # under the same GPG signature as the packages are. It says what is
-      # INSIDE them, per platform, from the build's own inventory
-      # (tools/release/make_sbom.py), not what a scan of an installer sees.
-      # The CycloneDX file is the same bill of materials reshaped from the SPDX
-      # document, for the scanners that read that format; the two cannot
-      # disagree.
       - name: Download the third-party inventories
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -594,6 +568,7 @@ jobs:
       - name: Make the SBOMs (SPDX and CycloneDX)
         shell: bash
         run: |
+          mkdir -p sbom
           notices=(--notices windows=inventory/notices-windows-x64/third-party-notices.json
                    --notices macos=inventory/notices-macos-arm64/third-party-notices.json
                    --notices linux=inventory/notices-linux-x64/third-party-notices.json
@@ -601,329 +576,40 @@ jobs:
           python3 tools/release/make_sbom.py \
             --version "$VERSION" --tag "$TAG" --repo "$REPO" --files dist/files \
             "${notices[@]}" \
-            --output "dist/files/Cubeulator-${VERSION}.spdx.json" \
-            --cyclonedx-output "dist/files/Cubeulator-${VERSION}.cdx.json"
+            --output "sbom/Cubeulator-${VERSION}.spdx.json" \
+            --cyclonedx-output "sbom/Cubeulator-${VERSION}.cdx.json"
 
-      # What a downloader checks against, whether or not the signing key exists.
-      - name: Write SHA512SUMS
-        shell: bash
-        run: |
-          cd dist/files
-          sha512sum Cubeulator-* > SHA512SUMS
-          sha512sum --check SHA512SUMS
-          cat SHA512SUMS
-
-      # The project's key (the same REPO_GPG_PRIVATE_KEY the sibling projects
-      # use) signs the manifest and every package.
-      #
-      # A real release without the key fails, unless it was told `unsigned`, so
-      # that a missing secret cannot turn into an unsigned release unnoticed.
-      #
-      # A dry run never signs with the real key: its files are a workflow
-      # artifact anyone with read access to the repository can download, and
-      # signatures from the project's key on files that were never released
-      # would be signatures to be mistaken for one. It signs with a key made
-      # for the run, and separately proves, in a keyring of its own that is
-      # thrown away, that the provisioned key imports and can sign, so that a
-      # wrong passphrase is found by the rehearsal and not by the release.
-      - name: Sign with GPG
-        id: gpg
-        shell: bash
-        env:
-          DRY_RUN: ${{ needs.verify.outputs.dry_run }}
-          UNSIGNED: ${{ inputs.unsigned }}
-          GPG_KEY: ${{ secrets.REPO_GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.REPO_GPG_PASSPHRASE }}
-        run: |
-          set -euo pipefail
-
-          new_home() {
-            mkdir -m 700 "$1"
-            echo "allow-loopback-pinentry" > "$1/gpg-agent.conf"
-          }
-          # Exactly one secret key, or "the first" is a guess.
-          only_key() {
-            if [ "$(gpg --list-secret-keys --with-colons | grep -c '^sec:')" -ne 1 ]; then
-              echo "::error::expected exactly one secret key in the keyring"
-              exit 1
-            fi
-            gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ {print $5; exit}'
-          }
-
-          if [ "$DRY_RUN" = "true" ]; then
-            if [ -n "$GPG_KEY" ]; then
-              probe="$RUNNER_TEMP/gnupg-probe"
-              new_home "$probe"
-              printf '%s' "$GPG_KEY" | GNUPGHOME="$probe" gpg --batch --import
-              echo probe > "$RUNNER_TEMP/probe.txt"
-              GNUPGHOME="$probe" gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 --armor --detach-sign "$RUNNER_TEMP/probe.txt" 3<<<"$GPG_PASSPHRASE"
-              GNUPGHOME="$probe" gpg --verify "$RUNNER_TEMP/probe.txt.asc" "$RUNNER_TEMP/probe.txt"
-              rm -rf "$probe" "$RUNNER_TEMP"/probe.txt*
-              echo "The provisioned signing key imports and signs."
-            else
-              echo "::warning::REPO_GPG_PRIVATE_KEY is not set: a real release will fail until it is (docs/releasing.md, 'The signing key')."
-            fi
-            export GNUPGHOME="$RUNNER_TEMP/gnupg"
-            new_home "$GNUPGHOME"
-            gpg --batch --passphrase '' --quick-generate-key "Cubeulator release dry run <dry-run@invalid>" rsa3072 sign 1d
-            passphrase=""
-          else
-            if [ -z "$GPG_KEY" ]; then
-              if [ "$UNSIGNED" = "true" ]; then
-                echo "::warning::No REPO_GPG_PRIVATE_KEY: this release is NOT GPG-signed (unsigned was ticked)."
-                echo "signed=false" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-              echo "::error::REPO_GPG_PRIVATE_KEY is not set. Provision the signing key (docs/releasing.md, 'The signing key'), or dispatch with 'unsigned' ticked to release without a signature."
-              exit 1
-            fi
-            export GNUPGHOME="$RUNNER_TEMP/gnupg"
-            new_home "$GNUPGHOME"
-            printf '%s' "$GPG_KEY" | gpg --batch --import
-            passphrase="$GPG_PASSPHRASE"
-          fi
-
-          keyid=$(only_key)
-          gpg --armor --export "$keyid" > dist/files/cubeulator-signing-key.asc
-
-          sign() {
-            gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 --armor --detach-sign "$1" 3<<<"$passphrase"
-          }
-          cd dist/files
-          shopt -s nullglob
-          signed_files=(SHA512SUMS Cubeulator-*.exe Cubeulator-*.dmg Cubeulator-*.deb Cubeulator-*.rpm Cubeulator-*.zip
-                        Cubeulator-*.spdx.json Cubeulator-*.cdx.json)
-          for f in "${signed_files[@]}"; do
-            sign "$f"
-            gpg --verify "$f.asc" "$f"
-          done
-          echo "signed=true" >> "$GITHUB_OUTPUT"
-          echo "Signed ${#signed_files[@]} files (SHA512SUMS, both SBOMs, the packages) with key $keyid."
-
-      # Keyless SLSA provenance: which repository, workflow and commit built
-      # these bytes. The GPG signature says who vouches for them; the two are
-      # complementary. `gh attestation verify <file> --repo <owner>/<repo>`.
-      - name: Attest the build provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: |
-            dist/files/*.exe
-            dist/files/*.dmg
-            dist/files/*.deb
-            dist/files/*.rpm
-            dist/files/*.zip
-
-      - name: Attest the SBOM
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: |
-            dist/files/*.exe
-            dist/files/*.dmg
-            dist/files/*.deb
-            dist/files/*.rpm
-            dist/files/*.zip
-          sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.spdx.json
-
-      - name: Attest the CycloneDX SBOM
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: |
-            dist/files/*.exe
-            dist/files/*.dmg
-            dist/files/*.deb
-            dist/files/*.rpm
-            dist/files/*.zip
-          sbom-path: dist/files/Cubeulator-${{ needs.verify.outputs.version }}.cdx.json
-
-      # The attestation is only worth the notes' sentence about it if it
-      # verifies. A short retry: it can take a moment to be readable.
-      - name: Verify the attestations
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          for f in dist/files/*.exe dist/files/*.dmg dist/files/*.deb dist/files/*.rpm dist/files/*.zip; do
-            ok=false
-            for attempt in 1 2 3 4 5 6; do
-              if gh attestation verify "$f" --repo "$REPO" > /dev/null 2>&1; then
-                ok=true
-                break
-              fi
-              sleep 10
-            done
-            if [ "$ok" != "true" ]; then
-              echo "::error::no verifiable attestation for $f"
-              exit 1
-            fi
-            echo "attested: $f"
-          done
-
-      # What the SBOM attestations hold must be the SBOM files that are
-      # released: the document GitHub attests for a package, read back through
-      # `gh attestation verify --predicate-type`, is compared with the file, as
-      # JSON. Any package carries both; the .deb stands for them.
-      - name: Verify the SBOM attestations
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          package="dist/files/Cubeulator-${VERSION}-linux-x64.deb"
-          check_sbom() {
-            local predicate="$1" file="$2" ok=false
-            for attempt in 1 2 3 4 5 6; do
-              if gh attestation verify "$package" --repo "$REPO" --predicate-type "$predicate" \
-                   --format json --jq '.[0].verificationResult.statement.predicate' > "$RUNNER_TEMP/attested.json"; then
-                ok=true
-                break
-              fi
-              sleep 10
-            done
-            if [ "$ok" != "true" ]; then
-              echo "::error::no verifiable $predicate attestation for $package"
-              exit 1
-            fi
-            if ! diff <(jq -S . "$RUNNER_TEMP/attested.json") <(jq -S . "$file") > /dev/null; then
-              echo "::error::the $predicate document attested for $package is not $file"
-              exit 1
-            fi
-            echo "attested and identical: $file"
-          }
-          check_sbom https://spdx.dev/Document/v2.3 "dist/files/Cubeulator-${VERSION}.spdx.json"
-          check_sbom https://cyclonedx.org/bom "dist/files/Cubeulator-${VERSION}.cdx.json"
-
-      # The notes are the changelog's section laid out the way every release of
-      # the family reads (tools/release/render_release_notes.py). What the
-      # table says was done is what this job did.
-      - name: Render the release notes
-        id: notes
-        shell: bash
-        env:
-          SIGNED: ${{ steps.gpg.outputs.signed }}
-          FROM_UNRELEASED: ${{ needs.verify.outputs.from_unreleased }}
-        run: |
-          set -euo pipefail
-          args=(--version "$VERSION" --tag "$TAG" --repo "$REPO"
-                --artifacts dist/files --attested --sbom --output dist/notes.md)
-          if [ "$SIGNED" = "true" ]; then args+=(--signed); fi
-          if [ "$FROM_UNRELEASED" = "true" ]; then args+=(--from-unreleased); fi
-          python3 tools/release/render_release_notes.py "${args[@]}"
-          {
-            echo "### Release notes for $TAG"
-            echo
-            cat dist/notes.md
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Keep the files and the notes
+      - name: Keep the SBOMs
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: release-${{ needs.verify.outputs.version }}
-          path: dist
+          name: release-sbom
+          path: sbom/*
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
 
-      - name: Say what this run did
-        shell: bash
-        env:
-          DRY_RUN: ${{ needs.verify.outputs.dry_run }}
-        run: |
-          if [ "$DRY_RUN" = "true" ]; then
-            {
-              echo "### Dry run"
-              echo
-              echo "Nothing was tagged or published. The files that would be attached, and \`notes.md\`, are the \`release-$VERSION\` artifact of this run."
-              echo "They were signed with a key made for this run, so \`gpg --verify\` needs the \`cubeulator-signing-key.asc\` in the artifact."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
+  # Everything between "the packages exist" and "a release exists" is the shared workflow of icl-common-infra
+  # (release-publish.yml): the SHA-512 manifest, the GPG signatures (checked against docs/signing-key.asc), the
+  # provenance and SBOM attestations (read back), the notes and the GitHub Release; and, for a final release, the
+  # fast-forward of `main`. Its publish job waits for the owner to approve the `release` environment. The project's
+  # part is the notes, which are the ones every release of this project has had (tools/release/render_release_notes.py).
+  # The public key is not in the release: it is docs/signing-key.asc in the repository, the key every signature is
+  # checked against.
   publish:
-    name: Create the draft release
-    needs: [verify, sign]
-    if: ${{ needs.verify.outputs.publish == 'true' }}
-    runs-on: ubuntu-26.04
+    name: Publish
+    needs: [verify, build, web, ios, sbom]
+    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.verify.result == 'success' && needs.build.result == 'success' && needs.web.result == 'success' && needs.sbom.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.ios.result) }}
     permissions:
-      # Make the tag (a dispatched release) and create the release. Nothing
-      # else in this workflow can write to the repository, and this job holds
-      # neither the signing key nor the OIDC identity. It reads the release
-      # bot's key to make a token for the tag, which a dispatched release needs.
       contents: write
-    steps:
-      - name: Download the release files and notes
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-${{ needs.verify.outputs.version }}
-          path: dist
-
-      # A tag push already has its tag. A dispatched release makes it here, at
-      # the end, on the commit that was built: a run that failed earlier leaves
-      # no tag behind. The `tags` ruleset lets only organisation admins and the
-      # release bot create a v* tag, so the workflow's own token cannot (HTTP 422,
-      # seen on the run for 0.2.0-beta.2), and the tag is made with a token of the
-      # release bot's, for this repository and the contents permission only. A tag
-      # that token pushes does start this workflow, and `verify` skips that run.
-      - name: Release bot token (dispatched release)
-        id: bot
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
-          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
-          repositories: ${{ github.event.repository.name }}
-          permission-contents: write
-
-      - name: Make the tag (dispatched release)
-        id: tag
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ steps.bot.outputs.token }}
-          TAG: ${{ needs.verify.outputs.tag }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh api --method POST "repos/$REPO/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$GITHUB_SHA" > /dev/null
-          echo "created=true" >> "$GITHUB_OUTPUT"
-          echo "Tagged $GITHUB_SHA as $TAG."
-
-      - name: Create the draft release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.verify.outputs.tag }}
-          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          cd dist
-          ls -l files
-          flags=(--draft --verify-tag --title "$TAG" --notes-file notes.md)
-          if [ "$PRERELEASE" = "true" ]; then
-            flags+=(--prerelease)
-          fi
-
-          # A re-run finds the draft it made last time and replaces it.
-          if gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1; then
-            gh release upload "$TAG" --repo "$REPO" --clobber files/*
-            gh release edit "$TAG" --repo "$REPO" --notes-file notes.md
-          else
-            gh release create "$TAG" --repo "$REPO" "${flags[@]}" files/*
-          fi
-          echo "Draft release for $TAG is ready for review."
-
-      # If the tag was made here and the release could not be, do not leave a
-      # tag that names nothing.
-      - name: Remove the tag this run made
-        if: ${{ failure() && steps.tag.outputs.created == 'true' }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.verify.outputs.tag }}
-          REPO: ${{ github.repository }}
-        run: |
-          if gh release view "$TAG" --repo "$REPO" > /dev/null 2>&1; then
-            echo "A release exists for $TAG: leaving the tag."
-          else
-            gh api --method DELETE "repos/$REPO/git/refs/tags/$TAG"
-            echo "Deleted the tag $TAG: no release was made for it."
-          fi
+      id-token: write
+      attestations: write
+    uses: iainchesworthlabs/icl-common-infra/.github/workflows/release-publish.yml@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
+    with:
+      generate-sbom: false
+      spdx-sbom: Cubeulator-${{ needs.verify.outputs.version }}.spdx.json
+      cyclonedx-sbom: Cubeulator-${{ needs.verify.outputs.version }}.cdx.json
+      notes-script: tools/release/render-notes.sh
+    secrets:
+      REPO_GPG_PRIVATE_KEY: ${{ secrets.REPO_GPG_PRIVATE_KEY }}
+      REPO_GPG_PASSPHRASE: ${{ secrets.REPO_GPG_PASSPHRASE }}
+      RELEASE_BOT_APP_ID: ${{ secrets.RELEASE_BOT_APP_ID }}
+      RELEASE_BOT_PRIVATE_KEY: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}

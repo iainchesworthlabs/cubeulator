@@ -77,8 +77,8 @@ apps; how they are made is in `icl-common-infra`.
 
 ## Building it
 
-The Release workflow calls `ios-device.yml` with the version. A real release (a tag, or a
-dispatch with `dry_run` unticked) uploads the build to TestFlight; a dry run has Apple
+The Release workflow calls `ios-device.yml` with the version. A real release (a tag) uploads
+the build to TestFlight; a rehearsal (the workflow run by hand) has Apple
 validate it and makes no build for anyone. With `SIGN_IOS_UPLOAD` unset the app is built
 unsigned and nothing is sent. The first step with `SIGN_IOS_UPLOAD` set imports the
 certificate and the profile and names any secret that is missing, before the Qt download.
