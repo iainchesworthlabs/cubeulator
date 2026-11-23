@@ -1,0 +1,1 @@
+**With the scan size on Auto, only Auto shows as chosen.** The scan screen's size row drew both Auto and the size found so far (for example 3×3) in the colour of the choice, as if two sizes were selected. Now the one in use is the only one marked: Auto while the size is being found from the cube, the size once one is chosen.

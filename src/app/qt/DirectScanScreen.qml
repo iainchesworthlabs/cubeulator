@@ -259,7 +259,9 @@ Item {
             AppButton {
                 objectName: "scan.size." + modelData
                 height: 36
-                variant: modelData === DirectScan.size ? "primary" : "secondary"
+                // Not while the size is being found: then DirectScan.size is the size found so
+                // far, and Auto is the choice that stands, not the size beside it as well.
+                variant: !DirectScan.autoSize && modelData === DirectScan.size ? "primary" : "secondary"
                 text: qsTrId("entry.size.option").arg(modelData)
                 onClicked: DirectScan.size = modelData
             }
