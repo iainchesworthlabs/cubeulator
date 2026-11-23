@@ -336,7 +336,7 @@ and replayed is the layer turns, and a person who follows the grouped moves
 arrives where the originals arrive (checked over random runs at every size and
 over the library's own solutions). Not yet: the middle-slice letters `M` `E` `S`,
 which mean different layers at different sizes. The screens say a layer in words
-beside the letters (`solve.move.layer`: "Right side · layer 2 · upwards").
+beside the letters (`solve.move.layer`: "Right · layer 2 · upwards").
 
 ## Following a solution
 
@@ -361,7 +361,7 @@ screens.
   6x6 and 8,297 into 8,264 at 7x7, under 1%: the solver rarely turns two adjacent
   layers one after the other. The app shows wide moves for a cube of 4 or more,
   but a person following a 5x5 meets mostly single layers, and the way to say
-  which one matters more than the grouping (the screens say "Right side · layer 2
+  which one matters more than the grouping (the screens say "Right · layer 2
   · upwards", `solve.move.layer`).
 * **Where a person is** is `current_index()`, set by `next()`, `previous()` or
   `seek(i)` (any position, clamped), and `core_start()` is the move at which the

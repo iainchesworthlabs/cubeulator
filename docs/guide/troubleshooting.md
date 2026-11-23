@@ -170,7 +170,7 @@ right, **Rescan the cube and carry on from there**.
 ## The camera on the solve screen does not step on by itself
 
 It can only see a move that turns a side it can see. A move on the side
-*facing you* turns out of its view, so for those it says *press Next after this
+*facing you* turns out of its view, so for those it says *press Next turn after this
 move*. The buttons and the keys always step.
 
 ## Other things

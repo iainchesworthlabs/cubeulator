@@ -67,7 +67,7 @@ The words at the top left are the guide. In the order you will meet them:
 | *Setting the camera's exposure and colour balance…* | The camera is being fixed to one setting so that colours do not drift while you scan. It takes a moment. |
 | *Hold one side of the cube square to the camera* | Waiting for the first side. |
 | *Hold it still* | It can see a side but it is moving. Keep it steady. |
-| *Reading this side — hold it there* | It is reading. Keep still until the chip fills. |
+| *Reading this side. Hold it there* | It is reading. Keep still until the chip fills. |
 | *Turn to a side that is not filled in below, square to the camera* | That side is done; show it another one. |
 | *These six sides do not make a valid cube yet. Show each side again, square to the camera.* | One or more stickers were read wrongly, or a side was counted twice. Show each side again; if it keeps saying this, use **Start over** and improve the light. |
 | *Turn the cube slowly to show the corner where Yellow, Green and Red meet.* | The six sides fit together in more than one way (about one scrambled cube in eighty, and more often a patterned one). Colours named are the centres of the three sides that meet at one corner of your cube: hold that corner towards the camera, with all three sides in view, and keep it still. Seeing it settles which cube yours is. |

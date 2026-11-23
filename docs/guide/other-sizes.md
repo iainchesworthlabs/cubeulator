@@ -63,7 +63,7 @@ The solve screen is the one you know, with what a bigger cube needs:
 </figure>
 
 - **Which layer.** A move of a layer inside the cube says so in words, counted
-  from the side it is named for: *Right side · layer 2 · quarter turn*, or
+  from the side it is named for: *Right · layer 2 · quarter turn*, or
   *layers 1 to 2* when two are turned together. The layer on the 3D cube is the
   one that nudges.
 - **The stages.** A cube bigger than a 3x3 is first made to look like one:
