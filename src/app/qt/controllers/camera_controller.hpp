@@ -99,6 +99,12 @@ private:
     bool ids_withheld_until_use_ = false;
     Enumerator enumerate_;
     QFutureWatcher<Result<std::vector<platform::camera::DeviceInfo>>> watcher_;
+    // A list is being read: from refreshDevices() until handleEnumerationFinished() has taken the
+    // answer. Not the watcher's isRunning(), which turns false when the worker returns, a queued
+    // event before handleEnumerationFinished() runs. A refreshDevices() in that gap saw nothing
+    // running and started a second probe of the cameras, which replaced the future and so dropped
+    // the answer of the first, and busy() said the list was settled when it was not yet.
+    bool busy_ = false;
 };
 
 }  // namespace cube::app

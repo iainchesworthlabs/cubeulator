@@ -29,7 +29,7 @@ QVariantList CameraController::devices() const {
 }
 
 bool CameraController::busy() const {
-    return watcher_.isRunning();
+    return busy_;
 }
 
 QString CameraController::selectedDeviceId() const {
@@ -61,16 +61,18 @@ bool CameraController::previewMirrored() const {
 }
 
 void CameraController::refreshDevices() {
-    if (watcher_.isRunning()) {
+    if (busy_) {
         return;
     }
 
     lastError_.clear();
+    busy_ = true;
     watcher_.setFuture(QtConcurrent::run(enumerate_));
     emit busyChanged();
 }
 
 void CameraController::handleEnumerationFinished() {
+    busy_ = false;
     const auto result = watcher_.result();
     emit busyChanged();
 
