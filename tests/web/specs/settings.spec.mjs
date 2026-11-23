@@ -211,7 +211,7 @@ test.describe('language', () => {
       // The launch screen's language button wears the language's own name.
       await app.click('settings.back');
       await app.waitForScreen('launch');
-      await expect.poll(async () => (await app.find('launch.language')).text).toBe(name);
+      await expect.poll(async () => (await app.find('launch.language'))?.text).toBe(name);
     });
   }
 
@@ -251,8 +251,10 @@ test.describe('language', () => {
       await expect.poll(async () => (await manager(app)).selectedLanguage).toBe(code);
       await app.click('settings.back');
       await app.waitForScreen('launch');
-      const scan = (await app.find('launch.startScan')).text;
-      expect(scan, 'the main button, in the language').toMatch(script);
+      // The launch screen is rebuilt in the new language: the button is there a moment later.
+      let scan = '';
+      await expect.poll(async () => (scan = (await app.find('launch.startScan'))?.text ?? ''),
+        { message: 'the main button, in the language' }).toMatch(script);
       expect(scan).not.toBe('Scan a cube');
       // And the product name is still the product name.
       expect(await app.texts()).toContain('Cubeulator');
@@ -309,8 +311,9 @@ test.describe('language', () => {
       await app.click('settings.back');
       await app.waitForScreen('launch');
       await app.settle();
-      expect((await app.find('launch.startScan')).text).not.toBe('Scan a cube');
-      expect((await app.find('launch.language')).text).toBe(name);
+      await expect.poll(async () => (await app.find('launch.startScan'))?.text,
+        { message: 'the main button, in the language' }).not.toBe('Scan a cube');
+      await expect.poll(async () => (await app.find('launch.language'))?.text).toBe(name);
       await picture(app, testInfo, `launch-${code}`);
     });
   }
@@ -322,6 +325,6 @@ test.describe('language', () => {
 
     await app.reload();
     expect((await manager(app)).selectedLanguage).toBe('de');
-    expect((await app.find('launch.language')).text).toBe('Deutsch');
+    await expect.poll(async () => (await app.find('launch.language'))?.text).toBe('Deutsch');
   });
 });

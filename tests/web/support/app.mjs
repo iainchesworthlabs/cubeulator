@@ -235,10 +235,23 @@ export class CubeulatorApp {
     const deadline = Date.now() + timeout;
     let last = '';
     let agreed = 0;
+    let empty = 0;
     while (Date.now() < deadline) {
-      const now = JSON.stringify((await this.state()).items
+      const items = (await this.state()).items
         .filter((i) => i.visible && i.name !== '')
-        .map((i) => [i.name, Math.round(i.x), Math.round(i.y), Math.round(i.opacity * 10)]));
+        .map((i) => [i.name, Math.round(i.x), Math.round(i.y), Math.round(i.opacity * 10)]);
+      // Nothing on show agrees with itself, and is not a screen that has stood still: it is a
+      // screen that has not been drawn yet (a language was just chosen, the page is rebuilding
+      // it in software). Three empty reads were enough to return, and the press or the read
+      // that followed found nothing. A screen with nothing named on it is waited for for a few
+      // seconds, not for ever.
+      if (items.length === 0 && ++empty < 25) {
+        agreed = 0;
+        last = '';
+        await this.page.waitForTimeout(120);
+        continue;
+      }
+      const now = JSON.stringify(items);
       agreed = now === last ? agreed + 1 : 0;
       if (agreed >= 2) {
         return;

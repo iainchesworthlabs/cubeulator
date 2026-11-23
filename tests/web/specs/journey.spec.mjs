@@ -75,9 +75,10 @@ test.describe('scan, solve, finish', () => {
     expect((await app.find('solve.next')).text).toBe('Finish');
     await app.click('solve.next');
     await app.waitForScreen('complete');
-    const texts = await app.texts();
-    expect(texts).toContain('Solve complete');
-    expect(texts).toContain(String(solve.totalMoves));
+    // The screen's words are drawn a moment after the screen is the one on show.
+    await expect.poll(() => app.texts(), { message: 'the complete screen, in words' })
+      .toContain('Solve complete');
+    expect(await app.texts()).toContain(String(solve.totalMoves));
   });
 
   test('the scan can be abandoned, and lets the camera go', async ({ app }) => {
