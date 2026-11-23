@@ -37,7 +37,8 @@ test.describe('?demo=', () => {
       const solve = await app.singleton('SolveController');
       const texts = await app.texts();
       expect(texts).toContain(solve.currentMoveNotation);
-      expect(texts.some((t) => /^STAGE \d OF \d$/.test(t))).toBe(true);
+      // The label is written in sentence case and drawn in capitals, so the page's text is the former.
+      expect(texts.some((t) => /^Stage \d of \d$/.test(t))).toBe(true);
       expect(solve.stageRanges.length).toBeGreaterThan(1);
       expect(solve.currentStageIndex).toBeGreaterThanOrEqual(0);
     });

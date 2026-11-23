@@ -48,7 +48,7 @@ test.describe('scan, solve, finish', () => {
     // well under its 100-turn average.
     expect(solve.method).toBe('Beginner');
     expect(solve.totalMoves).toBeLessThan(120);
-    expect((await app.texts()).some((t) => t.startsWith('STAGE 1 OF'))).toBe(true);
+    expect((await app.texts()).some((t) => t.startsWith('Stage 1 of'))).toBe(true);
 
     // Every move, in order: the counter follows, and Previous undoes one.
     await app.click('solve.next');
