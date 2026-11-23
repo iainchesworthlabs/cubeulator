@@ -22,6 +22,7 @@
 #include "scan_script.hpp"
 
 #include "app_runtime.hpp"
+#include "i18n/language_manager.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -946,6 +947,63 @@ TEST_CASE("the solution says each turn as it moves", "[system][accessibility]") 
     app.key(Qt::Key_Escape);
     wait_for_screen(app, "complete");
     app.go("launch");
+}
+
+TEST_CASE("what the solve says of a turn is said in the app's language",
+          "[system][accessibility]") {
+    // The announcement is built from the screen's own words (the turn in words, which way
+    // clockwise is, how far through the solve), so it follows the language: a reader in
+    // Hebrew is not given English.
+    App& app = App::fresh(App::Start::elsewhere);
+    auto* language = app.runtime().engine().singletonInstance<cube::i18n::LanguageManager*>(
+        "Cubeulator", "LanguageManager");
+    REQUIRE(language != nullptr);
+    auto& solve = app.runtime().solve();
+    solve.solveCube(cube::systest::scramble(17));
+    REQUIRE(app.wait_for([&]() { return !solve.isSolving(); }, kSolveTimeoutMs));
+    // A quarter turn, which has a direction to say; a half turn has none.
+    while (solve.currentMoveTurns() == 2 && !solve.atEnd()) {
+        solve.nextMove();
+    }
+    REQUIRE_FALSE(solve.atEnd());
+
+    for (const char* code : {"de", "fr", "es", "ja", "zh_CN", "he", "ar", "yi"}) {
+        INFO("in " << code);
+        language->preview(QString::fromLatin1(code));
+        app.pump(80);
+        // Listening first: the screen says its turn a moment after it appears.
+        const Listening listening;
+        app.go("solve");
+        app.settle();
+        QQuickItem* screen = app.screen_item();
+        REQUIRE(screen != nullptr);
+
+        // What the sentence is made of is not the English.
+        const QString sentence = qtTrId("solve.a11y.move");
+        CHECK(sentence != "%1, %2 as you look at that side.");
+        CHECK(qtTrId("dir.cw") != "clockwise");
+
+        const QString expected =
+            sentence.arg(screen->property("moveWords").toString())
+                .arg(qtTrId(solve.currentMoveTurns() == 1 ? "dir.cw" : "dir.ccw"));
+        const QString speech = screen->property("moveSpeech").toString();
+        CHECK(speech == expected);
+        CHECK_FALSE(speech.contains("as you look at that side"));
+        CHECK_FALSE(speech.contains("clockwise"));
+        REQUIRE_FALSE(speech.isEmpty());
+
+        // And it is that that is announced, with the place in the solve in the same words.
+        const QString place = screen->property("progressSpeech").toString();
+        INFO("said: " << Listening::everything().toStdString());
+        CHECK(app.wait_for([&]() { return Listening::said(speech) && Listening::said(place); },
+                           5000));
+        for (const Said& one : g_said) {
+            CHECK_FALSE(one.message.contains("Turn "));
+            CHECK_FALSE(one.message.contains("clockwise"));
+        }
+        app.go("launch");
+    }
+    app.reset_language();
 }
 
 TEST_CASE("what is wrong with a typed scramble is said, and interrupts",
