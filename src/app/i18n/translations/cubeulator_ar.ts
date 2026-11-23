@@ -1555,14 +1555,14 @@ In your hands.</source>
         <extracomment>The move in words, on the solve screen, for a turn of the right side ('Right side · quarter turn'). See solve.place.left. This is the longest of the labels in the column.</extracomment>
         <translation>الجانب الأيمن</translation>
     </message>
-    <message id="solve.move.quarter">
+    <message id="solve.amount.quarter">
         <source>quarter turn</source>
         <extracomment>How far, in the move in words on the solve screen ('Right side · quarter turn', and %3 of solve.move.layer). Lower case in English because it follows a dot. The same amount as amount.quarter, which is a label with a capital.</extracomment>
         <translation>ربع دورة</translation>
     </message>
-    <message id="solve.move.half">
+    <message id="solve.amount.half">
         <source>half turn</source>
-        <extracomment>How far, in the move in words on the solve screen: see solve.move.quarter. The same amount as amount.half.</extracomment>
+        <extracomment>How far, in the move in words on the solve screen: see solve.amount.quarter. The same amount as amount.half.</extracomment>
         <translation>نصف دورة</translation>
     </message>
     <message id="solve.skipToCore">

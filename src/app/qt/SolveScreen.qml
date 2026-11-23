@@ -261,7 +261,7 @@ Rectangle {
         top: qsTrId("side.top"), bottom: qsTrId("side.bottom"), left: qsTrId("solve.place.left"),
         right: qsTrId("solve.place.right"), front: qsTrId("side.front"), back: qsTrId("side.back")
     })
-    readonly property string turnWords: SolveController.currentMoveTurns === 2 ? qsTrId("solve.move.half") : qsTrId("solve.move.quarter")
+    readonly property string turnWords: SolveController.currentMoveTurns === 2 ? qsTrId("solve.amount.half") : qsTrId("solve.amount.quarter")
     readonly property bool outerMove: SolveController.currentMoveFirst === 0
                                       && SolveController.currentMoveLast === 0
     readonly property string moveWords: {
