@@ -24,6 +24,7 @@ Settings is open.
 | **History** | *Keep a history of solves*, on by default, and **Clear history**. Both are described in [Past solves](history.md). | Yes |
 | **Cube style** | How the 3D cube is shaded: *Physically-Based Realism* (the default), *Instructional Glow* or *Borderlands Cel-Shading*. It applies to the cube on the start, solve and review screens, at every size of cube. | No |
 | **Cube motion** | Whether the cube on the start and settings screens turns by itself when left alone, and how fast. | No |
+| **Motion** | *Same as this device* (the default), *Reduced* or *Full*. Reduced stops the cube turning by itself and cuts the animations: turns snap, nothing swings or bobs, and the fades are short. *Same as this device* follows the device's request for less motion where it can be read; this row always works. It applies at once. See [Accessibility](../accessibility.md). | Yes |
 | **Rendering** | Which graphics system draws the window (Automatic, Direct3D 11 or 12, Vulkan, OpenGL; what is offered depends on the system). Automatic is right unless the cube does not draw, and falls back on its own if the first choice cannot start on your computer ([how](https://github.com/iainchesworthlabs/cubeulator/blob/develop/docs/graphics-api.md)). A change takes effect the next time Cubeulator starts. | Yes |
 | **About Cubeulator** | The name, the version, who made it and under what licence, the address of the source code, and the way to the [licences](#about-and-licences). (On a Mac it is in the Help menu.) | |
 | **Show frame rate** | A small counter over the 3D cube, for people measuring performance. | No |
@@ -101,12 +102,16 @@ carries its own). On Linux, install a CJK font such as Noto Sans CJK.
 | Next turn | <kbd>→</kbd>, <kbd>Space</kbd>, <kbd>Enter</kbd> | the same | The solve screen |
 | Previous move | <kbd>←</kbd> | the same | The solve screen |
 | Play or pause, first turn, solved cube | <kbd>Space</kbd>, <kbd>Home</kbd>, <kbd>End</kbd> | the same | The solution screen ([Following the solution](solve.md#reviewing-the-solution)) |
-| Back | <kbd>Esc</kbd> | the same | The history, solution, About and Licences screens, and a question asking before it deletes |
+| Move between buttons, choices and switches; press one | <kbd>Tab</kbd> (<kbd>Shift</kbd>+<kbd>Tab</kbd> goes back); <kbd>Enter</kbd> or <kbd>Space</kbd> | the same | Every screen. A ring shows where you are |
+| Back | <kbd>Esc</kbd> | the same | Settings, the history, solution, About and Licences screens, *Another size of cube* and the colours screen, and a question asking before it deletes (it answers with the safe choice) |
+| Cancel the scan, or not now | <kbd>Esc</kbd> | the same | **Cancel** on the scan screen; **Not now** on the camera permission screen |
+| Paint the stickers of a side | arrow keys, <kbd>Space</kbd>, <kbd>Backspace</kbd>, <kbd>1</kbd> to <kbd>6</kbd>, <kbd>Page&nbsp;Up</kbd> and <kbd>Page&nbsp;Down</kbd> | the same | The colours screen: the stickers are one stop for Tab, the arrows move over them, Space paints, Backspace clears, 1 to 6 pick the colour, Page Up and Down change side |
 | Move between the rows of About and Licences, open one | <kbd>Tab</kbd>, <kbd>↑</kbd> and <kbd>↓</kbd>; <kbd>Enter</kbd> or <kbd>Space</kbd> | the same | About and Licences |
 | Diagnostics on or off, snapshot | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> | <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd> | Anywhere ([Privacy](../privacy.md#developer-recording-and-diagnostics)) |
 
-*Esc* goes back on the history, solution, About and Licences screens; elsewhere use the
-**Back**, **Cancel** and **Finish** buttons. In Hebrew, Arabic and Yiddish the layout
+*Esc* goes back on Settings and the screens listed above, and does nothing on the start, solve and solved screens; there
+use the **Back**, **Cancel** and **Finish** buttons. A click or a tap does not move the keyboard focus, so the solve
+screen's keys work whichever button you last clicked. In Hebrew, Arabic and Yiddish the layout
 is mirrored, and on the solution screen so are the arrow keys: <kbd>←</kbd> goes
 forward and <kbd>→</kbd> goes back, the way the buttons are laid out.
 
