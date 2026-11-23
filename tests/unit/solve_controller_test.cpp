@@ -14,6 +14,7 @@
 #include <QMetaObject>
 #include <QMetaProperty>
 #include <QStringList>
+#include <QThreadPool>
 #include <QVariantMap>
 
 #include <cstddef>
@@ -272,12 +273,11 @@ TEST_CASE("changing the method while a solve is still being worked out replaces 
     // this is still "a new cube to solve", not a continuation.
     CHECK_FALSE(controller.solutionContinuesCube());
 
-    // The replaced beginner solve must not land afterwards and undo the swap.
-    QElapsedTimer waited;
-    waited.start();
-    while (waited.elapsed() < 400) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
-    }
+    // The replaced beginner solve must not land afterwards and undo the swap. It is let finish
+    // (the pool is waited for, not a time) and its event, if it has one, is delivered: a solve
+    // that is slower than a fixed wait would have passed by not having landed yet.
+    QThreadPool::globalInstance()->waitForDone();
+    QCoreApplication::processEvents();
     CHECK(stage_values(controller) == std::vector<int>{kCross, kF2l, kOll, kPll});
     CHECK(step_to_end(controller).is_solved());
 }
