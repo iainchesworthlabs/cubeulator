@@ -22,18 +22,20 @@ A pass prints the repository, the commit and the workflow. Reject a file that do
 
 ## The author's GPG signature
 
-Each release also holds `SHA512SUMS`, its detached signature `SHA512SUMS.asc`, a signature beside every package, and the
-public key `cubeulator-signing-key.asc`:
+Each release also holds `SHA512SUMS`, its detached signature `SHA512SUMS.asc`, and a signature beside every package and
+each SBOM. The public key is not in the release: it is `docs/signing-key.asc` in the repository, so that a release cannot
+vouch for itself. Fetch it from there:
 
 ```sh
-gpg --import cubeulator-signing-key.asc
+curl -fsSLO https://raw.githubusercontent.com/iainchesworthlabs/cubeulator/develop/docs/signing-key.asc
+gpg --import signing-key.asc
 gpg --verify SHA512SUMS.asc SHA512SUMS && sha512sum -c --ignore-missing SHA512SUMS
 # or one file:
 gpg --verify Cubeulator-<version>-linux-x64.deb.asc Cubeulator-<version>-linux-x64.deb
 ```
 
-Compare the key's fingerprint with this one before you trust it. A key that arrives with the release proves nothing about
-who made the release if it is the only place the fingerprint appears.
+Compare the key's fingerprint with this one before you trust it. A key fetched from the same place as the download proves
+nothing about who made the release if that is the only place the fingerprint appears.
 
 | | |
 |---|---|
@@ -44,11 +46,12 @@ who made the release if it is the only place the fingerprint appears.
 
 This is the key of every release from 0.2.0-beta.3 on, and the one in `docs/signing-key.asc`. The two releases before it,
 0.1.0-beta.1 and 0.2.0-beta.1, were signed with an earlier key, `Cubeulator Release Signing Key` (RSA 4096, created
-2026-10-14, expires 2031-10-13), whose fingerprint is `0CF2 A242 440A 7AF0 18A2  BFF3 03E2 D330 B299 EB46`. Compare the key
-that comes with the release you have with the fingerprint for that release. (0.2.0-beta.2 was tagged and never published.)
+2026-10-14, expires 2031-10-13), whose fingerprint is `0CF2 A242 440A 7AF0 18A2  BFF3 03E2 D330 B299 EB46`. Those two releases carried
+their key as a file named `cubeulator-signing-key.asc` beside the packages; compare that key with the fingerprint for
+that release. (0.2.0-beta.2 was tagged and never published.)
 
 ```sh
-gpg --show-keys --fingerprint cubeulator-signing-key.asc
+gpg --show-keys --fingerprint signing-key.asc
 ```
 
 `gpg --verify` also prints a `Primary key fingerprint` and warns that the key is not certified by anyone you trust. That

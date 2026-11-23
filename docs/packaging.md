@@ -34,13 +34,13 @@ table are published.
 CI builds each one on its own runner and uploads it as a build artifact
 (`.github/workflows/ci.yml`, job `build-and-test`). CI publishes nothing: a
 release is cut by the `Release` workflow, `.github/workflows/release.yml`, run
-from a version tag or by hand (see [Cutting a release](releasing.md)).
+from a version tag; by hand it is a rehearsal that publishes nothing (see [Cutting a release](releasing.md)).
 
 ### Publishing
 
 The same packages, built from a version tag by the `Release` workflow, are
-checksummed (`SHA512SUMS`), signed with the project's GPG key, attested and
-attached to a draft GitHub Release with notes rendered from `CHANGELOG.md`; the
+checksummed (`SHA512SUMS`), signed with the organisation's GPG key, attested and
+attached to a GitHub Release (once the owner approves it) with notes rendered from `CHANGELOG.md`; the
 same workflow builds the iPhone app and sends it to TestFlight (the `.ipa` is not a
 release file). See [Cutting a release](releasing.md). Both CI and the release run
 `packaging/check-package.sh` on what CPack wrote, which looks inside each package
@@ -272,16 +272,22 @@ Two different things are called signing here.
 
 **What the release does already** (`release.yml`, [Cutting a release](releasing.md)):
 a SHA-512 manifest, a detached GPG signature on it and on every package from the
-project's key, a build-provenance attestation for each package and SBOMs (SPDX and CycloneDX). They
+organisation's key, a build-provenance attestation for each package and SBOMs (SPDX and CycloneDX). They
 prove where a file came from. The operating system does not look at them.
 
-**What the operating system looks at is not configured**, and no certificate is
-referenced anywhere (the maintainer has not decided; both cost an account and a yearly
-fee, and neither can be tried without one). It plugs in at two places:
+**What the operating system looks at** is configured for Windows, as far as it can be without a purchased certificate, and
+not for macOS (the maintainer has not decided; a Developer ID costs an account and a yearly fee, and cannot be tried
+without one). It plugs in at two places:
 
-- **Windows**: after CPack writes the installer, sign it with `signtool`
-  from a `CPACK_POST_BUILD_SCRIPTS` script. Until then SmartScreen warns on
-  first run.
+- **Windows**: `release.yml` signs `Cubeulator.exe` (before it is packaged) and the installer with the shared
+  `sign-windows` action of `icl-common-infra`, as the repository variable `SIGN_WINDOWS` says: `false` (the default;
+  nothing is signed), `test`, or `production`. `test` signs with a leaf certificate of the owner's personal certificate
+  authority, from the organisation secrets `WIN_TESTSIGN_PFX_BASE64` and `WIN_TESTSIGN_PFX_PASSWORD`, with a timestamp. A
+  machine trusts that signature only if it has installed the authority's root, so **SmartScreen still warns everyone
+  else**; the mode exists to prove the signing steps and to make the files verifiable on the owner's own machines.
+  `production` is for a real code-signing service (Azure Trusted Signing, a hardware token or a cloud HSM, an EV
+  certificate) and is not configured: the build fails in that mode until one is chosen. The files keep the names the
+  documents and the checks use in every mode (`rename: "false"`).
 - **macOS**: the bundle is signed ad hoc by default (Apple Silicon kills an
   unsigned process, so this is the floor). Pass
   `-DCUBEULATOR_MACOS_CODESIGN_IDENTITY="Developer ID Application: ..."` to
