@@ -170,14 +170,15 @@ right, **Rescan the cube and carry on from there**.
 ## The camera on the solve screen does not step on by itself
 
 It can only see a move that turns a side it can see. A move on the side
-*facing you* turns out of its view, so for those it says *press Next after this
+*facing you* turns out of its view, so for those it says *press Next turn after this
 move*. The buttons and the keys always step.
 
 ## Other things
 
-**The words are in English.** Not every language is translated yet, and the
-scan screen's guidance and most of the words round the solution are English in
-every language. See [Settings and shortcuts](settings.md#language).
+**The words are in English.** Check **Settings > Language**: *Same as this
+device* follows your system's language and shows English when it is not one of
+the nine. The eight other languages are first drafts and cover every screen. See
+[Settings and shortcuts](settings.md#language).
 
 **Japanese or Chinese shows boxes.** The system has no font for those
 characters. On Linux install Noto Sans CJK (`fonts-noto-cjk`); the browser

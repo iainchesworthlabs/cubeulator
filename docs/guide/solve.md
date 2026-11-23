@@ -33,7 +33,7 @@ For each move, the top left of the screen shows:
 
 - **The stage** you are in, for example *Stage 3 of 5*.
 - **The move**, in notation (`U'`, `B`, `R2`), and under it in words with the
-  centre colour of the side: *Top · quarter turn*, *Right side · half turn*.
+  centre colour of the side: *Top · quarter turn*, *Right · half turn*.
   A bare letter is a clockwise quarter turn looking straight at that side, a
   prime (`'`) is anticlockwise, and `2` is a half turn.
 - **The layer on the cube** nudging a little way in the direction it has to go
@@ -72,11 +72,11 @@ Beginner method they are:
 
 | Stage | What it does |
 | --- | --- |
-| White cross | Brings the four white edges home, matching each side's centre. |
-| White corners | Inserts the four white corners to complete the first layer. |
-| Middle layer | Sends the middle-layer edges home. |
-| Orient last layer | Orients the last layer's edges and corners so the top reads solid. |
-| Permute last layer | Moves the last layer's pieces into their solved places. |
+| White cross | Puts the four white edge pieces on the bottom, each lined up with the colour of its side. |
+| White corners | Puts the four white corners in place to finish the bottom layer. |
+| Middle layer | Puts the four edge pieces of the middle layer in place. |
+| Yellow top | Turns the top layer's pieces over until the whole top is yellow. |
+| Top layer in order | Moves the top layer's pieces round to their own places. |
 
 On a wide window every stage is listed on the right, the finished ones ticked
 and the current one opened out; on a narrow window only the current stage is
@@ -125,7 +125,7 @@ The frame round the picture is the camera's verdict:
 
 If you turn the wrong side, a note says so: for example *The red side was
 turned, but not the way shown. Turn it back and try again*, or *The blue side
-(Right side) was turned instead. Turn it back, then make the move shown.* The
+(right side) was turned instead. Turn it back, then make the move shown.* The
 buttons still work, and the solution never moves on by itself while the cube
 and the solution disagree.
 

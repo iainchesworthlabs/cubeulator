@@ -4,7 +4,7 @@
 > **Status in 0.2.0-beta.4:** Partly built, as `CompleteScreen.qml`, reached
 > from the solve screen's **Finish**: the bobbing solved cube, "Solved" with its
 > underline, the turns and the time (the eyebrow and the method too, on the wide
-> layout), **Review the solution** (which opens the solution) and **Scan another
+> layout, headed `complete.method`), **Review the solution** (which opens the solution) and **Scan another
 > cube**. Opening it marks the solve finished in History. Not built: **Done**,
 > **My cube is not solved** and its sheet, the sound and the haptic pattern, and
 > the `objectName`s of the table below (the app has `complete.stats`,
@@ -55,6 +55,7 @@ on its trailing edge. Trailing: the column, centred vertically, at most
 | The word | `display`, heading level 1 | `complete.title` | `complete.title` |
 | Turns | A label in eyebrow style (`inkSecondary`) over a `numeralLarge` figure | `complete.turns` | `complete.turns` |
 | Time | The same. Minutes and seconds, formatted by the locale; always left to right | `complete.time` | `complete.time` |
+| Method | The same, wide layout only: the name of the method the cube was solved by. The design drops it; the app has it | `complete.method`, `solve.method.beginner`, `solve.method.intermediate`, `solve.method.advanced` | - |
 | Scan another cube | button, primary, thumb, block, trailing chevron | `complete.scanAnother` | `complete.scanAnother` |
 | Review the solution | button, secondary, block, trailing chevron | `complete.review` | `complete.review` |
 | Done | button, ghost | `common.done` | `complete.done` |

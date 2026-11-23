@@ -308,7 +308,7 @@ screen, so that a knuckle on the space bar is enough.
 | key | does |
 |---|---|
 | Space, Enter, Page Down, forward arrow | Next turn. On the hold step: start. At a stage change: carry on. In timer mode: pause, or carry on |
-| Page Up, back arrow | Back one |
+| Page Up, back arrow | Previous |
 | Esc | Leave. The solve is kept |
 | P | Pause: opens the menu |
 | H | How to hold the cube |

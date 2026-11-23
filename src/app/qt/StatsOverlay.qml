@@ -62,7 +62,7 @@ Item {
         id: content
         anchors.centerIn: parent
         spacing: 2
-        Text { text: "FPS " + root.fps.toFixed(0); color: "#8CFF8C"; font.family: Theme.fontMono; font.pixelSize: 11 }
+        Text { text: qsTrId("settings.dev.fps").arg(root.fps.toFixed(0)); color: "#8CFF8C"; font.family: Theme.fontMono; font.pixelSize: 11 }
         Text { text: root.backendName; color: "#BAB6B6"; font.family: Theme.fontMono; font.pixelSize: 11 }
     }
 }

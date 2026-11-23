@@ -18,12 +18,14 @@
 > instruction block, notation, sound, carrying on after leaving (a solve carried
 > on from History goes straight to its turn, with no camera), and keeping the
 > screen awake. Where it differs from this page: the cube can be dragged, and
-> the camera follows the turns, which the spec lists as later. Many of its words
-> are still English literals (the camera's, the stage list's, **Previous**,
-> **Out of step? Rescan**), and the stage names of stages 4 and 5 are "Orient
-> last layer" and "Permute last layer", not the design's "Yellow top" and "Top
-> layer in order" (`stage.4.title`, `stage.5.title`, which the solution screen
-> does use).
+> the camera follows the turns, which the spec lists as later. Every word on it
+> asks for its string by id, and where the screen and this page worded a thing
+> differently the owner decided (2026-11-23, `../../i18n.md`): the screen now
+> says the design's stage names and sentences, the design's *Left* and *Right*
+> and **Previous** (the button is not **Back one**), and the design's pages
+> take the screen's hold line (it names the colours the cube is held by) and
+> **Solving…**. What the screen has beyond this page is under "The words the
+> built screen has", below.
 
 Lane: **solve** (`feature/solve-guidance`). This is a proposal for the
 chrome round the cube view and for the states of `SolveScreen.qml`. The
@@ -63,11 +65,12 @@ no input of its own. The cube is not draggable on this screen.
 2. **Progress**, 6 high, edge to edge, with a tick at each stage boundary.
 3. **The cube**, in all the height that is left (at least 140). The whole
    area is the tap target.
-4. **The hold reminder**, one centred line in `small`: two swatches and
-   `solve.holdLine`.
+4. **The hold reminder**, one centred line in `small`: the instruction
+   `solve.holdLine.hold`, and the statement `solve.holdLine.holding` once the
+   camera has seen the cube held. The swatches are not built.
 5. **The instruction block**.
 6. **Two buttons**, 96 high, 16 from the edges and 8 clear of the safe
-   area: **Back one** (one third) at the leading side, **Next turn** (two
+   area: **Previous** (one third) at the leading side, **Next turn** (two
    thirds) at the trailing side.
 
 **Short.** Bar and progress as above. Beneath, two columns: the cube
@@ -99,11 +102,11 @@ away.
 | Turn count | `numeral`. A screen reader that moves to it hears the fuller `solve.a11y.progress` | `solve.progress`, `solve.a11y.progress` | `solve.count` |
 | Progress | solve progress bar. Role: progress bar, value in turns | - | `solve.progress` |
 | The cube | The solve lane's cube view. Role: graphic. Also the tap target for the state's main action | `solve.a11y.cube` | `solve.cube` |
-| Hold reminder | Two swatches (yellow, green) and a line | `solve.holdLine` | `solve.holdLine` |
+| Hold reminder | A line: the hold the screen asks for, with the colours of the centre on top and the centre facing the person, and what the camera saw once it has seen the cube held. (The design's two swatches are not built) | `solve.holdLine.hold`, `solve.holdLine.holding`, `colour.word.*` | `solve.holdLine` |
 | Instruction block | instruction block; a polite live region whose text is the whole sentence | `side.*`, `dir.*`, `amount.*`, `turn.*`, `solve.a11y.notation` | `solve.instruction` |
 | First-turn hint | A line on `accentTint` above the instruction | `solve.hint.touch`, `solve.hint.keys` | `solve.hint` |
 | Next turn | button, primary, giant | `solve.next`, `solve.finish` | `solve.next` |
-| Back one | button, secondary, giant | `solve.previous` | `solve.previous` |
+| Previous | button, secondary, giant | `solution.previous` | `solve.previous` |
 | Skip to the 3x3 | button, secondary, above the two buttons; wide, with a line under it. Only on a cube of 4 or more that has not reached its 3x3 stages | `solve.skipToCore`, `solve.skipToCore.note` | `solve.skip` |
 | Layer words | The move line of a layer inside a big cube, in words | `solve.move.layer`, `solve.move.layers` | `solve.move` |
 | Stage list | Five stage rows (expanded only) | `stage.*` | `solve.stages` |
@@ -115,7 +118,7 @@ away.
 | Menu | sheet | `solve.paused`, `common.carryOn`, `solve.menu.hold`, `solve.menu.lost`, `common.settings`, `solve.menu.leave`, `solve.menu.leaveNote` | `solve.menu` |
 | Lost sheet | sheet | `solve.lost.title`, `solve.lost.body`, `solve.lost.step1`, `solve.lost.step2`, `solve.lost.step3`, `solve.lost.goBack`, `solve.lost.rescan`, `solve.lost.carryOn` | `solve.lostSheet` |
 | Hold step | The cube, a title, a paragraph, one giant button and one small one | `solve.hold.title`, `solve.hold.body`, `solve.hold.match`, `solve.hold.ready`, `solve.hold.check`, `solve.holdResume.title`, `solve.holdResume.body`, `solve.matches` | `solve.hold` |
-| Working | working indicator | `solve.working` | `solve.working` |
+| Working | working indicator | `solve.solving` | `solve.working` |
 | Message | A title, a sentence and buttons | `solve.failed.title`, `solve.failed.body`, `solve.alreadySolved.title`, `solve.alreadySolved.body`, `scan.checkColours`, `common.scanAgain`, `complete.scanAnother`, `common.home` | `solve.message` |
 
 **The method** is how the cube is being solved: Beginner (layer by layer,
@@ -140,7 +143,7 @@ which arrow key means next. The cube does not change.
 
 **Keys** work from anywhere on the screen, with focus on nothing: Space,
 Enter, Page Down or the forward arrow for the state's main action; Page
-Up or the back arrow for **Back one**; P for the menu; H for how to hold;
+Up or the back arrow for **Previous**; P for the menu; H for how to hold;
 Esc to leave.
 
 **The screen stays awake** for as long as it is showing and the menu has
@@ -154,12 +157,33 @@ asks nothing (brief, D5). The on-screen way to do the same is **Pause >
 Leave this solve**: there is no back arrow on this screen, because a
 96-high target and a small arrow should not sit together.
 
+## The words the built screen has
+
+The screen was built before these strings were written. Where it and this page
+worded a thing differently the owner decided which wording stays, and there is
+one id for each meaning (`../../i18n.md`, "Completing the translations"): the
+stage names and the sentence under each (`stage.1.title` to `stage.5.what`),
+the move's side words (`side.*`), **Previous** (`solution.previous`) and
+`scan.guide.reading` are this page's; the hold line, **Solving…** and the way
+out are the screen's. What the screen has beyond this page:
+
+| part | the screen says | strings | not built, and kept for the sheet that has it |
+|---|---|---|---|
+| Hold reminder | "Hold yellow on top, green facing you", and "Holding ..." once the camera has seen how the cube is held. The colours are those of the centres on top and facing the person | `solve.holdLine.hold`, `solve.holdLine.holding`, `colour.word.*` | |
+| Stage headings | "STAGES" over the wide layout's list, "STAGE 1 OF 5" over the move: the capitals are the app's | `solve.stages`, `solve.stageOf` | |
+| The move in words | "Top · quarter turn", "Right · half turn": the side words are `side.*`; the amount is lower case after a dot, a string of its own because a capital after a separator is each language's own | `side.*`, `solve.amount.quarter`, `solve.amount.half` | `amount.quarter`, `amount.half` are the same amounts as labels |
+| What the camera says | The words under the move label | `solve.camera.matched`, `solve.camera.sideHidden` (a 3x3), `solve.camera.layerHidden` (a bigger cube), `solve.camera.matchedMove`, `solve.camera.unsure`, `solve.camera.wrongMove`, `solve.camera.wrongSide`, `solve.camera.showAgain`, `solve.camera.holdAny` | |
+| When the cube does not match | A note with a title, a sentence that names the side by the colour of its centre and, when it is not the side the move was on, where that side is, and a button | `solve.mistake.title.move`, `solve.mistake.title.side`, `solve.mistake.wayWrong`, `solve.mistake.sideWrong`, `solve.mistake.unknown`, `solve.mistake.rescan`, `solve.theSide.*`, `solve.mistake.place.*` | `solve.lost.*`: a sheet nobody opens |
+| A view that has turned | A note while the picture has swung round behind the cube | `solve.view.behind`, `solve.view.note` | |
+| The way out | **Out of step? Rescan** | `solve.rescan` | `solve.lost.rescan`, for the sheet |
+| The rest | The hint on the cube; the spinner's word | `solve.hint.drag`, `solve.solving` | |
+
 ## States
 
 ### `solve.working`
 
 The solution is not ready when the screen opens. The working indicator
-and `solve.working`, centred. Normally never seen: the scan screen holds
+and `solve.solving`, centred. Normally never seen: the scan screen holds
 its "Cube read" state until the solution is ready.
 
 ### `solve.failed`
@@ -213,7 +237,7 @@ One turn is shown; the app waits.
   and still.
 - The instruction block names the turn.
 - **Next turn**, a tap on the cube, or a key: to `solve.turning`.
-- **Back one** (disabled at the first turn): plays the last turn
+- **Previous** (disabled at the first turn): plays the last turn
   backwards and shows it again.
 - Pause: to `solve.menu`.
 
@@ -279,7 +303,7 @@ Timer mode, paused. Also where the app returns after being in the
 background: it never resumes by itself.
 
 - The countdown is full and still.
-- **Carry on** (giant, primary) and **Back one** (giant, secondary).
+- **Carry on** (giant, primary) and **Previous** (giant, secondary).
 
 ### `solve.menu`
 

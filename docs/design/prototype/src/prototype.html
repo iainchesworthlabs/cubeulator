@@ -778,10 +778,10 @@ function insBlock(m) {
     <div class="ins-dir"><span dir="ltr">${ico(DIR_ICON[d])}</span><span>${t('dir.' + d)}</span></div>
     <div class="ins-amt"><span>${t(m.t === 2 ? 'amount.half' : 'amount.quarter')}${back ? ' · ' + t('dir.seenFromFront') : ''}</span>${P.opts.notation ? `<span class="kbd" dir="ltr">${notation(m)}</span>` : ''}</div></div>`;
 }
-const holdLine = () => `<div class="holdline">${stk('yellow', 'swatch')}${stk('green', 'swatch')}<span>${t('solve.holdLine')}</span></div>`;
+const holdLine = () => `<div class="holdline">${stk('yellow', 'swatch')}${stk('green', 'swatch')}<span>${t('solve.holdLine.hold', t('colour.word.yellow'), t('colour.word.green'))}</span></div>`;
 screens.solve = {
   render(st) {
-    if (st === 'working') return `<div class="screen solve">${working(t('solve.working'))}</div>`;
+    if (st === 'working') return `<div class="screen solve">${working(t('solve.solving'))}</div>`;
     if (st === 'failed' || st === 'already-solved') {
       const k = st === 'failed' ? 'failed' : 'alreadySolved';
       return `<div class="screen solve">${topbar('')}<div class="work"><h1 class="t-title">${t('solve.' + k + '.title')}</h1><p class="t-sec">${t('solve.' + k + '.body')}</p>
@@ -814,10 +814,10 @@ screens.solve = {
     } else if (st === 'auto') {
       lower = insBlock(m) + `<div class="autobar" style="--dur:${pace()}ms"><i></i></div><div class="solve-btns" style="grid-template-columns:1fr">${btn(t(touch() ? 'solve.auto.tapToPause' : 'solve.auto.keysToPause'), 'autoPause', {cls: 'giant', icon: 'pause'})}</div>`;
     } else if (st === 'auto-paused') {
-      lower = insBlock(m) + `<div class="solve-btns">${btn(t('solve.previous'), 'prev', {cls: 'giant', dis: S.turn === 0})}${btn(t('common.carryOn'), 'autoGo', {v: 'primary', cls: 'giant', kbd: fwdKey})}</div>`;
+      lower = insBlock(m) + `<div class="solve-btns">${btn(t('solution.previous'), 'prev', {cls: 'giant', dis: S.turn === 0})}${btn(t('common.carryOn'), 'autoGo', {v: 'primary', cls: 'giant', kbd: fwdKey})}</div>`;
     } else {
       const hint = (st === 'move-hint' || (S.turn === 0 && !P.d.hinted)) ? `<div class="hint">${t(touch() ? 'solve.hint.touch' : 'solve.hint.keys')}</div>` : '';
-      lower = hint + insBlock(m) + `<div class="solve-btns">${btn(t('solve.previous'), 'prev', {cls: 'giant', dis: S.turn === 0})}${btn(t(S.turn === N - 1 ? 'solve.finish' : 'solve.next'), 'next', {v: 'primary', cls: 'giant', kbd: fwdKey})}</div>`;
+      lower = hint + insBlock(m) + `<div class="solve-btns">${btn(t('solution.previous'), 'prev', {cls: 'giant', dis: S.turn === 0})}${btn(t(S.turn === N - 1 ? 'solve.finish' : 'solve.next'), 'next', {v: 'primary', cls: 'giant', kbd: fwdKey})}</div>`;
     }
     let layer = '';
     if (st === 'menu') layer = sheet(t('solve.paused'), btn(t('common.carryOn'), 'closeSheet', {v: 'primary', cls: 'block'}) + btn(t('solve.menu.hold'), 'go', {cls: 'block', arg: 'help.holding'})

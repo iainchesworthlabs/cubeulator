@@ -20,15 +20,15 @@ Rectangle {
     // contract; SolveController.stageRanges gives the structural (index
     // range) data this pairs with.
     readonly property var stageCopy: [
-        { title: "White cross", detail: "Bring the four white edges home, matching each side centre." },
-        { title: "White corners", detail: "Insert the four white corners to complete the first layer." },
-        { title: "Middle layer", detail: "Send the middle-layer edges home." },
-        { title: "Orient last layer", detail: "Orient the last layer's edges and corners so the top side reads solid." },
-        { title: "Permute last layer", detail: "Permute the last layer's pieces into their solved positions." }
+        { title: qsTrId("stage.1.title"), detail: qsTrId("stage.1.what") },
+        { title: qsTrId("stage.2.title"), detail: qsTrId("stage.2.what") },
+        { title: qsTrId("stage.3.title"), detail: qsTrId("stage.3.what") },
+        { title: qsTrId("stage.4.title"), detail: qsTrId("stage.4.what") },
+        { title: qsTrId("stage.5.title"), detail: qsTrId("stage.5.what") }
     ]
     // The three stages the other two methods have (cube::solver::Stage::F2l,
     // Reduce and Finish, which follow the five above in value). Worded through
-    // ids; the five above are the solve lane's, and are worded by them.
+    // ids, as the five above are, and as the solution screen words them.
     readonly property var extraStageCopy: [
         { title: qsTrId("stage.f2l.title"), detail: qsTrId("stage.f2l.what") },
         { title: qsTrId("stage.reduce.title"), detail: qsTrId("stage.reduce.what") },
@@ -106,6 +106,45 @@ Rectangle {
         return Theme.paper;
     }
 
+    // A cube colour as a bare word inside a sentence, and a side as "The green side",
+    // from the name the controller gives the colour.
+    function colourWord(name) {
+        switch (name) {
+        case "White": return qsTrId("colour.word.white");
+        case "Yellow": return qsTrId("colour.word.yellow");
+        case "Green": return qsTrId("colour.word.green");
+        case "Blue": return qsTrId("colour.word.blue");
+        case "Orange": return qsTrId("colour.word.orange");
+        case "Red": return qsTrId("colour.word.red");
+        }
+        return "";
+    }
+    function theSide(name) {
+        switch (name) {
+        case "White": return qsTrId("solve.theSide.white");
+        case "Yellow": return qsTrId("solve.theSide.yellow");
+        case "Green": return qsTrId("solve.theSide.green");
+        case "Blue": return qsTrId("solve.theSide.blue");
+        case "Orange": return qsTrId("solve.theSide.orange");
+        case "Red": return qsTrId("solve.theSide.red");
+        }
+        return "";
+    }
+    // Where a side is for the person holding the cube, inside a sentence.
+    function placeIn(place) {
+        switch (place) {
+        case "top": return qsTrId("solve.mistake.place.top");
+        case "bottom": return qsTrId("solve.mistake.place.bottom");
+        case "left": return qsTrId("solve.mistake.place.left");
+        case "right": return qsTrId("solve.mistake.place.right");
+        case "front": return qsTrId("solve.mistake.place.front");
+        case "back": return qsTrId("solve.mistake.place.back");
+        }
+        return "";
+    }
+    // A number in the reader's own digits.
+    function digits(n) { return Qt.locale(Qt.uiLanguage).toString(n); }
+
     // SolveController.stickers with each colour name swapped for its colour:
     // what the 3D cube is painted from.
     function painted(stickers) {
@@ -132,9 +171,8 @@ Rectangle {
     // How the cube is held, in words: every move is shown on the cube as
     // held this way. An instruction until the camera has seen the cube, a
     // statement of what it saw after.
-    readonly property string holdWords: (HeldCube.seen ? "Holding " : "Hold ")
-        + centreColor(HeldCube.up).toLowerCase() + " on top, "
-        + centreColor(HeldCube.front).toLowerCase() + " facing you"
+    readonly property string holdWords: (HeldCube.seen ? qsTrId("solve.holdLine.holding") : qsTrId("solve.holdLine.hold"))
+        .arg(colourWord(centreColor(HeldCube.up))).arg(colourWord(centreColor(HeldCube.front)))
 
     // ---- the camera -----------------------------------------------------------
     // The solve screen keeps the camera to see how the cube is held. A side
@@ -152,48 +190,53 @@ Rectangle {
     }
     readonly property string cameraWords: {
         if (DirectScan.cameraError !== "")
-            return "Camera unavailable";
+            return qsTrId("scan.title.cameraUnavailable");
         if (DirectScan.frameSeq === 0)
-            return DirectScan.starting ? "Starting the camera…" : "";
+            return DirectScan.starting ? qsTrId("scan.title.starting") : "";
         if (!DirectScan.complete)
             return ""; // no scan, so nothing to match a side against
         switch (HeldCube.sight) {
         case "matched":
             if (!guiding)
-                return "Matched to your cube";
+                return qsTrId("solve.camera.matched");
             // A layer the side in view does not show is one the camera never
             // sees move (a 3x3: the side facing the holder); say so rather than
             // leave them waiting.
             if (HeldCube.moveHidden)
                 return threeByThree
-                    ? "Matched. The camera cannot see the side facing you: press Next after this move."
+                    ? qsTrId("solve.camera.sideHidden")
                     : qsTrId("solve.camera.layerHidden");
-            return "Matched. Make the move and it steps on by itself.";
-        case "unsure": return "That side looks the same turned. Show another to tell which way up.";
-        case "wrong": return "Not the move that was asked for";
-        case "unknown": return "Not the side that was expected";
+            return qsTrId("solve.camera.matchedMove");
+        case "unsure": return qsTrId("solve.camera.unsure");
+        case "wrong": return qsTrId("solve.camera.wrongMove");
+        case "unknown": return qsTrId("solve.camera.wrongSide");
         }
-        return HeldCube.seen ? "Show a side again if you turn the cube over"
-                             : "Hold any side square to the camera and the cube here turns to match";
+        return HeldCube.seen ? qsTrId("solve.camera.showAgain")
+                             : qsTrId("solve.camera.holdAny");
     }
 
     // What the camera makes of a cube that is not as the solution has it.
     // When one turn explains what it sees, the side that was turned is
     // named; otherwise all it can say is that something is off. Either way
     // the buttons still step, and the solution does not move by itself.
-    readonly property string mistakeTitle: HeldCube.sight === "wrong" ? "That was not the move"
-        : HeldCube.sight === "unknown" ? "That side is not expected" : ""
+    function mistakeHeading() {
+        if (HeldCube.sight === "wrong")
+            return qsTrId("solve.mistake.title.move");
+        if (HeldCube.sight === "unknown")
+            return qsTrId("solve.mistake.title.side");
+        return "";
+    }
+    readonly property string mistakeTitle: mistakeHeading()
     readonly property string mistakeWords: {
         if (HeldCube.sight === "wrong") {
             var side = HeldCube.wrongSide;
-            var name = "The " + centreColor(side).toLowerCase() + " side";
+            var name = theSide(centreColor(side));
             if (side === moveSide)
-                return name + " was turned, but not the way shown. Turn it back and try again.";
-            return name + " (" + placeWords[HeldCube.places[side]].toLowerCase()
-                + ") was turned instead. Turn it back, then make the move shown.";
+                return qsTrId("solve.mistake.wayWrong").arg(name);
+            return qsTrId("solve.mistake.sideWrong").arg(name).arg(placeIn(HeldCube.places[side]));
         }
         if (HeldCube.sight === "unknown")
-            return "The side facing the camera is not what the solution has there. If the last move went wrong and cannot be put right, rescan.";
+            return qsTrId("solve.mistake.unknown");
         return "";
     }
 
@@ -215,9 +258,10 @@ Rectangle {
     // "left", "right", "front", "back", or "" when there is no move.
     readonly property string movePlace: moveSide !== "" ? HeldCube.places[moveSide] : ""
     readonly property var placeWords: ({
-        top: "Top", bottom: "Bottom", left: "Left side", right: "Right side", front: "Front", back: "Back"
+        top: qsTrId("side.top"), bottom: qsTrId("side.bottom"), left: qsTrId("side.left"),
+        right: qsTrId("side.right"), front: qsTrId("side.front"), back: qsTrId("side.back")
     })
-    readonly property string turnWords: SolveController.currentMoveTurns === 2 ? "half turn" : "quarter turn"
+    readonly property string turnWords: SolveController.currentMoveTurns === 2 ? qsTrId("solve.amount.half") : qsTrId("solve.amount.quarter")
     readonly property bool outerMove: SolveController.currentMoveFirst === 0
                                       && SolveController.currentMoveLast === 0
     readonly property string moveWords: {
@@ -243,7 +287,7 @@ Rectangle {
     // says so while it is turned.
     readonly property var views: ({
         home: { pitch: 24, yaw: -32, words: "" },
-        back: { pitch: 24, yaw: -140, words: "Seen from behind" }
+        back: { pitch: 24, yaw: -140, words: qsTrId("solve.view.behind") }
     })
     readonly property var view: views[movePlace] || views.home
     readonly property bool viewTurned: view.words !== ""
@@ -351,6 +395,8 @@ Rectangle {
             anchors.rightMargin: Theme.space3 + (root.wide ? leave.width + Theme.space3 : 0)
             anchors.verticalCenter: parent.verticalCenter
             text: root.holdWords
+            // One line, or two for a language that needs them: the header is tall enough.
+            wrapMode: Text.WordWrap; maximumLineCount: 2
             elide: Text.ElideRight
             font.family: Theme.fontMono; font.pixelSize: 12; color: Theme.ink
         }
@@ -507,11 +553,12 @@ Rectangle {
             spacing: 4
 
             Text {
-                text: "STAGE " + (root.stagePosition + 1) + " OF " + root.stageCount
+                text: qsTrId("solve.stageOf").arg(root.digits(root.stagePosition + 1)).arg(root.digits(root.stageCount))
+                font.capitalization: Font.AllUppercase
                 color: Theme.accent; font.family: Theme.fontHeading; font.pixelSize: 11; font.letterSpacing: 1.4
             }
             Text {
-                text: SolveController.atEnd ? "Solved" : SolveController.currentMoveNotation
+                text: SolveController.atEnd ? qsTrId("complete.title") : SolveController.currentMoveNotation
                 font.family: Theme.fontMono; font.pixelSize: root.wide ? 30 : 22; font.letterSpacing: 1
                 color: Theme.ink
             }
@@ -519,9 +566,9 @@ Rectangle {
             // colour of its centre, and how far. It keeps its place when
             // there is no move to say (at the end), so the cube does not
             // move for it; and it shrinks to its column rather than run
-            // under the preview ("Right side" is the longest name).
+            // under the preview ("Bottom" or "Right" is the longest name).
             //
-            // A cube bigger than 3x3 names layers too ("Left side · layer 2 ·
+            // A cube bigger than 3x3 names layers too ("Left · layer 2 ·
             // half turn"), which is more than one line holds in this column; the
             // room for a second is kept whatever the move says, for the reason
             // above, and the words are made to fit the two lines (or the one) as
@@ -576,7 +623,16 @@ Rectangle {
         Text {
             visible: root.wide
             anchors.right: parent.right; anchors.bottom: parent.bottom; anchors.margins: Theme.space4
-            text: "Drag the cube to look round it"
+            // The notes are laid out from the left in either direction, so the hint keeps to the
+            // right in either. Beside a note it takes the room the note leaves and wraps, rather
+            // than lie over it.
+            LayoutMirroring.enabled: false
+            width: Math.min(implicitWidth, parent.width - 2 * Theme.space4
+                            - Math.max(mistakeNote.visible ? mistakeNote.width : 0,
+                                       viewNote.visible ? viewNote.width : 0) - Theme.space2)
+            wrapMode: Text.WordWrap
+            horizontalAlignment: Text.AlignRight
+            text: qsTrId("solve.hint.drag")
             font.family: Theme.fontHeading; font.pixelSize: 11
             color: Theme.inkMuted(0.5)
         }
@@ -821,7 +877,8 @@ Rectangle {
                 AppButton {
                     objectName: "solve.rescanFromNote"
                     height: 30
-                    variant: "ghost"; text: "Rescan the cube and carry on from there"
+                    variant: "ghost"; text: qsTrId("solve.mistake.rescan")
+                    maxWidth: parent.width
                     onClicked: AppState.rescan()
                 }
             }
@@ -847,7 +904,9 @@ Rectangle {
                     color: Theme.ink
                 }
                 Text {
-                    text: "Only the view has turned. Keep your cube as it is."
+                    text: qsTrId("solve.view.note")
+                    wrapMode: Text.WordWrap
+                    width: Math.min(implicitWidth, notes.width - 2 * Theme.space3)
                     font.family: Theme.fontHeading; font.pixelSize: 12
                     color: Theme.inkMuted(0.75)
                 }
@@ -1059,7 +1118,8 @@ Rectangle {
             Text {
                 width: parent.width
                 padding: Theme.space3
-                text: "STAGES"
+                text: qsTrId("solve.stages")
+                font.capitalization: Font.AllUppercase
                 font.family: Theme.fontHeading; font.pixelSize: 11; font.letterSpacing: 1.4
                 color: Theme.inkMuted(0.6)
             }
@@ -1137,7 +1197,7 @@ Rectangle {
                 anchors.left: parent.left; anchors.leftMargin: Theme.space3
                 y: Theme.space3 + 1
                 height: 42
-                variant: "secondary"; text: "Previous"
+                variant: "secondary"; text: qsTrId("solution.previous")
                 enabled: !SolveController.atStart
                 onClicked: root.previous()
             }
@@ -1176,7 +1236,7 @@ Rectangle {
         y: root.wide ? (header.height - height) / 2
                      : root.height - buttons.height - skipBox.height - checkBox.height - height - Theme.space1
         height: 30
-        variant: "ghost"; text: "Out of step? Rescan"
+        variant: "ghost"; text: qsTrId("solve.rescan")
         onClicked: AppState.rescan()
     }
 
@@ -1220,7 +1280,7 @@ Rectangle {
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "Solving…"
+                text: qsTrId("solve.solving")
                 font.family: Theme.fontHeading; font.pixelSize: 14
                 color: Theme.ink
             }

@@ -20,7 +20,7 @@ screen. The design sets a target (WCAG 2.2 level AA, read for software); the app
   history, solution, About and Licences screens, and About and Licences can be moved through with <kbd>Tab</kbd> and the
   arrow keys. The [full list](guide/settings.md#keyboard) is in the guide.
 - **Moves in words.** Every move is shown in notation and also said in words with the colour of the side's centre
-  (*Top · quarter turn*, *Right side · layer 2 · quarter turn*), and each stage says what it does.
+  (*Top · quarter turn*, *Right · layer 2 · quarter turn*), and each stage says what it does.
 - **Messages in words.** The state of the camera on the solve screen (matched, ambiguous, not the side expected) is a
   coloured frame and also a sentence, and the scan's guidance is a sentence.
 - **Nine languages**, with the layout mirrored for Hebrew, Arabic and Yiddish. See [Settings](guide/settings.md#language)

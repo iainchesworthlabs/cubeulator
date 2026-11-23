@@ -43,6 +43,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 using cube::solver::Color;
@@ -461,7 +462,7 @@ void have_a_big_solution() {
 }
 
 // The same, stepped on to a turn of several layers together: the move in words
-// then names a range of layers ("Right side · layers 1 to 3 · quarter turn"),
+// then names a range of layers ("Right · layers 1 to 3 · quarter turn"),
 // the longest it gets.
 void have_a_wide_solution() {
     have_a_big_solution();
@@ -784,6 +785,221 @@ TEST_CASE("every converted screen holds English, the words the layout was made f
     // that a layout that lies one string over another in English is not found only by a
     // reader of a translation.
     holds_the_layout_in("en");
+}
+
+namespace {
+
+// The texts that are direct children of `parent`, visible or not, in the order they were made.
+[[nodiscard]] QList<QQuickItem*> texts_in(const QQuickItem* parent) {
+    QList<QQuickItem*> found;
+    for (QQuickItem* child : parent->childItems()) {
+        if (child->inherits("QQuickText")) {
+            found.append(child);
+        }
+    }
+    return found;
+}
+
+[[nodiscard]] QString words_of(const char* id) {
+    return qtTrId(id);
+}
+
+// The scan screen saying `headline` and `guidance` in its status panel. The words its state
+// chooses between are not the ones the default state says, and the state cannot be set from
+// here, so the strings are put where the screen puts them.
+void saying_on_the_scan(Screen& screen, const QString& headline, const QString& guidance) {
+    const QQuickItem* status = screen.find("scan.status");
+    REQUIRE(status != nullptr);
+    // The panel holds one column, which holds the headline and the guidance.
+    const QList<QQuickItem*> column = status->childItems();
+    REQUIRE_FALSE(column.isEmpty());
+    const QList<QQuickItem*> lines = texts_in(column.first());
+    REQUIRE(lines.size() == 2);
+    if (!headline.isEmpty()) {
+        lines[0]->setProperty("text", headline);
+    }
+    if (!guidance.isEmpty()) {
+        lines[1]->setProperty("text", guidance);
+    }
+    screen.settle();
+}
+
+// The solve screen of a 3x3 the camera read, saying `words` where the camera's words go. They are
+// only said while a camera view is on the screen, which these tests have not got: say so.
+void with_camera_words(Screen& screen, const QString& words) {
+    from_a_scan(screen);
+    QQuickItem* item = screen.find("solve.words");
+    REQUIRE(item != nullptr);
+    item->setProperty("text", words);
+    item->setProperty("visible", true);
+    screen.settle();
+}
+
+// The solve screen with the note that the cube is not as the solution has it on show, as it is when
+// the camera sees a turn that was not asked for: `title` over `words`, and the way out.
+void with_a_mistake(Screen& screen, const QString& title, const QString& words) {
+    from_a_scan(screen);
+    const QQuickItem* rescan = screen.find("solve.rescanFromNote");
+    REQUIRE(rescan != nullptr);
+    QQuickItem* column = rescan->parentItem();
+    REQUIRE(column != nullptr);
+    QQuickItem* note = column->parentItem();
+    REQUIRE(note != nullptr);
+    const QList<QQuickItem*> lines = texts_in(column);
+    REQUIRE(lines.size() == 2);
+    lines[0]->setProperty("text", title);
+    lines[1]->setProperty("text", words);
+    note->setProperty("visible", true);
+    screen.settle();
+}
+
+// The solve screen while its picture has swung round behind the cube: the note that says only the
+// view has turned.
+void with_the_view_turned(Screen& screen) {
+    from_a_scan(screen);
+    QQuickItem* note_line = nullptr;
+    for (QQuickItem* item : screen.item()->findChildren<QQuickItem*>()) {
+        if (item->inherits("QQuickText") &&
+            item->property("text").toString() == words_of("solve.view.note")) {
+            note_line = item;
+        }
+    }
+    REQUIRE(note_line != nullptr);
+    QQuickItem* column = note_line->parentItem();
+    REQUIRE(column != nullptr);
+    QQuickItem* note = column->parentItem();
+    REQUIRE(note != nullptr);
+    const QList<QQuickItem*> lines = texts_in(column);
+    REQUIRE(lines.size() == 2);
+    lines[0]->setProperty("text", words_of("solve.view.behind"));
+    note->setProperty("opacity", 1);
+    note->setProperty("visible", true);
+    screen.settle();
+}
+
+// The hold line as it reads once the camera has seen the cube held, in the longest colours.
+void with_the_cube_seen_held(Screen& screen) {
+    from_a_scan(screen);
+    const QString asked = screen.item()->property("holdWords").toString();
+    QQuickItem* line = nullptr;
+    for (QQuickItem* item : screen.item()->findChildren<QQuickItem*>()) {
+        if (item->inherits("QQuickText") && item->property("text").toString() == asked) {
+            line = item;
+        }
+    }
+    REQUIRE(line != nullptr);
+    line->setProperty("text",
+                      words_of("solve.holdLine.holding")
+                          .arg(words_of("colour.word.orange"), words_of("colour.word.yellow")));
+    screen.settle();
+}
+
+constexpr std::initializer_list<const char*> kEveryLanguage = {"en", "xx",    "de", "fr", "es",
+                                                               "ja", "zh_CN", "he", "ar", "yi"};
+
+}  // namespace
+
+// The scan screen is one of the converted screens: its words ask for their ids, and the screen is
+// held as the others are. What it says depends on what the camera sees, which a test cannot make it
+// see, so the words its states choose between are put in its status panel one by one and each is
+// held to the same checks, in English, the pseudo-locale and every draft, at both sizes.
+//
+// The pseudo-locale is held on the panel and not on the row of size buttons (Auto, 2x2 ... 5x5):
+// it pads each of those short labels by 40% and brackets it, which no language does, and five of
+// them are wider than a phone. The nine real languages and English are held on the whole screen.
+TEST_CASE("the scan screen holds every headline and every line of guidance it has",
+          "[i18n][screen][scan]") {
+    for (const char* language : kEveryLanguage) {
+        const bool pseudo = std::string_view(language) == "xx";
+        const auto say = [&](const QString& headline, const QString& guidance) {
+            holds_the_layout_of(language, {"DirectScanScreen"}, [&](Screen& screen) {
+                if (pseudo) {
+                    QQuickItem* sizes = screen.find("scan.sizes");
+                    REQUIRE(sizes != nullptr);
+                    sizes->setProperty("visible", false);
+                }
+                saying_on_the_scan(screen, headline, guidance);
+            });
+        };
+        say({}, {});
+        for (const char* id :
+             {"scan.title.cameraUnavailable", "scan.title.starting", "scan.title.complete"}) {
+            say(words_of(id), {});
+        }
+        say(words_of("scan.title.progress").arg(QStringLiteral("5")), {});
+        for (const char* id : {"scan.guide.settling", "scan.guide.first", "scan.guide.inView",
+                               "scan.guide.reading", "scan.guide.next", "scan.guide.conflict",
+                               "scan.guide.ambiguous", "scan.guide.complete",
+                               "scan.camera.error.notFound", "scan.camera.error.startFailed"}) {
+            say({}, words_of(id));
+        }
+        say({}, words_of("scan.guide.ambiguousCorner")
+                    .arg(words_of("colour.orange"), words_of("colour.yellow"),
+                         words_of("colour.green")));
+    }
+}
+
+// The same for the solve screen's own words that its default state does not say: what the camera
+// says under the move, the note when the cube is not as the solution has it, the note when only the
+// view has turned, and the hold line once the camera has seen the cube held; and each stage opened
+// out in the list, since the sentence under a stage's name is the longest of what the list says
+// and the screen opens at the first stage only.
+//
+// "press Next turn after this move", the 3x3's sentence for a side the camera cannot see, fills the
+// three lines the camera's words have in English. The pseudo-locale's 40% more cannot fit three
+// lines, and no real language is that much longer (each is held), so it is left out there.
+TEST_CASE("the solve screen holds the words only a state of it has",
+          "[i18n][screen][solve-states]") {
+    for (const char* language : kEveryLanguage) {
+        have_a_solution();
+        const bool pseudo = std::string_view(language) == "xx";
+        for (const char* id :
+             {"solve.camera.matched", "solve.camera.sideHidden", "solve.camera.matchedMove",
+              "solve.camera.unsure", "solve.camera.wrongMove", "solve.camera.wrongSide",
+              "solve.camera.showAgain", "solve.camera.holdAny", "scan.title.cameraUnavailable"}) {
+            if (pseudo && std::string_view(id) == "solve.camera.sideHidden") {
+                continue;
+            }
+            holds_the_layout_of(language, {"SolveScreen"},
+                                [&](Screen& screen) { with_camera_words(screen, words_of(id)); });
+        }
+        holds_the_layout_of(language, {"SolveScreen"}, [&](Screen& screen) {
+            with_a_mistake(
+                screen, words_of("solve.mistake.title.move"),
+                words_of("solve.mistake.wayWrong").arg(words_of("solve.theSide.orange")));
+        });
+        holds_the_layout_of(language, {"SolveScreen"}, [&](Screen& screen) {
+            with_a_mistake(
+                screen, words_of("solve.mistake.title.move"),
+                words_of("solve.mistake.sideWrong")
+                    .arg(words_of("solve.theSide.orange"), words_of("solve.mistake.place.right")));
+        });
+        holds_the_layout_of(language, {"SolveScreen"}, [&](Screen& screen) {
+            with_a_mistake(screen, words_of("solve.mistake.title.side"),
+                           words_of("solve.mistake.unknown"));
+        });
+        holds_the_layout_of(language, {"SolveScreen"}, with_the_view_turned);
+        holds_the_layout_of(language, {"SolveScreen"}, with_the_cube_seen_held);
+
+        // Each stage of the solution as the stage list opens it out: wide, its row grows; narrow,
+        // it is the words under the stage's name.
+        SolveController& solve = t::controllers().solve;
+        int stages_held = 0;
+        for (const QVariant& range : solve.stageRanges()) {
+            const QVariantMap stage = range.toMap();
+            if (stage.value(QStringLiteral("endIndex")).toInt() <=
+                stage.value(QStringLiteral("startIndex")).toInt()) {
+                continue;
+            }
+            solve.goToMove(stage.value(QStringLiteral("startIndex")).toInt());
+            holds_the_layout_of(language, {"SolveScreen"}, from_a_scan);
+            ++stages_held;
+        }
+        // The stages this solution has moves in: a loop that held none would pass.
+        CHECK(stages_held >= 3);
+        solve.goToMove(0);
+        t::controllers().history.clear();
+    }
 }
 
 // The panel under the cube on a phone's solve screen. A cube bigger than a 3x3 has more in

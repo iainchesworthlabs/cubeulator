@@ -155,6 +155,24 @@ private:
     QQuickItem* cube_ = nullptr;
 };
 
+// The words the screen has for the colours of the centres of the side held up and of the
+// side facing the person, which are what its hold line names. No language is installed
+// under test, so a word is its id (colour.word.yellow), and the line itself is the id of
+// the line (solve.holdLine.hold, or solve.holdLine.holding once the camera has seen it).
+[[nodiscard]] QStringList held_colours(const Screen& screen, const cube::app::HeldCube& held) {
+    QStringList words;
+    for (const QString& side : {held.up(), held.front()}) {
+        QVariant name;
+        REQUIRE(QMetaObject::invokeMethod(screen.item(), "centreColor",
+                                          Q_RETURN_ARG(QVariant, name), Q_ARG(QVariant, side)));
+        QVariant word;
+        REQUIRE(QMetaObject::invokeMethod(screen.item(), "colourWord", Q_RETURN_ARG(QVariant, word),
+                                          Q_ARG(QVariant, name)));
+        words.append(word.toString());
+    }
+    return words;
+}
+
 }  // namespace
 
 TEST_CASE("the solve screen's six colours are six different colours", "[qml][solve-screen]") {
@@ -355,7 +373,10 @@ TEST_CASE("the camera turns the screen's cube to the hold it sees, and steps on 
     Screen screen;
     camera.setWatching(true);
     screen.settle();
-    CHECK(screen.get("holdWords").toString() == "Hold yellow on top, green facing you");
+    // As the screen asks: an instruction, with yellow on top and green facing the person.
+    CHECK(screen.get("holdWords").toString() == "solve.holdLine.hold");
+    CHECK(held_colours(screen, app.held) ==
+          QStringList({"colour.word.yellow", "colour.word.green"}));
 
     // Held some other way: the cube on screen turns to match.
     const Hold hold{Face::R, Face::D};
@@ -363,7 +384,10 @@ TEST_CASE("the camera turns the screen's cube to the hold it sees, and steps on 
          trust);
     REQUIRE(app.held.hold() == hold);
     screen.settle();
-    CHECK(screen.get("holdWords").toString() == "Holding orange on top, white facing you");
+    // As the camera saw it: a statement, with orange on top and white facing the person.
+    CHECK(screen.get("holdWords").toString() == "solve.holdLine.holding");
+    CHECK(held_colours(screen, app.held) ==
+          QStringList({"colour.word.orange", "colour.word.white"}));
     // From the usual viewpoint the top, the front and the right side of the
     // cube as held are the ones in view.
     for (const cube::solver::Place place :

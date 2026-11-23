@@ -78,11 +78,13 @@ What to expect in this beta:
 - **English** is complete, and the source of every other.
 - **The other eight** (Deutsch, Français, Español, Japanese, Simplified
   Chinese, Hebrew, Arabic and Yiddish) are complete first drafts made with
-  machine assistance that no fluent reader has been through yet. Expect
-  wording a native speaker would change.
-- **The scan screen's guidance and most of the words round the solution** (the
-  stage names, *Previous*, *Next turn*, *Finish*, *Out of step? Rescan*) are
-  English in every language for now.
+  machine assistance that no fluent reader has been through yet. Every screen
+  is in them, the scan screen and the solve screen included, but expect
+  wording a native speaker would change, most of all the words for the colours,
+  the sides and the directions, which nobody has yet held against a real cube.
+- **What stays the same in every language** is not wording: the name
+  *Cubeulator*, the notation letters (R U R'), key names such as Space, and the
+  names of graphics systems and cameras as your computer gives them.
 
 Japanese and Chinese are drawn in your system's own fonts (the browser version
 carries its own). On Linux, install a CJK font such as Noto Sans CJK.

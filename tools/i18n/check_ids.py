@@ -13,6 +13,8 @@ the translation tooling would see: lupdate over the QML and C++ of the app
 
 Also reports, without failing, the ids the catalogue holds that no code asks
 for yet: most of the design is not built, and this is how that shrinks.
+`--unused` lists them, grouped by the screen (the first part of the id) whose
+design they belong to.
 
 Standard library only.
 """
@@ -62,6 +64,7 @@ def main(argv: list[str]) -> int:
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--lupdate", required=True, help="path to Qt's lupdate")
+    ap.add_argument("--unused", action="store_true", help="list the ids no code asks for, grouped by screen")
     args = ap.parse_args(argv)
 
     wanted = code_ids(args.lupdate)
@@ -90,6 +93,13 @@ def main(argv: list[str]) -> int:
             print(f"  {d}")
     if ok:
         print(f"{len(wanted)} ids in the code, all in strings.json; {len(unused)} of its {len(have)} not used by any code yet.")
+    if args.unused:
+        groups: dict[str, list[str]] = {}
+        for mid in unused:
+            groups.setdefault(mid.split(".")[0], []).append(mid)
+        print()
+        for group, ids in groups.items():
+            print(f"{group} ({len(ids)}): " + ", ".join(i[len(group) + 1 :] or i for i in ids))
     return 0 if ok else 1
 
 

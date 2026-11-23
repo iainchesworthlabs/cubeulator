@@ -59,7 +59,7 @@ is left, caption, buttons. Trailing: the list.
   dots ("Right · downwards · Quarter turn"). Its accessible name is the
   whole sentence (`solution.a11y.turn`).
 - On a cube bigger than a 3x3 a turn of a layer inside it, or of several
-  together, says which: "Right side · layer 2 · downwards · Quarter turn",
+  together, says which: "Right · layer 2 · downwards · Quarter turn",
   "Top · layers 1 to 2 · ...", counted from the side the move is named for
   (`solution.layer`, `solution.layers`). A turn of the outer layer says
   nothing more, so a 3x3's rows are as they were. The accessible name is the

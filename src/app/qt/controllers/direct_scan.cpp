@@ -39,6 +39,18 @@ constexpr int kLockWaitFrames = 240;
     return QColor(bgr[2], bgr[1], bgr[0]).name();
 }
 
+// Why the camera did not start, as the code the screen words (cameraErrorCode). The
+// library's English stays in cameraError; the app's language is the screen's to speak.
+[[nodiscard]] QString camera_error_code_of(const cube::CubeError error) {
+    if (error == cube::CubeError::camera_not_found) {
+        return QStringLiteral("notFound");
+    }
+    if (error == cube::CubeError::camera_start_failed) {
+        return QStringLiteral("startFailed");
+    }
+    return QStringLiteral("other");
+}
+
 // The colours of the corner the scan would like to see, as the names the
 // screen looks up (settlingCorner).
 [[nodiscard]] QStringList settling_corner_of(const cube::vision::ScanDiagnosis& diagnosis) {
@@ -509,6 +521,7 @@ void DirectScan::setWatching(bool watching) {
 
 void DirectScan::openCamera(const QString& deviceId) {
     camera_error_.clear();
+    camera_error_code_.clear();
 
     device_id_ = deviceId;
     lock_report_.reset();
@@ -533,6 +546,7 @@ void DirectScan::handleStartFinished() {
     const bool stop_requested = std::exchange(stop_requested_while_starting_, false);
     if (!result.has_value()) {
         camera_error_ = QString::fromStdString(std::string(cube::to_string(result.error())));
+        camera_error_code_ = camera_error_code_of(result.error());
         noteCamera("open_failed");
         emit runningChanged();
         return;

@@ -68,40 +68,53 @@ Item {
             .arg(colourName(corner[0])).arg(colourName(corner[1])).arg(colourName(corner[2]));
     }
 
+    // A number in the reader's own digits.
+    function digits(n) { return Qt.locale(Qt.uiLanguage).toString(n); }
+
+    // Why the camera did not start, in the app's language (the library's own English is
+    // what DirectScan.cameraError keeps, for the logs and the tests).
+    readonly property string cameraErrorWords: {
+        switch (DirectScan.cameraErrorCode) {
+        case "notFound": return qsTrId("scan.camera.error.notFound");
+        case "startFailed": return qsTrId("scan.camera.error.startFailed");
+        }
+        return DirectScan.cameraError;
+    }
+
     readonly property string headline: {
         if (DirectScan.cameraError !== "")
-            return "Camera unavailable";
+            return qsTrId("scan.title.cameraUnavailable");
         if (complete)
-            return "Cube read";
+            return qsTrId("scan.title.complete");
         if (!DirectScan.running)
-            return "Starting the camera…";
-        return DirectScan.sidesRead + " of 6 sides read";
+            return qsTrId("scan.title.starting");
+        return qsTrId("scan.title.progress").arg(digits(DirectScan.sidesRead));
     }
     readonly property string guidance: {
         if (DirectScan.cameraError !== "")
-            return DirectScan.cameraError;
+            return cameraErrorWords;
         if (complete)
-            return "All six sides make a valid cube. Working out the solution…";
+            return qsTrId("scan.guide.complete");
         if (!DirectScan.running)
             return "";
         if (DirectScan.settingUp)
-            return "Setting the camera's exposure and colour balance…";
+            return qsTrId("scan.guide.settling");
         if (DirectScan.ambiguous) {
             // Said by colour when the cubes the six sides make differ at one
             // corner more than another: showing that corner settles it.
             if (settlingText !== "")
                 return settlingText;
-            return "These six sides fit together in more than one way. Turn the cube slowly so that two sides show at once.";
+            return qsTrId("scan.guide.ambiguous");
         }
         if (DirectScan.conflicted)
-            return "These six sides do not make a valid cube yet. Show each side again, square to the camera.";
+            return qsTrId("scan.guide.conflict");
         if (DirectScan.reading)
-            return "Reading this side — hold it there";
+            return qsTrId("scan.guide.reading");
         if (cubeInView)
-            return "Hold it still";
+            return qsTrId("scan.guide.inView");
         if (DirectScan.sidesRead === 0)
-            return "Hold one side of the cube square to the camera";
-        return "Turn to a side that is not filled in below, square to the camera";
+            return qsTrId("scan.guide.first");
+        return qsTrId("scan.guide.next");
     }
 
     Rectangle { anchors.fill: parent; color: "#141312" }
@@ -191,6 +204,8 @@ Item {
 
             Text {
                 text: root.headline
+                width: parent.width
+                wrapMode: Text.WordWrap
                 color: root.complete ? root.good : "#F3F2F2"
                 font.family: Theme.fontHeading; font.pixelSize: 24; font.weight: Font.DemiBold
                 Behavior on color { ColorAnimation { duration: 220 } }
@@ -227,7 +242,7 @@ Item {
                 color: "#E5484D"
             }
             Text {
-                text: "Recording this scan to " + DirectScan.recordingRoot
+                text: qsTrId("scan.dev.recording").arg(DirectScan.recordingRoot)
                 color: "#F3F2F2"
                 font.family: Theme.fontMono; font.pixelSize: 12
             }
@@ -358,7 +373,7 @@ Item {
 
         AppButton {
             height: 42
-            variant: "secondary"; text: "Cancel"
+            variant: "secondary"; text: qsTrId("common.cancel")
             onClicked: AppState.goLaunch()
         }
         // Six sides are in and they make no cube (or one the person doubts): look
@@ -374,7 +389,7 @@ Item {
         AppButton {
             height: 42
             visible: !root.complete && !root.cameraFailed
-            variant: "secondary"; text: "Start over"
+            variant: "secondary"; text: qsTrId("scan.startOver")
             enabled: DirectScan.sidesRead > 0
             onClicked: DirectScan.restart()
         }
