@@ -781,11 +781,22 @@ TEST_CASE("a side is named by its colour at any size", "[qml][solve-screen][nxn]
         solve_in_app(cube::nxn::random_scramble({.size = size, .seed = 8, .moves = 60}));
         Screen screen;
         screen.settle();
-        const QString words = screen.get("holdWords").toString();
-        // "Hold <colour> on top, <colour> facing you".
-        CHECK(words.contains("on top"));
-        CHECK(words.contains("facing you"));
-        CHECK_FALSE(words.contains("undefined"));
+        // The hold line names the colour of the centre on top and the one facing the person,
+        // each by one of the six colour words, whatever the size (a cube with no centre is
+        // named by what its corners say). The words are the catalogue's, which these tests do
+        // not install, so what is held is that each side has a colour and the colour a word.
+        const auto& held = cube::test::app_controllers().held;
+        for (const QString& side : {held.up(), held.front()}) {
+            QVariant name;
+            REQUIRE(QMetaObject::invokeMethod(screen.item(), "centreColor",
+                                              Q_RETURN_ARG(QVariant, name), Q_ARG(QVariant, side)));
+            QVariant word;
+            REQUIRE(QMetaObject::invokeMethod(screen.item(), "colourWord",
+                                              Q_RETURN_ARG(QVariant, word), Q_ARG(QVariant, name)));
+            INFO("the " << side.toStdString() << " side is " << name.toString().toStdString());
+            CHECK(word.toString().startsWith(QStringLiteral("colour.word.")));
+        }
+        CHECK_FALSE(screen.get("holdWords").toString().contains("undefined"));
     }
 }
 
