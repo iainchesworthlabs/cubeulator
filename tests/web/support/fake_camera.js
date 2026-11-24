@@ -71,6 +71,11 @@
   // however many cameras there are. Off, the list is always the whole one.
   let withheld = null;
   let granted = false;
+  // A browser that is slow to say what cameras there are: enumerateDevices() asked while this is
+  // on answers only when releaseListing() is called, with what it had to say when it was asked.
+  // `waiting` is the answers it owes.
+  let holding = false;
+  let waiting = [];
   // The camera the page has open, and every constraint set it asked with.
   let chosen = null;
   const requests = [];
@@ -264,12 +269,19 @@
   const mediaDevices = navigator.mediaDevices || {};
   const fake = {
     enumerateDevices: async () => {
+      // What there is to say is settled when it is asked, and held back after that if the browser
+      // is slow: a list asked for before a camera was allowed is the list without names, however
+      // late it arrives.
+      let listed = devices;
       if (withheld && !granted) {
         const count = withheld.collapse ? 1 : devices.length;
-        return Array.from({ length: count }, () =>
+        listed = Array.from({ length: count }, () =>
           ({ deviceId: '', kind: 'videoinput', label: '', groupId: '' }));
       }
-      return devices;
+      if (holding) {
+        await new Promise((resolve) => waiting.push(resolve));
+      }
+      return listed;
     },
     getUserMedia: async (constraints) => {
       attempts++;
@@ -335,12 +347,25 @@
     // `options.withheld` has the browser hide ids and names until a camera has
     // been opened once, as it does until a site is given access; with
     // `collapse` it also lists one camera however many there are.
+    // `options.holdListing` has it be slow to answer: every enumerateDevices()
+    // asked until releaseListing() is called answers then, with the list it
+    // would have given when asked.
     setDevices(list, options) {
       devices = list.map((d) => ({
         deviceId: d.deviceId, kind: 'videoinput', label: d.label, groupId: 'fake', facing: d.facing,
       }));
       withheld = options && options.withheld ? { collapse: !!options.collapse } : null;
       granted = false;
+      holding = !!(options && options.holdListing);
+      waiting = [];
+    },
+    // Answers the enumerateDevices() calls that are being held, and stops
+    // holding the ones to come.
+    releaseListing() {
+      holding = false;
+      const owed = waiting;
+      waiting = [];
+      owed.forEach((resolve) => resolve());
     },
     // Every constraint set getUserMedia() has been asked, in order, and the id
     // of the camera the last of them got.
