@@ -1,0 +1,1 @@
+**The Slow, Normal and Fast chips under "Auto-rotate when idle" can be read again when it is off.** They were dimmed twice, once as a row and once each, to the point where the words were hard to make out in the light and dark themes alike; they are now dimmed once, as every other button that is switched off is, and are whole again when Auto-rotate is on.

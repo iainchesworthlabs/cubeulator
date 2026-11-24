@@ -6,6 +6,7 @@
 
 #include "app_runtime.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -31,6 +32,16 @@ void open_settings(App& app, const QString& from_control = "launch.settings") {
 
 [[nodiscard]] bool theme_is_dark(App& app) {
     return app.theme().property("effectiveDark").toBool();
+}
+
+// How much of what is behind an item shows through it and every item above it: the product
+// of their opacities, its own included.
+[[nodiscard]] double effective_opacity(const QQuickItem* item) {
+    double seen = 1.0;
+    for (; item != nullptr; item = item->parentItem()) {
+        seen *= item->opacity();
+    }
+    return seen;
 }
 
 }  // namespace
@@ -189,5 +200,68 @@ TEST_CASE("the diagnostics switches work from Settings, and every screen says wh
         REQUIRE(app.wait_for([&]() { return !diagnostics.enabled(); }));
         app.settle();
         CHECK(app.find("diagnostics.marker") == nullptr);
+    }
+}
+
+TEST_CASE("a control that is switched off is dimmed once, not again for the row it is in",
+          "[system][settings]") {
+    // AppButton dims itself when it is disabled, and the speed chips are disabled while the
+    // cube is not turning by itself: the row used to dim them as well (opacity 0.4 on the row,
+    // 0.45 on each chip), which left a label nobody could read. Since AppButton's own
+    // enabled is the item's, a chip under a disabled row reads as disabled and dims itself.
+    const Layout layout = GENERATE(Layout::wide, Layout::narrow);
+    DYNAMIC_SECTION("in the " << cube::systest::to_string(layout) << " layout") {
+        App& app = App::fresh();
+        app.resize(layout == Layout::wide ? cube::systest::kDesktop : cube::systest::kPhone);
+        open_settings(app);
+
+        // What one dimming is: Clear history is disabled on its own account (nothing is kept).
+        QQuickItem* alone = app.find("settings.clearHistory");
+        REQUIRE(alone != nullptr);
+        REQUIRE_FALSE(alone->isEnabled());
+        const double once = effective_opacity(alone);
+        CHECK(once < 1.0);
+        CHECK(once > 0.4);
+
+        // Nothing on the screen sits in a container that is dimmed: a button dims itself.
+        const auto buttons_are_not_dimmed_twice = [&]() {
+            for (QQuickItem* control : app.visible_controls()) {
+                if (!QByteArray(control->metaObject()->className()).startsWith("AppButton")) {
+                    continue;
+                }
+                INFO("the container of " << app.control_key(control).toStdString()
+                                         << " has opacity "
+                                         << effective_opacity(control->parentItem()));
+                CHECK(effective_opacity(control->parentItem()) == Catch::Approx(1.0));
+            }
+        };
+
+        // The speed chips follow Auto-rotate, which App::fresh leaves off.
+        buttons_are_not_dimmed_twice();
+        REQUIRE_FALSE(app.settings_state().property("cubeAutoRotate").toBool());
+        for (int speed = 0; speed < 3; ++speed) {
+            QQuickItem* chip = app.find(QStringLiteral("settings.rotateSpeed.%1").arg(speed));
+            REQUIRE(chip != nullptr);
+            INFO("speed chip " << speed << ": effective opacity " << effective_opacity(chip)
+                               << ", a control that is off is " << once);
+            CHECK_FALSE(chip->isEnabled());
+            CHECK(effective_opacity(chip) == Catch::Approx(once));
+        }
+
+        // On, they are whole.
+        app.click("settings.cubeAutoRotate");
+        REQUIRE(app.wait_for(
+            [&]() { return app.settings_state().property("cubeAutoRotate").toBool(); }));
+        app.pump(100);
+        for (int speed = 0; speed < 3; ++speed) {
+            QQuickItem* chip = app.find(QStringLiteral("settings.rotateSpeed.%1").arg(speed));
+            REQUIRE(chip != nullptr);
+            INFO("speed chip " << speed << ": effective opacity " << effective_opacity(chip));
+            CHECK(chip->isEnabled());
+            CHECK(effective_opacity(chip) == Catch::Approx(1.0));
+        }
+
+        buttons_are_not_dimmed_twice();
+        app.settings_state().setProperty("cubeAutoRotate", false);
     }
 }
