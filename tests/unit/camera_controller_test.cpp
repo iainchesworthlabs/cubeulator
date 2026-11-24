@@ -374,6 +374,102 @@ TEST_CASE("CameraController keeps the camera that was chosen when the list is re
     }
 }
 
+namespace {
+
+// How long a test's controller waits for a list before it gives up on it: the controller's own
+// wait is a minute, which is not what a test can spend, and well past what a probe that has not
+// stopped takes to answer here (it answers as soon as it is let go).
+constexpr std::chrono::milliseconds kGiveUpAfter{600};
+
+}  // namespace
+
+TEST_CASE("CameraController gives up on a list that never arrives, and runs the read kept for it",
+          "[qt][controllers]") {
+    // Reading the cameras is a probe of drivers and hardware, and can stop for good. A controller
+    // that waited for ever would take every request after it for one that is being read.
+    HeldEnumeration held;
+    held.answer_for(1, std::vector<DeviceInfo>{kBack});
+    held.answer_for(2, std::vector<DeviceInfo>{kFront});
+    held.release_call(2);
+    CameraController controller(held.enumerator(), false, kGiveUpAfter);
+    QStringList errors;
+    QObject::connect(&controller, &CameraController::errorOccurred,
+                     [&](const QString& message) { errors.append(message); });
+    std::vector<bool> busy_seen;
+    QObject::connect(&controller, &CameraController::busyChanged,
+                     [&] { busy_seen.push_back(controller.busy()); });
+
+    controller.refreshDevices();
+    REQUIRE(held.wait_started(1));
+    controller.refreshDevices();
+    CHECK(held.started() == 1);
+
+    // The first read is never let go. The second, which was kept, runs when it has been given up
+    // on.
+    REQUIRE(wait_until([&] { return !controller.busy(); }));
+    CHECK(held.started() == 2);
+    CHECK(ids_of(controller.devices()) == "front");
+    // Giving up on the first was said, as a read that failed is; the second then cleared it.
+    CHECK(errors.size() == 1);
+    CHECK(controller.lastError().isEmpty());
+    // Busy from the first request to the second read's answer, with no settled-looking gap between.
+    CHECK(busy_seen == std::vector<bool>{true, false});
+
+    // The probe that had stopped answers at last. It was given up on, and what it says is not the
+    // list: the one that was read since stays.
+    held.release();
+    QThreadPool::globalInstance()->waitForDone();
+    QCoreApplication::processEvents();
+    QCoreApplication::processEvents();
+    CHECK(ids_of(controller.devices()) == "front");
+    CHECK(errors.size() == 1);
+    CHECK(held.started() == 2);
+    CHECK_FALSE(controller.busy());
+}
+
+TEST_CASE("CameraController can read the list again after giving up on one that never arrived",
+          "[qt][controllers]") {
+    HeldEnumeration held;
+    held.answer_for(1, std::vector<DeviceInfo>{kBack});
+    held.answer_for(2, std::vector<DeviceInfo>{kFront});
+    held.release_call(2);
+    CameraController controller(held.enumerator(), false, kGiveUpAfter);
+    QStringList errors;
+    QObject::connect(&controller, &CameraController::errorOccurred,
+                     [&](const QString& message) { errors.append(message); });
+
+    controller.refreshDevices();
+    REQUIRE(held.wait_started(1));
+    REQUIRE(wait_until([&] { return !controller.busy(); }));
+    CHECK(errors.size() == 1);
+    CHECK(controller.lastError() == errors.first());
+    CHECK_FALSE(controller.lastError().isEmpty());
+    CHECK(controller.devices().isEmpty());
+
+    // Nothing is read in its place: with nothing asked for, the controller does not look again on
+    // its own, which with a driver that does not answer would be a probe after every give-up.
+    CHECK_FALSE(wait_until([&] { return held.started() > 1; }, 1000));
+    CHECK_FALSE(controller.busy());
+
+    // The probe that stopped answers late, and what it says is not taken for a list.
+    held.release_call(1);
+    QThreadPool::globalInstance()->waitForDone();
+    QCoreApplication::processEvents();
+    QCoreApplication::processEvents();
+    CHECK(controller.devices().isEmpty());
+    CHECK(errors.size() == 1);
+    CHECK_FALSE(controller.busy());
+
+    // And a request now is run, and clears the error, as it does after any other.
+    controller.refreshDevices();
+    CHECK(controller.busy());
+    CHECK(controller.lastError().isEmpty());
+    REQUIRE(wait_until([&] { return !controller.busy(); }));
+    CHECK(held.started() == 2);
+    CHECK(ids_of(controller.devices()) == "front");
+    CHECK(errors.size() == 1);
+}
+
 TEST_CASE("CameraController reports a list that could not be read, and can read it again",
           "[qt][controllers]") {
     HeldEnumeration held;

@@ -17,9 +17,17 @@ CameraController::CameraController(QObject* parent)
 
 CameraController::CameraController(Enumerator enumerate, bool ids_withheld_until_use,
                                    QObject* parent)
+    : CameraController(std::move(enumerate), ids_withheld_until_use, kRefreshTimeout, parent) {}
+
+CameraController::CameraController(Enumerator enumerate, bool ids_withheld_until_use,
+                                   std::chrono::milliseconds refresh_timeout, QObject* parent)
     : QObject(parent),
       ids_withheld_until_use_(ids_withheld_until_use),
-      enumerate_(std::move(enumerate)) {}
+      enumerate_(std::move(enumerate)) {
+    timeout_.setSingleShot(true);
+    timeout_.setInterval(refresh_timeout);
+    connect(&timeout_, &QTimer::timeout, this, &CameraController::handleRefreshTimedOut);
+}
 
 QVariantList CameraController::devices() const {
     return devices_;
@@ -77,10 +85,15 @@ void CameraController::startProbe() {
     probe_ = new Probe(this);
     connect(probe_, &Probe::finished, this, &CameraController::handleEnumerationFinished);
     probe_->setFuture(QtConcurrent::run(enumerate_));
+    timeout_.start();
 }
 
-void CameraController::handleEnumerationFinished() {
-    const Answer result = probe_->result();
+bool CameraController::endProbe() {
+    timeout_.stop();
+    // Deleted, not kept for the next read: a watcher that is gone reports nothing more, so the
+    // answer of a read that was given up on, if it ever comes, finds nobody to take it. The
+    // worker finishes into the future it was given, which nothing is waiting on.
+    probe_->disconnect(this);
     probe_->deleteLater();
     probe_ = nullptr;
 
@@ -92,8 +105,31 @@ void CameraController::handleEnumerationFinished() {
         busy_ = false;
         emit busyChanged();
     }
+    return again;
+}
+
+void CameraController::handleEnumerationFinished() {
+    const Answer result = probe_->result();
+    const bool again = endProbe();
 
     takeAnswer(result);
+
+    if (again) {
+        lastError_.clear();
+        startProbe();
+    }
+}
+
+void CameraController::handleRefreshTimedOut() {
+    if (probe_ == nullptr) {
+        return;
+    }
+    const bool again = endProbe();
+
+    // As a read that failed: a later request is a new read, and clears this. A code and not
+    // wording, as a controller gives one (the i18n lint holds to it); nothing shows lastError().
+    lastError_ = QStringLiteral("timedOut");
+    emit errorOccurred(lastError_);
 
     if (again) {
         lastError_.clear();
