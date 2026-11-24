@@ -88,6 +88,24 @@ Checked against `src/app/qt`, `tests/system/accessibility_test.cpp` and
   their own.
 - **Light, dark and the device's own scheme**, chosen in Settings and followed
   live.
+- **A switched-off button can be read.** It is not faded. `AppButton` draws it
+  as an opaque `surface` plate with an `outline` edge and its label and icons in
+  `inkDisabled`, in every look it has: a secondary button, a chip, the chosen
+  chip, a primary, a ghost, and any of them over the camera. The label is
+  3.15:1 on the plate in the light theme and 3.57:1 in the dark, and the edge
+  3.41:1 and 3.95:1 on the page. The plate is opaque, so the label is measured
+  on it and never on the camera picture behind the scan screen's buttons, which
+  cannot be measured. The chosen one of a set (the speed chip that is selected
+  while Auto-rotate is off) has a second ring inside its edge, so that which is
+  chosen is not told by colour alone; a screen reader still says it is checked,
+  and says the button is disabled. Fading the whole button was tried first
+  (`Theme.disabledOpacity`, 0.45 and then 0.6) and does not work: the label and
+  the plate fade towards the page together, which left a filled button's label
+  at 1.7:1 and a ghost's red at 2.4:1. `check_tokens.py` measures every look and
+  holds `Theme.qml` and `AppButton.qml` to the tokens, `tests/unit/disabled_contrast_test.cpp`
+  measures the real button in both themes and the scan screen's own Start over,
+  and `tests/system/settings_test.cpp` reads the speed chips on the Settings
+  screen.
 - **Reduced motion.** `Theme.reducedMotion` is on when Settings > Appearance >
   Motion says **Reduced**, or says **Same as this device** (the default) and the
   device asks (`Qt.styleHints.accessibility.motionPreference`, new in Qt 6.12,
@@ -134,16 +152,8 @@ Checked against `src/app/qt`, `tests/system/accessibility_test.cpp` and
   `tokens.json`, but `Theme.qml` is still the legacy palette (the brand red
   `#EC3013` as text, `inkMuted(0.55)`), which the design says misses 4.5:1. The
   figures in this page describe the tokens, not what the screens draw. A
-  switched-off button is the whole button at `Theme.disabledOpacity` (0.6), not
-  the design's own look for it: a secondary button's or chip's label is then
-  4.2:1 on the light page and 6.3:1 on the dark, which `check_tokens.py` and
-  `tests/unit/disabled_contrast_test.cpp` hold at 3:1. The label of a filled
-  button (the chosen chip, a primary) is 1.7:1 on its own fill, and its fill is
-  2.2 to 2.4:1 on the page, as a ghost's red label is, which fading cannot mend
-  (3:1 for the label on its fill would take 0.9, and the button would not look
-  switched off); the design's look (`inkDisabled` on `surface`, 3.15:1 and
-  3.57:1) would, and is not built. The scan screen's buttons sit straight on
-  the camera picture, so what theirs measure against is the picture's to say.
+  switched-off button is the exception: it is drawn in the tokens' own colours
+  (see Built).
 - **Describing the cube, reading turns aloud, durations spoken as durations**
   (the solved screen says "62 turns · 12:40"), **the chips read out as nine
   colours**, **a quarter-turn's direction by side** (the solve screen says

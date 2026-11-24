@@ -62,7 +62,7 @@ seen changing.
 | | Vibration | switch | On. Phones only | `settings.haptics` | `settings.haptics` |
 | Camera | see states | | | `settings.section.camera` | `settings.camera` |
 | History | Keep a history of solves | switch, with a note | On | `settings.section.history`, `settings.history.keep`, `settings.history.note` | `settings.keepHistory` |
-| | Clear history | button, secondary. Disabled when there is none | - | `history.clear` | `settings.clearHistory` |
+| | Clear history | button, secondary. Disabled when there is none, and drawn as every disabled button is (`../system.md`, "Button") | - | `history.clear` | `settings.clearHistory` |
 | About | About Cubeulator | list row | - | `settings.section.about`, `settings.about` | `settings.about` |
 | | Help | list row | - | `common.help` | `settings.help` |
 
@@ -166,7 +166,10 @@ section under `settings.section.developer`:
   `settings.dev.cubeStyle.glow`, `settings.dev.cubeStyle.cel`);
 - the cube's motion, which the design did not have: a heading
   (`settings.dev.motion`), a switch (`settings.dev.autoRotate`) and three speeds
-  (`settings.pace.slow`, `settings.dev.speed.normal`, `settings.dev.speed.fast`);
+  (`settings.pace.slow`, `settings.dev.speed.normal`, `settings.dev.speed.fast`),
+  which are switched off while the switch is off: each is drawn as a disabled
+  choice (`../system.md`, "Choice"), the one chosen kept apart by its second
+  ring, and the row itself is not faded;
 - a heading over the graphics backend rows (`settings.dev.rendering`) and, under
   the cube in the wide layout, a button that turns one layer of it at random
   (`settings.dev.testTurn`);

@@ -24,8 +24,10 @@ import sys
 from pathlib import Path
 
 TOKENS = Path(__file__).resolve().parent.parent / "tokens.json"
-# Where the app sets how much of a switched-off button is left, in one place.
-THEME = Path(__file__).resolve().parents[3] / "src" / "app" / "qt" / "Theme.qml"
+# The two files that draw a switched-off button, which this holds to the tokens.
+QT = Path(__file__).resolve().parents[3] / "src" / "app" / "qt"
+THEME = QT / "Theme.qml"
+APP_BUTTON = QT / "AppButton.qml"
 
 # The worst thing a camera can put behind an overlay panel is pure white.
 WORST_BEHIND = "#FFFFFF"
@@ -66,12 +68,38 @@ def blend(fg, bg, alpha):
     return "#%02X%02X%02X" % tuple(round(alpha * f[i] + (1 - alpha) * b[i]) for i in range(3))
 
 
-def disabled_opacity():
-    """Theme.disabledOpacity, as the app has it."""
-    found = re.search(r"readonly\s+property\s+real\s+disabledOpacity:\s*([0-9.]+)", THEME.read_text(encoding="utf-8"))
-    if not found:
-        sys.exit(f"no disabledOpacity in {THEME}")
-    return float(found.group(1))
+def theme_colours():
+    """The colours Theme.qml gives a light and a dark value, as {name: (light, dark)}."""
+    found = re.findall(r'readonly\s+property\s+color\s+(\w+):\s*effectiveDark\s*\?\s*"(#[0-9A-Fa-f]{6})"\s*:\s*"(#[0-9A-Fa-f]{6})"',
+                       THEME.read_text(encoding="utf-8"))
+    return {name: (light.upper(), dark.upper()) for name, dark, light in found}
+
+
+def app_drawn_as_tokens(tokens):
+    """What is wrong, if anything, with how the app draws a switched-off button, as a list of sentences."""
+    problems = []
+    theme = THEME.read_text(encoding="utf-8")
+    button = APP_BUTTON.read_text(encoding="utf-8")
+    have = theme_colours()
+    used = {name for look in tokens["disabled"]["looks"]
+            for name in (look["plate"], look["label"], look["edge"], look.get("ring")) if name}
+    for name in sorted(used | {"paper"}):
+        if name not in have:
+            problems.append(f"Theme.qml has no {name}, which a switched-off button is drawn in")
+            continue
+        want = (tokens["color"][name]["light"].upper(), tokens["color"][name]["dark"].upper())
+        if have[name] != want:
+            problems.append(f"Theme.{name} is {have[name][0]} and {have[name][1]} (light, dark), "
+                            f"tokens.json says {want[0]} and {want[1]}")
+        if name != "paper" and f"Theme.{name}" not in button:
+            problems.append(f"AppButton.qml does not draw a switched-off button in Theme.{name}")
+    # A switched-off button is not faded: no opacity on the button at all, and no token for one.
+    if re.search(r"^\s*opacity\s*:", button, re.M):
+        problems.append("AppButton.qml sets an opacity, so a switched-off button is faded and not drawn in the "
+                        "plate, label and edge of the tokens")
+    if "disabledOpacity" in theme + button:
+        problems.append("something still names disabledOpacity: a switched-off button is not faded")
+    return problems
 
 
 def simulate(hex_, kind):
@@ -119,22 +147,44 @@ def main():
         out.append(f"| `{fg}` | `{bg}` | {use} | {target}:1 | {cells[0]} | {cells[1]} |")
 
     # ---- a switched-off button ---------------------------------------------
-    opacity = disabled_opacity()
+    disabled = tokens["disabled"]
+    target = disabled["target"]
+    problems = app_drawn_as_tokens(tokens)
+    failures.extend(problems)
     out.append("\n### Switched-off buttons\n")
-    out.append(f"The app draws a switched-off button as the whole button at `Theme.disabledOpacity`, "
-               f"{opacity:g}. The label is blended over what it sits on at that opacity.\n")
-    out.append("| foreground | background | use | target | light | dark |")
+    out.append("A switched-off button is not faded. It is an opaque plate with an edge, and its label in "
+               "`inkDisabled`, in every look, because fading a whole button drags its label and its plate "
+               "towards the page together (a filled button's label fell to 1.7:1 at an opacity that still "
+               "looked switched off). The plate is opaque, so the label is measured on it and never on what "
+               "is behind the button, which over the camera is a picture. The chosen one of a set has a "
+               "second ring inside its edge, so that it is told by a shape and not by colour alone. "
+               + ("The app draws it so (`Theme.qml` and `AppButton.qml` agree with `tokens.json`).\n"
+                  if not problems else "**The app does not draw it so; see the failures.**\n"))
+    out.append(f"Each ratio is light / dark, and each is held to {target:g}:1.\n")
+    out.append("| look | use | label on plate | edge on the page | edge on a pane | ring on plate |")
     out.append("|---|---|---|---|---|---|")
-    for fg, bg, target, use in tokens["disabled"]["pairs"]:
+    for look in disabled["looks"]:
+        over_camera = look.get("overCamera", False)
         cells = []
-        for theme in ("light", "dark"):
-            under = color[bg][theme]
-            ratio = contrast(blend(color[fg][theme], under, opacity), under)
-            ok = ratio >= target
-            if not ok:
-                failures.append(f"disabled {fg} on {bg} ({theme}) at {opacity:g}: {ratio:.2f} < {target}")
-            cells.append(f"{ratio:.2f}" + ("" if ok else " FAIL"))
-        out.append(f"| `{fg}` | `{bg}` | {use} | {target}:1 | {cells[0]} | {cells[1]} |")
+        for what, fg, bg in (("label on plate", look["label"], look["plate"]),
+                             ("edge on the page", look["edge"], "paper"),
+                             ("edge on a pane", look["edge"], "surface"),
+                             ("ring on plate", look.get("ring"), look["plate"])):
+            if what.startswith("edge") and over_camera:
+                cells.append("the picture's")  # no page behind it to measure against
+                continue
+            if fg is None:
+                cells.append("-")  # a ring only the chosen one has
+                continue
+            pair = []
+            for theme in ("light", "dark"):
+                ratio = contrast(color[fg][theme], color[bg][theme])
+                ok = ratio >= target
+                if not ok:
+                    failures.append(f"disabled {look['name']}: {what} ({theme}): {ratio:.2f} < {target:g}")
+                pair.append(f"{ratio:.2f}" + ("" if ok else " FAIL"))
+            cells.append(" / ".join(pair))
+        out.append(f"| `{look['name']}` | {look['use']} | " + " | ".join(cells) + " |")
 
     # ---- camera overlay ----------------------------------------------------
     ov = tokens["overlay"]
@@ -199,7 +249,9 @@ def main():
     if markdown:
         print("\n".join(out))
     else:
-        checked = (len(tokens["pairs"]) + len(tokens["disabled"]["pairs"])) * 2 + 5 + len(cube)
+        measured = sum(2 * (1 + (0 if look.get("overCamera") else 2) + (1 if look.get("ring") else 0))
+                       for look in tokens["disabled"]["looks"])
+        checked = len(tokens["pairs"]) * 2 + measured + 5 + len(cube)
         print(f"{checked} pairings measured, {len(failures)} below target")
         for k in KINDS:
             print(f"  closest cube pair, {k}: {worst[k][0]:.1f} ({worst[k][1]})")
