@@ -44,7 +44,7 @@ Choose **Another size of cube** on the start screen, then a size from 2x2 to
 </figure>
 
 <figure markdown="span">
-  ![The colours screen: the top and front sides of a 4x4 painted, the cube drawn beside them, and a count of the stickers still to paint.](img/colours-wide-light.webp){ loading=lazy }
+  ![The colours screen: the top and front sides of a 4x4 painted, the cube drawn beside them, a count of the stickers still to paint, and Redo and Solve greyed out.](img/colours-wide-light.webp){ loading=lazy }
   <figcaption>Painting a 4x4. The cube beside it is the cube as far as you have got.</figcaption>
 </figure>
 

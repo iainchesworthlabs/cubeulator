@@ -81,7 +81,7 @@ preview stays in the corner and the solution still steps on by itself when you
 make the move. (A cube you typed in has no scan, so it has no camera.)
 
 <figure markdown="span">
-  ![The Check the colours screen over a cube the camera read, with two stickers marked with a question mark and a note that the camera was not sure of 2 stickers.](img/colours-doubt-wide-light.webp){ loading=lazy }
+  ![The Check the colours screen over a cube the camera read, with two stickers marked with a question mark and a note that the camera was not sure of 2 stickers. Clear all, Undo, Redo and Back to the scan are greyed out.](img/colours-doubt-wide-light.webp){ loading=lazy }
   <figcaption>Two stickers the camera was not sure of are marked with a question mark.</figcaption>
 </figure>
 
@@ -103,7 +103,7 @@ make the move. (A cube you typed in has no scan, so it has no camera.)
   so a mistake here is found before the solve rather than after it.
 
 <figure markdown="span">
-  ![The Check the colours screen for a cube that cannot be real: 'Two pieces look swapped', and buttons offering a half turn of the Yellow, White, Green or Blue side.](img/colours-turn-wide-light.webp){ loading=lazy }
+  ![The Check the colours screen for a cube that cannot be real: 'Two pieces look swapped', and buttons offering a half turn of the Yellow, White, Green or Blue side. Clear all, Undo, Redo and Back to the scan are greyed out.](img/colours-turn-wide-light.webp){ loading=lazy }
   <figcaption>A cube that cannot be real. The screen says what looks wrong and offers the turns of a side that would make it one.</figcaption>
 </figure>
 

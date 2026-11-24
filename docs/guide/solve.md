@@ -6,8 +6,8 @@ cube notation: the layer to turn moves on the picture, and the screen says it
 in words as well.
 
 <figure markdown="span">
-  ![The solve screen at the start: the top layer of the 3D cube is nudged part-way round, Stage 1 of 5, and a Next turn button.](img/solve-start-wide-light.webp#only-light){ loading=lazy }
-  ![The solve screen at the start: the top layer of the 3D cube is nudged part-way round, Stage 1 of 5, and a Next turn button.](img/solve-start-wide-dark.webp#only-dark){ loading=lazy }
+  ![The solve screen at the start: the top layer of the 3D cube is nudged part-way round, Stage 1 of 5, a Previous button greyed out, and a Next turn button.](img/solve-start-wide-light.webp#only-light){ loading=lazy }
+  ![The solve screen at the start: the top layer of the 3D cube is nudged part-way round, Stage 1 of 5, a Previous button greyed out, and a Next turn button.](img/solve-start-wide-dark.webp#only-dark){ loading=lazy }
   <figcaption>The first move. The top layer is nudged the way it has to go.</figcaption>
 </figure>
 
