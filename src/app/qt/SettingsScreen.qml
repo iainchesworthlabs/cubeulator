@@ -321,9 +321,10 @@ Rectangle {
                 options: SettingsState.rotateSpeeds
                 currentIndex: SettingsState.rotateSpeedIndex
                 onSelected: (index) => SettingsState.rotateSpeedIndex = index
-                // Off with Auto-rotate. Each chip dims itself when it is disabled, and a
-                // row that dimmed them as well made a label nobody could read, so the row
-                // does not (tests/system/settings_test.cpp holds it).
+                // Off with Auto-rotate. Each chip draws itself in the switched-off style
+                // when it is disabled (AppButton.qml), and a row that faded them as well
+                // made a label nobody could read, so the row does not
+                // (tests/system/settings_test.cpp holds it).
                 enabled: SettingsState.cubeAutoRotate
             }
         }

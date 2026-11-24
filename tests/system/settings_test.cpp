@@ -44,6 +44,83 @@ void open_settings(App& app, const QString& from_control = "launch.settings") {
     return seen;
 }
 
+// What an AppButton is drawn in, read from its items (AppButton.qml): the plate, the label and the
+// ring that marks the chosen one of a set when it is switched off.
+struct Drawn {
+    QColor fill;
+    QColor edge;
+    QColor label;
+    bool ring_shown = false;
+    double face_opacity = 1.0;
+    double label_opacity = 1.0;
+};
+
+[[nodiscard]] Drawn drawn_of(const QQuickItem* button) {
+    Drawn drawn;
+    const QQuickItem* face = nullptr;
+    for (const QQuickItem* child : button->childItems()) {
+        if (!child->inherits("QQuickRectangle")) {
+            continue;
+        }
+        if (child->objectName() == "appButton.chosenRing") {
+            drawn.ring_shown = child->isVisible();
+        } else if (face == nullptr) {
+            face = child;
+        }
+    }
+    REQUIRE(face != nullptr);
+    drawn.fill = face->property("color").value<QColor>();
+    drawn.edge =
+        qvariant_cast<QObject*>(face->property("border"))->property("color").value<QColor>();
+    drawn.face_opacity = effective_opacity(face);
+
+    // The label is the Text that says what the button says.
+    const QString said = button->property("text").toString();
+    const auto find_label = [&said](const auto& self, const QQuickItem* from) -> const QQuickItem* {
+        for (const QQuickItem* child : from->childItems()) {
+            if (child->inherits("QQuickText") && child->property("text").toString() == said) {
+                return child;
+            }
+            if (const QQuickItem* deeper = self(self, child)) {
+                return deeper;
+            }
+        }
+        return nullptr;
+    };
+    const QQuickItem* label = find_label(find_label, button);
+    REQUIRE(label != nullptr);
+    drawn.label = label->property("color").value<QColor>();
+    drawn.label_opacity = effective_opacity(label);
+    return drawn;
+}
+
+[[nodiscard]] QColor theme_colour(App& app, const char* name) {
+    return app.theme().property(name).value<QColor>();
+}
+
+// A button that is switched off is an opaque `surface` plate with an `outline` edge and its label
+// in `inkDisabled`, none of it faded, and the one chosen of a set has a ring inside its edge.
+// Switched on, it has none of that.
+void check_switched_off_style(App& app, const QQuickItem* button, bool chosen) {
+    const Drawn drawn = drawn_of(button);
+    CHECK(drawn.fill == theme_colour(app, "surface"));
+    CHECK(drawn.fill.alpha() == 255);
+    CHECK(drawn.edge == theme_colour(app, "outline"));
+    CHECK(drawn.label == theme_colour(app, "inkDisabled"));
+    CHECK(drawn.face_opacity == Catch::Approx(1.0));
+    CHECK(drawn.label_opacity == Catch::Approx(1.0));
+    CHECK(drawn.ring_shown == chosen);
+}
+
+void check_switched_on_style(App& app, const QQuickItem* button) {
+    const Drawn drawn = drawn_of(button);
+    CHECK(drawn.label != theme_colour(app, "inkDisabled"));
+    CHECK(drawn.fill != theme_colour(app, "surface"));
+    CHECK_FALSE(drawn.ring_shown);
+    CHECK(drawn.face_opacity == Catch::Approx(1.0));
+    CHECK(drawn.label_opacity == Catch::Approx(1.0));
+}
+
 }  // namespace
 
 TEST_CASE("settings open from launch and close back to it", "[system][settings]") {
@@ -203,29 +280,29 @@ TEST_CASE("the diagnostics switches work from Settings, and every screen says wh
     }
 }
 
-TEST_CASE("a control that is switched off is dimmed once, not again for the row it is in",
+TEST_CASE("a control that is switched off is drawn in the switched-off style, and not faded",
           "[system][settings]") {
-    // AppButton dims itself when it is disabled, and the speed chips are disabled while the
-    // cube is not turning by itself: the row used to dim them as well, which left a label
-    // nobody could read (the two opacities multiplied). Since AppButton's own enabled is the
-    // item's, a chip under a disabled row reads as disabled and dims itself.
+    // AppButton draws itself as a plain grey plate when it is disabled, and the speed chips are
+    // disabled while the cube is not turning by itself. The row used to fade them as well, which
+    // left a label nobody could read (the two opacities multiplied); a button is now not faded at
+    // all, and nothing around one fades it either. Since AppButton's own enabled is the item's,
+    // a chip under a disabled row reads as disabled and draws itself so.
     const Layout layout = GENERATE(Layout::wide, Layout::narrow);
     DYNAMIC_SECTION("in the " << cube::systest::to_string(layout) << " layout") {
         App& app = App::fresh();
         app.resize(layout == Layout::wide ? cube::systest::kDesktop : cube::systest::kPhone);
         open_settings(app);
 
-        // What one dimming is: Theme.disabledOpacity, the one place the value is set. Clear
-        // history is disabled on its own account (nothing is kept) and shows it.
-        const double once = app.theme().property("disabledOpacity").toDouble();
-        CHECK(once < 1.0);
+        // Clear history is disabled on its own account (nothing is kept) and shows it: a plain
+        // button, none of it chosen.
         QQuickItem* alone = app.find("settings.clearHistory");
         REQUIRE(alone != nullptr);
         REQUIRE_FALSE(alone->isEnabled());
-        CHECK(effective_opacity(alone) == Catch::Approx(once));
+        check_switched_off_style(app, alone, false);
+        CHECK(effective_opacity(alone) == Catch::Approx(1.0));
 
-        // Nothing on the screen sits in a container that is dimmed: a button dims itself.
-        const auto buttons_are_not_dimmed_twice = [&]() {
+        // Nothing on the screen sits in a container that is faded: a button does not need it.
+        const auto buttons_are_not_faded = [&]() {
             for (QQuickItem* control : app.visible_controls()) {
                 if (!QByteArray(control->metaObject()->className()).startsWith("AppButton")) {
                     continue;
@@ -237,19 +314,21 @@ TEST_CASE("a control that is switched off is dimmed once, not again for the row 
             }
         };
 
-        // The speed chips follow Auto-rotate, which App::fresh leaves off.
-        buttons_are_not_dimmed_twice();
+        // The speed chips follow Auto-rotate, which App::fresh leaves off. Each is the switched-off
+        // plate, and the one chosen is told from the others by its ring, not by a colour.
+        buttons_are_not_faded();
         REQUIRE_FALSE(app.settings_state().property("cubeAutoRotate").toBool());
+        const int chosen = app.settings_state().property("rotateSpeedIndex").toInt();
         for (int speed = 0; speed < 3; ++speed) {
             QQuickItem* chip = app.find(QStringLiteral("settings.rotateSpeed.%1").arg(speed));
             REQUIRE(chip != nullptr);
-            INFO("speed chip " << speed << ": effective opacity " << effective_opacity(chip)
-                               << ", a control that is off is " << once);
+            INFO("speed chip " << speed << ", the chosen one is " << chosen);
             CHECK_FALSE(chip->isEnabled());
-            CHECK(effective_opacity(chip) == Catch::Approx(once));
+            CHECK(effective_opacity(chip) == Catch::Approx(1.0));
+            check_switched_off_style(app, chip, speed == chosen);
         }
 
-        // On, they are whole.
+        // On, they are whole: the chosen one red, the others bare, no ring on any.
         app.click("settings.cubeAutoRotate");
         REQUIRE(app.wait_for(
             [&]() { return app.settings_state().property("cubeAutoRotate").toBool(); }));
@@ -257,12 +336,13 @@ TEST_CASE("a control that is switched off is dimmed once, not again for the row 
         for (int speed = 0; speed < 3; ++speed) {
             QQuickItem* chip = app.find(QStringLiteral("settings.rotateSpeed.%1").arg(speed));
             REQUIRE(chip != nullptr);
-            INFO("speed chip " << speed << ": effective opacity " << effective_opacity(chip));
+            INFO("speed chip " << speed);
             CHECK(chip->isEnabled());
             CHECK(effective_opacity(chip) == Catch::Approx(1.0));
+            check_switched_on_style(app, chip);
         }
 
-        buttons_are_not_dimmed_twice();
+        buttons_are_not_faded();
         app.settings_state().setProperty("cubeAutoRotate", false);
     }
 }
