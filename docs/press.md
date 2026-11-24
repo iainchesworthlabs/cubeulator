@@ -20,7 +20,7 @@ the cube, solves it and shows you the turns, one at a time, on a 3D cube.
 | Cube sizes | 3×3 by camera; 2×2 to 5×5 by camera, typed scramble or typed colours |
 | Methods | Beginner (about 100 turns), Intermediate (about 50), Advanced (about 20) |
 | Runs on | Windows 10 and later, macOS 14.4 and later on Apple silicon, Linux (Debian, Ubuntu, Fedora), and a web browser. An iPhone app is on TestFlight for invited testers |
-| Status | Pre-release (the latest is 0.2.0-beta.4, 1 November 2026) |
+| Status | Pre-release (the latest is 1.0.0-rc.1, 25 November 2026) |
 | Price | Free |
 | Licence | GNU General Public License, version 3 or later for the source; version 3 for the binaries |
 | Privacy | The camera picture is read on the device and not saved. No account, no telemetry, no update check |

@@ -14,7 +14,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [1.0.0-rc.1] - 2026-11-25
 
-The first release candidate for 1.0.0. The app can now be used from the keyboard, gives a screen reader names and announcements, follows a device's request for less motion, and says every word of its scan and solve screens in the language you chose. About and Licences can be opened on the iPhone, and cancelling a scan as the camera opens lets go of the camera. It is also the first release made by the organisation's shared release workflow, signed with the organisation's key.
+The first release candidate for 1.0.0. The app can now be used from the keyboard, gives a screen reader names and announcements, follows a device's request for less motion, and says every word of its scan and solve screens in the language you chose. About and Licences can be opened on the iPhone, allowing the camera there takes you on to the scan, and cancelling a scan as the camera opens lets go of the camera. It is also the first release made by the organisation's shared release workflow, signed with the organisation's key.
 
 ### Added
 
@@ -35,28 +35,10 @@ The first release candidate for 1.0.0. The app can now be used from the keyboard
 - **Looking for cameras no longer starts a second search while the first is being finished.** If the list of cameras was asked for again in the instant the first search had ended, the app searched the cameras a second time, which on a machine where that takes seconds meant a longer wait, and Settings said it had finished looking before it had the list. The app now knows it is still looking until it has been given the list.
 - **Cancelling the scan as the camera finishes opening now lets go of the camera.** If you left the scan screen at the moment the camera had just finished starting, the app went back to the start screen but the camera kept running, and its light stayed on until you quit. The scan now knows the camera is still being opened until it has been told it is open, so the stop is not lost.
 - **With the scan size on Auto, only Auto shows as chosen.** The scan screen's size row drew both Auto and the size found so far (for example 3×3) in the colour of the choice, as if two sizes were selected. Now the one in use is the only one marked: Auto while the size is being found from the cube, the size once one is chosen.
-
-> **Pre-release.** A release candidate: if nothing is found that needs fixing, 1.0.0 follows with these changes. The keyboard, screen-reader and motion work has been checked by automated tests that read what the app tells an assistive technology, and not with a real screen reader or on a device that asks for less motion. The other eight languages are machine-made first drafts that no fluent reader has been through. The scan has been checked on recorded sessions and on a webcam, not across many cameras, rooms and cubes, and the iPhone app has been seen to open and go on to the scan, not tried on a phone by anyone but the author. The Windows files are test-signed with a certificate that only the author's machines trust, and the macOS and Linux packages are not signed by Apple or by a Linux vendor, so SmartScreen and Gatekeeper will ask before they run; the GPG signatures, attestations and SBOMs are how to check them instead.
-
-## [0.2.0-beta.4] - 2026-11-01
-
-Another build for the iPhone. With Borderlands Cel-Shading chosen, the 3D cube no longer sits on a pale square.
-
-### Fixed
-
+- **The iPhone app now goes on to scan once you allow the camera.** After you tapped Allow, the app kept saying "Camera access is off" with a Try again button, even though the camera was switched on in Settings: it read the answer the wrong way round. Allowing the camera now takes you to the scan, and refusing it shows the explanation.
 - **Borderlands Cel-Shading no longer draws a lighter square behind the cube.** With that look chosen, the 3D cube sat on a pale square with soft edges, in the home screen and wherever else the cube is shown, instead of on the page itself. The cube is now drawn on the page again, with the halftone dots and the dark edges still in place.
 
-> **Pre-release.** The iPhone build opens and takes you to the scan once the camera is allowed. The scan itself, the camera's colours and the 3D cube's other looks have not been tried on a phone by anyone but the author, and the cel-shading fix has been checked on a desktop and by tests, not yet on a phone, so the first scan is a test (see [Installing on an iPhone](docs/ios-install.md)). The packages are not signed with a Windows or Apple certificate, so SmartScreen and Gatekeeper will ask before they run; the GPG signatures, attestations and SBOMs are how to check them instead.
-
-## [0.2.0-beta.3] - 2026-11-01
-
-A second build for the iPhone, after the first one on TestFlight closed as it opened and the next did not go on to scan once the camera was allowed. Allowing the camera now takes you to the scan.
-
-### Fixed
-
-- **The iPhone app now goes on to scan once you allow the camera.** After you tapped Allow, the app kept saying "Camera access is off" with a Try again button, even though the camera was switched on in Settings: it read the answer the wrong way round. Allowing the camera now takes you to the scan, and refusing it shows the explanation.
-
-> **Pre-release.** The iPhone build opens, and its camera has not yet been seen to run on a phone: the fix for the permission screen has been checked by tests and not on a phone, and the scan, the camera's colours and the 3D cube are untried there, so the first scan is a test (see [Installing on an iPhone](docs/ios-install.md)). The packages are not signed with a Windows or Apple certificate, so SmartScreen and Gatekeeper will ask before they run; the GPG signatures, attestations and SBOMs are how to check them instead.
+> **Pre-release.** A release candidate: if nothing is found that needs fixing, 1.0.0 follows with these changes. The keyboard, screen-reader and motion work has been checked by automated tests that read what the app tells an assistive technology, and not with a real screen reader or on a device that asks for less motion. The other eight languages are machine-made first drafts that no fluent reader has been through. The scan has been checked on recorded sessions and on a webcam, not across many cameras, rooms and cubes, and the iPhone app has been seen to open and go on to the scan, not tried on a phone by anyone but the author, and the cel-shading fix has been checked on a desktop and by tests, not yet on a phone. The Windows files are test-signed with a certificate that only the author's machines trust, and the macOS and Linux packages are not signed by Apple or by a Linux vendor, so SmartScreen and Gatekeeper will ask before they run; the GPG signatures, attestations and SBOMs are how to check them instead.
 
 ## [0.2.0-beta.2] - 2026-10-31
 
