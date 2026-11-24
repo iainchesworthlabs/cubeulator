@@ -15,7 +15,7 @@ A release is a deliberate human step: the tag is the owner's, and the publish jo
 ```text
 feature/* bugfix/* ──PR──▶ merge queue ──▶ develop
                                               │
-        release/<version> ──PR──▶ develop     │   1. cut the changelog, set the version, write whats-new
+   chore/release-<version> ──PR──▶ develop    │   1. cut the changelog, set the version, write whats-new
                                               ▼
               tag v<version> on that develop commit      2. `Tag a release` (the bot), or `git tag` and push
                                               ▼
@@ -29,7 +29,7 @@ feature/* bugfix/* ──PR──▶ merge queue ──▶ develop
 ```
 
 - **Releases are cut from `develop`.** The version is set and the changelog cut in a pull request into `develop` that
-  goes through the merge queue like any other, from a `release/<version>` branch. The tag is on a commit of `develop`:
+  goes through the merge queue like any other, from a `chore/release-<version>` branch (dashes for the dots: `chore/release-1-0-0`). The tag is on a commit of `develop`:
   the workflow refuses any other.
 - **The tag is the build.** A tag starts `release.yml`. It checks the tree and the tag (`tools/release/check_release.py`),
   that the commit is green, and builds the packages; the shared workflow then signs and attests them and makes the
@@ -227,7 +227,7 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
 
    ```sh
    git switch develop && git pull
-   git switch -c release/1.0.0
+   git switch -c chore/release-1-0-0
    python tools/release/prepare_release.py 1.0.0
    ```
 
@@ -237,7 +237,7 @@ python tools/release/render_release_notes.py --version 0.1.0-beta.1 \
    what is wrong. Change `docs/whats-new.md` in the same pull request: the new version in bold at the top, and a short
    section that says in plain words what changed and what is not yet proven; the `Site` check fails until the page names
    the newest release of `CHANGELOG.md`. A final release drops the pre-release wording of the README, the FAQ and the
-   guide's "What this release is" box. Open a PR into `develop` (the branch name must start `release/`); it goes
+   guide's "What this release is" box. Open a PR into `develop` labelled `no-changelog` (the changelog is assembled by this very change; the branch name must follow `chore/`, and `release/x.y` is for a fix to an old release); it goes
    through the merge queue like any other.
 
    Pull requests that were open when you prepared the release can merge after it, each with a fragment, and the release
