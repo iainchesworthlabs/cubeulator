@@ -1,1 +1,0 @@
-**The About screen no longer says Cubeulator is for the 3x3 cube.** Its one-line description read "A camera-driven solver for the 3x3 cube", though Cubeulator also solves a 2x2, 4x4 and 5x5. It now says "A camera-driven cube solver", and the same in the other eight languages.

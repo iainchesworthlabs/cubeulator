@@ -1,1 +1,0 @@
-**Cancelling the scan as the camera finishes opening now lets go of the camera.** If you left the scan screen at the moment the camera had just finished starting, the app went back to the start screen but the camera kept running, and its light stayed on until you quit. The scan now knows the camera is still being opened until it has been told it is open, so the stop is not lost.
