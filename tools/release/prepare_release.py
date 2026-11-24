@@ -21,7 +21,7 @@ What it does, and nothing else (docs/releasing.md, "Preparing the release"):
     pre-release caveat).
 
 It writes all of them or none. It never commits, tags or pushes: the result is
-a diff for a `chore/release-<version>` branch and a pull request into develop.
+a diff for a `release/<major>.<minor>` branch and a pull request into develop.
 
 Standard library only.
 """
