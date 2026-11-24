@@ -143,14 +143,24 @@ a card left unfilled reads fine in the light theme and is near-white ink on
 white in the dark one. The system suite's `render_test.cpp` checks the same
 card's pixels.
 
-`disabled_contrast_test.cpp` does the same for a button that is switched off.
-It loads the real `AppButton` in each theme and each look, reads what each item
-is drawn in, and blends them as the scene graph does (the fill over the page,
-then the label over the fill, each at the product of the opacities above it).
-The label of a secondary button or chip must be 3:1 on the page and on a pane
-at `Theme.disabledOpacity`; the filled and ghost looks cannot be, and are held
-to the floor they have. `docs/design/tools/check_tokens.py` makes the same
-measurement from the tokens, reading the opacity out of `Theme.qml`.
+`disabled_contrast_test.cpp` does the same for a button that is switched off,
+which `AppButton` does not fade: it draws an opaque `surface` plate, an
+`outline` edge and the label in `inkDisabled`, and a second ring inside the edge
+for the chosen one of a set. The test loads the real `AppButton` in each theme
+and in each look it has (the secondary button and chip, the chosen chip, the
+primary, the ghost, and each of them over the camera, with and without icons),
+reads what each item is drawn in, and holds that nothing is faded (every part is
+at an opacity of 1), that the plate is opaque, that the label and any icon are
+`inkDisabled` and 3:1 on the plate, that the edge is `outline` and 3:1 on the
+page and on a pane (not over the camera, where the page is a picture), and that
+the ring is there for the chosen one and for no other. It also loads the real
+`DirectScanScreen` and holds its Start over, which is switched off until a side
+is read, to the same. The old way, fading the whole button, fails every one of
+these. `tests/system/settings_test.cpp` reads the speed chips and Clear history
+on the real Settings screen, switched off and then on. `docs/design/tools/check_tokens.py`
+makes the same measurement from the tokens (every look, light and dark), and
+fails if `Theme.qml` does not have those colours, if `AppButton.qml` does not
+draw in them or sets an opacity, or if anything names `disabledOpacity` again.
 
 To *look* at the solve screen rather than check it, a hidden case puts the
 real screen in a window parked off-screen, drives it with drawn frames, and
