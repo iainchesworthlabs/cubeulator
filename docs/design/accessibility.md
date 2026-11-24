@@ -133,7 +133,17 @@ Checked against `src/app/qt`, `tests/system/accessibility_test.cpp` and
 - **The contrast gate on the screens.** `check_tokens.py` passes for
   `tokens.json`, but `Theme.qml` is still the legacy palette (the brand red
   `#EC3013` as text, `inkMuted(0.55)`), which the design says misses 4.5:1. The
-  figures in this page describe the tokens, not what the screens draw.
+  figures in this page describe the tokens, not what the screens draw. A
+  switched-off button is the whole button at `Theme.disabledOpacity` (0.6), not
+  the design's own look for it: a secondary button's or chip's label is then
+  4.2:1 on the light page and 6.3:1 on the dark, which `check_tokens.py` and
+  `tests/unit/disabled_contrast_test.cpp` hold at 3:1. The label of a filled
+  button (the chosen chip, a primary) is 1.7:1 on its own fill, and its fill is
+  2.2 to 2.4:1 on the page, as a ghost's red label is, which fading cannot mend
+  (3:1 for the label on its fill would take 0.9, and the button would not look
+  switched off); the design's look (`inkDisabled` on `surface`, 3.15:1 and
+  3.57:1) would, and is not built. The scan screen's buttons sit straight on
+  the camera picture, so what theirs measure against is the picture's to say.
 - **Describing the cube, reading turns aloud, durations spoken as durations**
   (the solved screen says "62 turns · 12:40"), **the chips read out as nine
   colours**, **a quarter-turn's direction by side** (the solve screen says

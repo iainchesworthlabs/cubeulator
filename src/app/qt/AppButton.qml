@@ -65,7 +65,8 @@ Item {
     readonly property bool secondary: variant === "secondary"
     readonly property bool ghost: variant === "ghost"
 
-    opacity: enabled ? 1.0 : 0.45
+    // Switched off, it is the same button, dimmed (Theme.disabledOpacity).
+    opacity: enabled ? 1.0 : Theme.disabledOpacity
 
     // `enabled` is Item's own (this used to shadow it with a property of its
     // own, which left the item itself enabled): a disabled button is out of the

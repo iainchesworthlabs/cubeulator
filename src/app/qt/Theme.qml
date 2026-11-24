@@ -24,6 +24,19 @@ QtObject {
     readonly property color surface: effectiveDark ? "#242220" : "#EAE9E9"
     readonly property color divider: effectiveDark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(0.125, 0.117, 0.113, 0.4)
 
+    // How much of a button is left when it is switched off: all of it (fill,
+    // label and edge) at this opacity, over what it sits on, and nothing else
+    // about it changes. The design holds a disabled label to 3:1 although WCAG
+    // exempts it (docs/design/system.md, "Measured"), and a secondary label,
+    // ink over the page, is 4.2:1 at 0.6 in the light theme and 6.3:1 in the
+    // dark (2.7 and 4.2 at the 0.45 it was). The label of a filled button, the
+    // chosen chip or a primary, cannot reach it by dimming: it is paper on
+    // the brand red, 3.8:1 or 4.2:1 whole, and both fade towards the page
+    // together. It is 1.7:1 at 0.6, and 3:1 would take 0.9, at which a
+    // switched-off button does not look it, so 0.6 is as far as this goes.
+    // tests/unit/disabled_contrast_test.cpp holds all of this.
+    readonly property real disabledOpacity: 0.6
+
     // Secondary/muted text was previously a hardcoded near-black rgba tuple
     // throughout the screens, which read fine on the light paper background
     // but would be near-illegible on the dark one - this derives it from

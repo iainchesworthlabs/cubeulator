@@ -169,6 +169,15 @@ something the tokens do not.
 | `cubeEdge` | `paper` | Sticker outline against the page | 3.0:1 | 14.86 | 5.06 |
 | `cubeEdge` | `surface` | Sticker outline against a pane | 3.0:1 | 13.70 | 4.57 |
 
+### Switched-off buttons
+
+The app draws a switched-off button as the whole button at `Theme.disabledOpacity`, 0.6. The label is blended over what it sits on at that opacity.
+
+| foreground | background | use | target | light | dark |
+|---|---|---|---|---|---|
+| `ink` | `paper` | Disabled secondary button or chip, label on the page | 3.0:1 | 4.23 | 6.33 |
+| `ink` | `surface` | Disabled secondary button or chip, label on a pane | 3.0:1 | 4.12 | 6.00 |
+
 ### Over the camera
 
 Panel `#141312` at 0.86 opacity. Measured against the worst case, a pure white picture behind it, where the panel reads as `#353433`.
@@ -386,6 +395,15 @@ A label, with an optional leading icon, trailing chevron or key name.
 - Heights are minimums. A label that wraps makes the button taller.
 - A disabled button always has the reason beside it in words. If nothing
   the person can do would enable it, it is not shown.
+- The app draws a disabled button as the whole button at
+  `Theme.disabledOpacity` (0.6), fill, edge and label faded together, and not
+  with the colours of the table above. A secondary button's or chip's label is
+  4.2:1 (light) and 6.3:1 (dark) on the page that way, and
+  `check_tokens.py` holds it at 3:1 ("Switched-off buttons", below). A
+  primary's label cannot reach 3:1 by fading, because it and its fill fade
+  towards the page together: the app's is `paper` on the brand red (3.8:1 and
+  4.2:1 whole, 1.7:1 at 0.6). The table's look for it (`inkDisabled` on a
+  `surface` fill, 3.15:1 and 3.57:1) is not built.
 - Activates on click, tap, Space and Enter.
 
 ### Icon button

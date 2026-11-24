@@ -143,6 +143,15 @@ a card left unfilled reads fine in the light theme and is near-white ink on
 white in the dark one. The system suite's `render_test.cpp` checks the same
 card's pixels.
 
+`disabled_contrast_test.cpp` does the same for a button that is switched off.
+It loads the real `AppButton` in each theme and each look, reads what each item
+is drawn in, and blends them as the scene graph does (the fill over the page,
+then the label over the fill, each at the product of the opacities above it).
+The label of a secondary button or chip must be 3:1 on the page and on a pane
+at `Theme.disabledOpacity`; the filled and ghost looks cannot be, and are held
+to the floor they have. `docs/design/tools/check_tokens.py` makes the same
+measurement from the tokens, reading the opacity out of `Theme.qml`.
+
 To *look* at the solve screen rather than check it, a hidden case puts the
 real screen in a window parked off-screen, drives it with drawn frames, and
 saves what it renders - one picture per run, chosen by name:

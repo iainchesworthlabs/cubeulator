@@ -206,22 +206,23 @@ TEST_CASE("the diagnostics switches work from Settings, and every screen says wh
 TEST_CASE("a control that is switched off is dimmed once, not again for the row it is in",
           "[system][settings]") {
     // AppButton dims itself when it is disabled, and the speed chips are disabled while the
-    // cube is not turning by itself: the row used to dim them as well (opacity 0.4 on the row,
-    // 0.45 on each chip), which left a label nobody could read. Since AppButton's own
-    // enabled is the item's, a chip under a disabled row reads as disabled and dims itself.
+    // cube is not turning by itself: the row used to dim them as well, which left a label
+    // nobody could read (the two opacities multiplied). Since AppButton's own enabled is the
+    // item's, a chip under a disabled row reads as disabled and dims itself.
     const Layout layout = GENERATE(Layout::wide, Layout::narrow);
     DYNAMIC_SECTION("in the " << cube::systest::to_string(layout) << " layout") {
         App& app = App::fresh();
         app.resize(layout == Layout::wide ? cube::systest::kDesktop : cube::systest::kPhone);
         open_settings(app);
 
-        // What one dimming is: Clear history is disabled on its own account (nothing is kept).
+        // What one dimming is: Theme.disabledOpacity, the one place the value is set. Clear
+        // history is disabled on its own account (nothing is kept) and shows it.
+        const double once = app.theme().property("disabledOpacity").toDouble();
+        CHECK(once < 1.0);
         QQuickItem* alone = app.find("settings.clearHistory");
         REQUIRE(alone != nullptr);
         REQUIRE_FALSE(alone->isEnabled());
-        const double once = effective_opacity(alone);
-        CHECK(once < 1.0);
-        CHECK(once > 0.4);
+        CHECK(effective_opacity(alone) == Catch::Approx(once));
 
         // Nothing on the screen sits in a container that is dimmed: a button dims itself.
         const auto buttons_are_not_dimmed_twice = [&]() {

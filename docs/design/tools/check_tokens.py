@@ -19,10 +19,13 @@ from __future__ import annotations
 import itertools
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
 TOKENS = Path(__file__).resolve().parent.parent / "tokens.json"
+# Where the app sets how much of a switched-off button is left, in one place.
+THEME = Path(__file__).resolve().parents[3] / "src" / "app" / "qt" / "Theme.qml"
 
 # The worst thing a camera can put behind an overlay panel is pure white.
 WORST_BEHIND = "#FFFFFF"
@@ -61,6 +64,14 @@ def contrast(a, b):
 def blend(fg, bg, alpha):
     f, b = rgb(fg), rgb(bg)
     return "#%02X%02X%02X" % tuple(round(alpha * f[i] + (1 - alpha) * b[i]) for i in range(3))
+
+
+def disabled_opacity():
+    """Theme.disabledOpacity, as the app has it."""
+    found = re.search(r"readonly\s+property\s+real\s+disabledOpacity:\s*([0-9.]+)", THEME.read_text(encoding="utf-8"))
+    if not found:
+        sys.exit(f"no disabledOpacity in {THEME}")
+    return float(found.group(1))
 
 
 def simulate(hex_, kind):
@@ -104,6 +115,24 @@ def main():
             ok = ratio >= target
             if not ok:
                 failures.append(f"{fg} on {bg} ({theme}): {ratio:.2f} < {target}")
+            cells.append(f"{ratio:.2f}" + ("" if ok else " FAIL"))
+        out.append(f"| `{fg}` | `{bg}` | {use} | {target}:1 | {cells[0]} | {cells[1]} |")
+
+    # ---- a switched-off button ---------------------------------------------
+    opacity = disabled_opacity()
+    out.append("\n### Switched-off buttons\n")
+    out.append(f"The app draws a switched-off button as the whole button at `Theme.disabledOpacity`, "
+               f"{opacity:g}. The label is blended over what it sits on at that opacity.\n")
+    out.append("| foreground | background | use | target | light | dark |")
+    out.append("|---|---|---|---|---|---|")
+    for fg, bg, target, use in tokens["disabled"]["pairs"]:
+        cells = []
+        for theme in ("light", "dark"):
+            under = color[bg][theme]
+            ratio = contrast(blend(color[fg][theme], under, opacity), under)
+            ok = ratio >= target
+            if not ok:
+                failures.append(f"disabled {fg} on {bg} ({theme}) at {opacity:g}: {ratio:.2f} < {target}")
             cells.append(f"{ratio:.2f}" + ("" if ok else " FAIL"))
         out.append(f"| `{fg}` | `{bg}` | {use} | {target}:1 | {cells[0]} | {cells[1]} |")
 
@@ -170,7 +199,7 @@ def main():
     if markdown:
         print("\n".join(out))
     else:
-        checked = len(tokens["pairs"]) * 2 + 5 + len(cube)
+        checked = (len(tokens["pairs"]) + len(tokens["disabled"]["pairs"])) * 2 + 5 + len(cube)
         print(f"{checked} pairings measured, {len(failures)} below target")
         for k in KINDS:
             print(f"  closest cube pair, {k}: {worst[k][0]:.1f} ({worst[k][1]})")
