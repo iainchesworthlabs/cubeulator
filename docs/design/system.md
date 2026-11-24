@@ -169,6 +169,20 @@ something the tokens do not.
 | `cubeEdge` | `paper` | Sticker outline against the page | 3.0:1 | 14.86 | 5.06 |
 | `cubeEdge` | `surface` | Sticker outline against a pane | 3.0:1 | 13.70 | 4.57 |
 
+### Switched-off buttons
+
+A switched-off button is not faded. It is an opaque plate with an edge, and its label in `inkDisabled`, in every look, because fading a whole button drags its label and its plate towards the page together (a filled button's label fell to 1.7:1 at an opacity that still looked switched off). The plate is opaque, so the label is measured on it and never on what is behind the button, which over the camera is a picture. The chosen one of a set has a second ring inside its edge, so that it is told by a shape and not by colour alone. The app draws it so (`Theme.qml` and `AppButton.qml` agree with `tokens.json`).
+
+Each ratio is light / dark, and each is held to 3:1.
+
+| look | use | label on plate | edge on the page | edge on a pane | ring on plate |
+|---|---|---|---|---|---|
+| `plain` | Secondary button, and a chip that is not chosen | 3.15 / 3.57 | 3.41 / 3.95 | 3.15 / 3.57 | - |
+| `chosen` | The chosen chip: the ring tells it | 3.15 / 3.57 | 3.41 / 3.95 | 3.15 / 3.57 | 3.15 / 3.57 |
+| `primary` | Primary (filled) button | 3.15 / 3.57 | 3.41 / 3.95 | 3.15 / 3.57 | - |
+| `ghost` | Ghost (red label) button | 3.15 / 3.57 | 3.41 / 3.95 | 3.15 / 3.57 | - |
+| `scan` | Any of them over the camera picture (Start over, Cancel) | 3.15 / 3.57 | the picture's | the picture's | - |
+
 ### Over the camera
 
 Panel `#141312` at 0.86 opacity. Measured against the worst case, a pure white picture behind it, where the panel reads as `#353433`.
@@ -369,9 +383,9 @@ A label, with an optional leading icon, trailing chevron or key name.
 
 | variant | rest | hover | pressed | disabled |
 |---|---|---|---|---|
-| **primary** | `accentFill`, label `onAccent` | `accentFillHover` | `accentFillPress` | fill `surface`, 2 px `divider` edge, label `inkDisabled` |
-| **secondary** | transparent, 2 px `outline` edge, label `ink` | fill `hoverWash` | fill `pressWash` | edge `divider`, label `inkDisabled` |
-| **ghost** | transparent, label `accentText` | fill `hoverWash` | fill `pressWash` | label `inkDisabled` |
+| **primary** | `accentFill`, label `onAccent` | `accentFillHover` | `accentFillPress` | fill `surface`, `outline` edge, label `inkDisabled` |
+| **secondary** | transparent, 2 px `outline` edge, label `ink` | fill `hoverWash` | fill `pressWash` | fill `surface`, `outline` edge, label `inkDisabled` |
+| **ghost** | transparent, label `accentText` | fill `hoverWash` | fill `pressWash` | fill `surface`, `outline` edge, label `inkDisabled` |
 
 | size | height | label | where |
 |---|---|---|---|
@@ -386,6 +400,23 @@ A label, with an optional leading icon, trailing chevron or key name.
 - Heights are minimums. A label that wraps makes the button taller.
 - A disabled button always has the reason beside it in words. If nothing
   the person can do would enable it, it is not shown.
+- A disabled button is **never faded**. All three variants take the same look:
+  an opaque `surface` plate, an `outline` edge and the label (and any icon) in
+  `inkDisabled`. Fading the whole button drags the label and the plate towards
+  the page together, so a primary's label (paper on the brand red, 3.8:1 and
+  4.2:1 whole) fell to 1.7:1 and a ghost's red to 2.4:1 at an opacity that still
+  looked switched off, and a button over the camera picture faded into whatever
+  the camera saw. The opaque plate makes the label's contrast a fact of the
+  button alone: 3.15:1 (light) and 3.57:1 (dark), and the edge is 3.41:1 and
+  3.95:1 on the page. `check_tokens.py` holds every look to 3:1 ("Switched-off
+  buttons", below) and checks the app draws it so; the edge is 1 px in the app.
+- The scan screen's buttons are on the camera picture itself in the app (the
+  design puts them on a panel, `scan.md`), so there the opaque plate is what
+  makes the disabled label readable. Its edge cannot be measured against a
+  picture, and is not claimed to be.
+- **A chosen choice has a second ring when it is disabled**, inside its edge. The
+  colour that said "chosen" (the primary's red) is gone with the plate, so a
+  shape says it instead; a screen reader still reads it as checked.
 - Activates on click, tap, Space and Enter.
 
 ### Icon button
@@ -405,7 +436,7 @@ the switch at the trailing side. The whole row is the target, 56 high.
 | on | `accentFill` | `onAccent`, at the trailing end, with a check drawn in `accentFill` |
 | hover | row fill `hoverWash` | - |
 | pressed | row fill `pressWash` | - |
-| disabled | 2 px `divider` | `divider`; label `inkDisabled`; the reason in the note |
+| disabled | 2 px `outline` | `outline`; label `inkDisabled`; the reason in the note |
 
 On and off differ by position and by the check, not by colour. A screen
 reader reads the state as `common.on` or `common.off`.
@@ -419,7 +450,8 @@ to a column when the labels do not fit.
 |---|---|
 | unchosen | secondary button |
 | chosen | fill `ink`, label `paper`, leading check |
-| hover, pressed, disabled | as secondary |
+| hover, pressed | as secondary |
+| disabled | as a disabled secondary button; the chosen one has a second ring inside its edge |
 
 Arrow keys move the choice; Tab enters and leaves the group once.
 

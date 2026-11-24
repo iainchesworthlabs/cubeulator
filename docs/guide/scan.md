@@ -77,8 +77,8 @@ The words at the top left are the guide. In the order you will meet them:
 ## The buttons
 
 - **Cancel** (or <kbd>Esc</kbd>) goes back to the start screen. It does not ask first.
-- **Start over** forgets the sides read so far and begins again. It is dimmed
-  until the first side is read.
+- **Start over** forgets the sides read so far and begins again. It is greyed
+  out until the first side is read.
 - **Try again** takes the place of *Start over* when the camera could not be
   started. It asks for the camera again, so once whatever was in the way is
   sorted you do not have to go back to the start screen.

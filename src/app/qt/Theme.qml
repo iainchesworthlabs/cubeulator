@@ -24,6 +24,20 @@ QtObject {
     readonly property color surface: effectiveDark ? "#242220" : "#EAE9E9"
     readonly property color divider: effectiveDark ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(0.125, 0.117, 0.113, 0.4)
 
+    // What a switched-off button is drawn in (AppButton.qml): `surface` for the
+    // fill, `inkDisabled` for the label and `outline` for the edge, all opaque
+    // and none of them faded. Fading a whole button drags its label and its fill
+    // towards the page together, so the label of a filled button (the chosen chip,
+    // a primary) and the red of a ghost could not be read at any opacity that
+    // looked switched off; and a button over the camera picture was faded
+    // towards whatever the camera saw. The design holds a disabled label to 3:1
+    // although WCAG exempts it (docs/design/system.md, "Measured"): the label is
+    // 3.15:1 on `surface` in the light theme and 3.57:1 in the dark, and the edge
+    // is 3.41:1 and 3.95:1 on the page (docs/design/tokens.json, "disabled").
+    // tests/unit/disabled_contrast_test.cpp holds all of it.
+    readonly property color inkDisabled: effectiveDark ? "#7A7776" : "#858281"
+    readonly property color outline: effectiveDark ? "#7A7776" : "#858281"
+
     // Secondary/muted text was previously a hardcoded near-black rgba tuple
     // throughout the screens, which read fine on the light paper background
     // but would be near-illegible on the dark one - this derives it from

@@ -87,7 +87,7 @@ top leading corner and the chips and buttons centred at the bottom.
 | Size | A row of buttons over the chips: **Auto** and 2×2 to 5×5, the one in use primary. With **Auto** the scan works the size out from the cube in view, until the first side is captured; a size chosen stands until **Auto** is chosen again. Changing it starts the scan over. Hidden once the cube is read or the camera has failed | `scan.size.auto`, `entry.size.option` | `scan.sizes`, `scan.size.auto`, `scan.size.<n>` |
 | Chip 1-6 | side chip. Stickers are the measured colours; each carries the mark of the colour the reader took it for | `scan.a11y.chipEmpty`, `scan.a11y.chipRead`, `scan.a11y.chipInView`, `colourSide.*` | `scan.chip1` ... `scan.chip6` |
 | Cancel | button, secondary on a panel, thumb | `common.cancel` | `scan.cancel` |
-| Start over | button, secondary on a panel, thumb. Disabled until a side is read | `scan.startOver` | `scan.startOver` |
+| Start over | button, secondary on a panel, thumb. Disabled until a side is read, drawn as every disabled button is (an opaque plate, `../system.md`, "Button"), so its label reads against the plate and not the picture | `scan.startOver` | `scan.startOver` |
 | More | button, secondary on a panel, thumb, three-dot icon | `common.more` | `scan.more` |
 | Check the colours | button, primary on a panel, thumb | `scan.checkColours` | `scan.checkColours` |
 | Try again / Look again | button, primary on a panel, thumb, refresh icon | `common.tryAgain`, `common.lookAgain` | `scan.retry` |

@@ -124,8 +124,7 @@ svg.cvd{position:absolute;width:0;height:0}
 .btn.block{display:flex;width:100%;justify-content:space-between}
 .btn.thumb{min-height:56px}
 .btn.giant{min-height:96px;font-size:calc(var(--rem)*1.25);padding-inline:12px}
-.btn[disabled]{color:var(--inkDisabled);border-color:var(--divider);background:none;cursor:default}
-.btn.primary[disabled]{background:var(--surface);color:var(--inkDisabled);border-color:var(--divider)}
+.btn[disabled],.btn[disabled]:hover,.btn[disabled]:active{color:var(--inkDisabled);border-color:var(--outline);background:var(--surface);cursor:default}
 .kbd{font:500 calc(var(--rem)*.8125)/1 var(--f-mono);border:1px solid currentColor;padding:3px 6px;opacity:.85}
 .iconbtn{width:56px;height:56px;display:inline-grid;place-items:center;background:none;border:2px solid transparent;border-radius:0;color:var(--ink);cursor:pointer;flex:none}
 .iconbtn:hover{background:var(--hoverWash)}

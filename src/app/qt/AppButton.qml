@@ -12,6 +12,13 @@ import Cubeulator
 // click or a tap does not take focus from the screen (the solve screen's keys
 // act on the screen, not on the last button that was pressed), so the ring is
 // for the keyboard alone.
+//
+// Switched off, it is not faded: it is drawn in a style of its own, an opaque
+// `surface` plate with an `outline` edge and the label in `inkDisabled`, so
+// that its label is read against its own fill (3:1) and not against whatever
+// it sits on, which over the camera picture is not known. A chosen one of a set
+// (a chip) has a second ring inside its edge, so that which is chosen is not
+// told by colour alone (Theme.qml, "inkDisabled"; docs/design/system.md).
 Item {
     id: root
 
@@ -65,8 +72,6 @@ Item {
     readonly property bool secondary: variant === "secondary"
     readonly property bool ghost: variant === "ghost"
 
-    opacity: enabled ? 1.0 : 0.45
-
     // `enabled` is Item's own (this used to shadow it with a property of its
     // own, which left the item itself enabled): a disabled button is out of the
     // tab chain and says so to a screen reader, and so is one whose parent is
@@ -90,12 +95,27 @@ Item {
     }
 
     Rectangle {
+        id: face
         anchors.fill: parent
-        color: root.primary ? (mouse.pressed ? Theme.accent700 : (mouse.containsMouse ? Theme.accent600 : Theme.accent))
+        color: !root.enabled ? Theme.surface
+             : root.primary ? (mouse.pressed ? Theme.accent700 : (mouse.containsMouse ? Theme.accent600 : Theme.accent))
              : root.secondary ? (mouse.containsMouse ? Theme.inkMuted(0.07) : "transparent")
              : (mouse.containsMouse ? Qt.rgba(0.925, 0.188, 0.075, 0.10) : "transparent")
-        border.width: root.secondary ? 1 : 0
-        border.color: Theme.divider
+        border.width: (!root.enabled || root.secondary) ? 1 : 0
+        border.color: root.enabled ? Theme.divider : Theme.outline
+    }
+
+    // Which one is chosen, when it is switched off and the red that says so is
+    // gone: a second ring inside the edge, which is a shape and not a colour.
+    Rectangle {
+        id: chosenRing
+        objectName: "appButton.chosenRing"
+        visible: !root.enabled && root.checkable && root.checked
+        anchors.fill: parent
+        anchors.margins: 3
+        color: "transparent"
+        border.width: 2
+        border.color: Theme.outline
     }
 
     Row {
@@ -111,7 +131,7 @@ Item {
             name: root.leadingIcon
             width: 16; height: 16
             anchors.verticalCenter: parent.verticalCenter
-            color: root.ghost ? Theme.accent : Theme.ink
+            color: !root.enabled ? Theme.inkDisabled : (root.ghost ? Theme.accent : Theme.ink)
         }
 
         Text {
@@ -121,7 +141,8 @@ Item {
             font.weight: Font.ExtraBold
             font.pixelSize: 14
             anchors.verticalCenter: parent.verticalCenter
-            color: root.primary ? Theme.paper : (root.ghost ? Theme.accent : Theme.ink)
+            color: !root.enabled ? Theme.inkDisabled
+                 : root.primary ? Theme.paper : (root.ghost ? Theme.accent : Theme.ink)
             // As wide as it is, up to the room the button leaves it; past that
             // it wraps, at a word if it can and inside a word if it must, so
             // that nothing is ever wider than the box. (Before the button has
@@ -143,7 +164,7 @@ Item {
                 visible: root.trailingIcon !== ""
                 anchors.fill: parent
                 name: root.trailingIcon
-                color: root.primary ? Theme.paper : Theme.ink
+                color: !root.enabled ? Theme.inkDisabled : (root.primary ? Theme.paper : Theme.ink)
             }
         }
     }
@@ -155,7 +176,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: parent.right
         anchors.rightMargin: Theme.space4
-        color: root.primary ? Theme.paper : Theme.ink
+        color: !root.enabled ? Theme.inkDisabled : (root.primary ? Theme.paper : Theme.ink)
     }
 
     FocusRing { overCamera: root.overCamera }
