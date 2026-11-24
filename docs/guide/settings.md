@@ -7,8 +7,8 @@ progress starts again from the first side, because the camera is closed while
 Settings is open.
 
 <figure markdown="span">
-  ![Settings: Camera, Solving, Appearance, Language, History, Cube style and Cube motion, with a 3D cube beside them.](img/settings-wide-light.webp#only-light){ loading=lazy }
-  ![Settings: Camera, Solving, Appearance, Language, History, Cube style and Cube motion, with a 3D cube beside them.](img/settings-wide-dark.webp#only-dark){ loading=lazy }
+  ![Settings: Camera, Solving, Appearance with its Motion row, Language, History, Cube style and Cube motion, with a 3D cube beside them.](img/settings-wide-light.webp#only-light){ loading=lazy }
+  ![Settings: Camera, Solving, Appearance with its Motion row, Language, History, Cube style and Cube motion, with a 3D cube beside them.](img/settings-wide-dark.webp#only-dark){ loading=lazy }
   <figcaption>The top of Settings on a desktop window. The list goes on, to
   Rendering, About and the Developer rows, and scrolls.</figcaption>
 </figure>
