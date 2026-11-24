@@ -104,6 +104,34 @@ test.describe('the camera a first scan opens, when the browser lists them by nam
   });
 });
 
+test.describe('the camera list, when the camera is allowed while it is still being read', () => {
+  // The browser is slow to say what cameras there are: the read made as the app starts is still
+  // waiting when the scan opens a camera, which is what makes a browser give the cameras' names,
+  // and the app asks for the list again then. That request arrives with the first read in flight,
+  // and has to be kept and run after it, or the list stays as the first read left it.
+  test.use({
+    appOptions: {
+      cameras: { list: [FRONT, BACK], options: { ...SAFARI_FIRST_VISIT, holdListing: true } },
+    },
+  });
+
+  test('is read again when the first read ends, and has the real cameras', async ({ app }) => {
+    await startScan(app);
+    // The camera is open (the scan chose the one facing away, as it does with no list), and the
+    // list has not been given yet, so nothing is selected from it.
+    expect(await opened(app)).toBe('cam-back');
+    expect((await app.singleton('CameraController')).selectedDeviceId).toBe('');
+
+    await app.page.evaluate(() => window.__fakeCamera.releaseListing());
+
+    // The first read says there is "a camera"; the one after it, asked for when the camera opened,
+    // names both, and the back one is what stays selected.
+    await expect.poll(async () => (await app.singleton('CameraController')).selectedDeviceId,
+      { timeout: 30_000 }).toBe('cam-back');
+    await app.waitFor('scan.switchCamera');
+  });
+});
+
 test.describe('a laptop with one webcam', () => {
   test.use({
     appOptions: {
