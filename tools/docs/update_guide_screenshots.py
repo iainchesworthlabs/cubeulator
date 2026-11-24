@@ -31,7 +31,7 @@ Notes for whoever does step 2:
 * The tour runs at 900x640 (wide) and 390x844 (narrow), light and dark. The
   guide's Settings pictures were taken with the window made about twice as
   tall for that one shot (a scratch edit in tour_test.cpp, like the other two:
-  `app.resize` to 900x1280 wide or 390x1688 narrow and `app.settle()` before
+  `app.resize` to 900x1280 wide or 390x1800 narrow and `app.settle()` before
   `tour.shoot("settings")`, then `app.resize(variant.size)` after it), and
   both are then cropped (CROP_HEIGHT below).
 * A scratch run for the pictures also renames the fake camera in
@@ -85,13 +85,15 @@ USED = [
 
 # Pictures cut to a height, so that one does not end on a heading with nothing
 # under it: Settings in the wide tour is taller than the tour's window made for
-# it, and stops part-way down the Rendering section. The narrow one runs to the
-# end of the Developer section and is cut just under "Snapshot now": the line
-# below it names the folder the diagnostics go to, which in a tour run is a
-# temporary folder of the machine it ran on, and must not be in a picture.
+# it, and is cut after the Cube motion buttons, just above the Rendering heading.
+# The narrow one runs to the end of the Developer section and is cut just under
+# "Snapshot now": the line below it names the folder the diagnostics go to, which
+# in a tour run is a temporary folder of the machine it ran on, and must not be in
+# a picture. Both heights move when a row is added to Settings: find them by
+# looking for the first blank rows under the last button to keep.
 CROP_HEIGHT = {
-    ("settings", "wide"): 1115,
-    ("settings", "narrow"): 1597,
+    ("settings", "wide"): 1197,
+    ("settings", "narrow"): 1680,
 }
 
 

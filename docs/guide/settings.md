@@ -7,8 +7,8 @@ progress starts again from the first side, because the camera is closed while
 Settings is open.
 
 <figure markdown="span">
-  ![Settings: Camera, Solving, Appearance, Language, History, Cube style and Cube motion, with a 3D cube beside them.](img/settings-wide-light.webp#only-light){ loading=lazy }
-  ![Settings: Camera, Solving, Appearance, Language, History, Cube style and Cube motion, with a 3D cube beside them.](img/settings-wide-dark.webp#only-dark){ loading=lazy }
+  ![Settings: Camera, Solving, Appearance with its Motion row, Language, History with Clear history greyed out, Cube style, and Cube motion with its three speeds greyed out, with a 3D cube beside them.](img/settings-wide-light.webp#only-light){ loading=lazy }
+  ![Settings: Camera, Solving, Appearance with its Motion row, Language, History with Clear history greyed out, Cube style, and Cube motion with its three speeds greyed out, with a 3D cube beside them.](img/settings-wide-dark.webp#only-dark){ loading=lazy }
   <figcaption>The top of Settings on a desktop window. The list goes on, to
   Rendering, About and the Developer rows, and scrolls.</figcaption>
 </figure>
@@ -43,9 +43,9 @@ source code, which opens in your browser when you press it. **Back**, or
 of a scan or a solve, where leaving would lose your place.
 
 <figure markdown="span">
-  ![The About screen: Cubeulator, Version 0.2.0-beta.4, who made it, the GNU General Public License notice, a Licences row and the source code address.](img/about-wide-light.webp#only-light){ loading=lazy }
-  ![The About screen: Cubeulator, Version 0.2.0-beta.4, who made it, the GNU General Public License notice, a Licences row and the source code address.](img/about-wide-dark.webp#only-dark){ loading=lazy }
-  <figcaption>About. The version is the one on your screen; this picture is of 0.2.0-beta.4.</figcaption>
+  ![The About screen: Cubeulator, Version 1.0.0-rc.1, who made it, the GNU General Public License notice, a Licences row and the source code address.](img/about-wide-light.webp#only-light){ loading=lazy }
+  ![The About screen: Cubeulator, Version 1.0.0-rc.1, who made it, the GNU General Public License notice, a Licences row and the source code address.](img/about-wide-dark.webp#only-dark){ loading=lazy }
+  <figcaption>About. The version is the one on your screen; this picture is of 1.0.0-rc.1.</figcaption>
 </figure>
 
 **Licences** lists Cubeulator itself and every third-party component that is in
