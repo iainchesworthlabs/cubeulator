@@ -3,11 +3,11 @@ template: marketing.html
 layout: prose
 title: What's new
 title_tag: "What's new in Cubeulator"
-description: "What each Cubeulator release changed, and what is not yet proven. The latest is 0.2.0-beta.4, a pre-release."
+description: "What each Cubeulator release changed, and what is not yet proven. The latest is 1.0.0-rc.1, a release candidate."
 ---
 # What's new
 
-The latest release is **0.2.0-beta.4**, of 1 November 2026. Every release so far is a pre-release: download one from the
+The latest release is **1.0.0-rc.1**, of 25 November 2026, a release candidate for 1.0.0. Every release so far is a pre-release: download one from the
 [Releases page](https://github.com/iainchesworthlabs/cubeulator/releases). The full record, with every change, is the
 [changelog](https://github.com/iainchesworthlabs/cubeulator/blob/main/CHANGELOG.md).
 
@@ -18,6 +18,18 @@ go on to the scan; the scan itself, the camera's colours and the 3D cube's other
 anyone but the author. The installers are not signed with a Windows or Apple certificate, so SmartScreen and Gatekeeper
 ask before they run one; [checking a download](guide/verify.md) is how to be sure of one.
 </div>
+
+## 1.0.0-rc.1 (25 November 2026)
+
+The first release candidate for 1.0.0. If nothing is found that needs fixing, 1.0.0 follows with these changes.
+
+- **The keyboard works everywhere.** <kbd>Tab</kbd> moves between the buttons, choices and switches, <kbd>Enter</kbd> or <kbd>Space</kbd> presses one, and a ring shows where you are. <kbd>Esc</kbd> goes back on Settings, cancels a scan and says *Not now* on the camera permission screen.
+- **A screen reader is given names, roles and headings,** and is told when the scan's guidance, a turn of the solve or a typed scramble's mistake changes. This has been checked by tests, not yet with a real screen reader.
+- **The app moves less when you ask it to.** Settings has a **Motion** row (the same as this device, reduced, or full), and by default the app follows the device's own request.
+- **Every word of the scan and solve screens is in the language you chose.** The eight other languages are still machine-made first drafts that no fluent reader has been through. The solve screen's stages are named *Yellow top* and *Top layer in order*, as the solution screen's are.
+- **About and Licences can be opened on the iPhone,** and the About screen no longer says Cubeulator is for the 3x3 only.
+- **Cancelling a scan as the camera opens lets go of the camera,** and the scan size row marks only Auto while it is finding the size.
+- **Releases are made by the organisation's shared release workflow.** The key that signs them is now in the repository (`docs/signing-key.asc`) and no longer attached to each release; [checking a download](guide/verify.md) says how.
 
 ## 0.2.0-beta.4 (1 November 2026)
 

@@ -60,7 +60,7 @@ if(CUBEULATOR_ENABLE_TRACY)
 endif()
 
 project(Cubeulator
-    VERSION 0.2.0
+    VERSION 1.0.0
     DESCRIPTION "A camera-driven, on-device Rubik's Cube solver"
     HOMEPAGE_URL "https://github.com/iainchesworthlabs/cubeulator"
     LANGUAGES CXX)
@@ -72,7 +72,7 @@ project(Cubeulator
 # named for the version - the packages, the version resource, version.hpp's
 # version_string - uses CUBEULATOR_VERSION_FULL, so a beta is never a package
 # called by the final's name.
-set(CUBEULATOR_VERSION_PRERELEASE "beta.4")
+set(CUBEULATOR_VERSION_PRERELEASE "rc.1")
 set(CUBEULATOR_VERSION_FULL "${PROJECT_VERSION}")
 if(NOT CUBEULATOR_VERSION_PRERELEASE STREQUAL "")
     if(NOT CUBEULATOR_VERSION_PRERELEASE MATCHES "^(alpha|beta|rc)\\.[1-9][0-9]*$")
