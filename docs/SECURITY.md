@@ -100,7 +100,7 @@ place the fingerprint appears.
 | Created | 2026-10-22 |
 | Expires | 2028-10-21 |
 
-This is the key of every release from 0.2.0-beta.3 on, and the one in `docs/signing-key.asc`. The two releases before it,
+This is the key of every release from 1.0.0-rc.1 on, and the one in `docs/signing-key.asc`. The two releases before it,
 0.1.0-beta.1 and 0.2.0-beta.1, were signed with an earlier key, `Cubeulator Release Signing Key` (RSA 4096, created
 2026-10-14, expires 2031-10-13), whose fingerprint is `0CF2 A242 440A 7AF0 18A2  BFF3 03E2 D330 B299 EB46`. Those two releases carried
 their key as a file named `cubeulator-signing-key.asc` beside the packages; compare that key with the fingerprint for

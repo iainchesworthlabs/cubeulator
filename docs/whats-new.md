@@ -29,17 +29,9 @@ The first release candidate for 1.0.0. If nothing is found that needs fixing, 1.
 - **Every word of the scan and solve screens is in the language you chose.** The eight other languages are still machine-made first drafts that no fluent reader has been through. The solve screen's stages are named *Yellow top* and *Top layer in order*, as the solution screen's are.
 - **About and Licences can be opened on the iPhone,** and the About screen no longer says Cubeulator is for the 3x3 only.
 - **Cancelling a scan as the camera opens lets go of the camera,** and the scan size row marks only Auto while it is finding the size.
+- **Allowing the camera on the iPhone takes you to the scan.** Before, the app kept saying the camera was off even after you allowed it.
+- **Borderlands Cel-Shading no longer draws a pale square behind the cube.** The cube is drawn on the page again, with the halftone dots and the dark edges still in place.
 - **Releases are made by the organisation's shared release workflow.** The key that signs them is now in the repository (`docs/signing-key.asc`) and no longer attached to each release; [checking a download](guide/verify.md) says how.
-
-## 0.2.0-beta.4 (1 November 2026)
-
-Another build for the iPhone. With Borderlands Cel-Shading chosen, the 3D cube no longer sits on a pale square: it is
-drawn on the page again, with the halftone dots and the dark edges still in place.
-
-## 0.2.0-beta.3 (1 November 2026)
-
-A second build for the iPhone. Allowing the camera now takes you to the scan. Before, the app kept saying the camera was
-off even after you allowed it.
 
 ## 0.2.0-beta.2 (31 October 2026)
 
