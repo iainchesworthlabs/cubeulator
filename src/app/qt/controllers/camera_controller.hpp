@@ -28,6 +28,9 @@ namespace cube::app {
 // that long. It runs via QtConcurrent on Qt's thread pool instead; callers
 // react to devicesChanged/errorOccurred rather than reading the result
 // immediately after calling refreshDevices().
+//
+// One list is read at a time, and a request made while it is being read is kept,
+// not dropped: see refreshDevices().
 class CameraController : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList devices READ devices NOTIFY devicesChanged)
@@ -64,6 +67,16 @@ public:
     [[nodiscard]] static bool previewMirroredFor(platform::camera::Facing facing) noexcept;
 
 public slots:
+    // Reads the list of cameras again, off the GUI thread. With a read already in flight it starts
+    // no second one beside it (two probes of the cameras at once would race for them, and the
+    // controller waits for the answer of one): the request is kept, and when that read ends
+    // exactly one more runs, however many requests came meanwhile. The request is not for the
+    // read already going, which can be a list made stale by what prompted the request: a
+    // browser gives the cameras' names only once the camera has been allowed (see
+    // PlatformInfo::camera_ids_withheld_until_use), and the request to read again arrives from
+    // that, which may be while the first list is being read. busy() stays true from the first
+    // request until the last of these reads has been taken. The camera that is selected is
+    // carried over to the new list as handleEnumerationFinished() describes.
     void refreshDevices();
     void selectDevice(const QString& deviceId);
     // Selects the next camera in the list, going back to the first after the
@@ -82,6 +95,14 @@ private slots:
     void handleEnumerationFinished();
 
 private:
+    using Answer = Result<std::vector<platform::camera::DeviceInfo>>;
+    using Probe = QFutureWatcher<Answer>;
+
+    // Starts reading the list on the thread pool. Only with none in flight.
+    void startProbe();
+    // Makes `answer` the list, or the error, and settles the selection against it.
+    void takeAnswer(const Answer& answer);
+
     // The facing recorded for `deviceId` in the list last read, if it is there.
     [[nodiscard]] std::optional<platform::camera::Facing> facingOf(
         const std::string& deviceId) const;
@@ -98,13 +119,19 @@ private:
     // longer holds is then a placeholder that has become a device.
     bool ids_withheld_until_use_ = false;
     Enumerator enumerate_;
-    QFutureWatcher<Result<std::vector<platform::camera::DeviceInfo>>> watcher_;
+    // The read in flight, if there is one: a child of this, made for that read alone, and
+    // deleted once its answer is taken. A watcher of its own for each, and not one that is given
+    // each future in turn, so that what it reports can only be about the read it was made for.
+    Probe* probe_ = nullptr;
     // A list is being read: from refreshDevices() until handleEnumerationFinished() has taken the
     // answer. Not the watcher's isRunning(), which turns false when the worker returns, a queued
     // event before handleEnumerationFinished() runs. A refreshDevices() in that gap saw nothing
     // running and started a second probe of the cameras, which replaced the future and so dropped
     // the answer of the first, and busy() said the list was settled when it was not yet.
     bool busy_ = false;
+    // refreshDevices() was called while busy_, and the list has not been read again since: one
+    // more read follows the one in flight.
+    bool refreshQueued_ = false;
 };
 
 }  // namespace cube::app

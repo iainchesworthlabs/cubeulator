@@ -19,10 +19,7 @@ CameraController::CameraController(Enumerator enumerate, bool ids_withheld_until
                                    QObject* parent)
     : QObject(parent),
       ids_withheld_until_use_(ids_withheld_until_use),
-      enumerate_(std::move(enumerate)) {
-    connect(&watcher_, &QFutureWatcher<Result<std::vector<platform::camera::DeviceInfo>>>::finished,
-            this, &CameraController::handleEnumerationFinished);
-}
+      enumerate_(std::move(enumerate)) {}
 
 QVariantList CameraController::devices() const {
     return devices_;
@@ -62,20 +59,49 @@ bool CameraController::previewMirrored() const {
 
 void CameraController::refreshDevices() {
     if (busy_) {
+        // A list is being read. Not a second probe beside it, but not dropped either: the request
+        // can be about something the read in flight began without (a browser gives the cameras'
+        // names only once the camera has been allowed, and that can happen while the list is
+        // being read), so it is run when that read ends. Once, whatever number of requests came.
+        refreshQueued_ = true;
         return;
     }
 
     lastError_.clear();
     busy_ = true;
-    watcher_.setFuture(QtConcurrent::run(enumerate_));
+    startProbe();
     emit busyChanged();
 }
 
-void CameraController::handleEnumerationFinished() {
-    busy_ = false;
-    const auto result = watcher_.result();
-    emit busyChanged();
+void CameraController::startProbe() {
+    probe_ = new Probe(this);
+    connect(probe_, &Probe::finished, this, &CameraController::handleEnumerationFinished);
+    probe_->setFuture(QtConcurrent::run(enumerate_));
+}
 
+void CameraController::handleEnumerationFinished() {
+    const Answer result = probe_->result();
+    probe_->deleteLater();
+    probe_ = nullptr;
+
+    // With a request waiting, the controller stays busy across the hand-over: it has not got the
+    // list that was asked for, and a screen that took a false here for "settled" would show a list
+    // that is about to change.
+    const bool again = std::exchange(refreshQueued_, false);
+    if (!again) {
+        busy_ = false;
+        emit busyChanged();
+    }
+
+    takeAnswer(result);
+
+    if (again) {
+        lastError_.clear();
+        startProbe();
+    }
+}
+
+void CameraController::takeAnswer(const Answer& result) {
     if (!result.has_value()) {
         lastError_ = QString::fromStdString(std::string(to_string(result.error())));
         emit errorOccurred(lastError_);
