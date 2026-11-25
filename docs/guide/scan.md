@@ -120,8 +120,8 @@ sides of the corner.
   <figcaption>A cube held on a corner. A dot, in a colour for each side (blue, violet or pink), marks every sticker the scan found.</figcaption>
 </figure>
 
-It is the newer of the two ways and the less proven: showing one side square
-to the camera at a time is still the reliable one. The screen's words still
+It is the newer of the two ways: showing one side square to the camera at a
+time is still the most dependable. The screen's words still
 say *this side* for a corner; watch the chips fill. In poor light the third side of a corner is often missed, and the scan
 carries on with the sides it did read.
 

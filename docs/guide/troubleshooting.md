@@ -177,7 +177,7 @@ move*. The buttons and the keys always step.
 
 **The words are in English.** Check **Settings > Language**: *Same as this
 device* follows your system's language and shows English when it is not one of
-the nine. The eight other languages are first drafts and cover every screen. See
+the nine. The eight other languages were translated with machine help and cover every screen. See
 [Settings and shortcuts](settings.md#language).
 
 **Japanese or Chinese shows boxes.** The system has no font for those

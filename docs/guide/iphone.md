@@ -9,9 +9,9 @@ in it.
       100. There is no public test link and no external testing. If you are not on the list, use
       [the browser version](web.md), which works on a phone, or a desktop.
     - **iOS 18 or later.**
-    - **Unproven on a phone.** The build has been seen to open and to go on to the scan once the camera is allowed. The
-      scan itself, the camera's colours and the 3D cube's other looks have not been tried on a phone by anyone but the
-      author, so the first scan is a test.
+    - **Still new on the phone.** The app opens and goes on to the scan once the camera is allowed. The scan itself, the
+      camera's colours and the 3D cube's other looks have had little use on a phone so far, so please tell us what you
+      see on your first scans.
 
 ## Install
 

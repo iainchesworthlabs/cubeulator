@@ -4,10 +4,9 @@ Cubeulator comes as an installer for each desktop system. There is nothing to
 register for and no account.
 
 Download the one for your system from the
-[Releases page](https://github.com/iainchesworthlabs/cubeulator/releases) (while
-Cubeulator is in beta every release is marked *pre-release*, and the newest is
-the first one listed). `<version>` below is the release's number, for example
-`0.1.0-beta.1`.
+[Releases page](https://github.com/iainchesworthlabs/cubeulator/releases) (the
+newest version is the first one listed). `<version>` below is the release's
+number, for example `1.0.0-rc.1`.
 
 | System | File | Needs |
 | --- | --- | --- |

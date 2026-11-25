@@ -14,11 +14,11 @@ description: "Hold each side of a scrambled Rubik's Cube up to the camera. Cubeu
 <a class="icl-button icl-button--ghost" href="app/">Try it in your browser</a>
 </div>
 <ul class="cu-platforms" aria-label="Where Cubeulator runs">
-<li><strong>Windows, macOS and Linux</strong><span>Download from GitHub, pre-release</span></li>
+<li><strong>Windows, macOS and Linux</strong><span>Download from GitHub</span></li>
 <li><strong>In a browser</strong><span>Nothing to install</span></li>
 <li><strong>iPhone</strong><span>TestFlight, for invited testers only</span></li>
 </ul>
-<p class="icl-hero__meta">No account &middot; Nothing uploaded &middot; Works offline on a computer &middot; English, with eight more languages in draft</p>
+<p class="icl-hero__meta">No account &middot; Nothing uploaded &middot; Works offline on a computer &middot; Nine languages</p>
 </div>
 <div class="cu-shots">
 <figure class="cu-window"><picture><source srcset="guide/img/solve-middle-wide-dark.webp" media="(prefers-color-scheme: dark)"><img src="guide/img/solve-middle-wide-light.webp" width="900" height="640" alt="The solve screen on a computer: a 3D cube with the layer to turn nudged, the line Hold yellow on top, green facing you, the five stages of the Beginner method listed on the right and a Next turn button."></picture></figure>
@@ -51,7 +51,7 @@ description: "Hold each side of a scrambled Rubik's Cube up to the camera. Cubeu
 
 <section class="icl-section" id="screens"><div class="icl-wrap">
 <h2>A look at it</h2>
-<p class="cu-note">These are pictures of the app itself, taken by its own test suite. The camera picture in them is a drawn frame, so nobody is in them.</p>
+<p class="cu-note">Pictures of the app itself. Where a camera picture appears it is a drawn stand-in, so nobody is in them.</p>
 <div class="cu-gallery cu-gallery--wide">
 <figure><div class="cu-window"><img src="guide/img/scan-reading-wide-light.webp" width="900" height="640" loading="lazy" alt="The scan screen with one side in view: a dot on each of its nine stickers, and the first of six chips along the bottom filling."></div><figcaption>Scanning. A dot sits on each sticker it found, and a chip fills as a side is read.</figcaption></figure>
 <figure><div class="cu-window"><picture><source srcset="guide/img/solution-middle-wide-dark.webp" media="(prefers-color-scheme: dark)"><img src="guide/img/solution-middle-wide-light.webp" width="900" height="640" loading="lazy" alt="The solution screen: the stages and every turn in a list, grouped by stage, beside a 3D cube with Previous, Play and Next buttons."></picture></div><figcaption>The whole solution, grouped by stage, to look back over.</figcaption></figure>
@@ -65,9 +65,9 @@ description: "Hold each side of a scrambled Rubik's Cube up to the camera. Cubeu
 <h2>Get Cubeulator</h2>
 <ul class="cu-platform-cards">
 <li>
-<p class="cu-state">Pre-release</p>
+<p class="cu-state">Free download</p>
 <h3>Windows, macOS and Linux</h3>
-<p>An installer for each, on GitHub: Windows 10 or later (64-bit), macOS 14.4 or later on Apple silicon, and Debian, Ubuntu or Fedora. They are not signed with a Windows or Apple certificate yet, so each system asks before it runs one. Every file can be <a href="guide/verify/">checked</a>.</p>
+<p>An installer for each, on GitHub: Windows 10 or later (64-bit), macOS 14.4 or later on Apple silicon, and Debian, Ubuntu or Fedora. Windows and macOS ask you to confirm the first time you open it, because the installers are not signed with a Microsoft or Apple certificate yet; the <a href="guide/install/">install guide</a> shows where to click, and every file can be <a href="guide/verify/">checked</a>.</p>
 <a class="icl-button" href="https://github.com/iainchesworthlabs/cubeulator/releases">Packages on GitHub</a>
 </li>
 <li>
@@ -79,10 +79,10 @@ description: "Hold each side of a scrambled Rubik's Cube up to the camera. Cubeu
 <li>
 <p class="cu-state">Invited testers</p>
 <h3>iPhone</h3>
-<p>The iPhone app goes to TestFlight for testers the author has invited. It is not in the App Store, and there is no public test link. It needs iOS 18 or later. Everyone else can use the browser version on a phone.</p>
+<p>The iPhone app is on TestFlight for invited testers. It is not in the App Store yet, and there is no public link. It needs iOS 18 or later. On a phone, use the browser version.</p>
 <a class="icl-button icl-button--ghost" href="guide/iphone/">About the iPhone build</a>
 </li>
 </ul>
-<p>Android: the app builds for Android, but its camera is not written yet, so it cannot scan and is not offered.</p>
-<p>It is pre-release software. The scan has been checked on recorded sessions and on a webcam, not yet across many cameras, rooms and cubes. <a href="whats-new/">What's new</a> says what each release changed and what is not yet proven.</p>
+<p>There is no Android app yet. Phones can use the browser version.</p>
+<p>The latest version is 1.0.0-rc.1, the release candidate for 1.0, of 25 November 2026. <a href="whats-new/">What's new</a> &middot; <a href="features/#good-to-know">Good to know before you start</a></p>
 </div></section>

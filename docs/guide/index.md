@@ -53,26 +53,15 @@ solution, and shows you the turns one at a time on a 3D cube.
 | [Privacy](../privacy.md) | What the camera picture is used for, and what is kept |
 | [Troubleshooting](troubleshooting.md) | When it will not start, will not read a side, or will not agree with your cube |
 
-## What this release is
+## Good to know
 
-!!! warning "A beta"
-    This is a pre-release, and the guide says plainly what is not finished.
-
-    - **The scan is proven on a few cubes and rooms, not many.** It has been
-      checked on recorded sessions of one cube in tungsten light and in backlit
-      daylight, and on a webcam by hand. Other cameras, rooms and cubes are what
-      the beta is for.
-    - **The camera is proven on a 3x3, much less on other sizes.** A 2x2 to a
-      5x5 can be scanned too, but so far only as drawings on a screen and a few
-      recordings, not many cubes in a hand; **Check the colours** puts right
-      what it misreads, and you can type a scramble or the colours in instead
-      ([Another size of cube](other-sizes.md)).
-    - **The other eight languages are first drafts** that no fluent reader has
-      been through: every screen is in them, the scan and solve screens
-      included, but expect wording a native speaker would change. See
-      [Settings and shortcuts](settings.md#language).
-    - **The installers are not code-signed**, so Windows and macOS ask before
-      they run it. [Installing](install.md) says what to expect.
+- **Your cube and your light.** The scan reads best on a cube with dark plastic between the stickers, in steady, even
+  light. A 2x2 to a 5x5 can be scanned too; on those, look over the colours screen after the scan, or type the scramble
+  in ([Another size of cube](other-sizes.md)).
+- **Other languages.** The eight languages besides English were translated with machine help, so some wording may read
+  oddly. See [Settings and shortcuts](settings.md#language).
+- **The first run.** Windows and macOS ask you to confirm the first time you open the app, because the installers are
+  not signed with a certificate from Microsoft or Apple yet. [Installing](install.md) says where to click.
 
 Something wrong, or a cube it will not read? Please
 [open an issue](https://github.com/iainchesworthlabs/cubeulator/issues): what

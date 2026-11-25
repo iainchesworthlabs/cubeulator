@@ -74,15 +74,15 @@ Choosing one changes the words, the direction of the layout (Hebrew, Arabic and
 Yiddish are written right to left, and the screen mirrors), numbers and plurals
 at once. **Same as this device** follows the system's language.
 
-What to expect in this beta:
+About the languages:
 
-- **English** is complete, and the source of every other.
+- **English** came first, and is the source of every other.
 - **The other eight** (Deutsch, Français, Español, Japanese, Simplified
-  Chinese, Hebrew, Arabic and Yiddish) are complete first drafts made with
-  machine assistance that no fluent reader has been through yet. Every screen
-  is in them, the scan screen and the solve screen included, but expect
-  wording a native speaker would change, most of all the words for the colours,
-  the sides and the directions, which nobody has yet held against a real cube.
+  Chinese, Hebrew, Arabic and Yiddish) were translated with machine help.
+  Every screen is in them, the scan screen and the solve screen included, but
+  some wording may read oddly to a native speaker, most of all the words for
+  the colours, the sides and the directions. If you spot one, please
+  [tell us](../support.md).
 - **What stays the same in every language** is not wording: the name
   *Cubeulator*, the notation letters (R U R'), key names such as Space, and the
   names of graphics systems and cameras as your computer gives them.
