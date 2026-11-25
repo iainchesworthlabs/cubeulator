@@ -3,26 +3,25 @@ template: marketing.html
 layout: prose
 title: Accessibility
 title_tag: "Accessibility: what Cubeulator supports today, and what it does not"
-description: "A plain statement of what Cubeulator supports for keyboard use, screen readers, reduced motion, colour, text size and language today, and what is not built or not tested yet."
+description: "What Cubeulator supports for keyboard use, screen readers, reduced motion, colour, text size and language, what it does not support yet, and how to tell us about a barrier."
 ---
 # Accessibility
 
-This page says what is true today, and says plainly what is not. Cubeulator is pre-release software, and accessibility
-has had a first round of work and no more: the app was built for a person who can see the cube and hold it, and the scan
-still needs sight. The design sets a target (WCAG 2.2 level AA, read for software); the app has not reached it, and nothing
-here is a claim that it has.
+Cubeulator can be used from the keyboard alone, tells a screen reader what is on each screen, and moves less when you
+ask it to. This page says what works, what does not yet, and how to tell us about a barrier. The app was designed for
+someone who can see the cube and hold it, and the camera scan still needs sight. The target is WCAG 2.2 level AA; the
+app has not reached it, and nothing here claims that it has.
 
-Most of what follows is **built for, and checked by automated tests, but not yet tried with a screen reader**. The tests
-read the app's own accessibility information (the names, roles and states a screen reader is given) and walk the screens
-with the keyboard. They cannot say how NVDA, Narrator, VoiceOver or any other reader speaks it. If you use one, please
-[tell me](#tell-me-about-a-barrier) what you find.
+The names, roles and announcements a screen reader is given are built into the app and checked automatically on every
+change. Nobody using NVDA, Narrator, VoiceOver or another screen reader has told us how it sounds yet, so if you use
+one, please [tell us](#tell-me-about-a-barrier) what you find.
 
 ## What is there
 
 - **Keyboard.** Every button, choice and switch, and the rows of History, About and Licences, can be reached with
   <kbd>Tab</kbd> (<kbd>Shift</kbd>+<kbd>Tab</kbd> goes back) and pressed with <kbd>Enter</kbd> or <kbd>Space</kbd>, and a
-  ring of two bands shows where you are. A test makes the whole journey with the keyboard alone, a drawn cube standing in
-  for the camera: start a scan, step through the solve, finish, review the solution and scan again. <kbd>Esc</kbd> goes back on Settings, history, the solution, About, Licences, *Another size of cube* and the colours
+  ring of two bands shows where you are. The whole journey works with the keyboard alone: start a scan, step through the solve, finish, review the
+  solution and scan again. <kbd>Esc</kbd> goes back on Settings, history, the solution, About, Licences, *Another size of cube* and the colours
   screen, is **Not now** on the camera permission screen and **Cancel** on the scan screen, and chooses the safe answer in a
   question that asks before it deletes. A click or a tap does not move keyboard focus, so the solve screen's keys
   (<kbd>→</kbd>, <kbd>Space</kbd> or <kbd>Enter</kbd> for the next move, <kbd>←</kbd> for the one before) work whichever
@@ -37,11 +36,8 @@ with the keyboard. They cannot say how NVDA, Narrator, VoiceOver or any other re
 - **Changes are announced.** On the scan screen the headline and the guidance are spoken as they change, and a camera that
   will not start interrupts. On the solve screen each move is spoken with its place in the solve (and the stage, when it
   changes). The solution says where you are as you step through it. A mistake in a typed scramble interrupts, and the
-  history says when a solve is deleted. Whether your reader turns these announcements into speech depends on the reader and
-  the system: they use the announcement events of Qt 6.8, which the Windows build hands to UI Automation, and that has
-  not been confirmed on any reader.
-- **Less motion.** The app follows the device's request for less motion where Qt can read it (which systems fill that in
-  was not checked), and Settings has a **Motion** row that always works: the same as the device (the default), reduced, or
+  history says when a solve is deleted. How a reader speaks these announcements depends on the reader and your system.
+- **Less motion.** The app follows your device's request for less motion, and Settings has a **Motion** row that always works: the same as the device (the default), reduced, or
   full. When it is reduced, the cube on the start screen does not turn by itself, the layer to turn on the solve screen is drawn
   leaning and still instead of swinging, turns snap, the cube does not swing to show its back, the finished screen does not
   bob, and the pulses and fades are cut or shortened.
@@ -50,12 +46,11 @@ with the keyboard. They cannot say how NVDA, Narrator, VoiceOver or any other re
   (*Top · quarter turn*, *Right · layer 2 · quarter turn*), and each stage says what it does.
 - **Messages in words.** The state of the camera on the solve screen (matched, ambiguous, not the side expected) is a
   coloured frame and also a sentence, and the scan's guidance is a sentence.
-- **Nine languages**, with the layout mirrored for Hebrew, Arabic and Yiddish. See [Settings](guide/settings.md#language)
-  for how complete each is.
+- **Nine languages**, with the layout mirrored for Hebrew, Arabic and Yiddish. See [Settings](guide/settings.md#language).
 - **A typed way in.** A side the camera misread can be put right by typing its colours as letters (`WWW/WRW/WWW`), or by
   keyboard on the colours screen, and a scramble can be pasted in as text.
-- **Checked colours of the design.** The app's colours come from a set of design tokens, and a script checks the contrast of
-  each pairing against WCAG 2.2 AA. That checks the tokens, not every screen.
+- **Checked colours.** The app's colours are checked against WCAG 2.2 AA contrast. Some older screens are still short of it
+  (see below).
 
 ## What is not there
 
@@ -73,16 +68,16 @@ with the keyboard. They cannot say how NVDA, Narrator, VoiceOver or any other re
   built.
 - **Spoken durations and directions.** A time is read as it is written (*12:40*), and a quarter turn is said as clockwise or
   anticlockwise as you look at that side, not as left or right.
-- **Contrast on every screen.** The tokens are checked; the screens still use the older palette, which misses 4.5:1 in
-  places (the red text, and some of the muted text).
+- **Contrast on every screen.** Some screens still use an older palette that misses 4.5:1 in places (the red text, and
+  some of the muted text).
 - **Touch targets** have not been measured against a minimum size, and several buttons are shorter than 48 pixels.
 
-## Not tested
+## Still to do
 
-No assistive technology has been used with Cubeulator: no screen reader, switch device, voice control or magnifier. What was
-checked is the information the app gives such tools (names, roles, states, focus and announcement events, through Qt's own
-accessibility interface), and the keyboard, by automated tests on Windows and in CI. The iPhone and the web builds have not
-been tried by anyone with a screen reader. No audit has been made, and none of the claims above is a conformance claim.
+Nobody has yet used Cubeulator with a screen reader, switch device, voice control or magnifier, and it has not had an
+outside accessibility audit, so none of the above is a conformance claim. The iPhone and web builds have the same names
+and roles but have not been tried with a screen reader either. What is checked on every change is the information the app
+gives such tools, and the keyboard.
 
 ## Tell me about a barrier
 

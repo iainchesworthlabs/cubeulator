@@ -108,8 +108,8 @@ cube beside it at the turn you select.
   2x2 are read less often, and then it is **Next turn** too.
 - **Sizes above 5.** Bigger cubes are solved by the library but are not offered
   on screen yet.
-- **The words.** Languages other than English are first drafts that no fluent
-  reader has been through ([Settings](settings.md#language)).
+- **The words.** Languages other than English were translated with machine help
+  ([Settings](settings.md#language)).
 
 ## Next
 

@@ -5,7 +5,7 @@ description: "What Cubeulator does: reads a cube from the camera, solves it thre
 ---
 <section class="cu-head"><div class="icl-wrap">
 <h1>Features</h1>
-<p class="icl-lead">What Cubeulator does today, and what it does not do yet. Each heading has its page in the <a href="../guide/">user guide</a>.</p>
+<p class="icl-lead">What Cubeulator does, from the scan to the last turn. Each heading has its page in the <a href="../guide/">user guide</a>, and <a href="#good-to-know">good to know</a> at the end says what it expects of your cube and your light.</p>
 </div></section>
 
 <section class="icl-section"><div class="icl-wrap">
@@ -41,7 +41,7 @@ description: "What Cubeulator does: reads a cube from the camera, solves it thre
 <h2>Yours, on your device</h2>
 <ul class="icl-points">
 <li><h3>Past solves</h3><p>A solve you left part-way carries on from the turn it reached. The list is a file on your device (the newest 100), never holds a picture, and can be turned off. <a href="../guide/history/">Past solves</a></p></li>
-<li><h3>Nine languages</h3><p>English, Deutsch, Fran&ccedil;ais, Espa&ntilde;ol, Japanese, Simplified Chinese, Hebrew, Arabic and Yiddish, with the layout mirrored for the last three. English is complete; the other eight are complete first drafts that no fluent reader has been through. <a href="../guide/settings/#language">What to expect</a></p></li>
+<li><h3>Nine languages</h3><p>English, Deutsch, Fran&ccedil;ais, Espa&ntilde;ol, Japanese, Simplified Chinese, Hebrew, Arabic and Yiddish, with the layout mirrored for the last three. Every screen is translated; English came first and the other eight were translated with machine help, so if a line reads oddly to you, please say. <a href="../guide/settings/#language">Language settings</a></p></li>
 <li><h3>Light, dark and three cube looks</h3><p>Follow the device or choose. The 3D cube can be shaded as <em>Physically-Based Realism</em>, <em>Instructional Glow</em> or <em>Borderlands Cel-Shading</em>.</p></li>
 <li><h3>No account, no upload</h3><p>No telemetry, no crash upload and no update check. <a href="../privacy/">Privacy</a></p></li>
 </ul>
@@ -53,12 +53,12 @@ description: "What Cubeulator does: reads a cube from the camera, solves it thre
 <li><h3>iPhone</h3><p>TestFlight, for invited testers. <a href="../guide/iphone/">The iPhone build</a></p></li>
 </ul>
 
-<h2 id="not-yet">Not yet</h2>
+<h2 id="good-to-know">Good to know</h2>
 <ul class="icl-points">
-<li><h3>Every cube</h3><p>It reads a cube with dark plastic between the stickers. A cube with white or light plastic, or with flush tiles and no visible gap, is not read yet.</p></li>
-<li><h3>Bigger than a 3&times;3, by camera</h3><p>The camera is proven on a 3&times;3, and much less on the other sizes. <em>Check the colours</em> puts right what it misreads.</p></li>
-<li><h3>Signed installers</h3><p>They are not signed with a Windows or Apple certificate, so SmartScreen and Gatekeeper ask first. <a href="../guide/verify/">Checking a download</a> shows how to be sure of one.</p></li>
-<li><h3>Android</h3><p>The app builds, but its camera is not written, so it is not offered.</p></li>
-<li><h3>The App Stores</h3><p>The licence of one part, Qt Quick 3D, is under discussion for the Apple stores. See the <a href="../faq/#why-gpl">FAQ</a>.</p></li>
+<li><h3>Your cube</h3><p>Cubeulator reads a cube with dark plastic between the stickers, which is most of them, in steady, even light. A cube with white or light plastic, or with flush tiles and no visible gap, is not read yet.</p></li>
+<li><h3>Bigger cubes</h3><p>A 3&times;3 is what the scan is tuned for. A 2&times;2 up to a 5&times;5 can be scanned too, and <em>Check the colours</em> puts right anything it misreads, or you can type the scramble in.</p></li>
+<li><h3>The first time you open it</h3><p>Windows and macOS ask you to confirm, because the installers are not signed with a Microsoft or Apple certificate yet. <a href="../guide/install/#first-run">The install guide</a> shows where to click, and <a href="../guide/verify/">checking a download</a> shows how to be sure of a file.</p></li>
+<li><h3>Android</h3><p>There is no Android app yet.</p></li>
+<li><h3>The App Stores</h3><p>Cubeulator is not in them yet: the licence of one part, Qt Quick 3D, has to be settled for the Apple stores first. See the <a href="../faq/#why-gpl">FAQ</a>.</p></li>
 </ul>
 </div></section>

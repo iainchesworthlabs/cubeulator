@@ -20,11 +20,11 @@ the cube, solves it and shows you the turns, one at a time, on a 3D cube.
 | Cube sizes | 3×3 by camera; 2×2 to 5×5 by camera, typed scramble or typed colours |
 | Methods | Beginner (about 100 turns), Intermediate (about 50), Advanced (about 20) |
 | Runs on | Windows 10 and later, macOS 14.4 and later on Apple silicon, Linux (Debian, Ubuntu, Fedora), and a web browser. An iPhone app is on TestFlight for invited testers |
-| Status | Pre-release (the latest is 1.0.0-rc.1, 25 November 2026) |
+| Version | 1.0.0-rc.1, the release candidate for 1.0 (25 November 2026) |
 | Price | Free |
 | Licence | GNU General Public License, version 3 or later for the source; version 3 for the binaries |
 | Privacy | The camera picture is read on the device and not saved. No account, no telemetry, no update check |
-| Languages | English, Deutsch, Français, Español, Japanese, Simplified Chinese, Hebrew, Arabic, Yiddish (English is complete; the others are first drafts) |
+| Languages | English, Deutsch, Français, Español, Japanese, Simplified Chinese, Hebrew, Arabic, Yiddish (the eight besides English were translated with machine help) |
 | Source | [github.com/iainchesworthlabs/cubeulator](https://github.com/iainchesworthlabs/cubeulator) |
 
 ## The app icon
@@ -40,8 +40,8 @@ size. They are part of the source and under the same licence. Please do not chan
 
 ## Pictures
 
-The pictures in the [user guide](guide/index.md) are screenshots of the app itself, taken by its own test suite with a
-drawn camera frame, so nobody is in them. Light and dark versions are there for most.
+The pictures in the [user guide](guide/index.md) are screenshots of the app itself, with a drawn stand-in for the camera
+picture, so nobody is in them. Light and dark versions are there for most.
 
 ## A note on the name
 
