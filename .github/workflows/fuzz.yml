@@ -76,12 +76,12 @@ jobs:
           persist-credentials: false
 
       - name: Set up vcpkg
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
         with:
           cache-key-suffix: x64-linux
 
       - name: Install CMake 4 + Ninja
-        uses: lukka/get-cmake@a89e43e22a96abafcd7a62db652a65ecd33052c9 # v4.4.4
+        uses: lukka/get-cmake@16e8153a8b4918849d92aad131befe67a3705daa # v4.5.0
         with:
           cmakeVersion: "4.4.2"
           ninjaVersion: "1.13.2"
@@ -138,7 +138,7 @@ jobs:
 
       - name: Open or update the nightly-analysis issue
         if: ${{ failure() && github.event_name == 'schedule' }}
-        uses: iainchesworthlabs/icl-common-infra/actions/report-nightly-failure@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/report-nightly-failure@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
         with:
           engine: fuzz
           # A failure before the harnesses ran (a download, the build) is not a crash: say which it was.
@@ -147,4 +147,4 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30

@@ -77,7 +77,7 @@ jobs:
 
       - name: Set up vcpkg
         if: steps.cached.outputs.cache-hit != 'true'
-        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/setup-vcpkg@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
         with:
           cache-key-suffix: wasm32-emscripten-threads
 
@@ -101,7 +101,7 @@ jobs:
       - name: Save vcpkg binaries
         if: ${{ always() && steps.cached.outputs.cache-hit != 'true' }}
         continue-on-error: true
-        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@e15f14812b7446517252d6677abf755698d57986 # v0.1.18
+        uses: iainchesworthlabs/icl-common-infra/actions/save-vcpkg-cache@7343cae74fb2028b995b39cdec14a58b0f37f2e8 # v0.1.30
 
   # The pages and the web app as one site. The app goes under app/, which is where the pages link. It is static files; the
   # edge serves .wasm as application/wasm. The app cannot get the response headers its threads need from the edge, so it brings
